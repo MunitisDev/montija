@@ -106,11 +106,18 @@ export class Hud {
       // Tracked separately: the amount lying in the field changes on its own,
       // and tying it to the stored total left a stale "+n" on screen after the
       // last load had already been carried in.
+      // The caption is hidden on very short screens, where five bare numbers
+      // are otherwise a guessing game. The title survives that.
+      const label = this.i18n.t(`hud.${resource}` as MessageKey);
+      if (element.parentElement && element.parentElement.title !== label) {
+        element.parentElement.title = label;
+      }
+
       if (this.lastRenderedLoose.get(resource) !== loose) {
         element.dataset['loose'] = loose > 0 ? `+${loose}` : '';
         // Said in words as well as symbols: "Food 0 +50" is alarming until you
         // know the 50 is real and merely still in the field.
-        element.title = loose > 0 ? `+${loose} ${this.i18n.t('hud.looseHint')}` : '';
+        element.title = loose > 0 ? `${label}: +${loose} ${this.i18n.t('hud.looseHint')}` : '';
         this.lastRenderedLoose.set(resource, loose);
       }
     }

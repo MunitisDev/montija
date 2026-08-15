@@ -6,12 +6,25 @@
  * windows.
  */
 
+/*
+ * Both bars stay a single row at every size.
+ *
+ * Wrapping is what made the HUD eat 68% of a 320px-tall landscape phone: each
+ * wrapped row costs height, and height is the scarce thing on the devices this
+ * game targets. Rows that will not fit scroll sideways instead, so nothing is
+ * ever unreachable — the build bar used to clip Gatherer Hut and Woodcutter off
+ * the end with no way to get at them.
+ */
 .hud-bar {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--hud-gap);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+}
+
+.hud-bar--top {
+  align-items: center;
 }
 
 .hud-bar--bottom {
@@ -33,8 +46,24 @@
 }
 
 .resource-strip {
-  flex-wrap: wrap;
-  gap: 2px 16px;
+  flex-wrap: nowrap;
+  gap: 0 16px;
+  /* `min-width: 0` is what actually lets a flex child shrink below its content
+     and scroll. Without it the strip pushes the climate readout onto a row of
+     its own. */
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow-x: auto;
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+
+.resource-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.resource {
+  flex: 0 0 auto;
 }
 
 .resource {
@@ -67,6 +96,8 @@
 
 .climate-strip {
   gap: 12px;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .climate__season {
@@ -84,6 +115,7 @@
 }
 
 .language-button {
+  flex: 0 0 auto;
   min-height: 34px;
   min-width: 44px;
   padding: 0 10px;
@@ -137,6 +169,15 @@
   flex-direction: column;
   align-items: flex-start;
   gap: var(--hud-gap);
+  /* Takes the leftover width and gives it back under pressure, so the build bar
+     scrolls instead of overrunning the save and speed controls. */
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.session-controls,
+.speed-controls {
+  flex: 0 0 auto;
 }
 
 .tile-panel {
@@ -228,9 +269,15 @@
   flex-wrap: nowrap;
   overflow-x: auto;
   max-width: 100%;
+  min-width: 0;
+  align-self: stretch;
   scrollbar-width: none;
   /* The bar scrolls; the world still owns every other gesture. */
   touch-action: pan-x;
+}
+
+.build-button {
+  flex: 0 0 auto;
 }
 
 .build-bar::-webkit-scrollbar {
@@ -278,10 +325,18 @@
  * tap-to-place: the brief requires that placement never demand precise
  * tapping, so the player frames the ghost with the camera and commits.
  */
+/*
+ * Sits in the shrinking left column, so its text gives way before its buttons
+ * do. It used to grow past the bar and sit on top of Save and Load, which put
+ * a confirm button where the player expected a save.
+ */
 .placement-bar {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+  align-self: stretch;
   min-height: var(--touch-target);
   padding: 0 12px;
   background: var(--colour-panel);
@@ -292,6 +347,28 @@
 
 .placement-bar[hidden] {
   display: none;
+}
+
+.placement-bar button {
+  flex: 0 0 auto;
+}
+
+/* The name and cost are the essentials, so they shrink last and truncate
+   rather than wrapping into a tall column. */
+.placement-bar__label,
+.placement-bar__hint {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.placement-bar__label {
+  flex: 1 1 auto;
+}
+
+.placement-bar__hint {
+  flex: 1 1 auto;
 }
 
 .placement-bar__label {
@@ -453,6 +530,41 @@
 }
 
 /*
+ * Touch devices get the full accessibility floor on every control.
+ *
+ * A 34px chip is fine under a mouse and mean under a thumb, and the brief asks
+ * for generous hit targets rather than merely reachable ones.
+ */
+@media (pointer: coarse) {
+  .language-button,
+  .build-button,
+  .session-button,
+  .speed-button,
+  .placement-bar button,
+  .tile-panel__action {
+    min-height: var(--touch-target);
+    min-width: var(--touch-target);
+  }
+}
+
+/*
+ * While a building is being positioned, the placement bar takes the row.
+ *
+ * On a short screen the two bars together left the placement label with room
+ * for one letter — "H." for a House — which tells the player nothing about what
+ * it costs. The build menu is not needed while aiming: cancelling brings it
+ * straight back.
+ */
+@media (max-height: 520px), (max-width: 760px) {
+  #hud.is-placing .build-bar,
+  /* Saving is not something anyone does mid-placement, and its two buttons are
+     the width the building's name and cost need. */
+  #hud.is-placing .session-controls {
+    display: none;
+  }
+}
+
+/*
  * Landscape phones are short. Tighten the HUD so the world keeps the screen.
  */
 @media (max-height: 460px) {
@@ -494,6 +606,16 @@
     display: none;
   }
 
+  /* The refusal reason still shows; the description is a luxury at this size. */
+  .placement-bar__hint:not(.is-refusal) {
+    display: none;
+  }
+
+  .advice {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+
   .session-button {
     min-width: 56px;
     padding: 0 8px;
@@ -528,5 +650,26 @@
     background: var(--colour-panel);
     border: 1px solid var(--colour-panel-edge);
     border-radius: 6px;
+  }
+}
+
+/*
+ * Very short screens: the numbers stay, their captions go.
+ *
+ * At 320px tall every row counts, and a player who has looked at the HUD once
+ * knows which number is food. The icons-only step further would need artwork
+ * that does not exist yet, so this is where the tightening stops.
+ */
+@media (max-height: 380px) {
+  .resource__label {
+    display: none;
+  }
+
+  .resource-strip {
+    gap: 0 12px;
+  }
+
+  .hud-bar--top {
+    padding-top: 0;
   }
 }

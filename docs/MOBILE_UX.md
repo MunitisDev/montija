@@ -170,3 +170,44 @@ Benchmarks arrive in Phase 11. No villager-count target is claimed before it is 
 - Contextual selection panels — depends on Phase 3.
 - Haptic feedback on confirm/cancel, where supported.
 - Verifying behaviour with an on-screen keyboard raised, and during orientation changes mid-gesture.
+
+## Fitting a short screen — Implemented
+
+Landscape phones are wide and **short**, and height is the resource the HUD
+spends. Measured across five viewports before any of this was done, the HUD
+covered 68% of the screen on a 568×320 phone — the settlement had a strip in
+the middle and the player could not see what they were building.
+
+Three things caused it, and all three are structural rather than cosmetic:
+
+- **Rows wrapped.** Every wrapped row costs its full height. Both bars are now
+  `nowrap`; anything that will not fit scrolls sideways instead.
+- **Flex children would not shrink.** The build bar had `overflow-x: auto`
+  already and still overran its neighbours, because a flex item will not shrink
+  below its content without `min-width: 0`. Gatherer Hut and Woodcutter were
+  simply off the end of the screen with no way to reach them.
+- **The placement bar grew over the save controls**, putting a confirm button
+  exactly where the player expected Save.
+
+While a building is being positioned on a small screen, the build menu and the
+save controls give up their space to the placement bar — nobody saves mid-aim,
+and cancelling brings both straight back. Without that the label had room for
+one letter: "H." for a House, which says nothing about what it costs.
+
+The result, same five viewports:
+
+| Viewport | HUD before | HUD after |
+| -------- | ---------- | --------- |
+| 568×320  | 68%        | 28%       |
+| 667×375  | 39%        | 24%       |
+| 844×390  | 36%        | 23%       |
+| 1024×768 | 20%        | 20%       |
+| 1280×800 | 19%        | 19%       |
+
+Every control on a touch device is at least 44px on both axes. That floor is
+applied under `pointer: coarse` rather than by screen size, because a small
+window on a desktop is not a thumb.
+
+Below 380px of height the resource captions are dropped and only the numbers
+remain. Each keeps its name as a `title`, so the information is still there for
+a long press and for a screen reader.

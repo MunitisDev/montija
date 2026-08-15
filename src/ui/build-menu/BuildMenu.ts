@@ -29,6 +29,7 @@ export class BuildMenu {
   private readonly context: GameContext;
   private readonly i18n: I18n;
   private renderedLanguageVersion = -1;
+  private readonly root: HTMLElement;
   private readonly bar: HTMLElement;
   private readonly panel: HTMLElement;
   private readonly label: HTMLElement;
@@ -41,6 +42,7 @@ export class BuildMenu {
   constructor(root: HTMLElement, context: GameContext, i18n: I18n) {
     this.context = context;
     this.i18n = i18n;
+    this.root = root;
     this.bar = requireElement(root, '[data-hud="build-bar"]');
     this.panel = requireElement(root, '[data-hud="placement"]');
     this.label = requireElement(root, '[data-hud="placement-label"]');
@@ -76,6 +78,9 @@ export class BuildMenu {
 
     const placement = this.context.placement;
     this.panel.hidden = placement === null;
+    // Short and narrow screens give the placement bar the whole row; the
+    // stylesheet decides where that applies, this just reports the state.
+    this.root.classList.toggle('is-placing', placement !== null);
 
     for (const [id, button] of this.buttons) {
       button.classList.toggle('is-active', placement?.buildingId === id);
