@@ -30,7 +30,7 @@ import {
   WAYPOINT_TOLERANCE,
 } from '@/data/villagers';
 import { gridToWorld } from '@/shared/math/isometric';
-import type { RandomSource } from '@/shared/math/random';
+import type { RandomState, SeededRandom } from '@/shared/math/random';
 import type { GridPoint } from '@/shared/types/geometry';
 import { recipe as findRecipe } from '@/data/recipes';
 import { resourceDefinition, type ResourceId } from '@/data/resources';
@@ -80,13 +80,13 @@ export class VillagerSystem {
   private readonly world: World;
   private readonly jobs: JobManager;
   private readonly storages: StorageRegistry;
-  private readonly random: RandomSource;
+  private readonly random: SeededRandom;
   private nextId = 1;
 
   private totalPathRequests = 0;
   private totalPathFailures = 0;
 
-  constructor(world: World, jobs: JobManager, storages: StorageRegistry, random: RandomSource) {
+  constructor(world: World, jobs: JobManager, storages: StorageRegistry, random: SeededRandom) {
     this.world = world;
     this.jobs = jobs;
     this.storages = storages;
@@ -190,6 +190,21 @@ export class VillagerSystem {
         this.chooseWanderTarget(villager);
       }
     }
+  }
+
+  /**
+   * The RNG's exact position in its sequence.
+   *
+   * Saved and restored, or a loaded settlement makes different choices from
+   * the one that was saved — the villagers wander elsewhere, pick different
+   * jobs, and the two simulations quietly drift apart.
+   */
+  public get randomState(): RandomState {
+    return this.random.getState();
+  }
+
+  public restoreRandomState(state: RandomState): void {
+    this.random.setState(state);
   }
 
   /** Replaces the population from a save. */

@@ -36,6 +36,16 @@ export interface SavedVillager {
   readonly health: number;
   readonly currentJobId: number | null;
   readonly carrying: SavedInventory;
+  /**
+   * The route being walked, and where it leads.
+   *
+   * Saved because dropping it makes a loaded villager re-plan from where they
+   * stand, which quietly diverges the simulation from the one that was saved.
+   */
+  readonly path: readonly { readonly gx: number; readonly gy: number }[];
+  readonly destination: { readonly gx: number; readonly gy: number } | null;
+  readonly activity: string;
+  readonly idleTicks: number;
 }
 
 export interface SavedPile {
@@ -98,6 +108,14 @@ export interface SaveGame {
   readonly buildings: readonly SavedBuilding[];
   readonly jobs: readonly Job[];
   readonly deaths: number;
+  /**
+   * Where each random stream had got to.
+   *
+   * Without this a loaded settlement restarts its RNG from the seed and makes
+   * different choices from the save it came from. Determinism is only worth
+   * claiming if it survives a save.
+   */
+  readonly random: { readonly villagers: { readonly seed: number; readonly cursor: number } };
 }
 
 /** Why a save could not be loaded, so the UI can say something useful. */

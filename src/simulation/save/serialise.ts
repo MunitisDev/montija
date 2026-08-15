@@ -47,6 +47,10 @@ export function serialise(simulation: Simulation, savedAt: string): SaveGame {
       health: villager.needs.health,
       currentJobId: villager.currentJobId,
       carrying: toRecord(villager.inventory),
+      path: villager.path.map((step) => ({ gx: step.gx, gy: step.gy })),
+      destination: villager.destination ? { ...villager.destination } : null,
+      activity: villager.activity,
+      idleTicks: villager.idleTicks,
     })),
 
     piles: [...world.piles.all].map((pile) => ({
@@ -79,6 +83,7 @@ export function serialise(simulation: Simulation, savedAt: string): SaveGame {
     // makes this a copy rather than a conversion.
     jobs: simulation.jobs.all.map((job) => ({ ...job })),
     deaths: simulation.snapshot().deaths,
+    random: { villagers: simulation.villagers.randomState },
   };
 }
 
@@ -142,12 +147,22 @@ export function restore(simulation: Simulation, save: SaveGame): void {
       villager.needs.warmth = saved.warmth;
       villager.needs.health = saved.health;
       villager.currentJobId = saved.currentJobId;
+      villager.path = saved.path.map((step) => ({ gx: step.gx, gy: step.gy }));
+      villager.destination = saved.destination ? { ...saved.destination } : null;
+      villager.activity = saved.activity as typeof villager.activity;
+      villager.idleTicks = saved.idleTicks;
+      // previousPosition matters for render interpolation; a loaded villager
+      // should not appear to lurch from wherever they last were.
+      villager.previousPosition = villager.position;
       fillInventory(villager.inventory, saved.carrying);
       return villager;
     }),
   );
 
   simulation.jobs.restore(save.jobs);
+  if (save.random?.villagers) {
+    simulation.villagers.restoreRandomState(save.random.villagers);
+  }
   simulation.restoreClock(save.simulationTime, save.deaths);
 }
 
