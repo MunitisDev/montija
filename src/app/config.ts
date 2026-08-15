@@ -29,6 +29,23 @@ export const WORLD_HEIGHT = 96;
 /** Founding population, per the MVP brief: "approximately 10 villagers". */
 export const STARTING_VILLAGERS = 10;
 
+/**
+ * What the settlers arrive with, per the MVP brief's "basic resources".
+ *
+ * Not generosity — a grace period. Villagers eat from the first day, and the
+ * only food source is a Gatherer Hut that costs logs, stone, hauling and
+ * labour to raise. Starting at zero meant starving before the settlement could
+ * possibly feed itself, which reads as the game being broken rather than hard.
+ *
+ * 120 food is twelve days for ten people: one full season to get a hut
+ * standing. The logs and stone are enough for that hut and a house.
+ */
+export const STARTING_RESOURCES = {
+  food: 120,
+  logs: 30,
+  stone: 12,
+} as const;
+
 export const ZOOM_LIMITS = {
   min: 0.35,
   max: 2.5,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LOGS_PER_TREE, RESOURCE_IDS, resourceDefinition } from '@/data/resources';
+import { STARTING_RESOURCES } from '@/app/config';
 import { Simulation } from '@/simulation/Simulation';
 import { Inventory } from '@/simulation/resources/Inventory';
 import { ResourcePileRegistry } from '@/simulation/resources/ResourcePile';
@@ -209,11 +210,14 @@ describe('the full logistics loop', () => {
     }
   }
 
-  it('starts with a storage yard and nothing stored', () => {
+  it("starts with a storage yard holding the settlers' supplies", () => {
     const simulation = new Simulation(OPTIONS);
 
     expect(simulation.storages.count).toBe(1);
-    expect(simulation.snapshot().stored.logs).toBe(0);
+    expect(simulation.snapshot().stored.logs).toBe(STARTING_RESOURCES.logs);
+    expect(simulation.snapshot().stored.food).toBe(STARTING_RESOURCES.food);
+    // Nothing is lying in the field yet: supplies arrive already stored.
+    expect(simulation.snapshot().loose.logs).toBe(0);
   });
 
   it('drops physical logs where a tree stood, not into a counter', () => {
@@ -226,24 +230,25 @@ describe('the full logistics loop', () => {
     // The logs exist on the ground...
     expect(simulation.world.piles.getAt(cell, 'logs')?.amount).toBe(LOGS_PER_TREE);
     // ...and the settlement's stock has not moved, because nobody carried them.
-    expect(simulation.snapshot().stored.logs).toBe(0);
+    expect(simulation.snapshot().stored.logs).toBe(STARTING_RESOURCES.logs);
   });
 
   it('hauls logs from the ground into storage', () => {
     const simulation = new Simulation(OPTIONS);
+    const before = simulation.snapshot().stored.logs;
     const cell = firstTreeCell(simulation);
     simulation.designateTreeForFelling(cell);
 
     for (let tick = 1; tick <= 8000; tick += 1) {
       simulation.update(tick, TICK);
-      if (simulation.snapshot().stored.logs > 0) {
+      if (simulation.snapshot().stored.logs > before) {
         break;
       }
     }
 
-    const snapshot = simulation.snapshot();
-    expect(snapshot.stored.logs).toBeGreaterThan(0);
-    expect(snapshot.stored.logs).toBeLessThanOrEqual(LOGS_PER_TREE);
+    const gained = simulation.snapshot().stored.logs - before;
+    expect(gained).toBeGreaterThan(0);
+    expect(gained).toBeLessThanOrEqual(LOGS_PER_TREE);
   });
 
   it('conserves every log: felled equals stored plus loose plus carried', () => {
@@ -264,7 +269,9 @@ describe('the full logistics loop', () => {
 
     // The invariant that makes this phase honest: wood is neither created nor
     // destroyed, only moved between the ground, a villager's arms and a yard.
-    expect(snapshot.stored.logs + snapshot.loose.logs + carried).toBe(felled * LOGS_PER_TREE);
+    // Measured against what the settlers arrived with.
+    const total = snapshot.stored.logs + snapshot.loose.logs + carried;
+    expect(total - STARTING_RESOURCES.logs).toBe(felled * LOGS_PER_TREE);
   });
 
   it('empties the ground once hauling catches up', () => {
@@ -278,7 +285,7 @@ describe('the full logistics loop', () => {
 
     const snapshot = simulation.snapshot();
     expect(snapshot.loose.logs).toBe(0);
-    expect(snapshot.stored.logs).toBe(trees.length * LOGS_PER_TREE);
+    expect(snapshot.stored.logs).toBe(STARTING_RESOURCES.logs + trees.length * LOGS_PER_TREE);
   });
 
   it('never lets two villagers haul the same pile', () => {
@@ -322,16 +329,18 @@ describe('the full logistics loop', () => {
 
     const snapshot = simulation.snapshot();
     expect(snapshot.loose.logs).toBe(LOGS_PER_TREE);
-    expect(snapshot.stored.logs).toBe(0);
+    expect(snapshot.stored.logs).toBe(STARTING_RESOURCES.logs);
     expect(snapshot.pileCount).toBe(1);
   });
 
   it('exposes a total for every resource, even at zero', () => {
     const snapshot = new Simulation(OPTIONS).snapshot();
     for (const resource of RESOURCE_IDS) {
-      expect(snapshot.stored[resource]).toBe(0);
+      expect(typeof snapshot.stored[resource]).toBe('number');
       expect(snapshot.loose[resource]).toBe(0);
     }
+    // Firewood has no source at founding; it must be made.
+    expect(snapshot.stored.firewood).toBe(0);
   });
 
   it('stays deterministic through a full haul cycle', () => {

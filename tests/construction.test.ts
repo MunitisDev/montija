@@ -130,8 +130,10 @@ describe('construction', () => {
   it('will not build without materials, however long it waits', () => {
     const simulation = new Simulation(OPTIONS);
     clearArea(simulation, { gx: 20, gy: 20 });
+    // Strip the settlers' supplies: the settlement genuinely has nothing.
+    simulation.storages.all[0]!.inventory.clear();
+    simulation.storages.markChanged();
     const site = simulation.placeBuilding('house', { gx: 20, gy: 20 })!;
-    // Deliberately no stock in the yard.
 
     for (let tick = 1; tick <= 3000; tick += 1) {
       simulation.update(tick, TICK);

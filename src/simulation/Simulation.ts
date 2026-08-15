@@ -12,6 +12,7 @@
 
 import type { GridPoint } from '@/shared/types/geometry';
 import { SeededRandom, deriveSeed, type RandomSource } from '@/shared/math/random';
+import { STARTING_RESOURCES } from '@/app/config';
 import type { BuildingId } from '@/data/buildings';
 import { recipe as findRecipe } from '@/data/recipes';
 import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
@@ -57,6 +58,14 @@ export interface SimulationSnapshot {
   readonly deaths: number;
   /** Lowest health among the living, so the HUD can warn before people die. */
   readonly lowestHealth: number;
+  /**
+   * The single most urgent thing wrong, or `null` when nothing is.
+   *
+   * One warning at a time on purpose: a stack of advice is noise, and the
+   * player needs to know what to do *next*, not everything that could ever go
+   * wrong.
+   */
+  readonly advice: 'starving' | 'foodLow' | 'firewoodLow' | null;
   /**
    * Stored totals per resource.
    *
@@ -214,6 +223,7 @@ export class Simulation {
       temperature: year.temperature,
       lastDay: this.lastDayReport,
       deaths: this.totalDeaths,
+      advice: this.adviseOn(year),
       lowestHealth: this.villagers.all.reduce(
         (lowest, villager) => Math.min(lowest, villager.needs.health),
         this.villagers.count === 0 ? 0 : 100,
@@ -273,6 +283,38 @@ export class Simulation {
     this.currentTick = tick;
     this.totalDeaths = deaths;
     this.lastDayReport = EMPTY_REPORT;
+  }
+
+  /**
+   * What the settlement most needs to hear about.
+   *
+   * Thresholds are in days of supply rather than raw amounts, so the advice
+   * stays right as the population changes.
+   */
+  private adviseOn(year: YearState): 'starving' | 'foodLow' | 'firewoodLow' | null {
+    const people = this.villagers.count;
+    if (people === 0) {
+      return null;
+    }
+
+    if (this.lastDayReport.foodShortfall > 0) {
+      return 'starving';
+    }
+
+    const foodDays = this.storages.totalOf('food') / people;
+    if (foodDays < 8 && this.world.buildings.countOf('gatherer-hut') === 0) {
+      return 'foodLow';
+    }
+
+    // Firewood only matters once the cold is in sight; warning in spring would
+    // be noise the player learns to ignore.
+    const winterIsNear = year.season === 'autumn' || year.season === 'winter';
+    const firewoodDays = this.storages.totalOf('firewood') / people;
+    if (winterIsNear && firewoodDays < 10 && this.world.buildings.countOf('woodcutter') === 0) {
+      return 'firewoodLow';
+    }
+
+    return null;
   }
 
   /** The calendar at the current tick. */
@@ -495,7 +537,13 @@ export class Simulation {
   private foundStorageYard(): void {
     const centre =
       this.world.navigation.nearestWalkable(this.world.centreCell) ?? this.world.centreCell;
-    this.storages.add({ cell: centre, capacity: 2000 });
+    const yard = this.storages.add({ cell: centre, capacity: 2000 });
+
+    // The settlers bring supplies with them. Without them the settlement
+    // starves long before it could possibly build anything that makes food.
+    for (const [resource, amount] of Object.entries(STARTING_RESOURCES)) {
+      yard.inventory.add(resource as ResourceId, amount);
+    }
   }
 
   /** Frees any villager still holding a job that no longer exists. */

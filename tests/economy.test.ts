@@ -76,7 +76,9 @@ describe('production', () => {
   it('a woodcutter will not make firewood without logs', () => {
     const simulation = new Simulation(OPTIONS);
     standingBuilding(simulation, 'woodcutter');
-    // Deliberately no logs anywhere.
+    // Strip the settlers' supplies, so there is genuinely no wood anywhere.
+    simulation.storages.all[0]!.inventory.clear();
+    simulation.storages.markChanged();
 
     for (let tick = 1; tick <= 5000; tick += 1) {
       simulation.update(tick, TICK);
@@ -128,12 +130,14 @@ describe('production', () => {
 
   it('produces nothing at all without a workshop', () => {
     const simulation = new Simulation(OPTIONS);
+    const before = simulation.snapshot().stored.food;
 
     for (let tick = 1; tick <= 4000; tick += 1) {
       simulation.update(tick, TICK);
     }
 
-    expect(simulation.snapshot().stored.food).toBe(0);
+    // Food only ever falls: it is eaten, and nothing replaces it.
+    expect(simulation.snapshot().stored.food).toBeLessThanOrEqual(before);
     expect(simulation.snapshot().stored.firewood).toBe(0);
   });
 
