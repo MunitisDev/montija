@@ -9,7 +9,17 @@ import type Phaser from 'phaser';
 import { overlayDepth } from '@/renderer/phaser/sorting';
 import { TextureKeys } from '@/renderer/phaser/terrain/tileTextures';
 import { gridToScene } from '@/shared/math/isometric';
+import type { JobType } from '@/simulation/jobs/Job';
 import type { JobManager } from '@/simulation/jobs/JobManager';
+
+/**
+ * Job types that represent an order the player gave.
+ *
+ * Hauling is deliberately absent: the settlement generates those itself, and
+ * marking them painted crosses over every log pile and storage yard, which read
+ * as designations the player had made.
+ */
+const PLAYER_DESIGNATED: ReadonlySet<JobType> = new Set<JobType>(['chop-tree', 'gather-stone']);
 
 export class DesignationRenderer {
   private readonly scene: Phaser.Scene;
@@ -28,6 +38,9 @@ export class DesignationRenderer {
 
     const live = new Set<number>();
     for (const job of jobs.all) {
+      if (!PLAYER_DESIGNATED.has(job.type)) {
+        continue;
+      }
       live.add(job.id);
       if (this.marks.has(job.id)) {
         continue;

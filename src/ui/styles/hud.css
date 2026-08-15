@@ -57,6 +57,14 @@
   color: var(--colour-ink);
 }
 
+/* Units still on the ground, waiting to be hauled in. */
+.resource__value::after {
+  content: attr(data-loose);
+  margin-left: 3px;
+  font-size: 0.68rem;
+  color: #8f7c4e;
+}
+
 .climate-strip {
   gap: 12px;
 }

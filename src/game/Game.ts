@@ -61,7 +61,9 @@ export interface Selection {
   readonly villager: VillagerSelection | null;
   /** Set when a tree stands on the tapped cell. */
   readonly treeId: number | null;
-  /** `true` when that tree is already marked for felling. */
+  /** `true` when the tapped cell is a stone deposit. */
+  readonly isStoneDeposit: boolean;
+  /** `true` when the tree or deposit is already marked for work. */
   readonly designated: boolean;
 }
 
@@ -224,7 +226,6 @@ export class Game implements GameContext, InputIntentSink {
 
   public onSelect(point: ScreenPoint): void {
     const cell = this.screenToGrid(point);
-    const world = this.simulation.world;
 
     if (!cell) {
       // Tapping off-map clears the selection rather than leaving a stale one.
@@ -237,14 +238,9 @@ export class Game implements GameContext, InputIntentSink {
     // meant, so they win over the ground beneath them.
     const villager = this.simulation.villagers.findNear(cell);
 
-    const tree = world.trees.getAt(cell);
-
-    this.currentSelection = {
+    this.currentSelection = this.describeCell(
       cell,
-      terrain: world.terrainAt(cell),
-      walkable: world.isWalkable(cell),
-      buildable: world.isBuildable(cell),
-      villager: villager
+      villager
         ? {
             id: villager.id,
             name: villager.name,
@@ -252,10 +248,28 @@ export class Game implements GameContext, InputIntentSink {
             activity: villager.activity,
           }
         : null,
-      treeId: tree?.id ?? null,
-      designated: this.simulation.isTreeDesignated(cell),
-    };
+    );
     this.selectionChanges += 1;
+  }
+
+  /** Builds the description of a cell. One place, so the two callers agree. */
+  private describeCell(cell: GridPoint, villager: VillagerSelection | null): Selection {
+    const world = this.simulation.world;
+    const tree = world.trees.getAt(cell);
+    const isStoneDeposit = world.terrainAt(cell) === 'stone';
+
+    return {
+      cell,
+      terrain: world.terrainAt(cell),
+      walkable: world.isWalkable(cell),
+      buildable: world.isBuildable(cell),
+      villager,
+      treeId: tree?.id ?? null,
+      isStoneDeposit,
+      designated: tree
+        ? this.simulation.isTreeDesignated(cell)
+        : isStoneDeposit && this.simulation.isStoneDesignated(cell),
+    };
   }
 
   /**
@@ -266,11 +280,15 @@ export class Game implements GameContext, InputIntentSink {
    */
   public designateSelectedTree(): boolean {
     const selection = this.currentSelection;
-    if (!selection || selection.treeId === null) {
+    if (!selection) {
       return false;
     }
 
-    const created = this.simulation.designateTreeForFelling(selection.cell);
+    const created =
+      selection.treeId !== null
+        ? this.simulation.designateTreeForFelling(selection.cell)
+        : selection.isStoneDeposit && this.simulation.designateStoneForMining(selection.cell);
+
     if (created) {
       this.refreshSelection(selection.cell);
     }
@@ -279,11 +297,15 @@ export class Game implements GameContext, InputIntentSink {
 
   public cancelSelectedDesignation(): boolean {
     const selection = this.currentSelection;
-    if (!selection || selection.treeId === null) {
+    if (!selection) {
       return false;
     }
 
-    const cancelled = this.simulation.cancelTreeDesignation(selection.cell);
+    const cancelled =
+      selection.treeId !== null
+        ? this.simulation.cancelTreeDesignation(selection.cell)
+        : selection.isStoneDeposit && this.simulation.cancelStoneDesignation(selection.cell);
+
     if (cancelled) {
       this.refreshSelection(selection.cell);
     }
@@ -292,17 +314,7 @@ export class Game implements GameContext, InputIntentSink {
 
   /** Re-reads the selected cell after the world changed underneath it. */
   private refreshSelection(cell: GridPoint): void {
-    const world = this.simulation.world;
-    const tree = world.trees.getAt(cell);
-    this.currentSelection = {
-      cell,
-      terrain: world.terrainAt(cell),
-      walkable: world.isWalkable(cell),
-      buildable: world.isBuildable(cell),
-      villager: null,
-      treeId: tree?.id ?? null,
-      designated: this.simulation.isTreeDesignated(cell),
-    };
+    this.currentSelection = this.describeCell(cell, null);
     this.selectionChanges += 1;
   }
 }

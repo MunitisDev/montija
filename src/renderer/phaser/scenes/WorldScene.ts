@@ -13,6 +13,7 @@ import { PhaserCameraBinding } from '@/renderer/phaser/camera/PhaserCameraBindin
 import { TerrainRenderer } from '@/renderer/phaser/terrain/TerrainRenderer';
 import { VillagerRenderer } from '@/renderer/phaser/entities/VillagerRenderer';
 import { DesignationRenderer } from '@/renderer/phaser/entities/DesignationRenderer';
+import { ResourceRenderer } from '@/renderer/phaser/entities/ResourceRenderer';
 import { TextureKeys } from '@/renderer/phaser/terrain/tileTextures';
 import { RenderLayer, depthFor } from '@/renderer/phaser/sorting';
 import { gridToScene } from '@/shared/math/isometric';
@@ -28,6 +29,7 @@ export class WorldScene extends Phaser.Scene {
   private terrainRenderer!: TerrainRenderer;
   private villagerRenderer!: VillagerRenderer;
   private designationRenderer!: DesignationRenderer;
+  private resourceRenderer!: ResourceRenderer;
   private selectionMarker!: Phaser.GameObjects.Image;
   /** Last selection version drawn, so the marker only moves when it changes. */
   private renderedSelectionVersion = -1;
@@ -48,6 +50,7 @@ export class WorldScene extends Phaser.Scene {
     this.terrainRenderer.build(this.context.simulation.world);
     this.villagerRenderer = new VillagerRenderer(this);
     this.designationRenderer = new DesignationRenderer(this);
+    this.resourceRenderer = new ResourceRenderer(this);
 
     this.selectionMarker = this.add
       .image(0, 0, TextureKeys.selection)
@@ -60,6 +63,7 @@ export class WorldScene extends Phaser.Scene {
       this.terrainRenderer.destroy();
       this.villagerRenderer.destroy();
       this.designationRenderer.destroy();
+      this.resourceRenderer.destroy();
     });
 
     this.cameraBinding.sync();
@@ -78,6 +82,10 @@ export class WorldScene extends Phaser.Scene {
     );
 
     this.designationRenderer.sync(this.context.simulation.jobs);
+    this.resourceRenderer.sync(
+      this.context.simulation.world.piles,
+      this.context.simulation.storages,
+    );
     // Cheap: returns immediately unless a tree was felled since last frame.
     this.terrainRenderer.syncTrees(this.context.simulation.world);
     this.syncSelectionMarker();

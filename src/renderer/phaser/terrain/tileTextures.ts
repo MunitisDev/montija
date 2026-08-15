@@ -47,6 +47,9 @@ export const TextureKeys = {
   villager: 'villager',
   villagerRing: 'villager-ring',
   designation: 'designation-mark',
+  logPile: 'pile-logs',
+  stonePile: 'pile-stone',
+  storageYard: 'storage-yard',
   /** Frame name within the terrain atlas. */
   terrainFrame: (type: TerrainType): string => type,
   /** Frame name within the tree atlas. */
@@ -64,6 +67,12 @@ const TREE_HEIGHT = 96;
  * people are what make it live. Characters must never dominate the frame.
  */
 export const VILLAGER_HEIGHT = 48;
+
+/** Resource pile sprite height, per the art bible. */
+export const PILE_HEIGHT = 40;
+/** Storage yard placeholder: a 3x3 footprint, low and open. */
+export const STORAGE_WIDTH = 192;
+export const STORAGE_HEIGHT = 96;
 const VILLAGER_WIDTH = 32;
 
 /** Cloth and skin tones, kept muted and earthy like everything else. */
@@ -104,6 +113,24 @@ export function createPlaceholderTextures(scene: Phaser.Scene): void {
   if (!scene.textures.exists(TextureKeys.designation)) {
     drawDesignationMark(graphics);
     graphics.generateTexture(TextureKeys.designation, TILE_WIDTH, TILE_HEIGHT);
+    graphics.clear();
+  }
+
+  if (!scene.textures.exists(TextureKeys.logPile)) {
+    drawLogPile(graphics);
+    graphics.generateTexture(TextureKeys.logPile, TILE_WIDTH, PILE_HEIGHT);
+    graphics.clear();
+  }
+
+  if (!scene.textures.exists(TextureKeys.stonePile)) {
+    drawStonePile(graphics);
+    graphics.generateTexture(TextureKeys.stonePile, TILE_WIDTH, PILE_HEIGHT);
+    graphics.clear();
+  }
+
+  if (!scene.textures.exists(TextureKeys.storageYard)) {
+    drawStorageYard(graphics);
+    graphics.generateTexture(TextureKeys.storageYard, STORAGE_WIDTH, STORAGE_HEIGHT);
     graphics.clear();
   }
 
@@ -320,4 +347,98 @@ function strokeCross(graphics: Phaser.GameObjects.Graphics, cx: number, cy: numb
   graphics.moveTo(cx + 11, cy - 11);
   graphics.lineTo(cx - 11, cy + 11);
   graphics.strokePath();
+}
+
+/** A stack of cut logs, seen end-on. */
+function drawLogPile(graphics: Phaser.GameObjects.Graphics): void {
+  const cx = TILE_WIDTH / 2;
+  const base = PILE_HEIGHT;
+
+  graphics.fillStyle(0x000000, 0.22);
+  graphics.fillEllipse(cx, base - 3, 34, 12);
+
+  const bark = 0x4a3b2a;
+  const cut = 0x8a7150;
+  const rows = [
+    { y: base - 9, xs: [-12, -4, 4, 12] },
+    { y: base - 17, xs: [-8, 0, 8] },
+    { y: base - 25, xs: [-4, 4] },
+  ];
+  for (const row of rows) {
+    for (const x of row.xs) {
+      graphics.fillStyle(bark, 1);
+      graphics.fillEllipse(cx + x, row.y, 9, 8);
+      graphics.fillStyle(cut, 1);
+      graphics.fillEllipse(cx + x, row.y, 5, 4.5);
+    }
+  }
+}
+
+/** A heap of quarried stone. */
+function drawStonePile(graphics: Phaser.GameObjects.Graphics): void {
+  const cx = TILE_WIDTH / 2;
+  const base = PILE_HEIGHT;
+
+  graphics.fillStyle(0x000000, 0.22);
+  graphics.fillEllipse(cx, base - 3, 32, 12);
+
+  const blocks = [
+    { x: -11, y: base - 8, w: 13, h: 10, c: 0x5a5750 },
+    { x: 2, y: base - 8, w: 14, h: 11, c: 0x646159 },
+    { x: -5, y: base - 17, w: 13, h: 10, c: 0x6d6a61 },
+    { x: 5, y: base - 20, w: 10, h: 8, c: 0x5f5c55 },
+  ];
+  for (const b of blocks) {
+    graphics.fillStyle(b.c, 1);
+    graphics.fillRect(cx + b.x, b.y - b.h, b.w, b.h);
+    // Key light from the upper left.
+    graphics.fillStyle(0xffffff, 0.07);
+    graphics.fillRect(cx + b.x, b.y - b.h, 4, b.h);
+  }
+}
+
+/**
+ * The founding storage yard: a low fenced platform stacked with goods.
+ *
+ * Open rather than enclosed, so it reads as a stockpile rather than a building
+ * — construction proper arrives in Phase 6.
+ */
+function drawStorageYard(graphics: Phaser.GameObjects.Graphics): void {
+  const cx = STORAGE_WIDTH / 2;
+  const baseY = STORAGE_HEIGHT - 8;
+  const halfW = 88;
+  const halfH = 44;
+
+  // The isometric footprint: a 3x3 diamond of trodden earth.
+  graphics.fillStyle(0x4a3f30, 1);
+  graphics.beginPath();
+  graphics.moveTo(cx, baseY - halfH);
+  graphics.lineTo(cx + halfW, baseY);
+  graphics.lineTo(cx, baseY + halfH);
+  graphics.lineTo(cx - halfW, baseY);
+  graphics.closePath();
+  graphics.fillPath();
+  graphics.lineStyle(2, 0x3a3126, 0.8);
+  graphics.strokePath();
+
+  // Corner posts.
+  graphics.fillStyle(0x4f4132, 1);
+  for (const [px, py] of [
+    [cx, baseY - halfH],
+    [cx + halfW, baseY],
+    [cx, baseY + halfH],
+    [cx - halfW, baseY],
+  ] as const) {
+    graphics.fillRect(px - 2.5, py - 16, 5, 16);
+  }
+
+  // A few crates and sacks, so the yard reads as holding something.
+  graphics.fillStyle(0x6b573c, 1);
+  graphics.fillRect(cx - 34, baseY - 26, 22, 18);
+  graphics.fillRect(cx - 8, baseY - 30, 24, 22);
+  graphics.fillStyle(0x7a6748, 1);
+  graphics.fillRect(cx + 18, baseY - 24, 20, 16);
+  graphics.fillStyle(0xffffff, 0.06);
+  graphics.fillRect(cx - 34, baseY - 26, 6, 18);
+  graphics.fillRect(cx - 8, baseY - 30, 6, 22);
 }
