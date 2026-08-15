@@ -681,15 +681,16 @@
  * exists in a dev build — `DebugControls` creates it in code, and bootstrap
  * only constructs it under `import.meta.env.DEV`.
  */
+/* Left-hand side: the diagnostics panel owns the right, and the two sitting on
+   top of each other made both unreadable. */
 .debug-controls {
   position: absolute;
-  right: 10px;
-  bottom: 120px;
+  left: 10px;
+  bottom: 130px;
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
   gap: 4px;
-  max-width: 40vw;
+  max-width: 34vw;
   pointer-events: auto;
 }
 
