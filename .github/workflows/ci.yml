@@ -1,0 +1,80 @@
+# Verifies every push and pull request, and publishes `main` to GitHub Pages.
+#
+# The build runs once, in the `verify` job. Its `dist/` is handed to `deploy`
+# as an artifact, so the deployed bundle is byte-for-byte the one that passed
+# the checks — not a second, separately built copy.
+
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  # Allows re-running a deploy from the Actions tab without a new commit.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push makes an in-flight run obsolete. Deployments are exempt: cancelling
+# one halfway can leave Pages serving a partial upload.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck, lint, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Matches the local toolchain; Vite 8 needs ^20.19 || >=22.12.
+          node-version: '22'
+          cache: npm
+
+      # `npm ci` installs exactly the lockfile, unlike `npm install`.
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload the built site
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    # Only publishes what already passed every check, and only from main.
+    needs: verify
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

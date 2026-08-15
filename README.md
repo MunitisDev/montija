@@ -1,6 +1,11 @@
 # Montija
 
+[![CI](https://github.com/MunitisDev/montija/actions/workflows/ci.yml/badge.svg)](https://github.com/MunitisDev/montija/actions/workflows/ci.yml)
+
 A mobile-first 2D medieval survival settlement builder that runs in the browser.
+
+**▶ Play the current build: https://munitisdev.github.io/montija/** — works on desktop, tablet and
+phone, no install required. Deployed automatically from `main` on every green build.
 
 Build a small settlement in an unforgiving wilderness, and help its people survive the winter.
 Inspired by deep settlement simulation games, but entirely original — no assets, code, text, UI or
