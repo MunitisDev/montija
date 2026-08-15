@@ -636,20 +636,86 @@
   }
 }
 
-/* Portrait is playable but not the target; nudge the player to rotate. */
+/*
+ * Portrait.
+ *
+ * The opposite problem from landscape: height is plentiful and width is scarce,
+ * so the answer is the opposite too. Rows stack instead of competing for one
+ * line — squeezed onto a single row on a 411px-wide phone, the save and speed
+ * controls took the whole width and pushed the build menu off the screen
+ * entirely, which left the player unable to build anything at all.
+ *
+ * This used to print "rotate your device" over the middle of the world. That is
+ * not support, it is an apology: the player had already chosen how to hold their
+ * phone.
+ */
 @media (orientation: portrait) {
-  .hud-bar--top::after {
-    content: 'Rotate your device for the best view';
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    padding: 10px 16px;
-    font-size: 0.85rem;
-    color: var(--colour-ink-dim);
-    background: var(--colour-panel);
-    border: 1px solid var(--colour-panel-edge);
-    border-radius: 6px;
+  /*
+   * Two rows: the build menu on its own, then saving and speed sharing the
+   * next. Done by wrapping rather than by a column, so no wrapper element is
+   * needed in the markup — the layout is a portrait concern and should live
+   * entirely in the portrait stylesheet.
+   */
+  .hud-bar--bottom {
+    flex-wrap: wrap;
+    align-items: stretch;
+    row-gap: 6px;
+  }
+
+  .bottom-left {
+    flex: 1 0 100%;
+  }
+
+  /* Narrow enough that saving and speed share one line on a 360px phone.
+     Two rows for six small buttons is a row of world thrown away. */
+  .session-controls,
+  .speed-controls {
+    flex: 1 1 auto;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .session-button,
+  .speed-button {
+    min-width: var(--touch-target);
+    padding: 0 6px;
+  }
+
+  .session-status {
+    display: none;
+  }
+
+  /* The build menu stays — switching building mid-aim is useful — but saving
+     is not something anyone does while positioning a house. */
+  #hud.is-placing .session-controls {
+    display: none;
+  }
+
+  /* The top strip has room to breathe over two lines rather than scrolling. */
+  .hud-bar--top {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  .resource-strip {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    row-gap: 2px;
+  }
+
+  .build-bar,
+  .placement-bar {
+    width: 100%;
+  }
+
+  /* In portrait there is room for both, so neither has to give way. */
+  #hud.is-placing .build-bar,
+  #hud.is-placing .session-controls {
+    display: flex;
+  }
+
+  .tile-panel {
+    flex-wrap: wrap;
   }
 }
 
