@@ -72,6 +72,54 @@
 
 /* --- Bottom bar ---------------------------------------------------------- */
 
+/*
+ * Bottom-left stack: the contextual panel sits above the build bar, so both
+ * stay within thumb reach without competing for the same space.
+ */
+.bottom-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--hud-gap);
+}
+
+.tile-panel {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 12px;
+  background: var(--colour-panel);
+  border: 1px solid var(--colour-panel-edge);
+  border-radius: 6px;
+  backdrop-filter: blur(6px);
+}
+
+.tile-panel[hidden] {
+  display: none;
+}
+
+.tile-panel__terrain {
+  font-size: 0.9rem;
+  color: var(--colour-ink);
+}
+
+.tile-panel__cell {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--colour-ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.tile-panel__flags {
+  font-size: 0.72rem;
+  font-style: italic;
+  color: #a8836a;
+}
+
+.tile-panel__flags:empty {
+  display: none;
+}
+
 .build-bar {
   display: flex;
   align-items: center;

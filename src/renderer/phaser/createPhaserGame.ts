@@ -7,7 +7,6 @@
  */
 
 import Phaser from 'phaser';
-import { PALETTE } from '@/app/config';
 import type { GameContext } from '@/game/Game';
 import { WORLD_SCENE_KEY, WorldScene } from '@/renderer/phaser/scenes/WorldScene';
 
@@ -20,7 +19,7 @@ export function createPhaserGame(options: PhaserGameOptions): Phaser.Game {
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent: options.parent,
-    backgroundColor: PALETTE.voidBackground,
+    backgroundColor: '#12140f',
     scale: {
       // The canvas tracks its parent element; CSS decides the layout, and the
       // renderer follows. This is what makes every aspect ratio work.

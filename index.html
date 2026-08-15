@@ -60,9 +60,18 @@
         </div>
 
         <div class="hud-bar hud-bar--bottom">
-          <!-- Build menu placeholder: populated from data in Phase 6. -->
-          <div class="build-bar" aria-label="Build menu">
-            <span class="build-bar__hint">Build menu arrives in Phase 6</span>
+          <div class="bottom-left">
+            <!-- Contextual panel: shows whatever the player last tapped. -->
+            <div class="tile-panel" data-hud="selection" hidden>
+              <span class="tile-panel__terrain" data-hud="selection-terrain"></span>
+              <span class="tile-panel__cell" data-hud="selection-cell"></span>
+              <span class="tile-panel__flags" data-hud="selection-flags"></span>
+            </div>
+
+            <!-- Build menu placeholder: populated from data in Phase 6. -->
+            <div class="build-bar" aria-label="Build menu">
+              <span class="build-bar__hint">Build menu arrives in Phase 6</span>
+            </div>
           </div>
 
           <div class="speed-controls" role="group" aria-label="Simulation speed">

@@ -31,7 +31,16 @@ export function start(): void {
   const hudRoot = requireElement<HTMLDivElement>('#hud');
 
   const game = new Game();
-  createPhaserGame({ parent: canvasHost, context: game });
+  const phaserGame = createPhaserGame({ parent: canvasHost, context: game });
+
+  if (import.meta.env.DEV) {
+    // Handles for profiling and debugging from the browser console. Dropped
+    // from production builds along with the rest of the DEV-only branches.
+    Object.assign(window as unknown as Record<string, unknown>, {
+      __game: phaserGame,
+      __context: game,
+    });
+  }
 
   const hud = new Hud(hudRoot, game);
 

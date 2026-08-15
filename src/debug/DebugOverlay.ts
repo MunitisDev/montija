@@ -38,6 +38,10 @@ export class DebugOverlay {
       return;
     }
 
+    const snapshot = this.context.snapshot();
+    const world = this.context.simulation.world;
+    const selection = this.context.selection;
+
     const lines = [
       `fps          ${this.smoothedFps.toFixed(0)}`,
       `tick         ${stats.tick}`,
@@ -47,7 +51,11 @@ export class DebugOverlay {
       `dropped      ${stats.droppedTicks}`,
       `zoom         ${stats.zoom.toFixed(2)}`,
       `camera       ${stats.cameraX.toFixed(0)}, ${stats.cameraY.toFixed(0)}`,
-      `villagers    ${this.context.snapshot().villagerCount}`,
+      `map          ${world.width} x ${world.height}`,
+      `tiles        ${world.width * world.height}`,
+      `trees        ${snapshot.treeCount}`,
+      `villagers    ${snapshot.villagerCount}`,
+      `selected     ${selection ? `${selection.cell.gx},${selection.cell.gy} ${selection.terrain}` : '-'}`,
       `seed         ${this.context.simulation.worldSeed}`,
     ];
 

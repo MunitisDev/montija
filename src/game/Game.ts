@@ -12,17 +12,21 @@
 
 import {
   CAMERA_FEEL,
-  CAMERA_LIMITS,
   DEFAULT_WORLD_SEED,
   INITIAL_ZOOM,
   MAX_TICKS_PER_ADVANCE,
   TICKS_PER_SECOND,
+  WORLD_HEIGHT,
+  WORLD_WIDTH,
+  ZOOM_LIMITS,
 } from '@/app/config';
 import { CameraController } from '@/renderer/camera/CameraController';
 import { Simulation, type SimulationSnapshot } from '@/simulation/Simulation';
 import { SimulationClock, type SimulationSpeed } from '@/simulation/SimulationClock';
 import type { InputIntentSink } from '@/input/types';
-import type { ScreenPoint } from '@/shared/types/geometry';
+import { gridToScene, isInsideGrid, sceneToGrid } from '@/shared/math/isometric';
+import type { GridPoint, ScreenPoint } from '@/shared/types/geometry';
+import type { TerrainType } from '@/data/terrain';
 
 /** Per-frame statistics surfaced to the HUD and debug overlay. */
 export interface FrameStats {
@@ -38,6 +42,14 @@ export interface FrameStats {
   readonly simulationMs: number;
 }
 
+/** What the player last tapped, resolved to the grid. */
+export interface Selection {
+  readonly cell: GridPoint;
+  readonly terrain: TerrainType;
+  readonly walkable: boolean;
+  readonly buildable: boolean;
+}
+
 /** What the presentation layer is allowed to see. */
 export interface GameContext {
   readonly simulation: Simulation;
@@ -47,8 +59,10 @@ export interface GameContext {
   advance(deltaMilliseconds: number): void;
   stats(): FrameStats;
   snapshot(): SimulationSnapshot;
-  /** Returns the last tap/click position, clearing it. `null` when there is none. */
-  consumeSelection(): ScreenPoint | null;
+  /** The current selection, or `null` when nothing is selected. */
+  readonly selection: Selection | null;
+  /** Increments whenever the selection changes, so renderers can skip work. */
+  readonly selectionVersion: number;
 }
 
 export interface GameOptions {
@@ -63,26 +77,49 @@ export class Game implements GameContext, InputIntentSink {
   private lastFrameFps = 0;
   private ticksLastFrame = 0;
   private simulationMs = 0;
-  /** Screen position of the last tap/click, consumed by Phase 3 selection. */
-  private pendingSelection: ScreenPoint | null = null;
+  private currentSelection: Selection | null = null;
+  private selectionChanges = 0;
 
   constructor(options: GameOptions = {}) {
     const seed = options.seed ?? DEFAULT_WORLD_SEED;
 
-    this.simulation = new Simulation({ seed });
+    this.simulation = new Simulation({
+      seed,
+      worldWidth: WORLD_WIDTH,
+      worldHeight: WORLD_HEIGHT,
+    });
     this.clock = new SimulationClock({
       ticksPerSecond: TICKS_PER_SECOND,
       maxTicksPerAdvance: MAX_TICKS_PER_ADVANCE,
     });
+
+    // Camera bounds come from the world's projected extent, so the map edge is
+    // the camera limit — no hand-tuned numbers to drift out of sync.
     this.camera = new CameraController({
-      limits: CAMERA_LIMITS,
+      limits: {
+        minZoom: ZOOM_LIMITS.min,
+        maxZoom: ZOOM_LIMITS.max,
+        bounds: this.simulation.world.sceneBounds,
+      },
       feel: CAMERA_FEEL,
       initialZoom: INITIAL_ZOOM,
+      initialCentre: gridToScene({
+        gx: Math.floor(WORLD_WIDTH / 2),
+        gy: Math.floor(WORLD_HEIGHT / 2),
+      }),
     });
   }
 
   public get input(): InputIntentSink {
     return this;
+  }
+
+  public get selection(): Selection | null {
+    return this.currentSelection;
+  }
+
+  public get selectionVersion(): number {
+    return this.selectionChanges;
   }
 
   /**
@@ -124,15 +161,19 @@ export class Game implements GameContext, InputIntentSink {
   }
 
   /**
-   * Returns and clears the last tap position.
+   * Resolves a viewport position to a grid cell.
    *
-   * Phase 3 turns this into an actual selection once there is something in the
-   * world worth selecting.
+   * The full chain, each step owned by exactly one subsystem:
+   * viewport → (camera) → scene → (isometric) → world → grid.
+   *
+   * @returns the cell, or `null` when the point falls outside the map
    */
-  public consumeSelection(): ScreenPoint | null {
-    const selection = this.pendingSelection;
-    this.pendingSelection = null;
-    return selection;
+  public screenToGrid(point: ScreenPoint): GridPoint | null {
+    const cell = sceneToGrid(this.camera.viewportToScene(point));
+    if (!isInsideGrid(cell, this.simulation.world.width, this.simulation.world.height)) {
+      return null;
+    }
+    return cell;
   }
 
   // --- InputIntentSink -----------------------------------------------------
@@ -154,6 +195,18 @@ export class Game implements GameContext, InputIntentSink {
   }
 
   public onSelect(point: ScreenPoint): void {
-    this.pendingSelection = point;
+    const cell = this.screenToGrid(point);
+    const world = this.simulation.world;
+
+    // Tapping off-map clears the selection rather than leaving a stale one.
+    this.currentSelection = cell
+      ? {
+          cell,
+          terrain: world.terrainAt(cell),
+          walkable: world.isWalkable(cell),
+          buildable: world.isBuildable(cell),
+        }
+      : null;
+    this.selectionChanges += 1;
   }
 }

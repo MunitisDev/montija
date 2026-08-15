@@ -5,24 +5,23 @@
  * insets, scale text properly on tablets and stay accessible, while the world
  * itself stays entirely inside the WebGL canvas.
  *
- * Status: the speed controls are fully wired. The resource and season readouts
- * are placeholders showing `--` until Phases 5-8 give them real values — they
- * are laid out now so the layout work is done, not to imply working economy.
+ * Status: speed controls and the tile panel are fully wired. The resource and
+ * season readouts are placeholders showing `--` until Phases 5-8 give them real
+ * values — they are laid out now so the layout work is done, not to imply a
+ * working economy.
  */
 
+import { TERRAIN, type TerrainType } from '@/data/terrain';
 import type { GameContext } from '@/game/Game';
 import { SIMULATION_SPEEDS, type SimulationSpeed } from '@/simulation/SimulationClock';
 
 /** Elements the HUD binds to, looked up once. */
 interface HudElements {
-  readonly root: HTMLElement;
   readonly population: HTMLElement;
-  readonly food: HTMLElement;
-  readonly logs: HTMLElement;
-  readonly firewood: HTMLElement;
-  readonly stone: HTMLElement;
-  readonly season: HTMLElement;
-  readonly temperature: HTMLElement;
+  readonly selection: HTMLElement;
+  readonly selectionTerrain: HTMLElement;
+  readonly selectionCell: HTMLElement;
+  readonly selectionFlags: HTMLElement;
   readonly speedButtons: readonly HTMLButtonElement[];
 }
 
@@ -31,6 +30,7 @@ export class Hud {
   private readonly elements: HudElements;
   private lastRenderedSpeed: SimulationSpeed | null = null;
   private lastRenderedPopulation = -1;
+  private lastRenderedSelection = -1;
 
   constructor(root: HTMLElement, context: GameContext) {
     this.context = context;
@@ -58,6 +58,32 @@ export class Hud {
       this.renderSpeed(speed);
       this.lastRenderedSpeed = speed;
     }
+
+    if (this.context.selectionVersion !== this.lastRenderedSelection) {
+      this.renderSelection();
+      this.lastRenderedSelection = this.context.selectionVersion;
+    }
+  }
+
+  private renderSelection(): void {
+    const selection = this.context.selection;
+    if (!selection) {
+      this.elements.selection.hidden = true;
+      return;
+    }
+
+    this.elements.selection.hidden = false;
+    this.elements.selectionTerrain.textContent = terrainName(selection.terrain);
+    this.elements.selectionCell.textContent = `${selection.cell.gx}, ${selection.cell.gy}`;
+
+    const flags: string[] = [];
+    if (!selection.walkable) {
+      flags.push('impassable');
+    }
+    if (!selection.buildable) {
+      flags.push('cannot build');
+    }
+    this.elements.selectionFlags.textContent = flags.join(' · ');
   }
 
   private renderSpeed(speed: SimulationSpeed): void {
@@ -82,16 +108,17 @@ export class Hud {
   }
 }
 
+function terrainName(type: TerrainType): string {
+  return TERRAIN[type].name;
+}
+
 function collectElements(root: HTMLElement): HudElements {
   return {
-    root,
     population: requireElement(root, '[data-hud="population"]'),
-    food: requireElement(root, '[data-hud="food"]'),
-    logs: requireElement(root, '[data-hud="logs"]'),
-    firewood: requireElement(root, '[data-hud="firewood"]'),
-    stone: requireElement(root, '[data-hud="stone"]'),
-    season: requireElement(root, '[data-hud="season"]'),
-    temperature: requireElement(root, '[data-hud="temperature"]'),
+    selection: requireElement(root, '[data-hud="selection"]'),
+    selectionTerrain: requireElement(root, '[data-hud="selection-terrain"]'),
+    selectionCell: requireElement(root, '[data-hud="selection-cell"]'),
+    selectionFlags: requireElement(root, '[data-hud="selection-flags"]'),
     speedButtons: Array.from(root.querySelectorAll<HTMLButtonElement>('[data-speed]')),
   };
 }
