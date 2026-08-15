@@ -35,12 +35,26 @@ export class NavigationGrid {
 
   /** Recomputes every cell from the terrain. */
   public rebuild(terrain: TerrainGrid): void {
-    terrain.forEach((gx, gy, type) => {
-      const definition = terrainDefinition(type);
-      this.costs[gy * this.width + gx] = definition.walkable
-        ? Math.max(1, Math.round(definition.movementCost * COST_SCALE))
-        : BLOCKED;
+    terrain.forEach((gx, gy) => {
+      this.refreshCell(terrain, gx, gy);
     });
+  }
+
+  /**
+   * Recomputes a single cell.
+   *
+   * Called when terrain changes underfoot — felling a tree turns forest into
+   * grass. A stale cost here would send villagers the long way round for the
+   * rest of the game, so the two must never drift apart.
+   */
+  public refreshCell(terrain: TerrainGrid, gx: number, gy: number): void {
+    if (!this.contains(gx, gy)) {
+      return;
+    }
+    const definition = terrainDefinition(terrain.get(gx, gy));
+    this.costs[gy * this.width + gx] = definition.walkable
+      ? Math.max(1, Math.round(definition.movementCost * COST_SCALE))
+      : BLOCKED;
   }
 
   public contains(gx: number, gy: number): boolean {

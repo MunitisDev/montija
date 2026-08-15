@@ -4,17 +4,17 @@
  * The authoritative one. A sprite elsewhere is a picture of this object, never
  * a second copy of it.
  *
- * Status: Phase 3. Identity, position and movement are live. `hunger`, `warmth`
- * and `health` exist because the brief's initial model calls for them, but
- * **nothing changes them until Phase 8** — they are inert fields, not a working
- * needs system. `homeId`, `profession` and `currentJobId` arrive with Phases 6,
- * 7 and 4 respectively.
+ * Status: Phase 4. Identity, position, movement and job assignment are live.
+ * `hunger`, `warmth` and `health` exist because the brief's initial model calls
+ * for them, but **nothing changes them until Phase 8** — they are inert fields,
+ * not a working needs system. `homeId` and `profession` arrive with Phases 6
+ * and 7.
  */
 
 import type { GridPoint, WorldPoint } from '@/shared/types/geometry';
 
 /** What a villager is doing, as far as the renderer needs to know. */
-export type VillagerActivity = 'idle' | 'walking';
+export type VillagerActivity = 'idle' | 'walking' | 'working';
 
 export interface VillagerNeeds {
   /** 0 = starving, 100 = full. Inert until Phase 8. */
@@ -52,6 +52,8 @@ export class Villager {
   public awaitingPath = false;
   /** Where the villager is trying to get to, if anywhere. */
   public destination: GridPoint | null = null;
+  /** The job this villager has claimed, or `null` when unemployed. */
+  public currentJobId: number | null = null;
 
   constructor(options: { id: number; name: string; age: number; position: WorldPoint }) {
     this.id = options.id;

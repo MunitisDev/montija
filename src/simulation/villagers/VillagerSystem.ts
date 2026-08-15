@@ -1,10 +1,15 @@
 /**
- * Spawns villagers and moves them.
+ * Spawns villagers, gives them work, and moves them.
  *
- * Status: Phase 3. Villagers with nothing to do wander — pick a reachable cell
- * nearby, walk there, pause, repeat. That is a placeholder for the job system
- * in Phase 4, which will hand them real work instead. It exists so navigation
- * can be seen and tested independently of jobs.
+ * Status: Phase 4. The loop the brief describes is now real:
+ *
+ * ```text
+ * idle ─▶ ask the job board ─▶ reserve ─▶ travel ─▶ perform ─▶ complete ─▶ idle
+ *   └────────────── no work available: wander instead ──────────────────┘
+ * ```
+ *
+ * Wandering is the fallback, not the purpose. It exists so a settlement with
+ * nothing designated still looks alive.
  *
  * Two rules the brief is explicit about, both honoured here:
  *
@@ -13,9 +18,9 @@
  * - **AI does not run every frame either.** Everything below happens on fixed
  *   simulation ticks, never in the render loop.
  *
- * Path requests are also budgeted per tick. With ten villagers that never
- * matters; at the two hundred the project is architected towards, letting every
- * idle villager search on the same tick would be a visible stall.
+ * Path requests are budgeted per tick. With ten villagers that never matters;
+ * at the two hundred the project is architected towards, letting every idle
+ * villager search on the same tick would be a visible stall.
  */
 
 import {
@@ -27,8 +32,10 @@ import {
 import { gridToWorld } from '@/shared/math/isometric';
 import type { RandomSource } from '@/shared/math/random';
 import type { GridPoint } from '@/shared/types/geometry';
+import type { Job } from '@/simulation/jobs/Job';
+import type { JobManager } from '@/simulation/jobs/JobManager';
 import { findPath } from '@/simulation/pathfinding/AStar';
-import type { NavigationGrid } from '@/simulation/world/NavigationGrid';
+import type { World } from '@/simulation/world/World';
 import { Villager } from './Villager';
 
 /** Maximum A* searches started per tick, across all villagers. */
@@ -37,31 +44,47 @@ const PATH_REQUESTS_PER_TICK = 4;
 /** How far an idle villager will pick a new spot to wander to, in cells. */
 const WANDER_RADIUS = 12;
 
-/** Ticks a villager rests on arrival before wandering again. */
+/** Ticks a villager rests on arrival before looking for work again. */
 const IDLE_TICKS_MIN = 10;
 const IDLE_TICKS_MAX = 60;
 
 /** Give up choosing a wander target after this many failed guesses. */
 const WANDER_ATTEMPTS = 8;
 
+/** Neighbours checked when looking for somewhere to stand next to a job. */
+const ADJACENT: readonly (readonly [number, number])[] = [
+  [0, -1],
+  [1, 0],
+  [0, 1],
+  [-1, 0],
+  [1, -1],
+  [1, 1],
+  [-1, 1],
+  [-1, -1],
+];
+
 export interface VillagerSystemStats {
   readonly pathRequests: number;
   readonly pathFailures: number;
   readonly walking: number;
+  readonly working: number;
   readonly idle: number;
+  readonly employed: number;
 }
 
 export class VillagerSystem {
   private readonly villagers: Villager[] = [];
-  private readonly navigation: NavigationGrid;
+  private readonly world: World;
+  private readonly jobs: JobManager;
   private readonly random: RandomSource;
   private nextId = 1;
 
   private totalPathRequests = 0;
   private totalPathFailures = 0;
 
-  constructor(navigation: NavigationGrid, random: RandomSource) {
-    this.navigation = navigation;
+  constructor(world: World, jobs: JobManager, random: RandomSource) {
+    this.world = world;
+    this.jobs = jobs;
     this.random = random;
   }
 
@@ -75,16 +98,25 @@ export class VillagerSystem {
 
   public stats(): VillagerSystemStats {
     let walking = 0;
+    let working = 0;
+    let employed = 0;
     for (const villager of this.villagers) {
       if (villager.activity === 'walking') {
         walking += 1;
+      } else if (villager.activity === 'working') {
+        working += 1;
+      }
+      if (villager.currentJobId !== null) {
+        employed += 1;
       }
     }
     return {
       pathRequests: this.totalPathRequests,
       pathFailures: this.totalPathFailures,
       walking,
-      idle: this.villagers.length - walking,
+      working,
+      idle: this.villagers.length - walking - working,
+      employed,
     };
   }
 
@@ -131,22 +163,38 @@ export class VillagerSystem {
         continue;
       }
 
-      villager.activity = 'idle';
+      if (villager.currentJobId !== null) {
+        this.workOnJob(villager);
+        continue;
+      }
 
       if (villager.idleTicks > 0) {
+        villager.activity = 'idle';
         villager.idleTicks -= 1;
         continue;
       }
 
-      if (pathBudget > 0) {
-        pathBudget -= 1;
+      villager.activity = 'idle';
+      if (pathBudget <= 0) {
+        continue;
+      }
+      pathBudget -= 1;
+
+      // Real work first; wandering is only what they do when there is none.
+      if (!this.tryTakeJob(villager)) {
         this.chooseWanderTarget(villager);
       }
     }
   }
 
-  /** Nearest villager to a cell, within `radius`. Used for tap selection. */
-  public findNear(cell: GridPoint, radius = 1.5): Villager | null {
+  /**
+   * Nearest villager to a cell, within `radius`.
+   *
+   * The default is deliberately tight — just over half a cell — so only someone
+   * genuinely standing on the tapped tile is picked. A generous radius made
+   * villagers hijack taps aimed at the tree beside them.
+   */
+  public findNear(cell: GridPoint, radius = 0.75): Villager | null {
     let best: Villager | null = null;
     let bestDistance = radius;
 
@@ -166,6 +214,120 @@ export class VillagerSystem {
   public findById(id: number): Villager | null {
     return this.villagers.find((villager) => villager.id === id) ?? null;
   }
+
+  // --- jobs ----------------------------------------------------------------
+
+  /**
+   * Claims a job and routes to it.
+   *
+   * @returns `true` when the villager now has work
+   */
+  private tryTakeJob(villager: Villager): boolean {
+    const job = this.jobs.claimBest(villager.id, villager.cell);
+    if (!job) {
+      return false;
+    }
+
+    const standing = this.findWorkingPosition(villager, job);
+    if (!standing) {
+      // Unreachable — hand it back rather than holding a job nobody can do.
+      this.jobs.release(job.id);
+      this.totalPathFailures += 1;
+      return false;
+    }
+
+    villager.currentJobId = job.id;
+
+    if (standing.path.length === 0) {
+      // Already in position; start working this tick.
+      villager.activity = 'working';
+      this.jobs.beginWork(job.id);
+      return true;
+    }
+
+    villager.path = standing.path;
+    villager.destination = standing.cell;
+    villager.activity = 'walking';
+    return true;
+  }
+
+  /** Performs one tick of work on the villager's current job. */
+  private workOnJob(villager: Villager): void {
+    const job = villager.currentJobId === null ? null : this.jobs.get(villager.currentJobId);
+
+    if (!job || job.assignedVillager !== villager.id) {
+      // Cancelled or reassigned underneath us — go back to looking for work.
+      villager.currentJobId = null;
+      villager.activity = 'idle';
+      return;
+    }
+
+    this.jobs.beginWork(job.id);
+    villager.activity = 'working';
+    job.workRemaining -= 1;
+
+    if (job.workRemaining > 0) {
+      return;
+    }
+
+    this.finishJob(job);
+    this.jobs.complete(job.id);
+    villager.currentJobId = null;
+    villager.activity = 'idle';
+    villager.idleTicks = this.random.int(2, 8);
+  }
+
+  /** Applies a completed job's effect on the world. */
+  private finishJob(job: Job): void {
+    switch (job.type) {
+      case 'chop-tree':
+        if (job.targetEntityId !== null) {
+          this.world.fellTree(job.targetEntityId);
+        }
+        break;
+      case 'move-to':
+        // Arriving is the whole job.
+        break;
+    }
+  }
+
+  /**
+   * Finds where to stand to do a job, and how to get there.
+   *
+   * A tree occupies its cell, so the villager works from an adjacent one.
+   * Candidates are tried in a fixed order, which keeps assignment reproducible.
+   */
+  private findWorkingPosition(
+    villager: Villager,
+    job: Job,
+  ): { cell: GridPoint; path: GridPoint[] } | null {
+    const from = villager.cell;
+
+    // Standing on the target itself is fine when it is walkable — a move-to job.
+    const candidates: GridPoint[] = this.world.isWalkable(job.target) ? [job.target] : [];
+    for (const [dx, dy] of ADJACENT) {
+      const cell = { gx: job.target.gx + dx, gy: job.target.gy + dy };
+      if (this.world.isWalkable(cell)) {
+        candidates.push(cell);
+      }
+    }
+
+    for (const cell of candidates) {
+      if (cell.gx === from.gx && cell.gy === from.gy) {
+        return { cell, path: [] };
+      }
+
+      this.totalPathRequests += 1;
+      const result = findPath(this.world.navigation, from, cell);
+      if (result.path && result.path.length > 0) {
+        return { cell, path: result.path };
+      }
+    }
+
+    return null;
+  }
+
+  // --- movement ------------------------------------------------------------
 
   /**
    * Moves a villager along its path.
@@ -202,11 +364,21 @@ export class VillagerSystem {
       remaining = 0;
     }
 
-    if (villager.path.length === 0) {
-      villager.destination = null;
-      villager.activity = 'idle';
-      villager.idleTicks = this.random.int(IDLE_TICKS_MIN, IDLE_TICKS_MAX);
+    if (villager.path.length > 0) {
+      return;
     }
+
+    villager.destination = null;
+
+    if (villager.currentJobId !== null) {
+      // Arrived at the work site; the next tick starts the work itself.
+      villager.activity = 'working';
+      this.jobs.beginWork(villager.currentJobId);
+      return;
+    }
+
+    villager.activity = 'idle';
+    villager.idleTicks = this.random.int(IDLE_TICKS_MIN, IDLE_TICKS_MAX);
   }
 
   /** Picks a nearby reachable cell and routes to it. */
@@ -219,7 +391,7 @@ export class VillagerSystem {
         gy: from.gy + this.random.int(-WANDER_RADIUS, WANDER_RADIUS + 1),
       };
 
-      if (!this.navigation.isWalkable(target.gx, target.gy)) {
+      if (!this.world.isWalkable(target)) {
         continue;
       }
       if (target.gx === from.gx && target.gy === from.gy) {
@@ -227,7 +399,7 @@ export class VillagerSystem {
       }
 
       this.totalPathRequests += 1;
-      const result = findPath(this.navigation, from, target);
+      const result = findPath(this.world.navigation, from, target);
 
       if (result.path && result.path.length > 0) {
         villager.path = result.path;
@@ -251,14 +423,14 @@ export class VillagerSystem {
         gx: origin.gx + this.random.int(-6, 7),
         gy: origin.gy + this.random.int(-6, 7),
       };
-      if (this.navigation.isWalkable(candidate.gx, candidate.gy)) {
+      if (this.world.isWalkable(candidate)) {
         return candidate;
       }
     }
 
     // Fall back to a deterministic outward search so spawning cannot fail
     // merely because the random attempts were unlucky.
-    return this.navigation.nearestWalkable(origin);
+    return this.world.navigation.nearestWalkable(origin);
   }
 
   private makeName(): string {

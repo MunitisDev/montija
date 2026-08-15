@@ -2,19 +2,26 @@ import { describe, expect, it } from 'vitest';
 import { VILLAGER_WALK_SPEED } from '@/data/villagers';
 import { SeededRandom } from '@/shared/math/random';
 import { Simulation } from '@/simulation/Simulation';
+import { JobManager } from '@/simulation/jobs/JobManager';
 import { Villager } from '@/simulation/villagers/Villager';
 import { VillagerSystem } from '@/simulation/villagers/VillagerSystem';
-import { NavigationGrid } from '@/simulation/world/NavigationGrid';
-import { TerrainGrid } from '@/simulation/world/TerrainGrid';
+import { World } from '@/simulation/world/World';
 
 const TICK_SECONDS = 0.1;
 
-function openGrid(size = 32): NavigationGrid {
-  return new NavigationGrid(new TerrainGrid(size, size, 'grass'));
+/** A world of open grass, so movement tests are not at the mercy of terrain. */
+function openWorld(size = 32): World {
+  const world = new World({ width: size, height: size, seed: 1 });
+  world.terrain.forEach((gx, gy) => world.terrain.set(gx, gy, 'grass'));
+  world.navigation.rebuild(world.terrain);
+  for (const tree of [...world.trees.all]) {
+    world.trees.remove(tree.id);
+  }
+  return world;
 }
 
 function makeSystem(size = 32, seed = 1): VillagerSystem {
-  return new VillagerSystem(openGrid(size), new SeededRandom(seed));
+  return new VillagerSystem(openWorld(size), new JobManager(), new SeededRandom(seed));
 }
 
 describe('Villager', () => {
@@ -57,27 +64,27 @@ describe('VillagerSystem', () => {
     });
 
     it('only places villagers on walkable ground', () => {
-      const terrain = new TerrainGrid(24, 24, 'water');
-      // A single small island of walkable land.
-      for (let gy = 10; gy < 14; gy += 1) {
-        for (let gx = 10; gx < 14; gx += 1) {
-          terrain.set(gx, gy, 'grass');
-        }
-      }
-      const navigation = new NavigationGrid(terrain);
-      const system = new VillagerSystem(navigation, new SeededRandom(3));
+      const world = openWorld(24);
+      // Flood everything but a small island.
+      world.terrain.forEach((gx, gy) => {
+        const island = gx >= 10 && gx < 14 && gy >= 10 && gy < 14;
+        world.terrain.set(gx, gy, island ? 'grass' : 'water');
+      });
+      world.navigation.rebuild(world.terrain);
+      const system = new VillagerSystem(world, new JobManager(), new SeededRandom(3));
 
       system.spawnNear({ gx: 12, gy: 12 }, 10);
 
       for (const villager of system.all) {
-        const cell = villager.cell;
-        expect(navigation.isWalkable(cell.gx, cell.gy)).toBe(true);
+        expect(world.isWalkable(villager.cell)).toBe(true);
       }
     });
 
     it('reports how many it actually placed when there is no room', () => {
-      const navigation = new NavigationGrid(new TerrainGrid(8, 8, 'water'));
-      const system = new VillagerSystem(navigation, new SeededRandom(1));
+      const world = openWorld(8);
+      world.terrain.forEach((gx, gy) => world.terrain.set(gx, gy, 'water'));
+      world.navigation.rebuild(world.terrain);
+      const system = new VillagerSystem(world, new JobManager(), new SeededRandom(1));
 
       expect(system.spawnNear({ gx: 4, gy: 4 }, 10)).toBe(0);
       expect(system.count).toBe(0);
@@ -236,15 +243,14 @@ describe('VillagerSystem', () => {
     });
 
     it('keeps every villager on walkable ground', () => {
-      const navigation = openGrid(32);
-      const system = new VillagerSystem(navigation, new SeededRandom(9));
+      const world = openWorld(32);
+      const system = new VillagerSystem(world, new JobManager(), new SeededRandom(9));
       system.spawnNear({ gx: 16, gy: 16 }, 10);
 
       for (let tick = 0; tick < 400; tick += 1) {
         system.update(TICK_SECONDS);
         for (const villager of system.all) {
-          const cell = villager.cell;
-          expect(navigation.isWalkable(cell.gx, cell.gy)).toBe(true);
+          expect(world.isWalkable(villager.cell)).toBe(true);
         }
       }
     });
