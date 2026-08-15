@@ -32,7 +32,8 @@ import {
 import { gridToWorld } from '@/shared/math/isometric';
 import type { RandomSource } from '@/shared/math/random';
 import type { GridPoint } from '@/shared/types/geometry';
-import { resourceDefinition } from '@/data/resources';
+import { recipe as findRecipe } from '@/data/recipes';
+import { resourceDefinition, type ResourceId } from '@/data/resources';
 import type { Job } from '@/simulation/jobs/Job';
 import type { JobManager } from '@/simulation/jobs/JobManager';
 import type { StorageRegistry } from '@/simulation/logistics/Storage';
@@ -215,6 +216,32 @@ export class VillagerSystem {
     return best;
   }
 
+  /**
+   * Removes a villager from the settlement.
+   *
+   * Any job they were holding goes back on the board rather than being lost
+   * with them, so a death does not silently abandon work.
+   */
+  public remove(id: number): boolean {
+    const index = this.villagers.findIndex((villager) => villager.id === id);
+    if (index < 0) {
+      return false;
+    }
+
+    const [villager] = this.villagers.splice(index, 1);
+    if (villager?.currentJobId !== null && villager?.currentJobId !== undefined) {
+      this.jobs.release(villager.currentJobId);
+    }
+    // Whatever they were carrying falls where they stood.
+    if (villager) {
+      for (const { resource, amount } of villager.inventory.contents) {
+        const dropped = this.world.piles.drop(villager.cell, resource, amount);
+        villager.inventory.remove(resource, dropped);
+      }
+    }
+    return true;
+  }
+
   public findById(id: number): Villager | null {
     return this.villagers.find((villager) => villager.id === id) ?? null;
   }
@@ -294,6 +321,63 @@ export class VillagerSystem {
     return job.stage === 'deliver' ? job.deliverTo : job.target;
   }
 
+  /**
+   * Runs one batch of a building's recipe.
+   *
+   * Inputs are consumed from what was physically carried in, and outputs are
+   * **dropped on the ground** beside the building rather than teleported into
+   * storage. A hauler then carries them in, exactly as with felled logs. That
+   * consistency is the point: production is another source of physical goods,
+   * not a shortcut past the logistics.
+   */
+  private runRecipe(job: Job): void {
+    const building =
+      job.targetEntityId === null ? null : this.world.buildings.getById(job.targetEntityId);
+    if (!building || !building.definition.recipeId) {
+      return;
+    }
+
+    const recipe = findRecipe(building.definition.recipeId);
+    if (!recipe) {
+      return;
+    }
+
+    // Take the inputs. If they are not all there, the batch is abandoned
+    // rather than producing something out of nothing.
+    for (const ingredient of recipe.inputs) {
+      if (building.input.count(ingredient.resource) < ingredient.amount) {
+        return;
+      }
+    }
+    for (const ingredient of recipe.inputs) {
+      building.input.remove(ingredient.resource, ingredient.amount);
+    }
+
+    const yieldScale = this.productionScale(recipe.seasonal);
+    for (const output of recipe.outputs) {
+      const amount = Math.max(0, Math.round(output.amount * yieldScale));
+      if (amount > 0) {
+        this.world.piles.drop(building.accessCell, output.resource, amount);
+      }
+    }
+    this.world.buildings.markChanged();
+  }
+
+  /**
+   * Season multiplier for gathered goods.
+   *
+   * Overridden by the simulation once seasons exist; 1 means "no seasons yet",
+   * which keeps Phase 7 independent of Phase 8.
+   */
+  public productionScaleProvider: (() => number) | null = null;
+
+  private productionScale(seasonal: boolean): number {
+    if (!seasonal || !this.productionScaleProvider) {
+      return 1;
+    }
+    return this.productionScaleProvider();
+  }
+
   /** Ticks of build progress are recorded on the building as well as the job. */
   private recordBuildProgress(job: Job): void {
     if (job.type !== 'build' || job.targetEntityId === null) {
@@ -325,6 +409,9 @@ export class VillagerSystem {
         }
         break;
       }
+      case 'produce':
+        this.runRecipe(job);
+        break;
       case 'haul':
       case 'move-to':
         // Handled by the haul state machine, or arriving is the whole job.
@@ -414,13 +501,7 @@ export class VillagerSystem {
       return false;
     }
 
-    const site = [...this.world.buildings.all].find(
-      (building) =>
-        !building.isComplete &&
-        building.accessCell.gx === job.deliverTo?.gx &&
-        building.accessCell.gy === job.deliverTo?.gy,
-    );
-    const needed = site ? site.stillNeeds(job.haulResource) : 0;
+    const needed = this.amountNeededAt(job.deliverTo, job.haulResource);
     if (needed <= 0) {
       return false;
     }
@@ -436,28 +517,62 @@ export class VillagerSystem {
   /**
    * What accepts a delivery at a cell.
    *
-   * Construction sites are checked first: a site standing next to a yard should
-   * receive the materials that were routed to it.
+   * Buildings are checked before yards, because a workshop or site standing
+   * next to a yard must receive what was routed to it. An unfinished building
+   * takes construction materials; a finished one takes recipe inputs. They are
+   * separate stores so a woodcutter's logs are never mistaken for its walls.
    */
   private deliveryInventory(cell: GridPoint | null) {
     if (!cell) {
       return null;
     }
 
-    for (const building of this.world.buildings.all) {
-      if (
-        !building.isComplete &&
-        building.accessCell.gx === cell.gx &&
-        building.accessCell.gy === cell.gy
-      ) {
-        return building.materials;
-      }
+    const building = this.buildingAtAccess(cell);
+    if (building) {
+      return building.isComplete ? building.input : building.materials;
     }
 
     const storage = this.storages.all.find(
       (candidate) => candidate.cell.gx === cell.gx && candidate.cell.gy === cell.gy,
     );
     return storage?.inventory ?? null;
+  }
+
+  /**
+   * How much of a resource the destination still wants.
+   *
+   * Bounded so a hauler takes only what is needed rather than stripping the
+   * yard and carrying the surplus back again.
+   */
+  private amountNeededAt(cell: GridPoint, resource: ResourceId): number {
+    const building = this.buildingAtAccess(cell);
+    if (!building) {
+      return 0;
+    }
+
+    if (!building.isComplete) {
+      return building.stillNeeds(resource);
+    }
+
+    const recipe = building.definition.recipeId ? findRecipe(building.definition.recipeId) : null;
+    const ingredient = recipe?.inputs.find((input) => input.resource === resource);
+    if (!ingredient) {
+      return 0;
+    }
+    // Keep a few batches' worth on hand so the workshop is not idle between
+    // deliveries, without hoarding the settlement's whole stock.
+    const target = ingredient.amount * 5;
+    return Math.max(0, target - building.input.count(resource));
+  }
+
+  /** The building whose work happens at this cell. */
+  private buildingAtAccess(cell: GridPoint) {
+    for (const building of this.world.buildings.all) {
+      if (building.accessCell.gx === cell.gx && building.accessCell.gy === cell.gy) {
+        return building;
+      }
+    }
+    return null;
   }
 
   /**

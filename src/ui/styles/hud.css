@@ -78,6 +78,11 @@
   color: var(--colour-ink-dim);
 }
 
+/* Below freezing the settlement starts burning firewood. A warning, not decor. */
+.climate__temperature.is-freezing {
+  color: #7fa8c9;
+}
+
 /* --- Bottom bar ---------------------------------------------------------- */
 
 /*

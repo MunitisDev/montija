@@ -6,7 +6,7 @@
  * itself stays entirely inside the WebGL canvas.
  *
  * Status: speed controls, the tile panel and the resource readouts are wired.
- * The season and temperature readouts remain placeholders until Phase 8.
+ * Everything it shows is now live.
  *
  * The resource numbers are a **cached summary** of what the storage yards hold,
  * never the authority. A small `+n` marks units still lying in the field.
@@ -26,6 +26,8 @@ interface HudElements {
   readonly selectionCell: HTMLElement;
   readonly selectionFlags: HTMLElement;
   readonly selectionAction: HTMLButtonElement;
+  readonly season: HTMLElement;
+  readonly temperature: HTMLElement;
   readonly speedButtons: readonly HTMLButtonElement[];
 }
 
@@ -39,6 +41,8 @@ export class Hud {
   private readonly lastRenderedTotals = new Map<ResourceId, number>();
   /** Loose totals last written, tracked apart from stored ones. */
   private readonly lastRenderedLoose = new Map<ResourceId, number>();
+  private lastRenderedSeason = '';
+  private lastRenderedTemperature = Number.NaN;
 
   constructor(root: HTMLElement, context: GameContext) {
     this.context = context;
@@ -83,6 +87,20 @@ export class Hud {
         element.dataset['loose'] = loose > 0 ? `+${loose}` : '';
         this.lastRenderedLoose.set(resource, loose);
       }
+    }
+
+    const seasonLabel = `${capitalise(snapshot.season)} · Y${snapshot.year} d${snapshot.dayOfSeason}`;
+    if (seasonLabel !== this.lastRenderedSeason) {
+      this.elements.season.textContent = seasonLabel;
+      this.lastRenderedSeason = seasonLabel;
+    }
+
+    if (snapshot.temperature !== this.lastRenderedTemperature) {
+      this.elements.temperature.textContent = `${snapshot.temperature.toFixed(0)}°`;
+      // Below freezing the settlement burns firewood, so the colour is a
+      // warning rather than decoration.
+      this.elements.temperature.classList.toggle('is-freezing', snapshot.temperature < 2);
+      this.lastRenderedTemperature = snapshot.temperature;
     }
 
     if (speed !== this.lastRenderedSpeed) {
@@ -195,6 +213,10 @@ export class Hud {
   }
 }
 
+function capitalise(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 function terrainName(type: TerrainType): string {
   return TERRAIN[type].name;
 }
@@ -213,6 +235,8 @@ function collectElements(root: HTMLElement): HudElements {
     selectionCell: requireElement(root, '[data-hud="selection-cell"]'),
     selectionFlags: requireElement(root, '[data-hud="selection-flags"]'),
     selectionAction: requireElement(root, '[data-hud="selection-action"]') as HTMLButtonElement,
+    season: requireElement(root, '[data-hud="season"]'),
+    temperature: requireElement(root, '[data-hud="temperature"]'),
     speedButtons: Array.from(root.querySelectorAll<HTMLButtonElement>('[data-speed]')),
   };
 }

@@ -23,7 +23,7 @@ import type { GridPoint } from '@/shared/types/geometry';
  */
 export type HaulSource = 'pile' | 'storage';
 
-export type JobType = 'move-to' | 'chop-tree' | 'gather-stone' | 'haul' | 'build';
+export type JobType = 'move-to' | 'chop-tree' | 'gather-stone' | 'haul' | 'build' | 'produce';
 
 /**
  * Which leg of a multi-stage job is being done.
@@ -92,6 +92,8 @@ export const JOB_WORK_TICKS: Readonly<Record<JobType, number>> = {
   haul: 0,
   // Overridden per building from its definition when the job is created.
   build: 100,
+  // Overridden per recipe.
+  produce: 40,
 };
 
 export function isFinished(job: Job): boolean {

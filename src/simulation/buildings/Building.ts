@@ -29,8 +29,15 @@ export class Building {
   public readonly materials: Inventory;
   /** Ticks of labour still needed once materials are complete. */
   public buildTicksRemaining: number;
-  /** Villagers assigned to work here. Phase 7. */
+  /** Villagers assigned to work here. */
   public readonly workers: number[] = [];
+  /**
+   * Recipe inputs delivered here.
+   *
+   * A woodcutter cannot split logs it does not have, and those logs have to be
+   * physically carried in — the same rule as construction materials.
+   */
+  public readonly input = new Inventory(40);
 
   constructor(id: number, buildingId: BuildingId, origin: GridPoint) {
     this.id = id;
@@ -91,6 +98,15 @@ export class Building {
       return 1;
     }
     return 1 - this.buildTicksRemaining / total;
+  }
+
+  /** `true` when the building has a recipe and a free worker slot. */
+  public get needsWorker(): boolean {
+    return (
+      this.isComplete &&
+      this.definition.recipeId !== undefined &&
+      this.workers.length < this.definition.workerSlots
+    );
   }
 
   /** Marks the building finished. Materials are consumed by the construction. */

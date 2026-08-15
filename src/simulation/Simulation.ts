@@ -1,9 +1,8 @@
 /**
  * The authoritative game state.
  *
- * Status: Phase 6. Owns the seed, the RNG, the tick counter, the world, the
- * villagers, the job board and the storage yards. Production and seasons join
- * in Phases 7-8.
+ * Status: Phase 8. Owns the seed, the RNG, the tick counter, the world, the
+ * villagers, the job board, the storage yards, the calendar and survival.
  *
  * Rules for everything added here later:
  * - no Phaser, no DOM, no `Math.random()` (all enforced by ESLint);
@@ -14,12 +13,21 @@
 import type { GridPoint } from '@/shared/types/geometry';
 import { SeededRandom, deriveSeed, type RandomSource } from '@/shared/math/random';
 import type { BuildingId } from '@/data/buildings';
+import { recipe as findRecipe } from '@/data/recipes';
 import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
 import type { Building } from './buildings/Building';
 import type { PlacementCheck } from './buildings/BuildingRegistry';
 import { JobPriority } from './jobs/Job';
 import { JobManager } from './jobs/JobManager';
 import { StorageRegistry } from './logistics/Storage';
+import {
+  SEASON_FORAGE_SCALE,
+  isDayBoundary,
+  yearStateAt,
+  type Season,
+  type YearState,
+} from './seasons/SeasonClock';
+import { EMPTY_REPORT, runDay, type DailyReport } from './seasons/SurvivalSystem';
 import { VillagerSystem } from './villagers/VillagerSystem';
 import { World } from './world/World';
 
@@ -40,6 +48,15 @@ export interface SimulationSnapshot {
   readonly buildingCount: number;
   readonly sitesUnderConstruction: number;
   readonly housingCapacity: number;
+  readonly season: Season;
+  readonly year: number;
+  readonly dayOfSeason: number;
+  readonly temperature: number;
+  /** What the settlement ate and burned on the last day that passed. */
+  readonly lastDay: DailyReport;
+  readonly deaths: number;
+  /** Lowest health among the living, so the HUD can warn before people die. */
+  readonly lowestHealth: number;
   /**
    * Stored totals per resource.
    *
@@ -69,6 +86,8 @@ export class Simulation {
   private readonly seed: number;
   private readonly tickRandom: RandomSource;
   private currentTick = 0;
+  private lastDayReport: DailyReport = EMPTY_REPORT;
+  private totalDeaths = 0;
 
   constructor(options: SimulationOptions) {
     this.seed = options.seed >>> 0;
@@ -93,6 +112,9 @@ export class Simulation {
 
     this.foundStorageYard();
     this.villagers.spawnNear(this.world.centreCell, options.startingVillagers);
+
+    // Foraging follows the calendar; winter yields nothing at all.
+    this.villagers.productionScaleProvider = () => SEASON_FORAGE_SCALE[this.year.season];
   }
 
   public get worldSeed(): number {
@@ -106,7 +128,15 @@ export class Simulation {
   /** Advances the world by exactly one fixed tick. */
   public update(tick: number, tickSeconds: number): void {
     this.currentTick = tick;
+
+    // A day's supplies are consumed at the day boundary, before work is done,
+    // so a settlement that ran out overnight feels it immediately.
+    if (isDayBoundary(tick)) {
+      this.runDailyUpkeep();
+    }
+
     this.createConstructionJobs();
+    this.createProductionJobs();
     this.createHaulJobs();
     this.villagers.update(tickSeconds);
     // Phase 7+ : production, seasons.
@@ -161,6 +191,7 @@ export class Simulation {
   public snapshot(): SimulationSnapshot {
     const villagerStats = this.villagers.stats();
     const jobStats = this.jobs.stats();
+    const year = this.year;
     return {
       seed: this.seed,
       tick: this.currentTick,
@@ -177,6 +208,16 @@ export class Simulation {
       buildingCount: this.world.buildings.count,
       sitesUnderConstruction: this.world.buildings.underConstruction().length,
       housingCapacity: this.world.buildings.housingCapacity,
+      season: year.season,
+      year: year.year,
+      dayOfSeason: year.dayOfSeason,
+      temperature: year.temperature,
+      lastDay: this.lastDayReport,
+      deaths: this.totalDeaths,
+      lowestHealth: this.villagers.all.reduce(
+        (lowest, villager) => Math.min(lowest, villager.needs.health),
+        this.villagers.count === 0 ? 0 : 100,
+      ),
       stored: this.totalsFrom((resource) => this.storages.totalOf(resource)),
       loose: this.totalsFrom((resource) => this.world.piles.totalOf(resource)),
     };
@@ -220,6 +261,32 @@ export class Simulation {
   public isStoneDesignated(cell: GridPoint): boolean {
     const cellId = cell.gy * this.world.width + cell.gx;
     return this.jobs.isTargetReserved('gather-stone', cellId);
+  }
+
+  /** The calendar at the current tick. */
+  public get year(): YearState {
+    return yearStateAt(this.currentTick);
+  }
+
+  /** `true` when everyone has died. The settlement has failed. */
+  public get hasFailed(): boolean {
+    return this.villagers.count === 0;
+  }
+
+  /**
+   * Eats, burns firewood, and buries whoever did not make it.
+   *
+   * Deaths remove the villager outright. There is no illness model — the brief
+   * asks for consequences, not a medical simulation.
+   */
+  private runDailyUpkeep(): void {
+    const { report, dead } = runDay(this.villagers.all, this.storages, this.year);
+    this.lastDayReport = report;
+
+    for (const villager of dead) {
+      this.villagers.remove(villager.id);
+      this.totalDeaths += 1;
+    }
   }
 
   /** Whether a building may be placed here. Used by the ghost and the command. */
@@ -297,6 +364,80 @@ export class Simulation {
         targetEntityId: reservationId,
         haulSource: 'storage',
         haulResource: cost.resource,
+      });
+    }
+  }
+
+  /**
+   * Keeps production buildings supplied and working.
+   *
+   * A workshop that needs logs gets them hauled in from storage first; only
+   * then is a production job posted. Nothing is produced from an empty store.
+   */
+  private createProductionJobs(): void {
+    for (const building of this.world.buildings.all) {
+      if (!building.isComplete || !building.definition.recipeId) {
+        continue;
+      }
+
+      const recipe = findRecipe(building.definition.recipeId);
+      if (!recipe) {
+        continue;
+      }
+
+      const missing = recipe.inputs.filter(
+        (input) => building.input.count(input.resource) < input.amount,
+      );
+      if (missing.length > 0) {
+        this.requestInputsFor(
+          building.id,
+          building.accessCell,
+          missing.map((m) => m.resource),
+        );
+        continue;
+      }
+
+      // One batch in flight per building, so a workshop does not queue up more
+      // work than its inputs can support.
+      if (!this.jobs.isTargetReserved('produce', building.id)) {
+        this.jobs.create({
+          type: 'produce',
+          target: building.accessCell,
+          priority: JobPriority.normal,
+          targetEntityId: building.id,
+          workTicks: recipe.workTicks,
+        });
+      }
+    }
+  }
+
+  /** Hauls recipe inputs from storage to a workshop. */
+  private requestInputsFor(
+    buildingId: number,
+    destination: GridPoint,
+    resources: ResourceId[],
+  ): void {
+    for (const resource of resources) {
+      // Offset the reservation id away from construction's, which uses the
+      // same haul type against the same buildings.
+      const reservationId = 500_000 + buildingId * 100 + RESOURCE_IDS.indexOf(resource);
+      if (this.jobs.isTargetReserved('haul', reservationId)) {
+        continue;
+      }
+
+      const source = this.storages.all.find((storage) => storage.inventory.count(resource) > 0);
+      if (!source) {
+        continue;
+      }
+
+      this.jobs.create({
+        type: 'haul',
+        target: source.cell,
+        deliverTo: destination,
+        priority: JobPriority.normal,
+        targetEntityId: reservationId,
+        haulSource: 'storage',
+        haulResource: resource,
       });
     }
   }
