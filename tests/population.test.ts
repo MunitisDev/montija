@@ -9,7 +9,12 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { BIRTH_REQUIREMENTS, LIFESPAN_MAX, WORKING_AGE } from '@/data/population';
+import {
+  BIRTH_REQUIREMENTS,
+  IMMIGRATION_REQUIREMENTS,
+  LIFESPAN_MAX,
+  WORKING_AGE,
+} from '@/data/population';
 import { SeededRandom } from '@/shared/math/random';
 import { Building } from '@/simulation/buildings/Building';
 import { BuildingRegistry } from '@/simulation/buildings/BuildingRegistry';
@@ -245,5 +250,86 @@ describe('births', () => {
     const first = daysUntilBirth(fertile());
     const second = daysUntilBirth(fertile());
     expect(first).toBe(second);
+  });
+});
+
+describe('immigration', () => {
+  /**
+   * A settlement worth walking to: food to spare and beds standing empty.
+   *
+   * Everyone here is past childbearing age, so any growth observed can only be
+   * arrivals — which is the dead end this exists to open up.
+   */
+  function attractive() {
+    return {
+      villagers: [person({ id: 1, age: 55 }), person({ id: 2, age: 58 })],
+      buildings: withHouses(2),
+      foodDaysPerPerson: IMMIGRATION_REQUIREMENTS.foodDaysPerPerson + 6,
+      random: new SeededRandom(3),
+    };
+  }
+
+  function daysUntilArrival(setup: ReturnType<typeof attractive>, limit = 400): number | null {
+    for (let day = 1; day <= limit; day++) {
+      if (runDay(setup).report.arrivals > 0) {
+        return day;
+      }
+    }
+    return null;
+  }
+
+  it('brings newcomers to a settlement with food and empty beds', () => {
+    expect(daysUntilArrival(attractive())).not.toBeNull();
+  });
+
+  it('rescues a settlement too old to have children of its own', () => {
+    // The dead end: without arrivals this village can only decline, however
+    // well the player then plays.
+    const setup = attractive();
+    expect(setup.villagers.every((villager) => villager.age > 42)).toBe(true);
+    expect(daysUntilArrival(setup)).not.toBeNull();
+  });
+
+  it('asks more of a settlement than a birth does', () => {
+    // Enough food for a family already living here, not enough for a stranger
+    // to make the journey on.
+    const setup = { ...attractive(), foodDaysPerPerson: BIRTH_REQUIREMENTS.foodDaysPerPerson };
+    expect(daysUntilArrival(setup)).toBeNull();
+  });
+
+  it('brings nobody to a settlement with nowhere to sleep', () => {
+    const setup = { ...attractive(), buildings: withHouses(0) };
+    expect(daysUntilArrival(setup)).toBeNull();
+  });
+
+  it('brings nobody when the beds are already taken', () => {
+    const setup = attractive();
+    // One house, and four people already in it.
+    setup.buildings = withHouses(1);
+    setup.villagers = Array.from({ length: 4 }, (_, i) => person({ id: i + 1, age: 50 }));
+    expect(daysUntilArrival(setup)).toBeNull();
+  });
+
+  it('never arrives at a settlement with nobody left', () => {
+    // Word cannot spread about a place that no longer exists.
+    const setup = { ...attractive(), villagers: [] };
+    expect(daysUntilArrival(setup)).toBeNull();
+  });
+
+  it('never brings more people than there are beds', () => {
+    const setup = attractive();
+    for (let day = 1; day <= 400; day++) {
+      const report = runDay(setup).report;
+      if (report.arrivals > 0) {
+        const capacity = 2 * 4;
+        expect(report.arrivals).toBeLessThanOrEqual(capacity);
+        return;
+      }
+    }
+    throw new Error('no arrival to check');
+  });
+
+  it('is reproducible from the seed', () => {
+    expect(daysUntilArrival(attractive())).toBe(daysUntilArrival(attractive()));
   });
 });

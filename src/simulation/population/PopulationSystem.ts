@@ -30,6 +30,9 @@ import {
   BIRTH_REQUIREMENTS,
   CHILDBEARING_AGE_MAX,
   CHILDBEARING_AGE_MIN,
+  IMMIGRANTS_PER_ARRIVAL,
+  IMMIGRATION_CHANCE_PER_DAY,
+  IMMIGRATION_REQUIREMENTS,
   LIFESPAN_MAX,
   LIFESPAN_MIN,
 } from '@/data/population';
@@ -44,6 +47,8 @@ const DAYS_PER_YEAR = DAYS_PER_SEASON * 4;
 
 export interface PopulationReport {
   readonly births: number;
+  /** Newcomers who arrived from outside the settlement. */
+  readonly arrivals: number;
   /** Villagers who died of old age, as distinct from starving or freezing. */
   readonly deathsOfOldAge: number;
   /** How many have no house to go back to. */
@@ -54,6 +59,7 @@ export interface PopulationReport {
 
 export const NO_POPULATION_CHANGE: PopulationReport = {
   births: 0,
+  arrivals: 0,
   deathsOfOldAge: 0,
   homeless: 0,
   children: 0,
@@ -66,6 +72,8 @@ export interface PopulationDay {
   readonly died: Villager[];
   /** Newborns, for the caller to place and name. */
   readonly born: { readonly home: Building }[];
+  /** How many strangers walked in today. */
+  readonly arrivals: number;
 }
 
 /**
@@ -93,6 +101,7 @@ export function runPopulationDay(options: {
   assignHomes(survivors, houses);
 
   const born = considerBirths({ villagers: survivors, houses, random, foodDaysPerPerson });
+  const arrivals = considerImmigration({ villagers: survivors, houses, random, foodDaysPerPerson });
 
   let homeless = 0;
   let children = 0;
@@ -109,10 +118,57 @@ export function runPopulationDay(options: {
   }
 
   return {
-    report: { births: born.length, deathsOfOldAge: died.length, homeless, children, adults },
+    report: {
+      births: born.length,
+      arrivals,
+      deathsOfOldAge: died.length,
+      homeless,
+      children,
+      adults,
+    },
     died,
     born,
+    arrivals,
   };
+}
+
+/**
+ * Decides whether anyone walks in from outside today.
+ *
+ * The settlement has to be visibly worth joining: real food in store and beds
+ * standing empty. Stiffer than a birth on purpose — a family already living
+ * here will take a chance that a stranger on the road will not.
+ *
+ * The cooldown is kept on the settlement rather than on a person, because there
+ * is nobody yet to keep it on.
+ */
+function considerImmigration(options: {
+  villagers: readonly Villager[];
+  houses: readonly Building[];
+  random: SeededRandom;
+  foodDaysPerPerson: number;
+}): number {
+  const { villagers, houses, random, foodDaysPerPerson } = options;
+
+  if (villagers.length === 0) {
+    // Nobody left to have built anything, and no story left to continue.
+    return 0;
+  }
+  if (foodDaysPerPerson < IMMIGRATION_REQUIREMENTS.foodDaysPerPerson) {
+    return 0;
+  }
+
+  const capacity = houses.reduce((total, house) => total + (house.definition.housing ?? 0), 0);
+  const spare = capacity - villagers.filter((villager) => villager.homeId !== null).length;
+  if (spare < IMMIGRATION_REQUIREMENTS.spareHousing) {
+    return 0;
+  }
+
+  if (random.next() >= IMMIGRATION_CHANCE_PER_DAY) {
+    return 0;
+  }
+
+  return Math.min(IMMIGRANTS_PER_ARRIVAL, spare);
 }
 
 /** A lifespan for a newborn, or for a founding settler. */

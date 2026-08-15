@@ -463,6 +463,12 @@ export class Simulation {
       this.villagers.bear(home.accessCell, home.id);
     }
 
+    // Newcomers arrive at the edge of the settlement rather than in a bed:
+    // they walk in, and the housing pass on the next day finds them a room.
+    for (let i = 0; i < day.arrivals; i += 1) {
+      this.villagers.welcome(this.world.centreCell);
+    }
+
     this.lastPopulation = day.report;
   }
 

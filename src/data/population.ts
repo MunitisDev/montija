@@ -58,3 +58,40 @@ export const BIRTH_REQUIREMENTS = {
  * population rising and build ahead of it.
  */
 export const BIRTH_CHANCE_PER_DAY = 0.04;
+
+/**
+ * What draws newcomers to a settlement.
+ *
+ * Without this the game has a dead end with no way back: a settlement that
+ * loses its last adults of childbearing age can never grow again, however well
+ * the player then plays. Nothing arrives from outside, so the only outcome left
+ * is a slow decline the player can watch but not change — which is a failure
+ * state that fails to say so.
+ *
+ * Newcomers are earned rather than given. Word travels because a place has
+ * spare beds and food to spare, so the requirements are the ones the player
+ * controls, and they are stiffer than a birth's: a stranger walking out of the
+ * woods wants more assurance than a family already living there.
+ */
+export const IMMIGRATION_REQUIREMENTS = {
+  /** Days of food in store, per villager, before word gets round. */
+  foodDaysPerPerson: 18,
+  /**
+   * Empty beds needed before anyone will make the journey.
+   *
+   * This is also the pacing. Each arrival fills the beds it needed, so a
+   * settlement has to keep building to keep attracting people — no separate
+   * cooldown required.
+   */
+  spareHousing: 2,
+} as const;
+
+/** Chance per day, once a settlement is worth walking to. */
+export const IMMIGRATION_CHANCE_PER_DAY = 0.05;
+
+/** How many arrive at once. A pair travels; a lone stranger is a sadder story. */
+export const IMMIGRANTS_PER_ARRIVAL = 2;
+
+/** Ages of the people who make that journey: young enough to start again. */
+export const IMMIGRANT_AGE_MIN = 17;
+export const IMMIGRANT_AGE_MAX = 38;

@@ -29,7 +29,12 @@ import {
   VILLAGER_WALK_SPEED,
   WAYPOINT_TOLERANCE,
 } from '@/data/villagers';
-import { FOUNDER_AGE_MAX, FOUNDER_AGE_MIN } from '@/data/population';
+import {
+  FOUNDER_AGE_MAX,
+  FOUNDER_AGE_MIN,
+  IMMIGRANT_AGE_MAX,
+  IMMIGRANT_AGE_MIN,
+} from '@/data/population';
 import { rollLifespan } from '@/simulation/population/PopulationSystem';
 import { gridToWorld } from '@/shared/math/isometric';
 import type { RandomState, SeededRandom } from '@/shared/math/random';
@@ -175,6 +180,31 @@ export class VillagerSystem {
       lifespan: rollLifespan(this.random),
     });
     villager.homeId = homeId;
+    this.nextId += 1;
+    this.villagers.push(villager);
+    return villager;
+  }
+
+  /**
+   * Adds an adult who has walked in from outside.
+   *
+   * Distinct from `spawnNear` because founders and newcomers are not the same
+   * people: a stranger who made the journey is young enough to start again, and
+   * arrives with nothing and nowhere to sleep until the settlement houses them.
+   */
+  public welcome(near: GridPoint): Villager | null {
+    const cell = this.findSpawnCell(near);
+    if (!cell) {
+      return null;
+    }
+
+    const villager = new Villager({
+      id: this.nextId,
+      name: this.makeName(),
+      age: this.randomSource.int(IMMIGRANT_AGE_MIN, IMMIGRANT_AGE_MAX + 1),
+      position: gridToWorld(cell),
+      lifespan: rollLifespan(this.randomSource),
+    });
     this.nextId += 1;
     this.villagers.push(villager);
     return villager;

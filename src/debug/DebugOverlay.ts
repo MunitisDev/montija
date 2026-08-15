@@ -60,7 +60,10 @@ export class DebugOverlay {
       `jobs done    ${snapshot.jobsCompleted}`,
       `piles        ${snapshot.pileCount}`,
       `buildings    ${snapshot.buildingCount} (${snapshot.sitesUnderConstruction} building)`,
-      `housing      ${snapshot.housingCapacity}`,
+      `housing      ${snapshot.housingCapacity} (${snapshot.population.homeless} homeless)`,
+      `people       ${snapshot.population.adults} adults, ${snapshot.population.children} children`,
+      `last day     +${snapshot.population.births} born, +${snapshot.population.arrivals} arrived, ` +
+        `${snapshot.population.deathsOfOldAge} of old age`,
       `season       ${snapshot.season} y${snapshot.year} d${snapshot.dayOfSeason} ${snapshot.temperature}°`,
       `last day     ate ${snapshot.lastDay.foodEaten}, burned ${snapshot.lastDay.firewoodBurned}`,
       `shortfall    ${snapshot.lastDay.foodShortfall} food, ${snapshot.lastDay.firewoodShortfall} wood`,

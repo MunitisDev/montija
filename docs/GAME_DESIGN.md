@@ -125,6 +125,15 @@ asks for many years rather than a boom. Measured over six years, a well-run
 settlement went from ten to twelve and then stopped, capped by its own housing:
 the way to grow is to build.
 
+**Newcomers arrive** at a settlement visibly worth joining: eighteen days of food per person and at
+least two empty beds. The bar is deliberately higher than a birth's — a family already living
+somewhere will take a chance a stranger on the road will not — and each arrival fills the beds that
+attracted it, so a settlement has to keep building to keep growing.
+
+This exists to close a dead end. Without it, a settlement that lost its last adults of childbearing
+age could never grow again however well the player then played: the only outcome left was a slow
+decline they could watch but not change, which is a failure state that fails to say so.
+
 Two failure modes are real and neither is a bug:
 
 - **Building no houses** kills the settlement in its first winter, however full
@@ -230,7 +239,7 @@ cries wolf is one the player stops reading.
   the game is named for.
 - **Villagers idle around 30% of the time** in the measured runs, mostly when the player has not
   designated enough work. Whether that reads as calm or as broken is a question for a real playtest.
-- **No immigration.** A settlement that loses its last childbearing adults cannot recover, and
-  nothing arrives from outside to help.
+- **Arrivals are not announced.** The population simply goes up. It is in the debug overlay but the
+  player has no notification, and a settlement that grows without telling anyone is confusing.
 - **No professions.** Villagers take whatever the job board offers rather than holding a trade, so a
   "worker slot" is a post rather than a career.

@@ -36,6 +36,7 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 10    | Mobile UX             | **Implemented** |
 | 11    | Performance           | **Prototype**   |
 | 12    | Homes and population  | **Implemented** |
+| 13    | Seasons on screen     | **Implemented** |
 
 ---
 
