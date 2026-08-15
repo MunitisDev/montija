@@ -29,6 +29,7 @@ import {
   type Season,
   type YearState,
 } from './seasons/SeasonClock';
+import { NO_SPOILAGE, runSpoilage, type SpoilageReport } from './resources/SpoilageSystem';
 import { EMPTY_REPORT, runDay, type DailyReport } from './seasons/SurvivalSystem';
 import { VillagerSystem } from './villagers/VillagerSystem';
 import { World } from './world/World';
@@ -40,7 +41,7 @@ import { World } from './world/World';
  * business, and the wording is the translation layer's.
  */
 export type Advice =
-  'starving' | 'foodLow' | 'needMoreHuts' | 'firewoodLow' | 'firewoodShort' | null;
+  'starving' | 'foodLow' | 'needMoreHuts' | 'foodSpoiling' | 'firewoodLow' | 'firewoodShort' | null;
 
 /**
  * Roughly how many villagers one Gatherer Hut keeps fed.
@@ -75,6 +76,8 @@ export interface SimulationSnapshot {
   readonly temperature: number;
   /** What the settlement ate and burned on the last day that passed. */
   readonly lastDay: DailyReport;
+  /** What went bad overnight, so the HUD can explain a falling total. */
+  readonly spoiled: SpoilageReport;
   readonly deaths: number;
   /** Lowest health among the living, so the HUD can warn before people die. */
   readonly lowestHealth: number;
@@ -116,6 +119,7 @@ export class Simulation {
   private readonly tickRandom: RandomSource;
   private currentTick = 0;
   private lastDayReport: DailyReport = EMPTY_REPORT;
+  private lastSpoilage: SpoilageReport = NO_SPOILAGE;
   private totalDeaths = 0;
 
   constructor(options: SimulationOptions) {
@@ -164,6 +168,7 @@ export class Simulation {
       this.runDailyUpkeep();
     }
 
+    this.openFinishedStorages();
     this.createConstructionJobs();
     this.createProductionJobs();
     this.createHaulJobs();
@@ -242,6 +247,7 @@ export class Simulation {
       dayOfSeason: year.dayOfSeason,
       temperature: year.temperature,
       lastDay: this.lastDayReport,
+      spoiled: this.lastSpoilage,
       deaths: this.totalDeaths,
       advice: this.adviseOn(year),
       lowestHealth: this.villagers.all.reduce(
@@ -303,6 +309,7 @@ export class Simulation {
     this.currentTick = tick;
     this.totalDeaths = deaths;
     this.lastDayReport = EMPTY_REPORT;
+    this.lastSpoilage = NO_SPOILAGE;
   }
 
   /**
@@ -338,6 +345,16 @@ export class Simulation {
     // to the game and losing to an invisible rule.
     if (huts * VILLAGERS_FED_PER_GATHERER_HUT < people) {
       return 'needMoreHuts';
+    }
+
+    // Losing food to rot is invisible otherwise: the total simply fails to grow,
+    // and a player watching two huts work hard has no way to tell why. Only
+    // worth saying once there is enough food for the loss to matter.
+    const hasLarder = this.storages.all.some(
+      (storage) => storage.preservation < 1 && storage.accepts('food'),
+    );
+    if (!hasLarder && (this.lastSpoilage.lost.food ?? 0) >= 3) {
+      return 'foodSpoiling';
     }
 
     // Firewood only matters once the cold is in sight; warning in spring would
@@ -380,6 +397,10 @@ export class Simulation {
       this.villagers.remove(villager.id);
       this.totalDeaths += 1;
     }
+
+    // People eat before anything turns. A settlement should never starve on a
+    // day it had food, only to watch that same food rot the same night.
+    this.lastSpoilage = runSpoilage(this.storages, this.world.piles);
   }
 
   /** Whether a building may be placed here. Used by the ghost and the command. */
@@ -511,6 +532,33 @@ export class Simulation {
           reservationSlot: slot,
         });
       }
+    }
+  }
+
+  /**
+   * Opens the yard of any finished building that has one and has not opened it.
+   *
+   * Reconciled here, once a tick, rather than hooked onto the moment a builder
+   * lays the last plank. Buildings can be finished by more than one route — a
+   * villager finishing the job, a debug tool, a save being restored — and a yard
+   * that only appears down one of those routes is a Storage Yard that silently
+   * does nothing. Recording the storage on the building keeps this idempotent.
+   */
+  private openFinishedStorages(): void {
+    for (const building of this.world.buildings.all) {
+      const definition = building.definition.storage;
+      if (!definition || !building.isComplete || building.storageId !== null) {
+        continue;
+      }
+
+      const storage = this.storages.add({
+        // Haulers walk to the doorway; the footprint itself is blocked.
+        cell: building.accessCell,
+        capacity: definition.capacity,
+        ...(definition.accepts ? { accepts: definition.accepts } : {}),
+        ...(definition.preservation === undefined ? {} : { preservation: definition.preservation }),
+      });
+      building.storageId = storage.id;
     }
   }
 

@@ -550,7 +550,13 @@ export class VillagerSystem {
     }
 
     const building = this.buildingAtAccess(cell);
-    if (building) {
+    // A finished yard shares its doorway with the storage it opened, and the
+    // building must not answer for it: goods delivered to a Food Storage were
+    // landing in the building's recipe-input buffer instead of its shelves,
+    // where nothing could ever eat them. A yard still under construction is a
+    // different matter — it takes its own materials like anything else.
+    const isOpenYard = building !== null && building.isComplete && building.definition.storage;
+    if (building && !isOpenYard) {
       return building.isComplete ? building.input : building.materials;
     }
 
