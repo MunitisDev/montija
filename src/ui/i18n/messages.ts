@@ -38,6 +38,8 @@ export const EN = {
 
   'action.fell': 'Fell',
   'action.mine': 'Mine',
+  'action.pave': 'Lay road',
+  'action.liftRoad': 'Lift road',
   'action.cancel': 'Cancel',
   'action.place': 'Place',
   'action.save': 'Save',
@@ -45,6 +47,8 @@ export const EN = {
 
   'status.markedForFelling': 'marked for felling',
   'status.markedForMining': 'marked for mining',
+  'status.road': 'road',
+  'status.roadOrdered': 'road ordered',
   'status.saved': 'Saved',
   'status.loaded': 'Loaded',
   'status.noSave': 'No saved settlement',
@@ -136,6 +140,8 @@ export const ES: Messages = {
 
   'action.fell': 'Talar',
   'action.mine': 'Picar',
+  'action.pave': 'Trazar camino',
+  'action.liftRoad': 'Levantar camino',
   'action.cancel': 'Cancelar',
   'action.place': 'Colocar',
   'action.save': 'Guardar',
@@ -143,6 +149,8 @@ export const ES: Messages = {
 
   'status.markedForFelling': 'marcado para talar',
   'status.markedForMining': 'marcado para picar',
+  'status.road': 'camino',
+  'status.roadOrdered': 'camino encargado',
   'status.saved': 'Guardado',
   'status.loaded': 'Cargado',
   'status.noSave': 'No hay partida guardada',

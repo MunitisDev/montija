@@ -29,6 +29,7 @@ interface HudElements {
   readonly selectionCell: HTMLElement;
   readonly selectionFlags: HTMLElement;
   readonly selectionAction: HTMLButtonElement;
+  readonly selectionRoad: HTMLButtonElement;
   readonly season: HTMLElement;
   readonly temperature: HTMLElement;
   readonly advice: HTMLElement;
@@ -77,6 +78,7 @@ export class Hud {
     this.elements = collectElements(root);
     this.bindSpeedButtons();
     this.bindSelectionAction();
+    this.bindRoadAction();
     this.bindSessionButtons();
     this.bindLanguageButton();
     this.elements.failureRestart.addEventListener('click', () => {
@@ -344,6 +346,7 @@ export class Hud {
     // beside it impossible to designate.
     const actionable = selection.treeId !== null || selection.isStoneDeposit;
     this.renderSelectionAction(actionable, selection.designated, selection.treeId !== null);
+    this.renderRoadAction(selection);
 
     // A tapped villager is what the player meant; the tile is the fallback.
     if (selection.villager) {
@@ -380,6 +383,11 @@ export class Hud {
     this.elements.selectionCell.textContent = `${selection.cell.gx}, ${selection.cell.gy}`;
 
     const flags: string[] = [];
+    if (selection.hasRoad) {
+      flags.push(this.i18n.t('status.road'));
+    } else if (selection.roadDesignated) {
+      flags.push(this.i18n.t('status.roadOrdered'));
+    }
     if (!selection.walkable) {
       flags.push(this.i18n.t('terrain.impassable'));
     }
@@ -403,6 +411,42 @@ export class Hud {
       }
       this.update();
     });
+  }
+
+  private bindRoadAction(): void {
+    this.elements.selectionRoad.addEventListener('click', () => {
+      this.context.toggleSelectedRoad();
+      this.update();
+    });
+  }
+
+  /**
+   * The road button, which says what it will do rather than what the cell is.
+   *
+   * Hidden entirely on cells that cannot take one — water, rock, a standing
+   * tree — because a permanently disabled button on a bottom bar this small
+   * costs more room than it earns.
+   */
+  private renderRoadAction(selection: {
+    hasRoad: boolean;
+    roadDesignated: boolean;
+    canPave: boolean;
+  }): void {
+    const available = selection.hasRoad || selection.roadDesignated || selection.canPave;
+    this.elements.selectionRoad.hidden = !available;
+    if (!available) {
+      return;
+    }
+
+    const undoing = selection.hasRoad || selection.roadDesignated;
+    this.elements.selectionRoad.textContent = this.i18n.t(
+      selection.hasRoad
+        ? 'action.liftRoad'
+        : selection.roadDesignated
+          ? 'action.cancel'
+          : 'action.pave',
+    );
+    this.elements.selectionRoad.classList.toggle('is-cancel', undoing);
   }
 
   private renderSelectionAction(actionable: boolean, designated: boolean, isTree: boolean): void {
@@ -531,6 +575,7 @@ function collectElements(root: HTMLElement): HudElements {
     selectionCell: requireElement(root, '[data-hud="selection-cell"]'),
     selectionFlags: requireElement(root, '[data-hud="selection-flags"]'),
     selectionAction: requireElement(root, '[data-hud="selection-action"]') as HTMLButtonElement,
+    selectionRoad: requireElement(root, '[data-hud="selection-road"]') as HTMLButtonElement,
     season: requireElement(root, '[data-hud="season"]'),
     temperature: requireElement(root, '[data-hud="temperature"]'),
     advice: requireElement(root, '[data-hud="advice"]'),

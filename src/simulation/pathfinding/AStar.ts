@@ -91,9 +91,13 @@ export function findPath(
   const cameFrom = new Int32Array(cellCount).fill(-1);
   const closed = new Uint8Array(cellCount);
 
+  // Read once per search rather than per node: it cannot change mid-search,
+  // and this keeps a property lookup out of the inner loop.
+  const heuristicScale = grid.minEntryCost / COST_SCALE;
+
   const open = new BinaryHeap();
   gScore[startIndex] = 0;
-  open.push(startIndex, heuristic(start.gx, start.gy, goal.gx, goal.gy));
+  open.push(startIndex, heuristic(start.gx, start.gy, goal.gx, goal.gy, heuristicScale));
 
   let expandedNodes = 0;
 
@@ -155,7 +159,7 @@ export function findPath(
       if (tentative < (gScore[neighbourIndex] ?? Number.POSITIVE_INFINITY)) {
         gScore[neighbourIndex] = tentative;
         cameFrom[neighbourIndex] = current;
-        open.push(neighbourIndex, tentative + heuristic(nx, ny, goal.gx, goal.gy));
+        open.push(neighbourIndex, tentative + heuristic(nx, ny, goal.gx, goal.gy, heuristicScale));
       }
     }
   }
@@ -164,15 +168,22 @@ export function findPath(
 }
 
 /**
- * Octile distance: the exact cost of an unobstructed eight-way walk.
+ * Octile distance: the cost of an unobstructed eight-way walk, priced at the
+ * cheapest step the grid can offer.
  *
  * Admissible (never overestimates), so A* still returns optimal paths, but far
  * better informed than Manhattan on a grid that allows diagonals.
+ *
+ * `scale` is what keeps it admissible once roads exist, since a paved step
+ * undercuts plain ground. It is 1 — and the arithmetic is exactly what it
+ * always was — until the settlement finishes its first road, so a village
+ * without them never pays for the weaker heuristic.
  */
-function heuristic(ax: number, ay: number, bx: number, by: number): number {
+function heuristic(ax: number, ay: number, bx: number, by: number, scale: number): number {
   const dx = Math.abs(ax - bx);
   const dy = Math.abs(ay - by);
-  return STRAIGHT_COST * (dx + dy) + (DIAGONAL_COST - 2 * STRAIGHT_COST) * Math.min(dx, dy);
+  const steps = STRAIGHT_COST * (dx + dy) + (DIAGONAL_COST - 2 * STRAIGHT_COST) * Math.min(dx, dy);
+  return scale === 1 ? steps : steps * scale;
 }
 
 function reconstruct(cameFrom: Int32Array, goalIndex: number, width: number): GridPoint[] {

@@ -326,6 +326,70 @@ export class Simulation {
   }
 
   /**
+   * Orders a road laid on a cell.
+   *
+   * Roads are the first thing the player can build that improves the settlement
+   * rather than adding to it. Every economic problem this game has turned out to
+   * be a hauling problem, and priorities only ever decide *what* gets carried —
+   * never how long the carrying takes. A road is the answer to the second half,
+   * and the first decision that is about the *shape* of a settlement rather than
+   * its contents.
+   *
+   * It costs labour and no materials on purpose: a beaten track is work, not
+   * goods, so nothing here has to invent a resource transfer that never
+   * physically happened.
+   */
+  public designateRoad(cell: GridPoint): boolean {
+    if (!this.world.canPave(cell)) {
+      return false;
+    }
+
+    const cellId = cell.gy * this.world.width + cell.gx;
+    const job = this.jobs.create({
+      type: 'pave-road',
+      target: cell,
+      // Below everything else, and deliberately so: a settlement must never
+      // pave a path while its food sits in the field. Roads get built with the
+      // hours nobody else needed.
+      priority: JobPriority.low,
+      targetEntityId: cellId,
+    });
+    return job !== null;
+  }
+
+  /** Cancels a pending paving order. */
+  public cancelRoadDesignation(cell: GridPoint): boolean {
+    const cellId = cell.gy * this.world.width + cell.gx;
+    const job = this.jobs.findByTarget('pave-road', cellId);
+    if (!job) {
+      return false;
+    }
+    this.jobs.cancel(job.id);
+    this.releaseVillagersFrom(job.id);
+    return true;
+  }
+
+  public isRoadDesignated(cell: GridPoint): boolean {
+    const cellId = cell.gy * this.world.width + cell.gx;
+    return this.jobs.isTargetReserved('pave-road', cellId);
+  }
+
+  public hasRoad(cell: GridPoint): boolean {
+    return this.world.roads.hasAt(cell);
+  }
+
+  /**
+   * Takes a laid road up again.
+   *
+   * Immediate rather than a job. Lifting is the player correcting a route they
+   * no longer want, and making them wait for a villager to come and un-beat a
+   * track would be ceremony rather than a decision.
+   */
+  public liftRoad(cell: GridPoint): boolean {
+    return this.world.liftRoad(cell);
+  }
+
+  /**
    * Restores the clock and the death toll after a save is loaded.
    *
    * Everything else is restored by the serialiser through the registries; this

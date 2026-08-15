@@ -23,7 +23,14 @@ import type { GridPoint } from '@/shared/types/geometry';
  */
 export type HaulSource = 'pile' | 'storage';
 
-export type JobType = 'move-to' | 'chop-tree' | 'gather-stone' | 'haul' | 'build' | 'produce';
+export type JobType =
+  | 'move-to'
+  | 'chop-tree'
+  | 'gather-stone'
+  | 'haul'
+  | 'build'
+  | 'produce'
+  | 'pave-road';
 
 /**
  * Which leg of a multi-stage job is being done.
@@ -101,6 +108,9 @@ export const JOB_WORK_TICKS: Readonly<Record<JobType, number>> = {
   build: 100,
   // Overridden per recipe.
   produce: 40,
+  // Clearing and beating a track flat. Short, because a road is only worth
+  // laying if a settlement can afford to lay a line of them.
+  'pave-road': 20,
 };
 
 export function isFinished(job: Job): boolean {

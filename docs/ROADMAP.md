@@ -38,6 +38,7 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 11    | Performance           | **Implemented** |
 | 12    | Homes and population  | **Implemented** |
 | 13    | Seasons on screen     | **Implemented** |
+| 14    | Roads                 | **Implemented** |
 
 ---
 
@@ -304,7 +305,7 @@ saved one exactly.
 
 ---
 
-## Phase 10 — Mobile UX — Implemented, pending real-device testing
+## Phase 10 — Mobile UX — Implemented
 
 **Done in the browser:** audited at 844x390, 1024x768 and 1280x800. No HUD overflow, no page
 scrolling, the canvas fills the viewport at every size, and every control meets the 44px floor.
@@ -312,18 +313,71 @@ scrolling, the canvas fills the viewport at every size, and every control meets 
 - The audit caught build buttons at 40px, below the floor this project documented for itself.
 - The bottom bar wrapped to two rows on a landscape phone, costing a quarter of the screen. The
   build bar now scrolls sideways instead.
+- Portrait was added afterwards, on request: the HUD reflows rather than assuming landscape.
+- The resource strip was given icons so it fits one line on a phone.
 
-**Not done, and cannot be done from here:** testing on a physical tablet and phone. Gesture feel,
-thumb reach and real safe-area insets need hands.
+**Done on hardware since:** the game has been played on a physical Android phone. Gesture feel and
+frame rate are recorded in [PERFORMANCE.md](./PERFORMANCE.md). A tablet is still untested.
 
 ---
 
-## Phase 11 — Performance — Planned
+## Phase 11 — Performance — Implemented
 
-Repeatable benchmarks at 25 / 50 / 100 villagers, recording FPS, simulation tick time, pathfinding
-time and render object count.
+Repeatable benchmarks at 25 / 50 / 100 villagers, plus a real-device frame-rate readout behind
+`?stats`. Full figures and methodology in [PERFORMANCE.md](./PERFORMANCE.md).
 
-Initial target: 50 villagers comfortably. Architected toward 100-300. **No maximum will be claimed
-until benchmarks exist.**
+- The simulation uses under 1% of its tick budget at 100 villagers.
+- A real phone holds its display's full refresh rate, zoomed fully out, so the game is bound by the
+  screen rather than the GPU.
+- **No maximum villager count is claimed.** Nothing has yet pushed the renderer hard enough to find
+  one.
+- One optimisation was written and then reverted, because re-measuring did not support it. "Profile
+  before optimising" taken literally, and written down so nobody re-nominates it without evidence.
 
-Profile before optimising.
+---
+
+## Phase 12 — Homes and population — Implemented
+
+A settlement that can only shrink is not a settlement. Villagers age, are born, arrive, and die of
+old age as well as of hardship.
+
+- Houses are homes: firewood only warms people who have one.
+- Births are considered at settlement level rather than per household, because tying growth to which
+  two people happened to hold the spare bed produced no children at all over six simulated years.
+- Immigration needs both food to spare and beds to spare, so growth is something the player earns.
+
+---
+
+## Phase 13 — Seasons on screen — Implemented
+
+The year was already lethal; this is where it became visible.
+
+- Seasonal terrain, canopy and structure palettes, drawn rather than tinted where the silhouette
+  changes — a bare tree is a different shape from a full one.
+- Screen-space rain and snow, running on real elapsed time so weather does not fall four times
+  faster at 4x.
+
+---
+
+## Phase 14 — Roads — Implemented
+
+Every economic problem this game has had turned out to be a hauling problem, and priorities only
+ever decide _what_ gets carried — never how long the carrying takes. Roads are the answer to the
+second half, and the first decision in the game that is about the **shape** of a settlement rather
+than its contents.
+
+- A road is a layer over the terrain, not a terrain type: felling the trees under one does not
+  un-road it, and lifting one gives back the meadow rather than a patch of dirt.
+- Pathfinding prefers roads through the existing cost model — no special case in the search.
+- Villagers genuinely walk faster on them. A road only pathfinding believed in would make the
+  settlement _slower_, by routing everyone down a track that walks like a field.
+- Laying one costs labour and no materials, at the lowest job priority in the game. A settlement
+  must never pave a path while its food sits in the field.
+- Lifting one is immediate: it is the player correcting a route, not a job.
+
+**Found while building it:** A\*'s heuristic assumed the cheapest possible step cost the same as
+plain ground. A road undercuts that, which made the heuristic overestimate — and an overestimating
+heuristic stops A\* looking, so it would have routed villagers straight across a field past the road
+beside it. The heuristic is now priced at the cheapest step the grid can offer, and only while roads
+actually exist, so a village that never laid one pays nothing for the fix. Benchmarks confirm no
+regression.

@@ -79,6 +79,12 @@ export interface Selection {
   readonly designated: boolean;
   /** Set when a building stands on the tapped cell. */
   readonly building: BuildingSelection | null;
+  /** `true` when a road is already laid here. */
+  readonly hasRoad: boolean;
+  /** `true` when a road here has been ordered but not yet beaten flat. */
+  readonly roadDesignated: boolean;
+  /** `true` when this cell would take a road. */
+  readonly canPave: boolean;
 }
 
 /**
@@ -139,6 +145,11 @@ export interface GameContext {
   designateSelectedTree(): boolean;
   /** Cancels the selected tree's felling order. */
   cancelSelectedDesignation(): boolean;
+  /**
+   * Lays a road on the selected cell, cancels the order, or lifts the road —
+   * whichever the cell's current state calls for.
+   */
+  toggleSelectedRoad(): boolean;
 
   /** The building being placed, or `null` when not in placement mode. */
   readonly placement: PlacementState | null;
@@ -581,6 +592,9 @@ export class Game implements GameContext, InputIntentSink {
       designated: tree
         ? this.simulation.isTreeDesignated(cell)
         : isStoneDeposit && this.simulation.isStoneDesignated(cell),
+      hasRoad: this.simulation.hasRoad(cell),
+      roadDesignated: this.simulation.isRoadDesignated(cell),
+      canPave: this.simulation.world.canPave(cell),
     };
   }
 
@@ -703,6 +717,32 @@ export class Game implements GameContext, InputIntentSink {
       this.refreshSelection(selection.cell);
     }
     return cancelled;
+  }
+
+  /**
+   * The road button, which is three commands wearing one hat.
+   *
+   * A single button rather than three, because the three are mutually exclusive
+   * by construction — a cell either has a road, has one ordered, or has neither
+   * — and a mobile panel that shows two greyed-out buttons to explain the third
+   * is worse than one that simply says what it will do.
+   */
+  public toggleSelectedRoad(): boolean {
+    const selection = this.currentSelection;
+    if (!selection) {
+      return false;
+    }
+
+    const acted = selection.hasRoad
+      ? this.simulation.liftRoad(selection.cell)
+      : selection.roadDesignated
+        ? this.simulation.cancelRoadDesignation(selection.cell)
+        : this.simulation.designateRoad(selection.cell);
+
+    if (acted) {
+      this.refreshSelection(selection.cell);
+    }
+    return acted;
   }
 
   /** Re-reads the selected cell after the world changed underneath it. */

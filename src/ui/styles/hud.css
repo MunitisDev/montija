@@ -348,6 +348,25 @@
   border-color: rgba(201, 138, 106, 0.5);
 }
 
+/*
+ * Roads read as earth rather than as an order.
+ *
+ * Felling and mining share the panel with this, and three buttons in the same
+ * ochre would be three ways of saying the same thing. Laying a road is an
+ * improvement to the ground, not a job called on something standing in it.
+ */
+.tile-panel__action--road:not(.is-cancel) {
+  color: #b3a184;
+  background: rgba(179, 161, 132, 0.1);
+  border-color: rgba(179, 161, 132, 0.42);
+}
+
+/* Two actions can appear at once; on a narrow phone they wrap rather than
+   push the panel off the edge of the screen. */
+.tile-panel {
+  flex-wrap: wrap;
+}
+
 .build-bar {
   display: flex;
   align-items: center;

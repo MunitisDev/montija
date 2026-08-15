@@ -19,7 +19,24 @@ import type { JobManager } from '@/simulation/jobs/JobManager';
  * marking them painted crosses over every log pile and storage yard, which read
  * as designations the player had made.
  */
-const PLAYER_DESIGNATED: ReadonlySet<JobType> = new Set<JobType>(['chop-tree', 'gather-stone']);
+const PLAYER_DESIGNATED: ReadonlySet<JobType> = new Set<JobType>([
+  'chop-tree',
+  'gather-stone',
+  'pave-road',
+]);
+
+/**
+ * How far above the cell each mark is lifted, in pixels.
+ *
+ * A mark on a tree has to sit up in the canopy to read as being *on* it. A road
+ * order is a mark on the ground and belongs on the ground — lifting it would
+ * leave it hovering over the cell in front of the one it refers to.
+ */
+const MARK_LIFT: Readonly<Partial<Record<JobType, number>>> = {
+  'chop-tree': 34,
+  'gather-stone': 34,
+  'pave-road': 0,
+};
 
 export class DesignationRenderer {
   private readonly scene: Phaser.Scene;
@@ -50,9 +67,7 @@ export class DesignationRenderer {
       const mark = this.scene.add
         .image(position.px, position.py, TextureKeys.designation)
         .setOrigin(0.5, 0.5)
-        // Raised towards the canopy so the mark reads as being *on* the tree,
-        // not lying on the ground in front of it.
-        .setY(position.py - 34)
+        .setY(position.py - (MARK_LIFT[job.type] ?? 0))
         // Above every world object: an order the player just gave must not be
         // hidden by whatever tree happens to stand in front of it.
         .setDepth(overlayDepth(job.target.gx, job.target.gy));

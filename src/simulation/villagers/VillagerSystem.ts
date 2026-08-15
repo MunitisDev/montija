@@ -45,6 +45,7 @@ import type { Job } from '@/simulation/jobs/Job';
 import type { JobManager } from '@/simulation/jobs/JobManager';
 import type { StorageRegistry } from '@/simulation/logistics/Storage';
 import { findPath } from '@/simulation/pathfinding/AStar';
+import { ROAD_SPEED_MULTIPLIER } from '@/simulation/world/RoadGrid';
 import type { World } from '@/simulation/world/World';
 import { Villager } from './Villager';
 
@@ -490,6 +491,9 @@ export class VillagerSystem {
       case 'gather-stone':
         this.world.mineStone(job.target);
         break;
+      case 'pave-road':
+        this.world.paveRoad(job.target);
+        break;
       case 'build': {
         const building =
           job.targetEntityId === null ? null : this.world.buildings.getById(job.targetEntityId);
@@ -750,10 +754,16 @@ export class VillagerSystem {
    *
    * Consumes as many waypoints as the tick's travel budget allows, so a fast
    * villager or a slow tick rate never causes stuttering between cells.
+   *
+   * The budget is kept in **seconds** rather than in distance, because speed is
+   * no longer constant: a step onto a road is walked faster. Pathfinding already
+   * prefers roads through the cost model, but preferring them would be a lie if
+   * taking one did not actually save time — so the same discount is applied
+   * here, per step, against the cell being entered.
    */
   private advanceAlongPath(villager: Villager, tickSeconds: number): void {
     villager.activity = 'walking';
-    let remaining = VILLAGER_WALK_SPEED * tickSeconds;
+    let remaining = tickSeconds;
 
     while (remaining > 0 && villager.path.length > 0) {
       const waypoint = villager.path[0];
@@ -761,21 +771,25 @@ export class VillagerSystem {
         break;
       }
 
+      const speed =
+        VILLAGER_WALK_SPEED * (this.world.roads.hasAt(waypoint) ? ROAD_SPEED_MULTIPLIER : 1);
+      const reach = speed * remaining;
+
       const target = gridToWorld(waypoint);
       const dx = target.wx - villager.position.wx;
       const dy = target.wy - villager.position.wy;
       const distance = Math.hypot(dx, dy);
 
-      if (distance <= remaining + WAYPOINT_TOLERANCE) {
+      if (distance <= reach + WAYPOINT_TOLERANCE) {
         villager.position = target;
         villager.path.shift();
-        remaining -= distance;
+        remaining -= distance / speed;
         continue;
       }
 
       villager.position = {
-        wx: villager.position.wx + (dx / distance) * remaining,
-        wy: villager.position.wy + (dy / distance) * remaining,
+        wx: villager.position.wx + (dx / distance) * reach,
+        wy: villager.position.wy + (dy / distance) * reach,
       };
       remaining = 0;
     }

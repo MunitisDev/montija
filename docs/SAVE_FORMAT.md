@@ -18,7 +18,7 @@ SaveGame
 ├── version          format version, currently 1
 ├── worldSeed        so the world's identity survives
 ├── simulationTime   the tick, which fully identifies season, day and year
-├── world            terrain buffer, trees, stone, resource piles
+├── world            terrain buffer, trees, stone, resource piles, roads
 ├── villagers        position, needs, inventory, job, path, activity
 ├── buildings        definition id, origin, construction progress, stores, yard opened
 ├── storages         cells, capacities, contents, and how well each keeps food
@@ -55,14 +55,22 @@ says so — "Save is from another version" — rather than loading something it 
 corrupting a settlement.
 
 Bump the version when a change would make an existing save load _incorrectly_. Additive changes that
-restore sensibly from a default do not need a bump, and there have been three:
+restore sensibly from a default do not need a bump, and there have been four:
 
 - jobs gained a `reservationSlot` when workshops learned to staff more than one worker, and an older
   save restores with slot 0 — right for every job that existed then;
 - storages gained a `preservation` figure, defaulting to 1, which is the open yard every storage in
   an older save was behaving as;
 - buildings gained the id of the yard they opened, and a finished storage building without one
-  simply opens its yard on the next tick.
+  simply opens its yard on the next tick;
+- the world gained a list of paved cells, and a save written before roads existed restores as a
+  settlement with none — which is the correct reading of it.
+
+Roads are stored as a **list of cells** rather than a second full-map buffer, because they are
+sparse: a well-connected settlement has tens of them on a map of some nine thousand cells. They are
+restored _before_ the navigation grid is rebuilt, not after — the grid reads them while it re-costs
+every cell, so the other order would leave a settlement whose roads were drawn but not routed over
+until the next one was laid.
 
 Doorways are the exception to storing things: a building's access cell is **recomputed** on load
 rather than saved, because which cell is standable depends on what every other building blocks, and

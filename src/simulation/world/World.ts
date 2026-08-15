@@ -26,6 +26,7 @@ import { terrainDefinition, type TerrainType } from '@/data/terrain';
 import { gridBoundsToScene } from '@/shared/math/isometric';
 import type { GridPoint, SceneBounds } from '@/shared/types/geometry';
 import { BuildingRegistry } from '@/simulation/buildings/BuildingRegistry';
+import { RoadGrid } from './RoadGrid';
 import { ResourcePileRegistry } from '@/simulation/resources/ResourcePile';
 import { NavigationGrid } from './NavigationGrid';
 import type { TerrainGrid } from './TerrainGrid';
@@ -36,6 +37,7 @@ export class World {
   public readonly terrain: TerrainGrid;
   public readonly navigation: NavigationGrid;
   public readonly trees: TreeRegistry;
+  public readonly roads: RoadGrid;
   public readonly piles = new ResourcePileRegistry();
   public readonly buildings = new BuildingRegistry();
 
@@ -44,6 +46,8 @@ export class World {
     this.terrain = generated.terrain;
     this.trees = new TreeRegistry(generated.terrain.width, generated.trees);
     this.navigation = new NavigationGrid(this.terrain);
+    this.roads = new RoadGrid(this.terrain.width, this.terrain.height);
+    this.navigation.useRoads(this.roads, this.terrain);
   }
 
   /** The middle of the map, used as the founding settlement's anchor. */
@@ -130,6 +134,45 @@ export class World {
     // Safe to drop on the deposit's own tile: it became walkable grass on the
     // line above, so a hauler can reach the stone that was just cut from it.
     this.piles.drop(cell, 'stone', STONE_PER_DEPOSIT);
+    return true;
+  }
+
+  /** `true` when this cell could take a road, and has none yet. */
+  public canPave(cell: GridPoint): boolean {
+    if (!this.terrain.contains(cell.gx, cell.gy)) {
+      return false;
+    }
+    if (this.roads.hasAt(cell)) {
+      return false;
+    }
+    // A road is beaten into open ground. Trees have to come down first, and
+    // water and rock are not passable at all — the same rule the player already
+    // learned from placing buildings.
+    return this.isWalkable(cell) && this.trees.getAt(cell) === null;
+  }
+
+  /**
+   * Lays a road and re-costs the cell.
+   *
+   * The navigation grid is updated in the same breath, because a road nobody
+   * routes over is only a decoration.
+   *
+   * @returns `true` when a road was actually laid
+   */
+  public paveRoad(cell: GridPoint): boolean {
+    if (!this.roads.lay(cell.gx, cell.gy)) {
+      return false;
+    }
+    this.navigation.refreshCell(this.terrain, cell.gx, cell.gy);
+    return true;
+  }
+
+  /** Takes a road up again, giving back the ground underneath. */
+  public liftRoad(cell: GridPoint): boolean {
+    if (!this.roads.lift(cell.gx, cell.gy)) {
+      return false;
+    }
+    this.navigation.refreshCell(this.terrain, cell.gx, cell.gy);
     return true;
   }
 }

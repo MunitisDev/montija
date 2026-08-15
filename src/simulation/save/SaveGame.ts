@@ -111,6 +111,16 @@ export interface SaveGame {
      */
     readonly terrain: readonly number[];
     readonly trees: readonly SavedTree[];
+    /**
+     * Every paved cell.
+     *
+     * Absent in saves written before roads existed, which restore as a
+     * settlement with none — the correct reading of a save that predates them.
+     * Stored as a list rather than a second full-map buffer because roads are
+     * sparse: a well-connected settlement has tens of them on a map of ~9,000
+     * cells.
+     */
+    readonly roads?: readonly { readonly gx: number; readonly gy: number }[];
   };
 
   readonly villagers: readonly SavedVillager[];

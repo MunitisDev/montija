@@ -50,6 +50,7 @@ export const TextureKeys = {
   building: (id: string): string => `building-${id}`,
   site: 'construction-site',
   ghostCell: 'ghost-cell',
+  road: 'road-tile',
   /** Frame name within the terrain atlas. */
   terrainFrame: (type: TerrainType, season: Season): string => `${type}-${season}`,
   /** Frame name within the tree atlas. */
@@ -158,6 +159,12 @@ export function createPlaceholderTextures(scene: Phaser.Scene): void {
   if (!scene.textures.exists(TextureKeys.site)) {
     drawConstructionSite(graphics);
     graphics.generateTexture(TextureKeys.site, 128, 96);
+    graphics.clear();
+  }
+
+  if (!scene.textures.exists(TextureKeys.road)) {
+    drawRoad(graphics);
+    graphics.generateTexture(TextureKeys.road, TILE_WIDTH, TILE_HEIGHT);
     graphics.clear();
   }
 
@@ -561,6 +568,53 @@ function drawConstructionSite(graphics: Phaser.GameObjects.Graphics): void {
   graphics.lineTo(cx, base - 50);
   graphics.lineTo(cx + 48, base - 26);
   graphics.strokePath();
+}
+
+/**
+ * A stretch of beaten track, painted onto the ground.
+ *
+ * Deliberately smaller than the tile it sits on and slightly ragged at the
+ * edges: a road here is trodden earth rather than a paved surface, and a
+ * diamond filling the cell exactly would read as a floor tile and make the grid
+ * — which the brief wants hidden — the most obvious thing on screen. Adjacent
+ * road cells still overlap enough to read as one continuous line.
+ */
+function drawRoad(graphics: Phaser.GameObjects.Graphics): void {
+  const cx = TILE_WIDTH / 2;
+  const cy = TILE_HEIGHT / 2;
+  const halfWidth = TILE_WIDTH / 2 - 1;
+  const halfHeight = TILE_HEIGHT / 2 - 1;
+
+  // Two passes: a wider, darker damp margin, then the drier trodden centre.
+  const passes = [
+    { inset: 0.98, colour: 0x4a4034, alpha: 0.75 },
+    { inset: 0.72, colour: 0x6a5a45, alpha: 0.85 },
+  ];
+  for (const pass of passes) {
+    graphics.fillStyle(pass.colour, pass.alpha);
+    graphics.beginPath();
+    graphics.moveTo(cx, cy - halfHeight * pass.inset);
+    graphics.lineTo(cx + halfWidth * pass.inset, cy);
+    graphics.lineTo(cx, cy + halfHeight * pass.inset);
+    graphics.lineTo(cx - halfWidth * pass.inset, cy);
+    graphics.closePath();
+    graphics.fillPath();
+  }
+
+  // A fixed scatter of grit, so a long road is not a flat band of one colour.
+  // Fixed rather than random: every road cell shares this one texture, and a
+  // per-draw scatter would only ever be generated once anyway.
+  graphics.fillStyle(0x877357, 0.7);
+  for (const [gx, gy] of [
+    [-10, -2],
+    [-2, 3],
+    [6, -3],
+    [11, 2],
+    [1, -5],
+    [-6, 5],
+  ] as const) {
+    graphics.fillRect(cx + gx, cy + gy, 2, 1);
+  }
 }
 
 /** One cell of the placement ghost. Tinted green or red by the renderer. */

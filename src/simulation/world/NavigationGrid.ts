@@ -12,10 +12,14 @@
 
 import { terrainDefinition } from '@/data/terrain';
 import type { GridPoint } from '@/shared/types/geometry';
+import { ROAD_COST_MULTIPLIER, type RoadGrid } from './RoadGrid';
 import type { TerrainGrid } from './TerrainGrid';
 
 /** Cost scale: `movementCost` of 1 becomes this, so costs stay integral. */
 export const COST_SCALE = 10;
+
+/** The cheapest a step can be once a road is laid. */
+const PAVED_ENTRY_COST = Math.max(1, Math.round(ROAD_COST_MULTIPLIER * COST_SCALE));
 
 /** Marks a cell nothing can enter. */
 const BLOCKED = 0;
@@ -31,6 +35,37 @@ export class NavigationGrid {
     this.height = terrain.height;
     this.costs = new Uint16Array(this.width * this.height);
     this.rebuild(terrain);
+  }
+
+  /**
+   * Roads laid over the terrain, or `null` before any exist.
+   *
+   * Held rather than folded into the costs at build time, so that lifting a
+   * road gives back the ground underneath instead of a guess at what was there.
+   */
+  private roads: RoadGrid | null = null;
+
+  /** Points the grid at the settlement's roads, and re-costs every cell. */
+  public useRoads(roads: RoadGrid, terrain: TerrainGrid): void {
+    this.roads = roads;
+    this.rebuild(terrain);
+  }
+
+  /**
+   * The cheapest a single step could possibly be on this grid right now.
+   *
+   * A*'s heuristic must never overestimate what remains, or the search stops
+   * being optimal and returns whichever route it reached first — which, with
+   * roads, means walking across a field past the road beside it. So the
+   * heuristic has to be priced at the cheapest step available.
+   *
+   * Reported as a live figure rather than a constant because a weaker heuristic
+   * expands more nodes, and a settlement that has never laid a road should not
+   * pay for one. Until the first is finished this is exactly what it always
+   * was, and every path is found on exactly the terms it used to be.
+   */
+  public get minEntryCost(): number {
+    return this.roads !== null && this.roads.count > 0 ? PAVED_ENTRY_COST : COST_SCALE;
   }
 
   /** Recomputes every cell from the terrain. */
@@ -52,9 +87,18 @@ export class NavigationGrid {
       return;
     }
     const definition = terrainDefinition(terrain.get(gx, gy));
-    this.costs[gy * this.width + gx] = definition.walkable
-      ? Math.max(1, Math.round(definition.movementCost * COST_SCALE))
-      : BLOCKED;
+    if (!definition.walkable) {
+      this.costs[gy * this.width + gx] = BLOCKED;
+      return;
+    }
+
+    // A road makes the step cheaper, so pathfinding prefers it without any
+    // special case in the search itself — the cost model was already there.
+    const surface = this.roads?.has(gx, gy) === true ? ROAD_COST_MULTIPLIER : 1;
+    this.costs[gy * this.width + gx] = Math.max(
+      1,
+      Math.round(definition.movementCost * surface * COST_SCALE),
+    );
   }
 
   public contains(gx: number, gy: number): boolean {

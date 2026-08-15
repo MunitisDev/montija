@@ -157,6 +157,7 @@ Priorities, highest first:
 | urgent   | production                       | a workshop has a fixed number of slots; leaving one empty wastes it |
 | high     | construction, hauling to storage | use what you already have before gathering more                     |
 | normal   | felling trees, mining stone      | raw material, and the most abundant kind of work                    |
+| low      | laying roads                     | an improvement, never a reason to leave food in the field           |
 
 That ordering is load-bearing rather than cosmetic. With production and hauling merely equal to
 felling, a player who marked a stand of trees posted dozens of _nearer_ jobs, and the settlement
@@ -165,6 +166,32 @@ enough to carry it in. The harder the player worked, the worse they did.
 
 A workshop reserves one slot per worker, not the whole building, so a two-slot hut really does work
 two villagers.
+
+---
+
+## Roads — Implemented
+
+Every economic problem this settlement has had turned out to be a hauling problem. Priorities decide
+_what_ gets carried; roads are the only thing that changes how long the carrying takes. They are the
+first decision the player makes about the **shape** of a settlement rather than its contents.
+
+- Tap any open tile and the panel offers to lay a road there. Tap again to cancel the order, or to
+  lift a road once it exists.
+- Laying one is a job like any other: a villager walks over and beats the track flat. Nothing is
+  built by decree.
+- It costs **labour and no materials**. A beaten track is work, not goods — so nothing here has to
+  invent a resource transfer that never physically happened.
+- It runs at the lowest priority in the game. A settlement must never pave a path while its food
+  sits in the field, and this is the rule that guarantees it.
+- A road cell is roughly **half** the cost to cross. Enough that a long haul along one is visibly
+  quicker and worth planning around, and not so much that a settlement without roads feels broken —
+  the game has to remain winnable by someone who never lays one.
+- Roads cannot be laid on water, rock, or a cell with a tree still standing on it. Clear the ground
+  first.
+
+Lifting a road takes effect immediately rather than posting a job, because it is the player
+correcting a route they no longer want — making them wait for somebody to come and un-beat a track
+would be ceremony rather than a decision.
 
 ---
 

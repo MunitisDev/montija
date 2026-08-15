@@ -273,6 +273,19 @@ architected towards 100-300 villagers, where the naive version fails suddenly ra
 - every A\* search has a node budget, so an unreachable goal cannot expand the whole grid;
 - at most four searches start per tick across all villagers, so no single tick can stall.
 
+**Roads are a cost, not a route.** A road is a separate bit-per-cell layer over the terrain — not a
+terrain type, so felling the trees under one does not un-road it and lifting one gives back the
+ground rather than a guess at what was there. Pathfinding needs no special case: a paved cell is
+simply cheaper to enter, and the cost model was already there. Villagers also walk correspondingly
+faster on one, because a road that only pathfinding believed in would make the settlement _slower_
+— routing everyone down a track that walks like a field.
+
+That change had a consequence worth recording: A\*'s heuristic must never overestimate what remains,
+and it had been priced at the cost of plain ground. A road undercuts that, so the heuristic is now
+priced at the cheapest step the grid can currently offer — which is the old figure exactly until the
+settlement finishes its first road, so a village that never lays one pays nothing for the weaker
+heuristic.
+
 **Pathfinding is deterministic**, because save/replay reproducibility depends on it. Neighbours are
 visited in a fixed order and equal scores break on insertion order — a heap keyed on object identity
 would silently destroy that guarantee.
