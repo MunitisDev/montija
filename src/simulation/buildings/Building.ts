@@ -32,6 +32,14 @@ export class Building {
   /** Villagers assigned to work here. */
   public readonly workers: number[] = [];
   /**
+   * The storage this building opened, once finished, or `null`.
+   *
+   * Recorded so opening one is idempotent: the settlement can reconcile
+   * buildings against storages every tick without ever opening a second yard
+   * for the same building, however the building came to be finished.
+   */
+  public storageId: number | null = null;
+  /**
    * Recipe inputs delivered here.
    *
    * A woodcutter cannot split logs it does not have, and those logs have to be
@@ -44,6 +52,10 @@ export class Building {
     this.definition = buildingDefinition(buildingId);
     this.origin = origin;
     this.buildTicksRemaining = this.definition.buildTicks;
+    this.accessCell = {
+      gx: origin.gx + Math.floor(this.definition.footprint.width / 2),
+      gy: origin.gy + Math.floor(this.definition.footprint.height / 2),
+    };
 
     const required = this.definition.constructionCost.reduce(
       (total, cost) => total + cost.amount,
@@ -56,13 +68,21 @@ export class Building {
     return this.state === 'complete';
   }
 
-  /** The cell haulers and builders walk to. */
-  public get accessCell(): GridPoint {
-    return {
-      gx: this.origin.gx + Math.floor(this.definition.footprint.width / 2),
-      gy: this.origin.gy + Math.floor(this.definition.footprint.height / 2),
-    };
-  }
+  /**
+   * The cell haulers and builders walk to.
+   *
+   * A doorway, not the middle of the floor. This used to return the centre of
+   * the footprint, which is inside the building — and since finishing a
+   * building blocks every cell it occupies, every completed workshop and yard
+   * walled off its own delivery point. Haulers would walk up, fail to arrive,
+   * drop the job and pick it up again forever, so a Food Storage the player
+   * built could never receive a single crate.
+   *
+   * Set by the registry, which has the navigation grid needed to find a cell
+   * that is actually standable. The footprint centre remains only as the
+   * fallback for a building with no reachable neighbour at all.
+   */
+  public accessCell: GridPoint;
 
   /** Every cell this building occupies. */
   public cells(): GridPoint[] {

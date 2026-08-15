@@ -105,6 +105,7 @@ export class BuildingRegistry {
     const building = new Building(this.nextId, buildingId, origin);
     this.nextId += 1;
     this.byId.set(building.id, building);
+    building.accessCell = findAccessCell(world, building);
     this.changeVersion += 1;
     return building;
   }
@@ -120,6 +121,9 @@ export class BuildingRegistry {
     for (const cell of building.cells()) {
       world.navigation.block(cell.gx, cell.gy);
     }
+    // Recomputed now the walls exist: the doorway chosen at placement may have
+    // been a cell this very building has just closed.
+    building.accessCell = findAccessCell(world, building);
     this.changeVersion += 1;
   }
 
@@ -166,4 +170,35 @@ export class BuildingRegistry {
     }
     return total;
   }
+}
+
+/**
+ * A standable cell from which to work on a building.
+ *
+ * Walks the ring immediately around the footprint in a fixed order, so the
+ * choice is reproducible, and falls back to the footprint centre when the
+ * building is walled in — at which point nothing can reach it anyway, and a
+ * wrong-but-defined answer beats an undefined one.
+ */
+export function findAccessCell(world: World, building: Building): GridPoint {
+  const { footprint } = building.definition;
+  const { gx, gy } = building.origin;
+
+  for (let x = gx - 1; x <= gx + footprint.width; x += 1) {
+    for (let y = gy - 1; y <= gy + footprint.height; y += 1) {
+      const insideFootprint =
+        x >= gx && x < gx + footprint.width && y >= gy && y < gy + footprint.height;
+      if (insideFootprint) {
+        continue;
+      }
+      if (world.navigation.isWalkable(x, y)) {
+        return { gx: x, gy: y };
+      }
+    }
+  }
+
+  return {
+    gx: gx + Math.floor(footprint.width / 2),
+    gy: gy + Math.floor(footprint.height / 2),
+  };
 }

@@ -60,12 +60,16 @@ export interface SavedStorage {
   readonly gy: number;
   readonly capacity: number;
   readonly accepts: readonly ResourceId[] | null;
+  /** Spoilage multiplier; absent in saves written before larders preserved food. */
+  readonly preservation?: number;
   readonly contents: SavedInventory;
 }
 
 export interface SavedBuilding {
   readonly id: number;
   readonly buildingId: BuildingId;
+  /** The yard this building opened, so restoring does not open a second. */
+  readonly storageId?: number | null;
   readonly gx: number;
   readonly gy: number;
   readonly complete: boolean;

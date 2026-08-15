@@ -10,6 +10,7 @@ import type { ResourceId } from '@/data/resources';
 import type { Simulation } from '@/simulation/Simulation';
 import type { Inventory } from '@/simulation/resources/Inventory';
 import { Building } from '@/simulation/buildings/Building';
+import { findAccessCell } from '@/simulation/buildings/BuildingRegistry';
 import { Villager } from '@/simulation/villagers/Villager';
 import type { SavedInventory, SaveGame } from './SaveGame';
 import { SAVE_VERSION } from './SaveGame';
@@ -64,7 +65,8 @@ export function serialise(simulation: Simulation, savedAt: string): SaveGame {
       gx: storage.cell.gx,
       gy: storage.cell.gy,
       capacity: storage.inventory.capacity,
-      accepts: null,
+      accepts: storage.acceptedResources,
+      preservation: storage.preservation,
       contents: toRecord(storage.inventory),
     })),
 
@@ -77,6 +79,7 @@ export function serialise(simulation: Simulation, savedAt: string): SaveGame {
       buildTicksRemaining: building.buildTicksRemaining,
       materials: toRecord(building.materials),
       input: toRecord(building.input),
+      storageId: building.storageId,
     })),
 
     // Jobs are already plain data — that design choice in Phase 4 is what
@@ -114,6 +117,10 @@ export function restore(simulation: Simulation, save: SaveGame): void {
     const storage = simulation.storages.add({
       cell: { gx: saved.gx, gy: saved.gy },
       capacity: saved.capacity,
+      ...(saved.accepts ? { accepts: saved.accepts } : {}),
+      // Saves written before food could spoil have no figure; 1 is the open
+      // yard they were all behaving as.
+      preservation: saved.preservation ?? 1,
     });
     fillInventory(storage.inventory, saved.contents);
   }
@@ -122,6 +129,9 @@ export function restore(simulation: Simulation, save: SaveGame): void {
   for (const saved of save.buildings) {
     const building = new Building(saved.id, saved.buildingId, { gx: saved.gx, gy: saved.gy });
     building.buildTicksRemaining = saved.buildTicksRemaining;
+    // Saves written before yards were linked to their buildings carry nothing;
+    // a finished storage building then simply opens its yard on the next tick.
+    building.storageId = saved.storageId ?? null;
     fillInventory(building.materials, saved.materials);
     fillInventory(building.input, saved.input);
     if (saved.complete) {
@@ -133,6 +143,12 @@ export function restore(simulation: Simulation, save: SaveGame): void {
       }
     }
     world.buildings.restoreOne(building);
+  }
+
+  // Doorways depend on which cells are blocked, so they can only be worked out
+  // once every building in the save has re-blocked its own footprint.
+  for (const building of world.buildings.all) {
+    building.accessCell = findAccessCell(world, building);
   }
 
   simulation.villagers.restore(
