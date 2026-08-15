@@ -234,3 +234,19 @@ speed controls share the next, and the resource strip wraps to two lines instead
 | 768×1024 | 21%       |
 
 Every build button is reachable and nothing scrolls horizontally at any of them.
+
+### Icons in the resource strip
+
+Five words plus five numbers do not fit across a phone held upright, so the strip wrapped to a second
+line — and on portrait a wrapped row is a row of world given up to say things the player learns once.
+
+Icons now carry the names, and the words appear alongside them only above 900px, where there is room.
+The strip is one line at every size: 266px wide on a phone against 528px with the words.
+
+The labels are **hidden, not deleted** — moved out of the layout so screen readers still read them,
+and each figure carries its name as a `title` for a hover or a long press. An icon nobody can name is
+worse than a word that does not fit.
+
+They are drawn inline rather than loaded: crisp at any pixel density, no request, and they take their
+colour from the stylesheet. The colours are the muted earthy ones the rest of the game is painted in
+— enough to tell timber from firewood at a glance, not a set of highlighter pens.

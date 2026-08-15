@@ -68,16 +68,85 @@
 
 .resource {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  align-items: center;
+  gap: 5px;
   min-height: 28px;
 }
 
+/*
+ * Icons carry the resource names.
+ *
+ * Five words plus five numbers do not fit across a phone held upright, and the
+ * strip wrapped to a second line — which on portrait is a row of world given up
+ * to say things the player learns once. The icon is always there; the word
+ * appears alongside it only where there is room for it.
+ *
+ * Drawn inline rather than loaded, so they are crisp at any density, need no
+ * request, and take their colour from the stylesheet.
+ */
+.resource__icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  fill: currentColor;
+}
+
+/*
+ * Muted, earthy, and distinct enough to tell apart at a glance — the palette
+ * the rest of the game is painted in, not a set of highlighter pens.
+ */
+.resource--population .resource__icon {
+  color: #9d9c93;
+}
+
+.resource--food .resource__icon {
+  color: #a8a25a;
+}
+
+.resource--logs .resource__icon {
+  color: #8a6a45;
+}
+
+.resource--firewood .resource__icon {
+  color: #b8763f;
+}
+
+.resource--stone .resource__icon {
+  color: #8f9096;
+}
+
+/*
+ * Hidden by default, and still read aloud.
+ *
+ * Removed from the layout rather than deleted, so the strip is one line
+ * everywhere while screen readers, and the `title` on each figure, keep saying
+ * which number is which.
+ */
 .resource__label {
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--colour-ink-dim);
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Wide enough for words: the icon keeps its place and the name joins it. */
+@media (min-width: 900px) {
+  .resource__label {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip-path: none;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--colour-ink-dim);
+  }
 }
 
 .resource__value {
@@ -697,10 +766,10 @@
     row-gap: 6px;
   }
 
+  /* One line, now that icons carry the names. */
   .resource-strip {
-    flex-wrap: wrap;
-    overflow-x: visible;
-    row-gap: 2px;
+    flex-wrap: nowrap;
+    gap: 0 12px;
   }
 
   .build-bar,
@@ -727,12 +796,8 @@
  * that does not exist yet, so this is where the tightening stops.
  */
 @media (max-height: 380px) {
-  .resource__label {
-    display: none;
-  }
-
   .resource-strip {
-    gap: 0 12px;
+    gap: 0 10px;
   }
 
   .hud-bar--top {

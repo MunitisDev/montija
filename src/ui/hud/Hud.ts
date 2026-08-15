@@ -107,6 +107,14 @@ export class Hud {
       this.lastRenderedPopulation = snapshot.villagerCount;
     }
 
+    // Population is read outside the resource loop below, so it needs its own
+    // naming — otherwise it is the one icon with nothing to say for itself.
+    const populationLabel = this.i18n.t('hud.population');
+    const populationRow = this.elements.population.parentElement;
+    if (populationRow && populationRow.title !== populationLabel) {
+      populationRow.title = populationLabel;
+    }
+
     // The HUD shows what the yards physically hold. Resources still lying on
     // the ground are excluded on purpose: felling a tree must not move the
     // counter until somebody has actually carried the logs in.
