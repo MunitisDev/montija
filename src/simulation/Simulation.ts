@@ -1,18 +1,17 @@
 /**
  * The authoritative game state.
  *
- * Status: SKELETON (Phase 1). It owns the seed, the RNG and the tick counter,
- * and nothing else yet — world, villagers, jobs and buildings arrive in
- * Phases 2-8. It exists now so that the layering is real from the first commit:
- * the renderer already reads its state instead of holding its own.
+ * Status: Phase 2. Owns the seed, the RNG, the tick counter and the world.
+ * Villagers, jobs, buildings and seasons join in Phases 3-8.
  *
  * Rules for everything added here later:
  * - no Phaser, no DOM, no `Math.random()` (all enforced by ESLint);
- * - all mutation happens inside `tick()`, driven by the SimulationClock;
+ * - all mutation happens inside `update()`, driven by the SimulationClock;
  * - the renderer reads, never writes. Player intent arrives as commands.
  */
 
 import { SeededRandom, deriveSeed, type RandomSource } from '@/shared/math/random';
+import { World } from './world/World';
 
 /** A read-only view of the simulation, safe to hand to the renderer and HUD. */
 export interface SimulationSnapshot {
@@ -20,21 +19,31 @@ export interface SimulationSnapshot {
   readonly tick: number;
   /** Population. Always 0 until Phase 3 introduces villagers. */
   readonly villagerCount: number;
+  readonly treeCount: number;
 }
 
 export interface SimulationOptions {
   readonly seed: number;
+  readonly worldWidth: number;
+  readonly worldHeight: number;
 }
 
 export class Simulation {
+  public readonly world: World;
+
   private readonly seed: number;
-  /** Stream reserved for world generation, kept separate from other systems. */
-  private readonly worldRandom: RandomSource;
+  /** Stream reserved for systems that need randomness during ticks. */
+  private readonly tickRandom: RandomSource;
   private currentTick = 0;
 
   constructor(options: SimulationOptions) {
     this.seed = options.seed >>> 0;
-    this.worldRandom = new SeededRandom(deriveSeed(this.seed, 'world'));
+    this.tickRandom = new SeededRandom(deriveSeed(this.seed, 'tick'));
+    this.world = new World({
+      width: options.worldWidth,
+      height: options.worldHeight,
+      seed: this.seed,
+    });
   }
 
   public get worldSeed(): number {
@@ -48,7 +57,7 @@ export class Simulation {
   /** Advances the world by exactly one fixed tick. */
   public update(tick: number, _tickSeconds: number): void {
     this.currentTick = tick;
-    // Phase 2+ : world, villagers, jobs, logistics, production, seasons.
+    // Phase 3+ : villagers, jobs, logistics, production, seasons.
   }
 
   public snapshot(): SimulationSnapshot {
@@ -56,14 +65,12 @@ export class Simulation {
       seed: this.seed,
       tick: this.currentTick,
       villagerCount: 0,
+      treeCount: this.world.trees.length,
     };
   }
 
-  /**
-   * Exposed for the systems added in later phases; also keeps the world stream
-   * referenced so its determinism contract is visible from the outset.
-   */
+  /** Exposed for the systems added in later phases. */
   public get random(): RandomSource {
-    return this.worldRandom;
+    return this.tickRandom;
   }
 }
