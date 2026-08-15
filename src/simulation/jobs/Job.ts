@@ -81,6 +81,13 @@ export interface Job {
   haulSource: HaulSource | null;
   /** Which resource a storage-sourced haul should take. */
   haulResource: ResourceId | null;
+  /**
+   * Which of the target's exclusive posts this job holds.
+   *
+   * Almost always 0. A workshop with several worker slots is the exception: its
+   * slots are reserved separately so more than one villager can work it.
+   */
+  reservationSlot: number;
 }
 
 /** How long each kind of work takes, in ticks. Balance comes later. */

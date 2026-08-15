@@ -39,6 +39,15 @@ export interface CreateJobOptions {
   readonly workTicks?: number;
   readonly haulSource?: HaulSource;
   readonly haulResource?: ResourceId;
+  /**
+   * Which of the target's exclusive posts this job occupies.
+   *
+   * A tree is one indivisible thing, but a workshop with two worker slots has
+   * two, and reserving the building as a whole would leave the second slot
+   * permanently empty. Defaults to slot 0, which is what every single-target
+   * job wants.
+   */
+  readonly reservationSlot?: number;
 }
 
 export class JobManager {
@@ -89,8 +98,29 @@ export class JobManager {
   }
 
   /** `true` when something already has a live job against it. */
-  public isTargetReserved(type: JobType, entityId: number): boolean {
-    return this.reservedTargets.has(targetKey(type, entityId));
+  public isTargetReserved(type: JobType, entityId: number, slot = 0): boolean {
+    return this.reservedTargets.has(targetKey(type, entityId, slot));
+  }
+
+  /** How many of a target's slots are currently taken. */
+  public reservedSlotCount(type: JobType, entityId: number, slots: number): number {
+    let taken = 0;
+    for (let slot = 0; slot < slots; slot++) {
+      if (this.isTargetReserved(type, entityId, slot)) {
+        taken += 1;
+      }
+    }
+    return taken;
+  }
+
+  /** The lowest free slot on a target, or `null` when all are taken. */
+  public firstFreeSlot(type: JobType, entityId: number, slots: number): number | null {
+    for (let slot = 0; slot < slots; slot++) {
+      if (!this.isTargetReserved(type, entityId, slot)) {
+        return slot;
+      }
+    }
+    return null;
   }
 
   /**
@@ -102,7 +132,9 @@ export class JobManager {
   public create(options: CreateJobOptions): Job | null {
     const entityId = options.targetEntityId ?? null;
 
-    if (entityId !== null && this.isTargetReserved(options.type, entityId)) {
+    const slot = options.reservationSlot ?? 0;
+
+    if (entityId !== null && this.isTargetReserved(options.type, entityId, slot)) {
       return null;
     }
 
@@ -119,13 +151,14 @@ export class JobManager {
       deliverTo: options.deliverTo ?? null,
       haulSource: options.type === 'haul' ? (options.haulSource ?? 'pile') : null,
       haulResource: options.haulResource ?? null,
+      reservationSlot: slot,
     };
 
     this.nextId += 1;
     this.changeVersion += 1;
     this.jobs.set(job.id, job);
     if (entityId !== null) {
-      this.reservedTargets.add(targetKey(options.type, entityId));
+      this.reservedTargets.add(targetKey(options.type, entityId, slot));
     }
 
     return job;
@@ -245,10 +278,14 @@ export class JobManager {
     this.nextId = 1;
 
     for (const job of jobs) {
-      this.jobs.set(job.id, { ...job });
-      this.nextId = Math.max(this.nextId, job.id + 1);
-      if (job.targetEntityId !== null) {
-        this.reservedTargets.add(targetKey(job.type, job.targetEntityId));
+      // Saves written before workshops had per-slot reservations carry no slot.
+      const restored: Job = { ...job, reservationSlot: job.reservationSlot ?? 0 };
+      this.jobs.set(restored.id, restored);
+      this.nextId = Math.max(this.nextId, restored.id + 1);
+      if (restored.targetEntityId !== null) {
+        this.reservedTargets.add(
+          targetKey(restored.type, restored.targetEntityId, restored.reservationSlot),
+        );
       }
     }
     this.changeVersion += 1;
@@ -259,11 +296,11 @@ export class JobManager {
     this.changeVersion += 1;
     this.jobs.delete(job.id);
     if (job.targetEntityId !== null) {
-      this.reservedTargets.delete(targetKey(job.type, job.targetEntityId));
+      this.reservedTargets.delete(targetKey(job.type, job.targetEntityId, job.reservationSlot));
     }
   }
 }
 
-function targetKey(type: JobType, entityId: number): string {
-  return `${type}:${entityId}`;
+function targetKey(type: JobType, entityId: number, slot: number): string {
+  return `${type}:${entityId}:${slot}`;
 }
