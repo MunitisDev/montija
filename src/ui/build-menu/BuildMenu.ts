@@ -14,17 +14,21 @@
 import { BUILDING_IDS, buildingDefinition, type BuildingId } from '@/data/buildings';
 import type { PlacementRefusal } from '@/simulation/buildings/BuildingRegistry';
 import type { GameContext } from '@/game/Game';
+import type { I18n } from '@/ui/i18n/I18n';
+import type { MessageKey } from '@/ui/i18n/messages';
 
-/** Plain-English reasons, so the player is told what is wrong. */
-const REFUSAL_TEXT: Readonly<Record<PlacementRefusal, string>> = {
-  'off-map': 'beyond the map',
-  'blocked-terrain': 'ground will not take it',
-  occupied: 'something is already here',
-  'trees-in-the-way': 'clear the trees first',
+/** Refusal reasons, so the player is told what is wrong rather than just "no". */
+const REFUSAL_KEY: Readonly<Record<PlacementRefusal, MessageKey>> = {
+  'off-map': 'placement.offMap',
+  'blocked-terrain': 'placement.blockedTerrain',
+  occupied: 'placement.occupied',
+  'trees-in-the-way': 'placement.treesInTheWay',
 };
 
 export class BuildMenu {
   private readonly context: GameContext;
+  private readonly i18n: I18n;
+  private renderedLanguageVersion = -1;
   private readonly bar: HTMLElement;
   private readonly panel: HTMLElement;
   private readonly label: HTMLElement;
@@ -34,8 +38,9 @@ export class BuildMenu {
   private readonly buttons = new Map<BuildingId, HTMLButtonElement>();
   private renderedPlacementVersion = -1;
 
-  constructor(root: HTMLElement, context: GameContext) {
+  constructor(root: HTMLElement, context: GameContext, i18n: I18n) {
     this.context = context;
+    this.i18n = i18n;
     this.bar = requireElement(root, '[data-hud="build-bar"]');
     this.panel = requireElement(root, '[data-hud="placement"]');
     this.label = requireElement(root, '[data-hud="placement-label"]');
@@ -58,6 +63,12 @@ export class BuildMenu {
 
   /** Refreshes only when placement actually changed. */
   public update(): void {
+    if (this.i18n.changeVersion !== this.renderedLanguageVersion) {
+      this.renderedLanguageVersion = this.i18n.changeVersion;
+      this.relabelButtons();
+      this.renderedPlacementVersion = -1;
+    }
+
     if (this.renderedPlacementVersion === this.context.placementVersion) {
       return;
     }
@@ -76,22 +87,35 @@ export class BuildMenu {
 
     const definition = buildingDefinition(placement.buildingId);
     const cost = definition.constructionCost
-      .map((entry) => `${entry.amount} ${entry.resource}`)
+      .map((entry) => `${entry.amount} ${this.i18n.t(`hud.${entry.resource}` as MessageKey)}`)
       .join(', ');
 
-    this.label.textContent = `${definition.name} — ${cost}`;
+    // The description is shown while placing, not only as a hover title: on a
+    // tablet there is no hover, and "which building makes food?" has to be
+    // answerable without one.
+    this.label.textContent = `${this.i18n.t(`building.${definition.id}` as MessageKey)} — ${cost}`;
+    this.label.title = this.i18n.t(`building.${definition.id}.description` as MessageKey);
     this.confirm.disabled = !placement.check.ok;
-    this.hint.textContent = placement.check.ok ? '' : REFUSAL_TEXT[placement.check.reason];
+    this.hint.textContent = placement.check.ok
+      ? this.i18n.t(`building.${definition.id}.description` as MessageKey)
+      : this.i18n.t(REFUSAL_KEY[placement.check.reason]);
+    this.hint.classList.toggle('is-refusal', !placement.check.ok);
+  }
+
+  private relabelButtons(): void {
+    for (const [id, button] of this.buttons) {
+      button.textContent = this.i18n.t(`building.${id}` as MessageKey);
+      button.title = this.i18n.t(`building.${id}.description` as MessageKey);
+    }
+    this.confirm.textContent = this.i18n.t('action.place');
+    this.cancel.textContent = this.i18n.t('action.cancel');
   }
 
   private buildButtons(): void {
     for (const id of BUILDING_IDS) {
-      const definition = buildingDefinition(id);
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'build-button';
-      button.textContent = definition.name;
-      button.title = definition.description;
       button.dataset['building'] = id;
 
       button.addEventListener('click', () => {

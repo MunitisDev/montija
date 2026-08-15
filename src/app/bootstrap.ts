@@ -17,6 +17,7 @@ import { TouchController } from '@/input/TouchController';
 import { createPhaserGame } from '@/renderer/phaser/createPhaserGame';
 import { Hud } from '@/ui/hud/Hud';
 import { BuildMenu } from '@/ui/build-menu/BuildMenu';
+import { I18n } from '@/ui/i18n/I18n';
 import { DebugOverlay } from '@/debug/DebugOverlay';
 
 function requireElement<T extends HTMLElement>(selector: string): T {
@@ -43,8 +44,11 @@ export function start(): void {
     });
   }
 
-  const hud = new Hud(hudRoot, game);
-  const buildMenu = new BuildMenu(hudRoot, game);
+  const i18n = new I18n();
+  document.documentElement.lang = i18n.language;
+
+  const hud = new Hud(hudRoot, game, i18n);
+  const buildMenu = new BuildMenu(hudRoot, game, i18n);
 
   // Mouse and touch are separate controllers feeding one intent sink, so a
   // hybrid device never processes the same gesture through both paths.

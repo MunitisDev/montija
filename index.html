@@ -32,32 +32,42 @@
         <div class="hud-bar hud-bar--top">
           <div class="resource-strip" role="group" aria-label="Settlement resources">
             <div class="resource">
-              <span class="resource__label">Pop</span>
+              <span class="resource__label" data-i18n="hud.population">Pop</span>
               <span class="resource__value" data-hud="population">0</span>
             </div>
             <div class="resource">
-              <span class="resource__label">Food</span>
+              <span class="resource__label" data-i18n="hud.food">Food</span>
               <span class="resource__value" data-hud="food">--</span>
             </div>
             <div class="resource">
-              <span class="resource__label">Logs</span>
+              <span class="resource__label" data-i18n="hud.logs">Logs</span>
               <span class="resource__value" data-hud="logs">--</span>
             </div>
             <div class="resource">
-              <span class="resource__label">Firewood</span>
+              <span class="resource__label" data-i18n="hud.firewood">Firewood</span>
               <span class="resource__value" data-hud="firewood">--</span>
             </div>
             <div class="resource">
-              <span class="resource__label">Stone</span>
+              <span class="resource__label" data-i18n="hud.stone">Stone</span>
               <span class="resource__value" data-hud="stone">--</span>
             </div>
           </div>
 
+          <button
+            type="button"
+            class="language-button"
+            data-hud="language"
+            aria-label="Language"
+          ></button>
+
           <div class="climate-strip">
-            <span class="climate__season" data-hud="season">Spring</span>
+            <span class="climate__season" data-hud="season"></span>
             <span class="climate__temperature" data-hud="temperature">--</span>
           </div>
         </div>
+
+        <!-- Advice when the settlement is heading for trouble. -->
+        <div class="advice" data-hud="advice" role="status" hidden></div>
 
         <div class="hud-bar hud-bar--bottom">
           <div class="bottom-left">
@@ -66,9 +76,12 @@
               <span class="tile-panel__terrain" data-hud="selection-terrain"></span>
               <span class="tile-panel__cell" data-hud="selection-cell"></span>
               <span class="tile-panel__flags" data-hud="selection-flags"></span>
-              <button type="button" class="tile-panel__action" data-hud="selection-action" hidden>
-                Fell
-              </button>
+              <button
+                type="button"
+                class="tile-panel__action"
+                data-hud="selection-action"
+                hidden
+              ></button>
             </div>
 
             <!-- Build menu. Buttons are generated from data/buildings.ts. -->
@@ -78,18 +91,22 @@
             <div class="placement-bar" data-hud="placement" hidden>
               <span class="placement-bar__label" data-hud="placement-label"></span>
               <span class="placement-bar__hint" data-hud="placement-hint"></span>
-              <button type="button" class="placement-bar__confirm" data-hud="placement-confirm">
-                Place
-              </button>
-              <button type="button" class="placement-bar__cancel" data-hud="placement-cancel">
-                Cancel
-              </button>
+              <button
+                type="button"
+                class="placement-bar__confirm"
+                data-hud="placement-confirm"
+              ></button>
+              <button
+                type="button"
+                class="placement-bar__cancel"
+                data-hud="placement-cancel"
+              ></button>
             </div>
           </div>
 
           <div class="session-controls" role="group" aria-label="Saved game">
-            <button type="button" class="session-button" data-hud="save">Save</button>
-            <button type="button" class="session-button" data-hud="load">Load</button>
+            <button type="button" class="session-button" data-hud="save"></button>
+            <button type="button" class="session-button" data-hud="load"></button>
             <span class="session-status" data-hud="save-status" role="status"></span>
           </div>
 
@@ -116,7 +133,10 @@
     </div>
 
     <noscript>
-      <p class="noscript">Montija needs JavaScript and WebGL to run.</p>
+      <p class="noscript">
+        Montija needs JavaScript and WebGL to run.<br />Montija necesita JavaScript y WebGL para
+        funcionar.
+      </p>
     </noscript>
 
     <script type="module" src="/src/app/bootstrap.ts"></script>

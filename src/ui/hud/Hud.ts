@@ -13,9 +13,10 @@
  */
 
 import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
-import { TERRAIN, type TerrainType } from '@/data/terrain';
 import type { GameContext } from '@/game/Game';
 import { SIMULATION_SPEEDS, type SimulationSpeed } from '@/simulation/SimulationClock';
+import { LANGUAGES, type I18n, type Language } from '@/ui/i18n/I18n';
+import type { MessageKey } from '@/ui/i18n/messages';
 
 /** Elements the HUD binds to, looked up once. */
 interface HudElements {
@@ -28,6 +29,8 @@ interface HudElements {
   readonly selectionAction: HTMLButtonElement;
   readonly season: HTMLElement;
   readonly temperature: HTMLElement;
+  readonly advice: HTMLElement;
+  readonly language: HTMLButtonElement;
   readonly speedButtons: readonly HTMLButtonElement[];
   readonly saveButton: HTMLButtonElement;
   readonly loadButton: HTMLButtonElement;
@@ -36,6 +39,9 @@ interface HudElements {
 
 export class Hud {
   private readonly context: GameContext;
+  private readonly i18n: I18n;
+  private readonly root: HTMLElement;
+  private renderedLanguageVersion = -1;
   private readonly elements: HudElements;
   private lastRenderedSpeed: SimulationSpeed | null = null;
   private lastRenderedPopulation = -1;
@@ -45,15 +51,19 @@ export class Hud {
   /** Loose totals last written, tracked apart from stored ones. */
   private readonly lastRenderedLoose = new Map<ResourceId, number>();
   private lastRenderedSaveVersion = -1;
+  private lastRenderedAdvice: string | null | undefined;
   private lastRenderedSeason = '';
   private lastRenderedTemperature = Number.NaN;
 
-  constructor(root: HTMLElement, context: GameContext) {
+  constructor(root: HTMLElement, context: GameContext, i18n: I18n) {
     this.context = context;
+    this.i18n = i18n;
+    this.root = root;
     this.elements = collectElements(root);
     this.bindSpeedButtons();
     this.bindSelectionAction();
     this.bindSessionButtons();
+    this.bindLanguageButton();
     this.update();
   }
 
@@ -66,6 +76,14 @@ export class Hud {
   public update(): void {
     const snapshot = this.context.snapshot();
     const speed = this.context.clock.speed;
+
+    // A language change invalidates every string, so force a full redraw
+    // rather than trying to work out which labels happen to differ.
+    if (this.i18n.changeVersion !== this.renderedLanguageVersion) {
+      this.renderedLanguageVersion = this.i18n.changeVersion;
+      this.applyStaticText();
+      this.invalidateAll();
+    }
 
     if (snapshot.villagerCount !== this.lastRenderedPopulation) {
       this.elements.population.textContent = String(snapshot.villagerCount);
@@ -94,7 +112,11 @@ export class Hud {
       }
     }
 
-    const seasonLabel = `${capitalise(snapshot.season)} · Y${snapshot.year} d${snapshot.dayOfSeason}`;
+    const seasonLabel = [
+      this.i18n.t(`season.${snapshot.season}` as MessageKey),
+      `${this.i18n.t('time.yearShort')}${snapshot.year}`,
+      `${this.i18n.t('time.dayShort')}${snapshot.dayOfSeason}`,
+    ].join(' · ');
     if (seasonLabel !== this.lastRenderedSeason) {
       this.elements.season.textContent = seasonLabel;
       this.lastRenderedSeason = seasonLabel;
@@ -111,6 +133,15 @@ export class Hud {
     if (speed !== this.lastRenderedSpeed) {
       this.renderSpeed(speed);
       this.lastRenderedSpeed = speed;
+    }
+
+    const advice = snapshot.advice;
+    if (advice !== this.lastRenderedAdvice) {
+      this.elements.advice.hidden = advice === null;
+      if (advice) {
+        this.elements.advice.textContent = this.i18n.t(`warning.${advice}` as MessageKey);
+      }
+      this.lastRenderedAdvice = advice;
     }
 
     if (this.context.saveVersion !== this.lastRenderedSaveVersion) {
@@ -143,34 +174,42 @@ export class Hud {
     if (selection.villager) {
       const villager = selection.villager;
       this.elements.selectionTerrain.textContent = villager.name;
-      this.elements.selectionCell.textContent = `age ${villager.age}`;
-      this.elements.selectionFlags.textContent = villager.activity;
+      this.elements.selectionCell.textContent = `${this.i18n.t('villager.age')} ${villager.age}`;
+      this.elements.selectionFlags.textContent = this.i18n.t(
+        `villager.${villager.activity}` as MessageKey,
+      );
       return;
     }
 
     if (selection.treeId !== null) {
-      this.elements.selectionTerrain.textContent = 'Tree';
+      this.elements.selectionTerrain.textContent = this.i18n.t('terrain.tree');
       this.elements.selectionCell.textContent = `${selection.cell.gx}, ${selection.cell.gy}`;
-      this.elements.selectionFlags.textContent = selection.designated ? 'marked for felling' : '';
+      this.elements.selectionFlags.textContent = selection.designated
+        ? this.i18n.t('status.markedForFelling')
+        : '';
       return;
     }
 
     if (selection.isStoneDeposit) {
-      this.elements.selectionTerrain.textContent = 'Stone deposit';
+      this.elements.selectionTerrain.textContent = this.i18n.t('terrain.stoneDeposit');
       this.elements.selectionCell.textContent = `${selection.cell.gx}, ${selection.cell.gy}`;
-      this.elements.selectionFlags.textContent = selection.designated ? 'marked for mining' : '';
+      this.elements.selectionFlags.textContent = selection.designated
+        ? this.i18n.t('status.markedForMining')
+        : '';
       return;
     }
 
-    this.elements.selectionTerrain.textContent = terrainName(selection.terrain);
+    this.elements.selectionTerrain.textContent = this.i18n.t(
+      `terrain.${selection.terrain}` as MessageKey,
+    );
     this.elements.selectionCell.textContent = `${selection.cell.gx}, ${selection.cell.gy}`;
 
     const flags: string[] = [];
     if (!selection.walkable) {
-      flags.push('impassable');
+      flags.push(this.i18n.t('terrain.impassable'));
     }
     if (!selection.buildable) {
-      flags.push('cannot build');
+      flags.push(this.i18n.t('terrain.cannotBuild'));
     }
     this.elements.selectionFlags.textContent = flags.join(' · ');
   }
@@ -196,8 +235,8 @@ export class Hud {
     if (!actionable) {
       return;
     }
-    const verb = isTree ? 'Fell' : 'Mine';
-    this.elements.selectionAction.textContent = designated ? 'Cancel' : verb;
+    const verb = this.i18n.t(isTree ? 'action.fell' : 'action.mine');
+    this.elements.selectionAction.textContent = designated ? this.i18n.t('action.cancel') : verb;
     this.elements.selectionAction.classList.toggle('is-cancel', designated);
   }
 
@@ -231,6 +270,39 @@ export class Hud {
     }
   }
 
+  private bindLanguageButton(): void {
+    this.elements.language.addEventListener('click', () => {
+      const next = LANGUAGES[(LANGUAGES.indexOf(this.i18n.language) + 1) % LANGUAGES.length];
+      this.i18n.setLanguage(next as Language);
+      this.update();
+    });
+  }
+
+  /** Writes the labels that never change except with the language. */
+  private applyStaticText(): void {
+    for (const element of this.root.querySelectorAll<HTMLElement>('[data-i18n]')) {
+      const key = element.dataset['i18n'] as MessageKey | undefined;
+      if (key) {
+        element.textContent = this.i18n.t(key);
+      }
+    }
+    this.elements.saveButton.textContent = this.i18n.t('action.save');
+    this.elements.loadButton.textContent = this.i18n.t('action.load');
+    this.elements.language.textContent = this.i18n.language.toUpperCase();
+  }
+
+  /** Forces every cached readout to redraw. */
+  private invalidateAll(): void {
+    this.lastRenderedPopulation = -1;
+    this.lastRenderedSelection = -1;
+    this.lastRenderedSpeed = null;
+    this.lastRenderedSeason = '';
+    this.lastRenderedTemperature = Number.NaN;
+    this.lastRenderedAdvice = undefined;
+    this.lastRenderedTotals.clear();
+    this.lastRenderedLoose.clear();
+  }
+
   private bindSpeedButtons(): void {
     for (const button of this.elements.speedButtons) {
       button.addEventListener('click', () => {
@@ -242,14 +314,6 @@ export class Hud {
       });
     }
   }
-}
-
-function capitalise(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-function terrainName(type: TerrainType): string {
-  return TERRAIN[type].name;
 }
 
 function collectElements(root: HTMLElement): HudElements {
@@ -268,6 +332,8 @@ function collectElements(root: HTMLElement): HudElements {
     selectionAction: requireElement(root, '[data-hud="selection-action"]') as HTMLButtonElement,
     season: requireElement(root, '[data-hud="season"]'),
     temperature: requireElement(root, '[data-hud="temperature"]'),
+    advice: requireElement(root, '[data-hud="advice"]'),
+    language: requireElement(root, '[data-hud="language"]') as HTMLButtonElement,
     speedButtons: Array.from(root.querySelectorAll<HTMLButtonElement>('[data-speed]')),
     saveButton: requireElement(root, '[data-hud="save"]') as HTMLButtonElement,
     loadButton: requireElement(root, '[data-hud="load"]') as HTMLButtonElement,
