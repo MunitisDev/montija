@@ -15,6 +15,7 @@ import {
   DEFAULT_WORLD_SEED,
   INITIAL_ZOOM,
   MAX_TICKS_PER_ADVANCE,
+  STARTING_VILLAGERS,
   TICKS_PER_SECOND,
   WORLD_HEIGHT,
   WORLD_WIDTH,
@@ -42,12 +43,22 @@ export interface FrameStats {
   readonly simulationMs: number;
 }
 
+/** A villager the player tapped. */
+export interface VillagerSelection {
+  readonly id: number;
+  readonly name: string;
+  readonly age: number;
+  readonly activity: string;
+}
+
 /** What the player last tapped, resolved to the grid. */
 export interface Selection {
   readonly cell: GridPoint;
   readonly terrain: TerrainType;
   readonly walkable: boolean;
   readonly buildable: boolean;
+  /** Set when a villager was standing there — they take priority over the tile. */
+  readonly villager: VillagerSelection | null;
 }
 
 /** What the presentation layer is allowed to see. */
@@ -61,6 +72,8 @@ export interface GameContext {
   snapshot(): SimulationSnapshot;
   /** The current selection, or `null` when nothing is selected. */
   readonly selection: Selection | null;
+  /** Progress through the pending simulation tick, for render interpolation. */
+  readonly tickAlpha: number;
   /** Increments whenever the selection changes, so renderers can skip work. */
   readonly selectionVersion: number;
 }
@@ -87,6 +100,7 @@ export class Game implements GameContext, InputIntentSink {
       seed,
       worldWidth: WORLD_WIDTH,
       worldHeight: WORLD_HEIGHT,
+      startingVillagers: STARTING_VILLAGERS,
     });
     this.clock = new SimulationClock({
       ticksPerSecond: TICKS_PER_SECOND,
@@ -120,6 +134,12 @@ export class Game implements GameContext, InputIntentSink {
 
   public get selectionVersion(): number {
     return this.selectionChanges;
+  }
+
+  public get tickAlpha(): number {
+    // Paused, nothing is in flight, so snap to the settled position rather
+    // than freezing mid-stride between two cells.
+    return this.clock.isPaused ? 1 : this.clock.tickAlpha;
   }
 
   /**
@@ -198,15 +218,31 @@ export class Game implements GameContext, InputIntentSink {
     const cell = this.screenToGrid(point);
     const world = this.simulation.world;
 
-    // Tapping off-map clears the selection rather than leaving a stale one.
-    this.currentSelection = cell
-      ? {
-          cell,
-          terrain: world.terrainAt(cell),
-          walkable: world.isWalkable(cell),
-          buildable: world.isBuildable(cell),
-        }
-      : null;
+    if (!cell) {
+      // Tapping off-map clears the selection rather than leaving a stale one.
+      this.currentSelection = null;
+      this.selectionChanges += 1;
+      return;
+    }
+
+    // A villager standing on the tapped tile is almost always what the player
+    // meant, so they win over the ground beneath them.
+    const villager = this.simulation.villagers.findNear(cell);
+
+    this.currentSelection = {
+      cell,
+      terrain: world.terrainAt(cell),
+      walkable: world.isWalkable(cell),
+      buildable: world.isBuildable(cell),
+      villager: villager
+        ? {
+            id: villager.id,
+            name: villager.name,
+            age: villager.age,
+            activity: villager.activity,
+          }
+        : null,
+    };
     this.selectionChanges += 1;
   }
 }

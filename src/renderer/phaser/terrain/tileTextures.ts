@@ -44,6 +44,8 @@ export const TextureKeys = {
   terrainAtlas: 'terrain-atlas',
   treeAtlas: 'tree-atlas',
   selection: 'selection-diamond',
+  villager: 'villager',
+  villagerRing: 'villager-ring',
   /** Frame name within the terrain atlas. */
   terrainFrame: (type: TerrainType): string => type,
   /** Frame name within the tree atlas. */
@@ -53,6 +55,20 @@ export const TextureKeys = {
 /** Tree sprite dimensions, per the art bible. */
 const TREE_WIDTH = 64;
 const TREE_HEIGHT = 96;
+
+/**
+ * Villager sprite height, per the art bible.
+ *
+ * Deliberately small against a 96px tree: the settlement is the subject, and
+ * people are what make it live. Characters must never dominate the frame.
+ */
+export const VILLAGER_HEIGHT = 48;
+const VILLAGER_WIDTH = 32;
+
+/** Cloth and skin tones, kept muted and earthy like everything else. */
+const VILLAGER_CLOTH = 0x6b5f4b;
+const VILLAGER_CLOAK = 0x4f4638;
+const VILLAGER_SKIN = 0xa88a6d;
 
 /**
  * Builds every placeholder texture once, at scene start.
@@ -69,6 +85,18 @@ export function createPlaceholderTextures(scene: Phaser.Scene): void {
   if (!scene.textures.exists(TextureKeys.selection)) {
     drawSelectionDiamond(graphics);
     graphics.generateTexture(TextureKeys.selection, TILE_WIDTH, TILE_HEIGHT);
+    graphics.clear();
+  }
+
+  if (!scene.textures.exists(TextureKeys.villager)) {
+    drawVillager(graphics);
+    graphics.generateTexture(TextureKeys.villager, VILLAGER_WIDTH, VILLAGER_HEIGHT);
+    graphics.clear();
+  }
+
+  if (!scene.textures.exists(TextureKeys.villagerRing)) {
+    drawVillagerRing(graphics);
+    graphics.generateTexture(TextureKeys.villagerRing, TILE_WIDTH, TILE_HEIGHT);
     graphics.clear();
   }
 
@@ -197,4 +225,64 @@ function drawSelectionDiamond(graphics: Phaser.GameObjects.Graphics): void {
   graphics.lineTo(1, halfHeight);
   graphics.closePath();
   graphics.strokePath();
+}
+
+/**
+ * A placeholder villager: a hooded figure, no face, adult proportions.
+ *
+ * Anchored at the feet by the renderer. Two readability constraints drive the
+ * shape, both learned from looking at it in the world: the silhouette must be
+ * clearly humanoid at small size, and it must not resemble a conifer, since
+ * trees share the scene and a pointed hood reads as a sapling. Hence rounded
+ * head and hood, and shoulders wider than the head.
+ *
+ * Deliberately not a chibi — the art direction rules out cartoon proportions.
+ */
+function drawVillager(graphics: Phaser.GameObjects.Graphics): void {
+  const centreX = VILLAGER_WIDTH / 2;
+  const feet = VILLAGER_HEIGHT;
+
+  // Soft contact shadow, so the figure sits on the ground rather than floats.
+  graphics.fillStyle(0x000000, 0.22);
+  graphics.fillEllipse(centreX, feet - 2, 18, 7);
+
+  // Legs, set apart so the gap reads at a glance.
+  graphics.fillStyle(VILLAGER_CLOAK, 1);
+  graphics.fillRect(centreX - 6, feet - 17, 4, 15);
+  graphics.fillRect(centreX + 2, feet - 17, 4, 15);
+
+  // Body: shoulders wider than the head, tapering to the waist. The shoulder
+  // line is what makes the shape read as a person rather than a cone.
+  graphics.fillStyle(VILLAGER_CLOTH, 1);
+  graphics.beginPath();
+  graphics.moveTo(centreX - 9, feet - 33);
+  graphics.lineTo(centreX + 9, feet - 33);
+  graphics.lineTo(centreX + 7, feet - 15);
+  graphics.lineTo(centreX - 7, feet - 15);
+  graphics.closePath();
+  graphics.fillPath();
+
+  // Arms, hanging close to the body.
+  graphics.fillStyle(VILLAGER_CLOAK, 1);
+  graphics.fillRect(centreX - 11, feet - 32, 3, 13);
+  graphics.fillRect(centreX + 8, feet - 32, 3, 13);
+
+  // Rounded hood behind the head — never a point.
+  graphics.fillStyle(VILLAGER_CLOAK, 1);
+  graphics.fillCircle(centreX, feet - 38, 6.5);
+  graphics.fillRect(centreX - 6.5, feet - 38, 13, 6);
+
+  // Face opening.
+  graphics.fillStyle(VILLAGER_SKIN, 1);
+  graphics.fillCircle(centreX, feet - 38, 4);
+
+  // Key light from the upper left.
+  graphics.fillStyle(0xffffff, 0.07);
+  graphics.fillRect(centreX - 9, feet - 33, 5, 18);
+}
+
+/** The ring drawn under a selected villager. */
+function drawVillagerRing(graphics: Phaser.GameObjects.Graphics): void {
+  graphics.lineStyle(2, 0xc9a227, 0.9);
+  graphics.strokeEllipse(TILE_WIDTH / 2, TILE_HEIGHT / 2, 26, 13);
 }

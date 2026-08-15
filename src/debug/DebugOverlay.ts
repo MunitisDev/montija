@@ -54,7 +54,8 @@ export class DebugOverlay {
       `map          ${world.width} x ${world.height}`,
       `tiles        ${world.width * world.height}`,
       `trees        ${snapshot.treeCount}`,
-      `villagers    ${snapshot.villagerCount}`,
+      `villagers    ${snapshot.villagerCount} (${snapshot.walkingCount} walking)`,
+      `path reqs    ${snapshot.pathRequests} (${snapshot.pathFailures} failed)`,
       `selected     ${selection ? `${selection.cell.gx},${selection.cell.gy} ${selection.terrain}` : '-'}`,
       `seed         ${this.context.simulation.worldSeed}`,
     ];

@@ -11,6 +11,7 @@ import Phaser from 'phaser';
 import type { GameContext } from '@/game/Game';
 import { PhaserCameraBinding } from '@/renderer/phaser/camera/PhaserCameraBinding';
 import { TerrainRenderer } from '@/renderer/phaser/terrain/TerrainRenderer';
+import { VillagerRenderer } from '@/renderer/phaser/entities/VillagerRenderer';
 import { TextureKeys } from '@/renderer/phaser/terrain/tileTextures';
 import { RenderLayer, depthFor } from '@/renderer/phaser/sorting';
 import { gridToScene } from '@/shared/math/isometric';
@@ -24,6 +25,7 @@ export class WorldScene extends Phaser.Scene {
   private context!: GameContext;
   private cameraBinding!: PhaserCameraBinding;
   private terrainRenderer!: TerrainRenderer;
+  private villagerRenderer!: VillagerRenderer;
   private selectionMarker!: Phaser.GameObjects.Image;
   /** Last selection version drawn, so the marker only moves when it changes. */
   private renderedSelectionVersion = -1;
@@ -42,6 +44,7 @@ export class WorldScene extends Phaser.Scene {
 
     this.terrainRenderer = new TerrainRenderer(this);
     this.terrainRenderer.build(this.context.simulation.world);
+    this.villagerRenderer = new VillagerRenderer(this);
 
     this.selectionMarker = this.add
       .image(0, 0, TextureKeys.selection)
@@ -52,6 +55,7 @@ export class WorldScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       this.terrainRenderer.destroy();
+      this.villagerRenderer.destroy();
     });
 
     this.cameraBinding.sync();
@@ -60,6 +64,15 @@ export class WorldScene extends Phaser.Scene {
   public override update(_time: number, delta: number): void {
     this.context.advance(delta);
     this.cameraBinding.sync();
+
+    // Villagers move every frame, so this runs unconditionally — unlike the
+    // tile marker, which only moves when the selection changes.
+    this.villagerRenderer.sync(
+      this.context.simulation.villagers.all,
+      this.context.tickAlpha,
+      this.context.selection?.villager?.id ?? null,
+    );
+
     this.syncSelectionMarker();
   }
 

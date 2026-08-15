@@ -73,6 +73,16 @@ export class Hud {
     }
 
     this.elements.selection.hidden = false;
+
+    // A tapped villager is what the player meant; the tile is the fallback.
+    if (selection.villager) {
+      const villager = selection.villager;
+      this.elements.selectionTerrain.textContent = villager.name;
+      this.elements.selectionCell.textContent = `age ${villager.age}`;
+      this.elements.selectionFlags.textContent = villager.activity;
+      return;
+    }
+
     this.elements.selectionTerrain.textContent = terrainName(selection.terrain);
     this.elements.selectionCell.textContent = `${selection.cell.gx}, ${selection.cell.gy}`;
 
