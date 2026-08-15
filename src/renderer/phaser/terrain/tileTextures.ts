@@ -86,6 +86,19 @@ const TREE_HEIGHT = 96;
  */
 export const VILLAGER_HEIGHT = 48;
 
+/**
+ * Where the ground line sits inside a building texture, as a fraction of its
+ * height.
+ *
+ * Exported so the renderer anchors on the drawn base rather than the bottom of
+ * the image. Guessing at this offset drew buildings a whole tile away from the
+ * footprint they actually occupy.
+ */
+export const BUILDING_TEXTURE_SIZE = 128;
+export const BUILDING_GROUND_LINE = 118 / BUILDING_TEXTURE_SIZE;
+export const SITE_TEXTURE_HEIGHT = 96;
+export const SITE_GROUND_LINE = 86 / SITE_TEXTURE_HEIGHT;
+
 /** Resource pile sprite height, per the art bible. */
 export const PILE_HEIGHT = 40;
 /** Storage yard placeholder: a 3x3 footprint, low and open. */

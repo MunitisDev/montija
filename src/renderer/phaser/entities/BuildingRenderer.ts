@@ -11,8 +11,12 @@
 
 import type Phaser from 'phaser';
 import { RenderLayer, depthForFootprint, overlayDepth } from '@/renderer/phaser/sorting';
-import { TextureKeys } from '@/renderer/phaser/terrain/tileTextures';
-import { gridToScene } from '@/shared/math/isometric';
+import {
+  BUILDING_GROUND_LINE,
+  SITE_GROUND_LINE,
+  TextureKeys,
+} from '@/renderer/phaser/terrain/tileTextures';
+import { gridToScene, worldToScene } from '@/shared/math/isometric';
 import { buildingDefinition } from '@/data/buildings';
 import type { PlacementState } from '@/game/Game';
 import type { Building } from '@/simulation/buildings/Building';
@@ -126,10 +130,7 @@ export class BuildingRenderer {
 
   private createSprites(building: Building): BuildingSprites {
     const { footprint } = building.definition;
-    const anchor = gridToScene({
-      gx: building.origin.gx + footprint.width - 1,
-      gy: building.origin.gy + footprint.height - 1,
-    });
+    const anchor = footprintCentre(building);
     const depth = depthForFootprint(
       building.origin.gx,
       building.origin.gy,
@@ -143,9 +144,12 @@ export class BuildingRenderer {
       : TextureKeys.site;
 
     const body = this.scene.add
-      .image(anchor.px, anchor.py + 16, texture)
-      // Anchored at the base of the footprint, per the art bible.
-      .setOrigin(0.5, 1)
+      .image(anchor.px, anchor.py, texture)
+      // Anchored on the *drawn ground line*, not the bottom of the image, and
+      // placed at the centre of the footprint. Anchoring at the image edge and
+      // nudging by a guessed offset put buildings a whole tile from the cells
+      // they occupy.
+      .setOrigin(0.5, building.isComplete ? BUILDING_GROUND_LINE : SITE_GROUND_LINE)
       .setDepth(depth);
 
     const sprites: BuildingSprites = {
@@ -166,11 +170,7 @@ export class BuildingRenderer {
       return;
     }
 
-    const { footprint } = building.definition;
-    const anchor = gridToScene({
-      gx: building.origin.gx + footprint.width - 1,
-      gy: building.origin.gy + footprint.height - 1,
-    });
+    const anchor = footprintCentre(building);
     const width = 44;
     const x = anchor.px - width / 2;
     const y = anchor.py - 54;
@@ -187,4 +187,13 @@ export class BuildingRenderer {
     bar.fillStyle(colour, 1);
     bar.fillRect(x, y, Math.max(0, Math.min(1, fraction)) * width, 4);
   }
+}
+
+/** The scene position of a footprint's centre, where its art belongs. */
+function footprintCentre(building: Building) {
+  const { footprint } = building.definition;
+  return worldToScene({
+    wx: building.origin.gx + footprint.width / 2,
+    wy: building.origin.gy + footprint.height / 2,
+  });
 }

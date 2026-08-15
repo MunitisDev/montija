@@ -224,6 +224,9 @@ export class Game implements GameContext, InputIntentSink {
    * never hidden beneath their own hand.
    */
   public beginPlacement(buildingId: BuildingId): void {
+    // Kill any drift already in flight, or the ghost starts sliding the moment
+    // it appears.
+    this.camera.stopMotion();
     this.currentPlacement = this.describePlacement(buildingId, this.viewCentreCell());
     this.placementChanges += 1;
   }
@@ -415,6 +418,14 @@ export class Game implements GameContext, InputIntentSink {
   }
 
   public onPanEnd(velocityScreenX: number, velocityScreenY: number): void {
+    // No inertia while aiming a building. Coasting after the finger lifts moved
+    // the ghost a couple of cells past where the player had aimed it, so the
+    // building landed somewhere they had not chosen. Exploring the map wants
+    // momentum; aiming does not.
+    if (this.currentPlacement) {
+      this.camera.stopMotion();
+      return;
+    }
     this.camera.flick(velocityScreenX, velocityScreenY);
   }
 
