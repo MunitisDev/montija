@@ -22,6 +22,7 @@ interface HudElements {
   readonly selectionTerrain: HTMLElement;
   readonly selectionCell: HTMLElement;
   readonly selectionFlags: HTMLElement;
+  readonly selectionAction: HTMLButtonElement;
   readonly speedButtons: readonly HTMLButtonElement[];
 }
 
@@ -36,6 +37,7 @@ export class Hud {
     this.context = context;
     this.elements = collectElements(root);
     this.bindSpeedButtons();
+    this.bindSelectionAction();
     this.update();
   }
 
@@ -74,12 +76,24 @@ export class Hud {
 
     this.elements.selection.hidden = false;
 
+    // The action depends only on there being a tree, never on which info line
+    // is showing. Tying the two together made a tree with someone standing
+    // beside it impossible to designate.
+    this.renderSelectionAction(selection.treeId !== null, selection.designated);
+
     // A tapped villager is what the player meant; the tile is the fallback.
     if (selection.villager) {
       const villager = selection.villager;
       this.elements.selectionTerrain.textContent = villager.name;
       this.elements.selectionCell.textContent = `age ${villager.age}`;
       this.elements.selectionFlags.textContent = villager.activity;
+      return;
+    }
+
+    if (selection.treeId !== null) {
+      this.elements.selectionTerrain.textContent = 'Tree';
+      this.elements.selectionCell.textContent = `${selection.cell.gx}, ${selection.cell.gy}`;
+      this.elements.selectionFlags.textContent = selection.designated ? 'marked for felling' : '';
       return;
     }
 
@@ -94,6 +108,31 @@ export class Hud {
       flags.push('cannot build');
     }
     this.elements.selectionFlags.textContent = flags.join(' · ');
+  }
+
+  private bindSelectionAction(): void {
+    this.elements.selectionAction.addEventListener('click', () => {
+      const selection = this.context.selection;
+      if (!selection || selection.treeId === null) {
+        return;
+      }
+
+      if (selection.designated) {
+        this.context.cancelSelectedDesignation();
+      } else {
+        this.context.designateSelectedTree();
+      }
+      this.update();
+    });
+  }
+
+  private renderSelectionAction(hasTree: boolean, designated: boolean): void {
+    this.elements.selectionAction.hidden = !hasTree;
+    if (!hasTree) {
+      return;
+    }
+    this.elements.selectionAction.textContent = designated ? 'Cancel' : 'Fell';
+    this.elements.selectionAction.classList.toggle('is-cancel', designated);
   }
 
   private renderSpeed(speed: SimulationSpeed): void {
@@ -129,6 +168,7 @@ function collectElements(root: HTMLElement): HudElements {
     selectionTerrain: requireElement(root, '[data-hud="selection-terrain"]'),
     selectionCell: requireElement(root, '[data-hud="selection-cell"]'),
     selectionFlags: requireElement(root, '[data-hud="selection-flags"]'),
+    selectionAction: requireElement(root, '[data-hud="selection-action"]') as HTMLButtonElement,
     speedButtons: Array.from(root.querySelectorAll<HTMLButtonElement>('[data-speed]')),
   };
 }

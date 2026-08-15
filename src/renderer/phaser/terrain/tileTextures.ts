@@ -46,6 +46,7 @@ export const TextureKeys = {
   selection: 'selection-diamond',
   villager: 'villager',
   villagerRing: 'villager-ring',
+  designation: 'designation-mark',
   /** Frame name within the terrain atlas. */
   terrainFrame: (type: TerrainType): string => type,
   /** Frame name within the tree atlas. */
@@ -97,6 +98,12 @@ export function createPlaceholderTextures(scene: Phaser.Scene): void {
   if (!scene.textures.exists(TextureKeys.villagerRing)) {
     drawVillagerRing(graphics);
     graphics.generateTexture(TextureKeys.villagerRing, TILE_WIDTH, TILE_HEIGHT);
+    graphics.clear();
+  }
+
+  if (!scene.textures.exists(TextureKeys.designation)) {
+    drawDesignationMark(graphics);
+    graphics.generateTexture(TextureKeys.designation, TILE_WIDTH, TILE_HEIGHT);
     graphics.clear();
   }
 
@@ -285,4 +292,32 @@ function drawVillager(graphics: Phaser.GameObjects.Graphics): void {
 function drawVillagerRing(graphics: Phaser.GameObjects.Graphics): void {
   graphics.lineStyle(2, 0xc9a227, 0.9);
   graphics.strokeEllipse(TILE_WIDTH / 2, TILE_HEIGHT / 2, 26, 13);
+}
+
+/**
+ * The mark painted on a tree ordered to be felled.
+ *
+ * A cut notch rather than a modern icon: the mood is medieval, and a floating
+ * axe glyph would read as mobile-game chrome. Warm ochre so it stands out
+ * against the greens without breaking the muted palette.
+ */
+function drawDesignationMark(graphics: Phaser.GameObjects.Graphics): void {
+  const cx = TILE_WIDTH / 2;
+  const cy = TILE_HEIGHT / 2;
+
+  // A dark backing stroke first, so the mark stays legible against both the
+  // pale grass and the dark canopy it may sit on.
+  graphics.lineStyle(6, 0x1a1c14, 0.55);
+  strokeCross(graphics, cx, cy);
+  graphics.lineStyle(3.5, 0xd8a92c, 1);
+  strokeCross(graphics, cx, cy);
+}
+
+function strokeCross(graphics: Phaser.GameObjects.Graphics, cx: number, cy: number): void {
+  graphics.beginPath();
+  graphics.moveTo(cx - 11, cy - 11);
+  graphics.lineTo(cx + 11, cy + 11);
+  graphics.moveTo(cx + 11, cy - 11);
+  graphics.lineTo(cx - 11, cy + 11);
+  graphics.strokePath();
 }

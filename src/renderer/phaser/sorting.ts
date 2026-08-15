@@ -66,3 +66,22 @@ export function depthForFootprint(
 ): number {
   return depthFor(gx + width - 1, gy + height - 1, layer);
 }
+
+/**
+ * Base depth for player-intent overlays, above every world object.
+ *
+ * Designation marks are not things standing in the world — they are the
+ * player's orders, drawn into it. Sorting them like scenery buries them behind
+ * whatever happens to be in front, which makes an order the player just gave
+ * invisible in dense forest. They therefore get their own band above
+ * everything, still sorted among themselves so they never flicker.
+ *
+ * This is the *only* sanctioned exception to isometric sorting, and it lives
+ * here rather than as a magic number at a call site.
+ */
+const OVERLAY_BAND = 1_000_000;
+
+/** Depth for a player-intent overlay on a given cell. */
+export function overlayDepth(gx: number, gy: number): number {
+  return OVERLAY_BAND + gx + gy;
+}

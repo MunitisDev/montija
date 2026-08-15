@@ -12,6 +12,7 @@ import type { GameContext } from '@/game/Game';
 import { PhaserCameraBinding } from '@/renderer/phaser/camera/PhaserCameraBinding';
 import { TerrainRenderer } from '@/renderer/phaser/terrain/TerrainRenderer';
 import { VillagerRenderer } from '@/renderer/phaser/entities/VillagerRenderer';
+import { DesignationRenderer } from '@/renderer/phaser/entities/DesignationRenderer';
 import { TextureKeys } from '@/renderer/phaser/terrain/tileTextures';
 import { RenderLayer, depthFor } from '@/renderer/phaser/sorting';
 import { gridToScene } from '@/shared/math/isometric';
@@ -26,6 +27,7 @@ export class WorldScene extends Phaser.Scene {
   private cameraBinding!: PhaserCameraBinding;
   private terrainRenderer!: TerrainRenderer;
   private villagerRenderer!: VillagerRenderer;
+  private designationRenderer!: DesignationRenderer;
   private selectionMarker!: Phaser.GameObjects.Image;
   /** Last selection version drawn, so the marker only moves when it changes. */
   private renderedSelectionVersion = -1;
@@ -45,6 +47,7 @@ export class WorldScene extends Phaser.Scene {
     this.terrainRenderer = new TerrainRenderer(this);
     this.terrainRenderer.build(this.context.simulation.world);
     this.villagerRenderer = new VillagerRenderer(this);
+    this.designationRenderer = new DesignationRenderer(this);
 
     this.selectionMarker = this.add
       .image(0, 0, TextureKeys.selection)
@@ -56,6 +59,7 @@ export class WorldScene extends Phaser.Scene {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       this.terrainRenderer.destroy();
       this.villagerRenderer.destroy();
+      this.designationRenderer.destroy();
     });
 
     this.cameraBinding.sync();
@@ -73,6 +77,9 @@ export class WorldScene extends Phaser.Scene {
       this.context.selection?.villager?.id ?? null,
     );
 
+    this.designationRenderer.sync(this.context.simulation.jobs);
+    // Cheap: returns immediately unless a tree was felled since last frame.
+    this.terrainRenderer.syncTrees(this.context.simulation.world);
     this.syncSelectionMarker();
   }
 

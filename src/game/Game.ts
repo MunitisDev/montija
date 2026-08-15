@@ -59,6 +59,10 @@ export interface Selection {
   readonly buildable: boolean;
   /** Set when a villager was standing there — they take priority over the tile. */
   readonly villager: VillagerSelection | null;
+  /** Set when a tree stands on the tapped cell. */
+  readonly treeId: number | null;
+  /** `true` when that tree is already marked for felling. */
+  readonly designated: boolean;
 }
 
 /** What the presentation layer is allowed to see. */
@@ -76,6 +80,10 @@ export interface GameContext {
   readonly tickAlpha: number;
   /** Increments whenever the selection changes, so renderers can skip work. */
   readonly selectionVersion: number;
+  /** Marks the selected tree for felling. Returns `false` when not possible. */
+  designateSelectedTree(): boolean;
+  /** Cancels the selected tree's felling order. */
+  cancelSelectedDesignation(): boolean;
 }
 
 export interface GameOptions {
@@ -229,6 +237,8 @@ export class Game implements GameContext, InputIntentSink {
     // meant, so they win over the ground beneath them.
     const villager = this.simulation.villagers.findNear(cell);
 
+    const tree = world.trees.getAt(cell);
+
     this.currentSelection = {
       cell,
       terrain: world.terrainAt(cell),
@@ -242,6 +252,56 @@ export class Game implements GameContext, InputIntentSink {
             activity: villager.activity,
           }
         : null,
+      treeId: tree?.id ?? null,
+      designated: this.simulation.isTreeDesignated(cell),
+    };
+    this.selectionChanges += 1;
+  }
+
+  /**
+   * Marks the selected tree for felling.
+   *
+   * A command: the player states intent, and the simulation decides what
+   * happens. The UI never touches the job board directly.
+   */
+  public designateSelectedTree(): boolean {
+    const selection = this.currentSelection;
+    if (!selection || selection.treeId === null) {
+      return false;
+    }
+
+    const created = this.simulation.designateTreeForFelling(selection.cell);
+    if (created) {
+      this.refreshSelection(selection.cell);
+    }
+    return created;
+  }
+
+  public cancelSelectedDesignation(): boolean {
+    const selection = this.currentSelection;
+    if (!selection || selection.treeId === null) {
+      return false;
+    }
+
+    const cancelled = this.simulation.cancelTreeDesignation(selection.cell);
+    if (cancelled) {
+      this.refreshSelection(selection.cell);
+    }
+    return cancelled;
+  }
+
+  /** Re-reads the selected cell after the world changed underneath it. */
+  private refreshSelection(cell: GridPoint): void {
+    const world = this.simulation.world;
+    const tree = world.trees.getAt(cell);
+    this.currentSelection = {
+      cell,
+      terrain: world.terrainAt(cell),
+      walkable: world.isWalkable(cell),
+      buildable: world.isBuildable(cell),
+      villager: null,
+      treeId: tree?.id ?? null,
+      designated: this.simulation.isTreeDesignated(cell),
     };
     this.selectionChanges += 1;
   }
