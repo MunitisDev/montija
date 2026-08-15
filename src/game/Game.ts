@@ -154,6 +154,8 @@ function describeFailure(kind: string): string {
 
 export interface GameOptions {
   readonly seed?: number;
+  /** Founding population. Overridden only for benchmarking. */
+  readonly startingVillagers?: number;
 }
 
 export class Game implements GameContext, InputIntentSink {
@@ -184,6 +186,8 @@ export class Game implements GameContext, InputIntentSink {
   private readonly presentationRng: SeededRandom;
   /** The seed the current settlement was founded from. */
   private currentSeed: number;
+  /** Founding population, so beginning again founds the same size of village. */
+  private readonly startingVillagers: number;
   /** Bumped when the world is replaced, so the renderer knows to rebuild. */
   private worldGeneration = 0;
 
@@ -197,7 +201,7 @@ export class Game implements GameContext, InputIntentSink {
    */
   public startNewSettlement(seed?: number): void {
     this.currentSeed = seed ?? this.currentSeed + 1;
-    this.simulation = Game.foundSettlement(this.currentSeed);
+    this.simulation = Game.foundSettlement(this.currentSeed, this.startingVillagers);
     this.worldGeneration += 1;
 
     this.clock.restore(0, 1);
@@ -218,20 +222,21 @@ export class Game implements GameContext, InputIntentSink {
     return this.worldGeneration;
   }
 
-  private static foundSettlement(seed: number): Simulation {
+  private static foundSettlement(seed: number, startingVillagers: number): Simulation {
     return new Simulation({
       seed,
       worldWidth: WORLD_WIDTH,
       worldHeight: WORLD_HEIGHT,
-      startingVillagers: STARTING_VILLAGERS,
+      startingVillagers,
     });
   }
 
   constructor(options: GameOptions = {}) {
     const seed = options.seed ?? DEFAULT_WORLD_SEED;
     this.currentSeed = seed;
+    this.startingVillagers = options.startingVillagers ?? STARTING_VILLAGERS;
 
-    this.simulation = Game.foundSettlement(seed);
+    this.simulation = Game.foundSettlement(seed, this.startingVillagers);
     // Falls back to memory when the browser has no IndexedDB, so the game runs
     // rather than crashing; saves simply do not survive a refresh.
     this.presentationRng = new SeededRandom(deriveSeed(seed, 'presentation'));

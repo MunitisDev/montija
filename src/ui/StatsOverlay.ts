@@ -36,6 +36,41 @@ export function statsRequested(search: string): boolean {
   return new URLSearchParams(search).has('stats');
 }
 
+/** Sane bounds for a benchmarking population. */
+const MIN_BENCHMARK_VILLAGERS = 1;
+const MAX_BENCHMARK_VILLAGERS = 300;
+
+/**
+ * A founding population asked for in the URL, or `null` for the usual ten.
+ *
+ * Exists so the frame rate can be measured under load on a real device.
+ * The benchmarks can say exactly what a hundred villagers cost the simulation
+ * and nothing at all about what they cost a phone to draw, and the debug
+ * controls that could spawn them are stripped from a release — so without this
+ * the one remaining performance question had no way of being answered by the
+ * only machines that can answer it.
+ *
+ * Clamped rather than trusted: a URL is user input, and `?villagers=1e9` should
+ * be a big settlement, not a hung tab.
+ */
+export function requestedVillagers(search: string): number | null {
+  const raw = new URLSearchParams(search).get('villagers');
+  if (raw === null) {
+    return null;
+  }
+
+  // `Number` rather than `parseInt`, which stops at the first character it does
+  // not understand: `parseInt('1e9', 10)` is 1, so asking for a billion
+  // villagers founded a settlement of one — the opposite of both the request
+  // and the clamp's intent.
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+
+  return Math.min(MAX_BENCHMARK_VILLAGERS, Math.max(MIN_BENCHMARK_VILLAGERS, Math.round(parsed)));
+}
+
 export class StatsOverlay {
   private readonly element: HTMLElement;
   private readonly context: GameContext;

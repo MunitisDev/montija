@@ -2,10 +2,9 @@
 
 Status labels: **Implemented**, **Prototype**, **Planned**.
 
-**Phase 11 — Implemented, with one honest gap.** Repeatable benchmark scenarios exist at 25 / 50 /
-100 villagers, the simulation side is measured, and the rendering side is measured only on a software
-renderer, which is not a machine anyone plays on. What that does and does not license is set out
-below.
+**Phase 11 — Implemented.** Repeatable benchmark scenarios exist at 25 / 50 / 100 villagers, the
+simulation is measured precisely, and the frame rate has now been measured on real hardware. What
+that does and does not license is set out below.
 
 Run the simulation benchmarks with:
 
@@ -82,6 +81,33 @@ finishes at all on a device slow enough to be worth measuring.
 Useful things to record: the figures sitting still, the figures while panning, and the figures zoomed
 right out — the last is where the object count bites hardest.
 
+`?villagers=100` founds a larger settlement, so the frame rate can be measured under load. The
+benchmarks below can say exactly what a hundred villagers cost the _simulation_ and nothing at all
+about what they cost a phone to _draw_, and the debug controls that could spawn them are stripped
+from a release. The value is clamped to 300: a URL is user input, and `?villagers=1e9` should be a
+big settlement rather than a hung tab.
+
+---
+
+## On real hardware — measured
+
+An Android phone with an adaptive-refresh display, at the default ten villagers:
+
+| Condition                | Frame rate |
+| ------------------------ | ---------- |
+| Sitting still            | 60         |
+| Panning the camera       | up to 120  |
+| Zoomed fully out, moving | up to 120  |
+
+**The game is bound by the display, not by the GPU.** The rise from 60 to 120 while moving is the
+phone, not the game: adaptive displays idle at 60Hz on static content and step up to 120Hz under
+continuous input, and the game keeps pace with both. The figure that matters is the last row — fully
+zoomed out is where the most tiles are on screen at once, and it holds the panel's full refresh rate.
+
+So the frame budget at its tightest is 8.3ms, against a per-frame game step measured at under 1ms
+with a hundred villagers. There is a great deal of headroom, and **terrain culling is not needed** —
+it was the first thing this document nominated to try, and the measurement says do not bother.
+
 ---
 
 ## Rendering — measured only on a software renderer
@@ -104,20 +130,24 @@ Two things are real here and transfer to any machine:
 
 **The frame-rate column is not a claim about real hardware.** It barely moves between 10 and 100
 villagers precisely because it is bound by rasterising the scene in software, so it measures this
-container and nothing else. The one real-hardware data point so far is qualitative: the project owner
-reported the game running smoothly on their own machine, which is a report and not a number.
+container and nothing else. For the real figures, see
+[On real hardware](#on-real-hardware--measured) above.
 
 ---
 
 ## What this does not claim
 
-No maximum villager count. The brief asks not to promise one until benchmarks exist, and while the
-simulation benchmarks now exist, the number that would decide a ceiling — frame rate on a real GPU,
-and particularly on a tablet — does not.
+**Still no maximum villager count.** What has been measured is a phone holding its display's refresh
+rate with a ten-villager settlement on a fully zoomed-out map. That says the current scene is
+comfortably within budget; it does not locate the ceiling, because nothing yet has pushed the
+renderer hard enough to find one.
 
-What can be said: at 100 villagers the simulation uses under 1% of its tick budget and the per-frame
-JavaScript is under a millisecond, so if a real device struggles, the cause will be drawing the scene,
-not simulating it.
+Nor does it speak for weaker hardware. One phone is one phone.
+
+What can be said, and is now measured at both ends: the simulation uses under 1% of its tick budget
+at 100 villagers, the per-frame game step is under a millisecond, and a real device draws the scene
+fast enough to be limited by its own screen. If some future device does struggle, the cause will be
+drawing the scene rather than simulating it.
 
 ---
 
@@ -151,6 +181,9 @@ In order, based on what the measurements above rule out:
 
 ## Planned
 
-- Frame-rate measurement on real hardware, and on a tablet in particular.
-- Viewport culling for terrain, if and when a real device asks for it.
+- Frame rate on a **tablet**, and on something slower than a current phone. One device is one device.
+- Frame rate at 100+ villagers on real hardware, via `?villagers=100`, to start locating a ceiling.
+- Viewport culling for terrain — **not** planned any more. It was the obvious first optimisation and
+  the measurement says it is unnecessary; it is written down here so nobody re-nominates it without
+  new evidence.
 - A benchmark for load and save at scale, which is currently unmeasured.

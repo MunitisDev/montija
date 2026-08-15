@@ -18,7 +18,7 @@ import { createPhaserGame } from '@/renderer/phaser/createPhaserGame';
 import { Hud } from '@/ui/hud/Hud';
 import { BuildMenu } from '@/ui/build-menu/BuildMenu';
 import { I18n } from '@/ui/i18n/I18n';
-import { StatsOverlay, statsRequested } from '@/ui/StatsOverlay';
+import { StatsOverlay, requestedVillagers, statsRequested } from '@/ui/StatsOverlay';
 import { DebugControls } from '@/debug/DebugControls';
 import { DebugOverlay } from '@/debug/DebugOverlay';
 
@@ -34,7 +34,12 @@ export function start(): void {
   const canvasHost = requireElement<HTMLDivElement>('#game-canvas');
   const hudRoot = requireElement<HTMLDivElement>('#hud');
 
-  const game = new Game();
+  // `?villagers=N` founds a larger settlement, for measuring the frame rate
+  // under load on a real device. Absent, the game starts as it always has.
+  const benchmarkVillagers = requestedVillagers(window.location.search);
+  const game = new Game(
+    benchmarkVillagers === null ? {} : { startingVillagers: benchmarkVillagers },
+  );
   const phaserGame = createPhaserGame({ parent: canvasHost, context: game });
 
   if (import.meta.env.DEV) {
