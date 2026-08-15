@@ -21,6 +21,8 @@
 import type Phaser from 'phaser';
 import type { TerrainType } from '@/data/terrain';
 import { TILE_HEIGHT, TILE_WIDTH } from '@/shared/math/isometric';
+import { BUILDING_IDS, type BuildingId } from '@/data/buildings';
+import { BUILDING_COLOURS, buildingTextureSpec, drawBuilding } from './buildingArt';
 
 /** Placeholder colours, keyed by terrain id. Art, so it lives in the renderer. */
 interface TerrainPalette {
@@ -37,20 +39,6 @@ const TERRAIN_COLOURS: Readonly<Record<TerrainType, TerrainPalette>> = {
 };
 
 /** Placeholder building palettes: aged timber, thatch and dark stone. */
-interface BuildingPalette {
-  readonly wall: number;
-  readonly roof: number;
-  readonly trim: number;
-}
-
-const BUILDING_COLOURS: Readonly<Record<string, BuildingPalette>> = {
-  house: { wall: 0x6b5a44, roof: 0x5a4a35, trim: 0x4a3d2c },
-  'storage-yard': { wall: 0x6b573c, roof: 0x574733, trim: 0x453824 },
-  'food-storage': { wall: 0x6a6048, roof: 0x565039, trim: 0x45402d },
-  'gatherer-hut': { wall: 0x5f6248, roof: 0x4c5039, trim: 0x3d402d },
-  woodcutter: { wall: 0x67543f, roof: 0x534431, trim: 0x423628 },
-};
-
 const TREE_TRUNK = 0x3d3227;
 const TREE_CANOPY = [0x2f4029, 0x35472d, 0x293823];
 
@@ -94,8 +82,16 @@ export const VILLAGER_HEIGHT = 48;
  * the image. Guessing at this offset drew buildings a whole tile away from the
  * footprint they actually occupy.
  */
-export const BUILDING_TEXTURE_SIZE = 128;
-export const BUILDING_GROUND_LINE = 118 / BUILDING_TEXTURE_SIZE;
+/**
+ * Where a building's anchor sits within its texture.
+ *
+ * Derived per building rather than shared, because each texture is sized from
+ * its own footprint. The renderer must use the same figure the texture was
+ * drawn with; taking both from `buildingArt` is what keeps them in step.
+ */
+export function buildingGroundLine(id: BuildingId): number {
+  return buildingTextureSpec(id).groundLine;
+}
 export const SITE_TEXTURE_HEIGHT = 96;
 export const SITE_GROUND_LINE = 86 / SITE_TEXTURE_HEIGHT;
 
@@ -177,13 +173,16 @@ export function createPlaceholderTextures(scene: Phaser.Scene): void {
     graphics.clear();
   }
 
-  for (const [id, colours] of Object.entries(BUILDING_COLOURS)) {
+  // Each building is sized from its own footprint, so a 3x3 yard is drawn 3x3
+  // rather than sharing the House's texture and standing beside its own plot.
+  for (const id of BUILDING_IDS) {
     const key = TextureKeys.building(id);
     if (scene.textures.exists(key)) {
       continue;
     }
-    drawBuilding(graphics, colours);
-    graphics.generateTexture(key, 128, 128);
+    const spec = buildingTextureSpec(id);
+    drawBuilding(graphics, id, BUILDING_COLOURS[id]);
+    graphics.generateTexture(key, spec.width, spec.height);
     graphics.clear();
   }
 
@@ -494,56 +493,6 @@ function drawStorageYard(graphics: Phaser.GameObjects.Graphics): void {
   graphics.fillStyle(0xffffff, 0.06);
   graphics.fillRect(cx - 34, baseY - 26, 6, 18);
   graphics.fillRect(cx - 8, baseY - 30, 6, 22);
-}
-
-/**
- * A placeholder building: walls, a pitched roof, a door.
- *
- * Anchored at the bottom centre of its footprint by the renderer, per the art
- * bible, so the roof is free to overhang upward.
- */
-function drawBuilding(graphics: Phaser.GameObjects.Graphics, palette: BuildingPalette): void {
-  const cx = 64;
-  const base = 118;
-
-  graphics.fillStyle(0x000000, 0.25);
-  graphics.fillEllipse(cx, base - 2, 92, 26);
-
-  // Walls: an isometric box.
-  graphics.fillStyle(palette.wall, 1);
-  graphics.beginPath();
-  graphics.moveTo(cx - 44, base - 44);
-  graphics.lineTo(cx, base - 66);
-  graphics.lineTo(cx + 44, base - 44);
-  graphics.lineTo(cx + 44, base - 12);
-  graphics.lineTo(cx, base + 10);
-  graphics.lineTo(cx - 44, base - 12);
-  graphics.closePath();
-  graphics.fillPath();
-
-  // Right face in shadow: key light comes from the upper left.
-  graphics.fillStyle(0x000000, 0.16);
-  graphics.beginPath();
-  graphics.moveTo(cx, base - 66 + 22);
-  graphics.lineTo(cx + 44, base - 44);
-  graphics.lineTo(cx + 44, base - 12);
-  graphics.lineTo(cx, base + 10);
-  graphics.closePath();
-  graphics.fillPath();
-
-  // Pitched roof.
-  graphics.fillStyle(palette.roof, 1);
-  graphics.beginPath();
-  graphics.moveTo(cx - 50, base - 46);
-  graphics.lineTo(cx, base - 86);
-  graphics.lineTo(cx + 50, base - 46);
-  graphics.lineTo(cx, base - 62);
-  graphics.closePath();
-  graphics.fillPath();
-
-  // Door.
-  graphics.fillStyle(palette.trim, 1);
-  graphics.fillRect(cx - 8, base - 30, 14, 26);
 }
 
 /** A half-built frame: posts and a partial floor. */

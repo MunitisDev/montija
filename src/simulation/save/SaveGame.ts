@@ -67,6 +67,8 @@ export interface SavedStorage {
   readonly accepts: readonly ResourceId[] | null;
   /** Spoilage multiplier; absent in saves written before larders preserved food. */
   readonly preservation?: number;
+  /** The building that opened this yard, or null for the founding one. */
+  readonly ownerBuildingId?: number | null;
   readonly contents: SavedInventory;
 }
 

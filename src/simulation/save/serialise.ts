@@ -72,6 +72,7 @@ export function serialise(simulation: Simulation, savedAt: string): SaveGame {
       capacity: storage.inventory.capacity,
       accepts: storage.acceptedResources,
       preservation: storage.preservation,
+      ownerBuildingId: storage.ownerBuildingId,
       contents: toRecord(storage.inventory),
     })),
 
@@ -126,6 +127,7 @@ export function restore(simulation: Simulation, save: SaveGame): void {
       // Saves written before food could spoil have no figure; 1 is the open
       // yard they were all behaving as.
       preservation: saved.preservation ?? 1,
+      ownerBuildingId: saved.ownerBuildingId ?? null,
     });
     fillInventory(storage.inventory, saved.contents);
   }

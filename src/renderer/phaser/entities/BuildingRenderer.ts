@@ -12,9 +12,9 @@
 import type Phaser from 'phaser';
 import { RenderLayer, depthForFootprint, overlayDepth } from '@/renderer/phaser/sorting';
 import {
-  BUILDING_GROUND_LINE,
   SITE_GROUND_LINE,
   TextureKeys,
+  buildingGroundLine,
 } from '@/renderer/phaser/terrain/tileTextures';
 import { gridToScene, worldToScene } from '@/shared/math/isometric';
 import { buildingDefinition } from '@/data/buildings';
@@ -149,7 +149,10 @@ export class BuildingRenderer {
       // placed at the centre of the footprint. Anchoring at the image edge and
       // nudging by a guessed offset put buildings a whole tile from the cells
       // they occupy.
-      .setOrigin(0.5, building.isComplete ? BUILDING_GROUND_LINE : SITE_GROUND_LINE)
+      .setOrigin(
+        0.5,
+        building.isComplete ? buildingGroundLine(building.definition.id) : SITE_GROUND_LINE,
+      )
       .setDepth(depth);
 
     const sprites: BuildingSprites = {

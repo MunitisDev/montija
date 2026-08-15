@@ -620,6 +620,7 @@ export class Simulation {
         capacity: definition.capacity,
         ...(definition.accepts ? { accepts: definition.accepts } : {}),
         ...(definition.preservation === undefined ? {} : { preservation: definition.preservation }),
+        ownerBuildingId: building.id,
       });
       building.storageId = storage.id;
     }

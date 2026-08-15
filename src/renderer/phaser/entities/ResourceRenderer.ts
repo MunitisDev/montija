@@ -12,7 +12,7 @@
 import type Phaser from 'phaser';
 import type { ResourceId } from '@/data/resources';
 import { RenderLayer, depthFor, depthForFootprint } from '@/renderer/phaser/sorting';
-import { TextureKeys } from '@/renderer/phaser/terrain/tileTextures';
+import { TextureKeys, buildingGroundLine } from '@/renderer/phaser/terrain/tileTextures';
 import { gridToScene } from '@/shared/math/isometric';
 import type { StorageRegistry } from '@/simulation/logistics/Storage';
 import type { ResourcePileRegistry } from '@/simulation/resources/ResourcePile';
@@ -83,17 +83,28 @@ export class ResourceRenderer {
       if (this.storageSprites.has(storage.id)) {
         continue;
       }
+      // A yard opened by a building is already drawn by that building. Drawing
+      // it again here put a second, differently-shaped yard on the same cells,
+      // which is what made buildings look like they were overlapping.
+      if (storage.ownerBuildingId !== null) {
+        continue;
+      }
 
-      const position = gridToScene(storage.cell);
+      // The founding yard has no building behind it, so it borrows the Storage
+      // Yard's own art: it *is* one, and two yards that behave identically
+      // should not look like different things.
+      // The founding yard is recorded as a single cell, and stands as a 3x3
+      // centred on it, so that cell's centre is already the footprint's centre.
+      const centre = gridToScene(storage.cell);
       const sprite = this.scene.add
-        .image(position.px, position.py, TextureKeys.storageYard)
-        .setOrigin(0.5, 1)
+        .image(centre.px, centre.py, TextureKeys.building('storage-yard'))
+        .setOrigin(0.5, buildingGroundLine('storage-yard'))
         // Sorted on the footprint's front corner, so a villager standing beside
         // the yard is not incorrectly drawn behind it.
         .setDepth(
           depthForFootprint(
-            storage.cell.gx,
-            storage.cell.gy,
+            storage.cell.gx - Math.floor(STORAGE_FOOTPRINT / 2),
+            storage.cell.gy - Math.floor(STORAGE_FOOTPRINT / 2),
             STORAGE_FOOTPRINT,
             STORAGE_FOOTPRINT,
             RenderLayer.Structure,

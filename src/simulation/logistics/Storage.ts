@@ -29,6 +29,14 @@ export interface StorageOptions {
    * there is room for it, but only keeps *well* somewhere built for it.
    */
   readonly preservation?: number;
+  /**
+   * The building that opened this yard, or `null` for the founding one.
+   *
+   * Recorded so the renderer knows not to draw a yard on top of a building that
+   * is already drawing itself — two sprites for one storage read as buildings
+   * overlapping each other.
+   */
+  readonly ownerBuildingId?: number | null;
 }
 
 export class Storage {
@@ -38,6 +46,8 @@ export class Storage {
   public readonly inventory: Inventory;
   /** Multiplier on how fast perishable goods spoil here. */
   public readonly preservation: number;
+  /** The building this yard belongs to, or `null` for the founding one. */
+  public readonly ownerBuildingId: number | null;
   private readonly accepted: ReadonlySet<ResourceId> | null;
 
   constructor(options: StorageOptions) {
@@ -45,6 +55,7 @@ export class Storage {
     this.cell = options.cell;
     this.inventory = new Inventory(options.capacity);
     this.preservation = options.preservation ?? 1;
+    this.ownerBuildingId = options.ownerBuildingId ?? null;
     this.accepted = options.accepts && options.accepts.length > 0 ? new Set(options.accepts) : null;
   }
 
