@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!--
+      viewport-fit=cover lets the page paint under notches; the CSS then uses
+      env(safe-area-inset-*) to keep the HUD out of them.
+      user-scalable=no stops the browser pinch-zooming the page, because pinch
+      belongs to the game camera.
+    -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#12140f" />
+    <meta
+      name="description"
+      content="Build a medieval settlement in an unforgiving wilderness and help it survive the winter."
+    />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <title>Montija</title>
+  </head>
+  <body class="is-loading">
+    <div id="game">
+      <!-- The Phaser canvas is injected here. World objects live only inside it. -->
+      <div id="game-canvas" aria-label="Settlement view" role="img"></div>
+
+      <!-- HUD overlay: HTML/CSS, deliberately outside the canvas. -->
+      <div id="hud">
+        <div class="hud-bar hud-bar--top">
+          <div class="resource-strip" role="group" aria-label="Settlement resources">
+            <div class="resource">
+              <span class="resource__label">Pop</span>
+              <span class="resource__value" data-hud="population">0</span>
+            </div>
+            <div class="resource">
+              <span class="resource__label">Food</span>
+              <span class="resource__value" data-hud="food">--</span>
+            </div>
+            <div class="resource">
+              <span class="resource__label">Logs</span>
+              <span class="resource__value" data-hud="logs">--</span>
+            </div>
+            <div class="resource">
+              <span class="resource__label">Firewood</span>
+              <span class="resource__value" data-hud="firewood">--</span>
+            </div>
+            <div class="resource">
+              <span class="resource__label">Stone</span>
+              <span class="resource__value" data-hud="stone">--</span>
+            </div>
+          </div>
+
+          <div class="climate-strip">
+            <span class="climate__season" data-hud="season">Spring</span>
+            <span class="climate__temperature" data-hud="temperature">--</span>
+          </div>
+        </div>
+
+        <div class="hud-bar hud-bar--bottom">
+          <!-- Build menu placeholder: populated from data in Phase 6. -->
+          <div class="build-bar" aria-label="Build menu">
+            <span class="build-bar__hint">Build menu arrives in Phase 6</span>
+          </div>
+
+          <div class="speed-controls" role="group" aria-label="Simulation speed">
+            <button type="button" class="speed-button" data-speed="0" aria-pressed="false">
+              II
+            </button>
+            <button type="button" class="speed-button is-active" data-speed="1" aria-pressed="true">
+              1x
+            </button>
+            <button type="button" class="speed-button" data-speed="2" aria-pressed="false">
+              2x
+            </button>
+            <button type="button" class="speed-button" data-speed="4" aria-pressed="false">
+              4x
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Development diagnostics. Hidden and tree-shaken out of production. -->
+      <button id="debug-toggle" type="button" hidden>debug</button>
+      <pre id="debug-overlay" hidden></pre>
+    </div>
+
+    <noscript>
+      <p class="noscript">Montija needs JavaScript and WebGL to run.</p>
+    </noscript>
+
+    <script type="module" src="/src/app/bootstrap.ts"></script>
+  </body>
+</html>

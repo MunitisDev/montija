@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Montija">
+  <rect width="32" height="32" rx="5" fill="#12140f" />
+  <!-- Pines against a cold sky, over settlement ground. -->
+  <path d="M9 23 L9 20 L6 20 L9 15 L7.5 15 L10.5 10 L13.5 15 L12 15 L15 20 L12 20 L12 23 Z" fill="#2f4029" />
+  <path d="M20 23 L20 21 L18 21 L20.5 17 L19.5 17 L21.75 13 L24 17 L23 17 L25.5 21 L23.5 21 L23.5 23 Z" fill="#3b4d31" />
+  <rect x="4" y="23" width="24" height="5" fill="#4a5b3a" />
+  <path d="M4 25.5 h24" stroke="#5a5750" stroke-width="1" opacity="0.5" />
+</svg>
