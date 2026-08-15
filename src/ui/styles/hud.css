@@ -1038,3 +1038,47 @@
     top: calc(var(--safe-top) + 100px);
   }
 }
+
+/*
+ * What the player tapped, when it was a building.
+ *
+ * Sits with the tile panel above the build menu: the same corner answers "what
+ * is this?" whatever the player pointed at.
+ */
+.building-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  max-width: 100%;
+  padding: 6px 12px;
+  background: var(--colour-panel);
+  border: 1px solid var(--colour-panel-edge);
+  border-radius: 6px;
+}
+
+.building-panel[hidden] {
+  display: none;
+}
+
+.building-panel__name {
+  font-size: 0.9rem;
+  color: var(--colour-ink);
+}
+
+.building-panel__state {
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--colour-ink-dim);
+}
+
+.building-panel__detail {
+  font-size: 0.78rem;
+  font-style: italic;
+  color: #b8a56a;
+}
+
+.building-panel__detail:empty,
+.building-panel__state:empty {
+  display: none;
+}

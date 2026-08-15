@@ -33,6 +33,10 @@ interface HudElements {
   readonly temperature: HTMLElement;
   readonly advice: HTMLElement;
   readonly events: HTMLElement;
+  readonly building: HTMLElement;
+  readonly buildingName: HTMLElement;
+  readonly buildingState: HTMLElement;
+  readonly buildingDetail: HTMLElement;
   readonly failure: HTMLElement;
   readonly failureSurvived: HTMLElement;
   readonly failureRestart: HTMLButtonElement;
@@ -265,7 +269,68 @@ export class Hud {
     notice.addEventListener('animationend', () => notice.remove());
   }
 
+  /**
+   * Describes the building the player tapped.
+   *
+   * Until this existed a settlement builder let you raise a workshop and never
+   * ask what it was doing — which is the half of the game that comes after
+   * building it. The lines answer the questions a player actually has: is it
+   * finished, what is it still waiting for, is anybody working it, what is
+   * inside.
+   */
+  private renderBuildingPanel(): void {
+    const building = this.context.selection?.building ?? null;
+    this.elements.building.hidden = building === null;
+    if (!building) {
+      return;
+    }
+
+    this.elements.buildingName.textContent = this.i18n.t(
+      `building.${building.buildingId}` as MessageKey,
+    );
+
+    if (!building.complete) {
+      const percent = Math.round(building.progress * 100);
+      this.elements.buildingState.textContent = `${this.i18n.t('building.underConstruction')} ${percent}%`;
+      // Materials are reported apart from progress, because "waiting for stone"
+      // and "half built" are different problems with different answers.
+      this.elements.buildingDetail.textContent =
+        building.missingMaterials.length > 0
+          ? `${this.i18n.t('building.waitingFor')}: ${this.describeAmounts(building.missingMaterials)}`
+          : '';
+      return;
+    }
+
+    const state: string[] = [];
+    if (building.workerSlots > 0) {
+      state.push(`${this.i18n.t('building.workers')} ${building.workers}/${building.workerSlots}`);
+    }
+    if (building.housing > 0) {
+      state.push(`${this.i18n.t('building.residents')} ${building.residents}/${building.housing}`);
+    }
+    this.elements.buildingState.textContent = state.join(' · ');
+
+    // A workshop with nobody in it looks identical to a working one, and the
+    // difference is the whole reason a settlement starves with a hut standing.
+    if (building.workerSlots > 0 && building.workers === 0) {
+      this.elements.buildingDetail.textContent = this.i18n.t('building.idleNoWorkers');
+      return;
+    }
+
+    this.elements.buildingDetail.textContent =
+      building.contents.length > 0
+        ? `${this.i18n.t('building.holding')} ${this.describeAmounts(building.contents)}`
+        : '';
+  }
+
+  private describeAmounts(amounts: readonly { resource: ResourceId; amount: number }[]): string {
+    return amounts
+      .map((entry) => `${entry.amount} ${this.i18n.t(`hud.${entry.resource}` as MessageKey)}`)
+      .join(', ');
+  }
+
   private renderSelection(): void {
+    this.renderBuildingPanel();
     const selection = this.context.selection;
     if (!selection) {
       this.elements.selection.hidden = true;
@@ -471,6 +536,10 @@ function collectElements(root: HTMLElement): HudElements {
     advice: requireElement(root, '[data-hud="advice"]'),
     fullscreen: root.querySelector<HTMLButtonElement>('[data-hud="fullscreen"]'),
     events: requireElement(root, '[data-hud="events"]'),
+    building: requireElement(root, '[data-hud="building"]'),
+    buildingName: requireElement(root, '[data-hud="building-name"]'),
+    buildingState: requireElement(root, '[data-hud="building-state"]'),
+    buildingDetail: requireElement(root, '[data-hud="building-detail"]'),
     failure: requireElement(root, '[data-hud="failure"]'),
     failureSurvived: requireElement(root, '[data-hud="failure-survived"]'),
     failureRestart: requireElement(root, '[data-hud="failure-restart"]') as HTMLButtonElement,

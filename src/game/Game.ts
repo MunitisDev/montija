@@ -29,8 +29,9 @@ import { gridToScene, isInsideGrid, sceneToGrid } from '@/shared/math/isometric'
 import type { GridPoint, ScreenPoint } from '@/shared/types/geometry';
 import type { TerrainType } from '@/data/terrain';
 import { SeededRandom, deriveSeed } from '@/shared/math/random';
-import type { BuildingId } from '@/data/buildings';
+import type { BuildingId, ResourceAmount } from '@/data/buildings';
 import type { PlacementCheck } from '@/simulation/buildings/BuildingRegistry';
+import type { Inventory } from '@/simulation/resources/Inventory';
 import { restore, serialise } from '@/simulation/save/serialise';
 import {
   AUTOSAVE_SLOT,
@@ -76,6 +77,35 @@ export interface Selection {
   readonly isStoneDeposit: boolean;
   /** `true` when the tree or deposit is already marked for work. */
   readonly designated: boolean;
+  /** Set when a building stands on the tapped cell. */
+  readonly building: BuildingSelection | null;
+}
+
+/**
+ * What the player is told about a building they tapped.
+ *
+ * A settlement builder in which you can raise a workshop and never ask what it
+ * is doing is missing the half of the game that comes after building it. The
+ * fields are the questions a player actually asks — is it finished, what is it
+ * still waiting for, is anybody working it, and what has it got in store.
+ */
+export interface BuildingSelection {
+  readonly id: number;
+  readonly buildingId: BuildingId;
+  readonly complete: boolean;
+  /** Construction progress in `0..1`; `1` once finished. */
+  readonly progress: number;
+  /** Materials still owed, so an idle site explains itself. */
+  readonly missingMaterials: readonly ResourceAmount[];
+  /** Villagers working here, against the posts available. */
+  readonly workers: number;
+  readonly workerSlots: number;
+  /** What the building is holding: recipe inputs, or a yard's stock. */
+  readonly contents: readonly ResourceAmount[];
+  /** How many people it houses, for a completed house. */
+  readonly housing: number;
+  /** Residents living here, for a completed house. */
+  readonly residents: number;
 }
 
 /** What the presentation layer is allowed to see. */
@@ -540,6 +570,7 @@ export class Game implements GameContext, InputIntentSink {
     const isStoneDeposit = world.terrainAt(cell) === 'stone';
 
     return {
+      building: this.describeBuilding(cell),
       cell,
       terrain: world.terrainAt(cell),
       walkable: world.isWalkable(cell),
@@ -551,6 +582,87 @@ export class Game implements GameContext, InputIntentSink {
         ? this.simulation.isTreeDesignated(cell)
         : isStoneDeposit && this.simulation.isStoneDesignated(cell),
     };
+  }
+
+  /** Everything worth saying about the building on a cell, if there is one. */
+  private describeBuilding(cell: GridPoint): BuildingSelection | null {
+    const building = this.simulation.world.buildings.getAt(cell);
+    if (!building) {
+      return this.describeFoundingYard(cell);
+    }
+
+    const definition = building.definition;
+    const missingMaterials = definition.constructionCost
+      .map((cost) => ({ resource: cost.resource, amount: building.stillNeeds(cost.resource) }))
+      .filter((entry) => entry.amount > 0);
+
+    // A site's progress is the labour left, not the materials: materials are
+    // reported separately because "waiting for stone" and "half built" are
+    // different problems with different answers.
+    const progress = building.isComplete
+      ? 1
+      : 1 - building.buildTicksRemaining / Math.max(1, definition.buildTicks);
+
+    const store = building.isComplete
+      ? (this.storageContents(building.storageId) ?? inventoryAmounts(building.input))
+      : inventoryAmounts(building.materials);
+
+    return {
+      id: building.id,
+      buildingId: definition.id,
+      complete: building.isComplete,
+      progress,
+      missingMaterials,
+      workers: building.workers.length,
+      workerSlots: definition.workerSlots,
+      contents: store,
+      housing: definition.housing ?? 0,
+      residents: this.simulation.villagers.all.filter((villager) => villager.homeId === building.id)
+        .length,
+    };
+  }
+
+  /**
+   * The settlers' own yard, which has no building behind it.
+   *
+   * It is the most prominent thing on screen when the game begins, and tapping
+   * it said nothing at all — the one structure a new player is most likely to
+   * ask about was the one the panel could not answer for. Described here rather
+   * than given a Building of its own, because it genuinely is not one: nobody
+   * constructed it and nothing can demolish it.
+   */
+  private describeFoundingYard(cell: GridPoint): BuildingSelection | null {
+    const yard = this.simulation.storages.all.find(
+      (storage) =>
+        storage.ownerBuildingId === null &&
+        Math.abs(storage.cell.gx - cell.gx) <= FOUNDING_YARD_RADIUS &&
+        Math.abs(storage.cell.gy - cell.gy) <= FOUNDING_YARD_RADIUS,
+    );
+    if (!yard) {
+      return null;
+    }
+
+    return {
+      id: yard.id,
+      buildingId: 'storage-yard',
+      complete: true,
+      progress: 1,
+      missingMaterials: [],
+      workers: 0,
+      workerSlots: 0,
+      contents: inventoryAmounts(yard.inventory),
+      housing: 0,
+      residents: 0,
+    };
+  }
+
+  /** A yard's stock, or `null` when this building opened no yard. */
+  private storageContents(storageId: number | null): readonly ResourceAmount[] | null {
+    if (storageId === null) {
+      return null;
+    }
+    const storage = this.simulation.storages.getById(storageId);
+    return storage ? inventoryAmounts(storage.inventory) : null;
   }
 
   /**
@@ -598,4 +710,20 @@ export class Game implements GameContext, InputIntentSink {
     this.currentSelection = this.describeCell(cell, null);
     this.selectionChanges += 1;
   }
+}
+
+/**
+ * How far from its centre the founding yard answers to a tap.
+ *
+ * It is drawn three cells across but recorded as a single point, so matching
+ * only the exact centre would leave most of what the player can see inert.
+ */
+const FOUNDING_YARD_RADIUS = 1;
+
+/** An inventory as a plain list, so the UI never touches simulation objects. */
+function inventoryAmounts(inventory: Inventory): readonly ResourceAmount[] {
+  return inventory.contents.map((entry) => ({
+    resource: entry.resource,
+    amount: entry.amount,
+  }));
 }
