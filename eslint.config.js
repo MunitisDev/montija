@@ -37,6 +37,13 @@ export default tseslint.config(
     },
   },
   {
+    // Benchmarks exist to print their measurements; that is their output.
+    files: ['bench/**/*.ts'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
+  {
     // The simulation layer must stay pure and renderer-agnostic.
     files: ['src/simulation/**/*.ts'],
     rules: {

@@ -54,6 +54,7 @@ const IDLE_TICKS_MAX = 60;
 /** Give up choosing a wander target after this many failed guesses. */
 const WANDER_ATTEMPTS = 8;
 
+
 /** Neighbours checked when looking for somewhere to stand next to a job. */
 const ADJACENT: readonly (readonly [number, number])[] = [
   [0, -1],

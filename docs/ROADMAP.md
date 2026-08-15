@@ -13,8 +13,11 @@ marks trees and stone, places buildings that villagers physically construct, and
 must be stockpiled through a winter capable of killing it. The game saves and loads, speaks English
 and Spanish, and needs neither mouse nor keyboard.
 
-**Phase 11 (performance) is not started.** No benchmark scenarios exist, so no villager-count claim
-is made beyond the 10 the settlement starts with.
+**Phase 11 (performance) is measured, not finished.** Repeatable benchmarks exist at 25/50/100
+villagers and the simulation is comfortably inside its budget — under 1% of a tick at 100. The
+rendering side has only been measured on a software renderer, so **no maximum villager count is
+claimed**: the number that would decide one needs a real GPU, and a tablet. See
+[PERFORMANCE.md](./PERFORMANCE.md).
 
 Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 
@@ -31,7 +34,7 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 8     | Seasons and survival  | **Implemented** |
 | 9     | Save / load           | **Implemented** |
 | 10    | Mobile UX             | **Implemented** |
-| 11    | Performance           | **Planned**     |
+| 11    | Performance           | **Prototype**   |
 
 ---
 

@@ -40,6 +40,7 @@ npm run dev      # http://localhost:5173
 | `npm run preview`    | Serve the production build locally               |
 | `npm test`           | Run the simulation test suite (Vitest, headless) |
 | `npm run test:watch` | Tests in watch mode                              |
+| `npm run bench`      | Simulation benchmarks at 25 / 50 / 100 villagers |
 | `npm run typecheck`  | TypeScript strict typecheck, no emit             |
 | `npm run lint`       | ESLint                                           |
 | `npm run format`     | Rewrite files with Prettier                      |
