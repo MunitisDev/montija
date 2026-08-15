@@ -24,13 +24,7 @@ import type { GridPoint } from '@/shared/types/geometry';
 export type HaulSource = 'pile' | 'storage';
 
 export type JobType =
-  | 'move-to'
-  | 'chop-tree'
-  | 'gather-stone'
-  | 'haul'
-  | 'build'
-  | 'produce'
-  | 'pave-road';
+  'move-to' | 'chop-tree' | 'gather-stone' | 'haul' | 'build' | 'produce' | 'pave-road';
 
 /**
  * Which leg of a multi-stage job is being done.
