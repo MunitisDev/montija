@@ -8,14 +8,14 @@ The repository must remain buildable and runnable after every phase.
 
 ## Where the project is
 
-**Phase 1 complete.** There is no gameplay. The toolchain, the layering and the camera work; the
-world is a placeholder and the simulation is an empty shell that counts ticks.
+**Phase 2 complete.** There is still no gameplay: nothing lives in the world and nothing can be
+built. What exists is a deterministic isometric wilderness you can pan, zoom and tap around.
 
 | Phase | Name                  | Status          |
 | ----- | --------------------- | --------------- |
 | 0     | Repository inspection | **Implemented** |
 | 1     | Browser foundation    | **Implemented** |
-| 2     | Isometric world       | **Planned**     |
+| 2     | Isometric world       | **Implemented** |
 | 3     | Villagers             | **Planned**     |
 | 4     | Job system            | **Planned**     |
 | 5     | Resource logistics    | **Planned**     |
@@ -73,16 +73,43 @@ Delivered:
 
 ---
 
-## Phase 2 — Isometric world — Planned
+## Phase 2 — Isometric world — Implemented
 
-Logical grid, world coordinates, **one** isometric projection subsystem, terrain renderer, seeded
-world generation (grass, forest, water, stone), camera bounds against real terrain,
-pointer-to-grid conversion, deterministic render sorting.
+**Definition of done:** the player can move around a deterministic isometric world. ✅ Met.
 
-**Done when:** the player can move around a deterministic isometric world.
+Delivered:
 
-Tests to add: coordinate conversion round-trips, grid↔world↔screen, world generation determinism,
-sort-order correctness.
+- Four distinct coordinate spaces with non-overlapping field names, so the compiler catches a value
+  used in the wrong space: grid `(gx, gy)`, world `(wx, wy)`, scene `(px, py)`, screen `(sx, sy)`.
+- One isometric projection subsystem (`shared/math/isometric.ts`) holding every grid↔world↔scene
+  conversion and the only two tile-pixel constants in the codebase.
+- `TerrainGrid`: a flat `Uint8Array` of terrain indices — one 9KB buffer rather than ~9k objects,
+  and trivially serialisable for Phase 9.
+- Seeded world generation from two value-noise fields, producing grass, meadow, forest, water and
+  stone, plus scattered trees. Each stage draws from its own named RNG stream.
+- Terrain renderer reading the simulation's world, with placeholder art generated at runtime.
+- Centralised depth sorting (`renderer/phaser/sorting.ts`), including the front-most-corner rule
+  for multi-tile footprints.
+- Camera bounds derived from the world's projected extent, so the map edge is the camera limit.
+- Pointer-to-grid picking: viewport → camera → scene → isometric → world → grid.
+- A contextual tile panel showing what was tapped.
+
+**Measured, not assumed:**
+
+- 96×96 map = 9,216 tiles + 1,973 trees = 11,190 render objects.
+- JS cost per frame: `step` 0 ms, render submission 4.1 ms.
+- Terrain mix varies widely by seed (water 2%–35%); every surveyed seed stays above 50% habitable.
+
+**Known limitations:**
+
+- **Frame rate is not validated on real hardware.** The CI container has no GPU — WebGL runs on
+  SwiftShader, a software rasteriser — so the 8 fps measured there reflects the absence of a GPU,
+  not the game. The measurement that _does_ carry over is the JS cost above, which is negligible.
+  Real-device numbers are Phase 11.
+- Terrain is static: no rivers, no coastlines, no elevation. Tiles are flat diamonds.
+- Trees are scenery. They are not harvestable until Phase 5.
+- No occupancy or navigation grid yet — `isWalkable` reads terrain only.
+- Placeholder art throughout; no seasonal variants.
 
 ---
 

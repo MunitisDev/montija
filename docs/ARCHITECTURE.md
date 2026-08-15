@@ -92,9 +92,12 @@ Data flows down. Nothing reaches back up.
 | `TouchController`             | **Implemented** | One-finger pan, pinch zoom, tap select, pinch↔pan handoff     |
 | `Hud`                         | **Prototype**   | Speed controls work; resource readouts show `--`              |
 | `DebugOverlay`                | **Implemented** | Dev-only; FPS, tick, sim time, camera, seed                   |
-| `Simulation`                  | **Skeleton**    | Owns seed, RNG and tick counter. No world, villagers or jobs. |
-| `WorldScene`                  | **Placeholder** | Flat checker field. Not isometric. Replaced in Phase 2.       |
-| Isometric projection          | **Planned**     | Phase 2 — a single subsystem, not scattered maths             |
+| `Simulation`                  | **Implemented** | Owns seed, RNG, tick counter and the world. No villagers yet. |
+| Isometric projection          | **Implemented** | One subsystem; the only place tile pixel sizes exist          |
+| `TerrainGrid` + generation    | **Implemented** | Seeded, deterministic, `Uint8Array`-backed                    |
+| `TerrainRenderer`             | **Implemented** | Reads the world; placeholder art generated at runtime         |
+| Depth sorting                 | **Implemented** | Centralised rule, incl. multi-tile footprints                 |
+| Pointer-to-grid picking       | **Implemented** | viewport → scene → world → grid                               |
 | Villagers, jobs, logistics    | **Planned**     | Phases 3-5                                                    |
 | Save/load                     | **Planned**     | Phase 9                                                       |
 
@@ -146,22 +149,34 @@ The same seed must produce the same world, always.
 
 ## Coordinate spaces
 
-Three spaces, deliberately given distinct types in `src/shared/types/geometry.ts` so the compiler
-catches confusion between them:
+**Four** spaces, deliberately given distinct types _and non-overlapping field names_ in
+`src/shared/types/geometry.ts`. Because no two spaces share a field name, passing a value from the
+wrong space is a compile error rather than a subtle half-tile offset:
 
 | Space  | Type          | Fields     | Meaning                                      |
 | ------ | ------------- | ---------- | -------------------------------------------- |
 | Grid   | `GridPoint`   | `gx`, `gy` | Integer simulation tiles. **Authoritative.** |
-| World  | `WorldPoint`  | `wx`, `wy` | Continuous world units, un-projected         |
-| Screen | `ScreenPoint` | `sx`, `sy` | Viewport pixels                              |
+| World  | `WorldPoint`  | `wx`, `wy` | Continuous tiles, un-projected               |
+| Scene  | `ScenePoint`  | `px`, `py` | Isometric pixels — where Phaser puts objects |
+| Screen | `ScreenPoint` | `sx`, `sy` | Viewport pixels — where the finger is        |
 
-`CameraController` converts between world and screen via `viewportToWorld` / `worldToViewport` —
-**camera transforms only** (pan and zoom).
+```text
+grid ──gridToWorld──▶ world ──worldToScene──▶ scene ──sceneToViewport──▶ screen
+     ◀──worldToGrid──       ◀──sceneToWorld──       ◀──viewportToScene──
+     └──────── shared/math/isometric.ts ───────┘   └─── CameraController ───┘
+```
 
-The isometric projection between grid and world space is a _separate_ Phase 2 subsystem
-(`gridToWorld`, `worldToGrid`, `worldToScreen`, `screenToWorld`). It will live in exactly one file.
-Scattering isometric maths across the codebase is the failure mode this naming is designed to
-prevent.
+One world unit is one grid cell, which keeps villager movement, pathfinding and building footprints
+in the same natural unit and confines pixel dimensions to the isometric module.
+
+**A deviation from the brief, deliberately.** The brief names the conversions `worldToScreen` /
+`screenToWorld`. Those names assume three spaces; with a pannable camera there are four, and
+"screen" would then mean two different things — the projected plane and the actual viewport. The
+functions are therefore `worldToScene` / `sceneToWorld`, and the camera owns `viewportToScene` /
+`sceneToViewport`. The brief's actual requirement — _one_ subsystem, no scattered projection maths —
+is met exactly.
+
+`shared/math/isometric.ts` is the only file that knows a tile is 64×32 pixels.
 
 ---
 
@@ -170,6 +185,10 @@ prevent.
 `CameraController` (`src/renderer/camera/`) is pure logic with no Phaser import, and is unit tested.
 `PhaserCameraBinding` (`src/renderer/phaser/camera/`) copies its state onto the real camera each
 frame. Nothing else moves `cameras.main` directly.
+
+It operates in **scene** space, and its bounds come from `World.sceneBounds` — the projected extent
+of the actual map — so the camera limit is the map edge by construction rather than a tuned constant
+that could drift out of sync.
 
 It handles zoom limits, world bounds, exponential-decay inertia, frame-rate-independent smooth zoom,
 and anchored zoom that keeps the world point under the cursor or pinch centre stationary. When the
@@ -211,6 +230,27 @@ No DOM node ever represents a world object. At the eventual target of 100-300 vi
 per entity would be fatal to performance, and the world would not compose correctly with the canvas.
 
 ---
+
+## Rendering and performance
+
+Terrain is built once as individual images: 9,216 tiles plus ~2,000 trees on a 96×96 map. Two
+decisions keep that affordable:
+
+- **All tile art lives in one texture atlas, and all tree art in another.** Depth sorting
+  interleaves terrain types, and a GPU batch breaks whenever the texture changes between adjacent
+  objects. With separate textures, ~9k tiles become thousands of draw calls on exactly the
+  low-power tablet GPUs this project targets. One atlas means one batch, whatever the draw order.
+- **The display list is only dirtied when something actually changes.** The selection marker, for
+  instance, moves only when the selection version changes, because repositioning it every frame
+  would force Phaser to re-sort every object.
+
+Measured on the 96×96 default map: `step` 0 ms, render submission 4.1 ms per frame. The JS side is
+effectively free.
+
+**Frame rate has not been validated on real hardware.** The development container has no GPU, so
+WebGL falls back to SwiftShader, a software rasteriser; measured frame rate there scales with pixel
+count and says nothing about a real device. Establishing real numbers is Phase 11, and no villager
+count or frame rate will be claimed before then.
 
 ## Build
 
