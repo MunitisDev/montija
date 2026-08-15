@@ -26,6 +26,9 @@ export const MAX_TICKS_PER_ADVANCE = 20;
 export const WORLD_WIDTH = 96;
 export const WORLD_HEIGHT = 96;
 
+/** Founding population, per the MVP brief: "approximately 10 villagers". */
+export const STARTING_VILLAGERS = 10;
+
 export const ZOOM_LIMITS = {
   min: 0.35,
   max: 2.5,

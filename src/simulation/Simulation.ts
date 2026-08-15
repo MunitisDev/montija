@@ -1,8 +1,8 @@
 /**
  * The authoritative game state.
  *
- * Status: Phase 2. Owns the seed, the RNG, the tick counter and the world.
- * Villagers, jobs, buildings and seasons join in Phases 3-8.
+ * Status: Phase 3. Owns the seed, the RNG, the tick counter, the world and the
+ * villagers. Jobs, buildings and seasons join in Phases 4-8.
  *
  * Rules for everything added here later:
  * - no Phaser, no DOM, no `Math.random()` (all enforced by ESLint);
@@ -11,39 +11,53 @@
  */
 
 import { SeededRandom, deriveSeed, type RandomSource } from '@/shared/math/random';
+import { VillagerSystem } from './villagers/VillagerSystem';
 import { World } from './world/World';
 
 /** A read-only view of the simulation, safe to hand to the renderer and HUD. */
 export interface SimulationSnapshot {
   readonly seed: number;
   readonly tick: number;
-  /** Population. Always 0 until Phase 3 introduces villagers. */
   readonly villagerCount: number;
   readonly treeCount: number;
+  readonly walkingCount: number;
+  readonly pathRequests: number;
+  readonly pathFailures: number;
 }
 
 export interface SimulationOptions {
   readonly seed: number;
   readonly worldWidth: number;
   readonly worldHeight: number;
+  /** Founding population. The MVP starts with roughly ten. */
+  readonly startingVillagers: number;
 }
 
 export class Simulation {
   public readonly world: World;
+  public readonly villagers: VillagerSystem;
 
   private readonly seed: number;
-  /** Stream reserved for systems that need randomness during ticks. */
   private readonly tickRandom: RandomSource;
   private currentTick = 0;
 
   constructor(options: SimulationOptions) {
     this.seed = options.seed >>> 0;
     this.tickRandom = new SeededRandom(deriveSeed(this.seed, 'tick'));
+
     this.world = new World({
       width: options.worldWidth,
       height: options.worldHeight,
       seed: this.seed,
     });
+
+    // Villagers get their own RNG stream, so adding a call here cannot shift
+    // the terrain or the tree layout.
+    this.villagers = new VillagerSystem(
+      this.world.navigation,
+      new SeededRandom(deriveSeed(this.seed, 'villagers')),
+    );
+    this.villagers.spawnNear(this.world.centreCell, options.startingVillagers);
   }
 
   public get worldSeed(): number {
@@ -55,17 +69,22 @@ export class Simulation {
   }
 
   /** Advances the world by exactly one fixed tick. */
-  public update(tick: number, _tickSeconds: number): void {
+  public update(tick: number, tickSeconds: number): void {
     this.currentTick = tick;
-    // Phase 3+ : villagers, jobs, logistics, production, seasons.
+    this.villagers.update(tickSeconds);
+    // Phase 4+ : jobs, logistics, production, seasons.
   }
 
   public snapshot(): SimulationSnapshot {
+    const villagerStats = this.villagers.stats();
     return {
       seed: this.seed,
       tick: this.currentTick,
-      villagerCount: 0,
+      villagerCount: this.villagers.count,
       treeCount: this.world.trees.length,
+      walkingCount: villagerStats.walking,
+      pathRequests: villagerStats.pathRequests,
+      pathFailures: villagerStats.pathFailures,
     };
   }
 
