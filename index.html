@@ -66,6 +66,17 @@
           </div>
         </div>
 
+        <!-- Shown when the last villager is gone. -->
+        <div class="failure" data-hud="failure" role="alertdialog" hidden>
+          <h2 class="failure__title" data-i18n="failure.title"></h2>
+          <p class="failure__body" data-i18n="failure.body"></p>
+          <p class="failure__stat" data-hud="failure-survived"></p>
+          <button type="button" class="failure__restart" data-hud="failure-restart"></button>
+        </div>
+
+        <!-- Transient notices: births, arrivals, deaths. -->
+        <div class="events" data-hud="events" role="status" aria-live="polite"></div>
+
         <!-- Advice when the settlement is heading for trouble. -->
         <div class="advice" data-hud="advice" role="status" hidden></div>
 

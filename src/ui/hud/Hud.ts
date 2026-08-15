@@ -14,7 +14,9 @@
 
 import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
 import type { GameContext } from '@/game/Game';
+import type { SimulationSnapshot } from '@/simulation/Simulation';
 import { SIMULATION_SPEEDS, type SimulationSpeed } from '@/simulation/SimulationClock';
+import { TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
 import { LANGUAGES, type I18n, type Language } from '@/ui/i18n/I18n';
 import type { MessageKey } from '@/ui/i18n/messages';
 
@@ -30,6 +32,10 @@ interface HudElements {
   readonly season: HTMLElement;
   readonly temperature: HTMLElement;
   readonly advice: HTMLElement;
+  readonly events: HTMLElement;
+  readonly failure: HTMLElement;
+  readonly failureSurvived: HTMLElement;
+  readonly failureRestart: HTMLButtonElement;
   readonly language: HTMLButtonElement;
   readonly speedButtons: readonly HTMLButtonElement[];
   readonly saveButton: HTMLButtonElement;
@@ -52,6 +58,9 @@ export class Hud {
   private readonly lastRenderedLoose = new Map<ResourceId, number>();
   private lastRenderedSaveVersion = -1;
   private lastRenderedAdvice: string | null | undefined;
+  private lastRenderedFailure: string | null | undefined;
+  /** The last day whose events were announced, so each is announced once. */
+  private lastAnnouncedDay = -1;
   private lastRenderedSeason = '';
   private lastRenderedTemperature = Number.NaN;
 
@@ -64,6 +73,14 @@ export class Hud {
     this.bindSelectionAction();
     this.bindSessionButtons();
     this.bindLanguageButton();
+    this.elements.failureRestart.addEventListener('click', () => {
+      this.context.startNewSettlement();
+      // `undefined` means "not yet drawn". `null` is a real value here — it is
+      // what "the settlement is fine" looks like — so using it as the reset
+      // sentinel left the panel on screen over the new settlement.
+      this.lastRenderedFailure = undefined;
+      this.update();
+    });
     this.update();
   }
 
@@ -154,6 +171,26 @@ export class Hud {
       this.lastRenderedAdvice = advice;
     }
 
+    this.announceEvents(snapshot);
+
+    // The settlement is over. Said plainly, with the only action left.
+    const failureKey = snapshot.hasFailed
+      ? `${snapshot.year}-${snapshot.season}-${snapshot.dayOfSeason}`
+      : null;
+    if (failureKey !== this.lastRenderedFailure) {
+      this.elements.failure.hidden = !snapshot.hasFailed;
+      if (snapshot.hasFailed) {
+        const survived = [
+          this.i18n.t('failure.survived'),
+          `${this.i18n.t('time.yearShort')}${snapshot.year}`,
+          this.i18n.t(`season.${snapshot.season}` as MessageKey),
+          `${this.i18n.t('time.dayShort')}${snapshot.dayOfSeason}`,
+        ].join(' · ');
+        this.elements.failureSurvived.textContent = survived;
+      }
+      this.lastRenderedFailure = failureKey;
+    }
+
     if (this.context.saveVersion !== this.lastRenderedSaveVersion) {
       this.elements.saveStatus.textContent = this.context.saveStatus;
       this.lastRenderedSaveVersion = this.context.saveVersion;
@@ -163,6 +200,59 @@ export class Hud {
       this.renderSelection();
       this.lastRenderedSelection = this.context.selectionVersion;
     }
+  }
+
+  /**
+   * Announces what happened overnight.
+   *
+   * The population moves for four different reasons and, until this existed,
+   * the only sign of any of them was a number quietly changing in the corner —
+   * so a settlement could gain two people or bury one and the player would have
+   * no idea which had happened, or why.
+   *
+   * Once a day, and only for days that actually brought news.
+   */
+  private announceEvents(snapshot: SimulationSnapshot): void {
+    const day = Math.floor(snapshot.tick / TICKS_PER_DAY);
+    if (day === this.lastAnnouncedDay) {
+      return;
+    }
+    // A restart winds the clock back; announcing the whole first day again is
+    // better than going silent until the settlement catches up.
+    const isFirstLook = this.lastAnnouncedDay < 0 || day < this.lastAnnouncedDay;
+    this.lastAnnouncedDay = day;
+    if (isFirstLook) {
+      return;
+    }
+
+    const { population, lastDay } = snapshot;
+    // Deaths of old age are counted separately from the ones the player caused
+    // by running out of food or firewood, because only one of those is a
+    // mistake and they should not read the same.
+    const fromHardship = Math.max(0, lastDay.deaths);
+
+    this.announce('event.born', population.births);
+    this.announce('event.arrived', population.arrivals);
+    this.announce('event.diedOfOldAge', population.deathsOfOldAge);
+    this.announce('event.died', fromHardship);
+  }
+
+  private announce(key: MessageKey, count: number): void {
+    if (count <= 0) {
+      return;
+    }
+
+    const notice = document.createElement('div');
+    notice.className = 'events__notice';
+    notice.textContent = count > 1 ? `${this.i18n.t(key)} (${count})` : this.i18n.t(key);
+    if (key === 'event.died' || key === 'event.diedOfOldAge') {
+      notice.classList.add('is-loss');
+    }
+
+    this.elements.events.append(notice);
+    // Removed on the animation's own end rather than on a timer, so the two can
+    // never disagree about how long a notice lasts.
+    notice.addEventListener('animationend', () => notice.remove());
   }
 
   private renderSelection(): void {
@@ -290,6 +380,7 @@ export class Hud {
 
   /** Writes the labels that never change except with the language. */
   private applyStaticText(): void {
+    this.elements.failureRestart.textContent = this.i18n.t('failure.restart');
     for (const element of this.root.querySelectorAll<HTMLElement>('[data-i18n]')) {
       const key = element.dataset['i18n'] as MessageKey | undefined;
       if (key) {
@@ -309,6 +400,7 @@ export class Hud {
     this.lastRenderedSeason = '';
     this.lastRenderedTemperature = Number.NaN;
     this.lastRenderedAdvice = undefined;
+    this.lastRenderedFailure = undefined;
     this.lastRenderedTotals.clear();
     this.lastRenderedLoose.clear();
   }
@@ -343,6 +435,10 @@ function collectElements(root: HTMLElement): HudElements {
     season: requireElement(root, '[data-hud="season"]'),
     temperature: requireElement(root, '[data-hud="temperature"]'),
     advice: requireElement(root, '[data-hud="advice"]'),
+    events: requireElement(root, '[data-hud="events"]'),
+    failure: requireElement(root, '[data-hud="failure"]'),
+    failureSurvived: requireElement(root, '[data-hud="failure-survived"]'),
+    failureRestart: requireElement(root, '[data-hud="failure-restart"]') as HTMLButtonElement,
     language: requireElement(root, '[data-hud="language"]') as HTMLButtonElement,
     speedButtons: Array.from(root.querySelectorAll<HTMLButtonElement>('[data-speed]')),
     saveButton: requireElement(root, '[data-hud="save"]') as HTMLButtonElement,

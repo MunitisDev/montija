@@ -105,6 +105,14 @@ export interface SimulationSnapshot {
    */
   readonly advice: Advice;
   /**
+   * `true` once the last villager is gone.
+   *
+   * The simulation has always known this and nothing ever asked. The MVP's
+   * final requirement is "survive or fail in winter", and a failure nobody
+   * reports is a game that simply stops meaning anything while still running.
+   */
+  readonly hasFailed: boolean;
+  /**
    * Stored totals per resource.
    *
    * A **cached summary** of what the storage yards physically hold. Resources
@@ -267,6 +275,7 @@ export class Simulation {
       population: this.lastPopulation,
       deaths: this.totalDeaths,
       advice: this.adviseOn(year),
+      hasFailed: this.hasFailed,
       lowestHealth: this.villagers.all.reduce(
         (lowest, villager) => Math.min(lowest, villager.needs.health),
         this.villagers.count === 0 ? 0 : 100,

@@ -211,3 +211,26 @@ window on a desktop is not a thumb.
 Below 380px of height the resource captions are dropped and only the numbers
 remain. Each keeps its name as a `title`, so the information is still there for
 a long press and for a screen reader.
+
+## Portrait — Implemented
+
+Held upright, the game used to print "rotate your device for the best view" across the middle of the
+world. That is not support; it is an apology, and the player had already chosen how to hold their
+phone.
+
+Behind the message the layout was genuinely broken: the bottom bar tried to fit the build menu, the
+save controls and the speed controls on one line, and on a 411px-wide phone the save and speed
+controls took the whole width and pushed the build menu off the screen. A player in portrait could
+not build anything at all.
+
+Portrait is the opposite problem from landscape and gets the opposite answer. Height is plentiful and
+width is scarce, so rows **stack** rather than compete: the build menu takes a row, the save and
+speed controls share the next, and the resource strip wraps to two lines instead of scrolling.
+
+| Viewport | HUD share |
+| -------- | --------- |
+| 360×640  | 45%       |
+| 411×915  | 32%       |
+| 768×1024 | 21%       |
+
+Every build button is reachable and nothing scrolls horizontally at any of them.

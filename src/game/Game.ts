@@ -81,6 +81,10 @@ export interface Selection {
 /** What the presentation layer is allowed to see. */
 export interface GameContext {
   readonly simulation: Simulation;
+  /** Increments when the settlement is replaced, so renderers rebuild. */
+  readonly worldVersion: number;
+  /** Abandons the current settlement and founds another. */
+  startNewSettlement(seed?: number): void;
   readonly clock: SimulationClock;
   readonly camera: CameraController;
   readonly input: InputIntentSink;
@@ -153,7 +157,14 @@ export interface GameOptions {
 }
 
 export class Game implements GameContext, InputIntentSink {
-  public readonly simulation: Simulation;
+  /**
+   * Not readonly: starting again replaces the settlement in place.
+   *
+   * Keeping the same Game — and the same GameContext the renderer, HUD and
+   * input controllers all hold — means a restart swaps one object rather than
+   * rewiring the whole application.
+   */
+  public simulation: Simulation;
   public readonly clock: SimulationClock;
   public readonly camera: CameraController;
 
@@ -171,16 +182,56 @@ export class Game implements GameContext, InputIntentSink {
   private ticksUntilAutosave = AUTOSAVE_INTERVAL_TICKS;
   /** Randomness for the renderer, deliberately outside the simulation. */
   private readonly presentationRng: SeededRandom;
+  /** The seed the current settlement was founded from. */
+  private currentSeed: number;
+  /** Bumped when the world is replaced, so the renderer knows to rebuild. */
+  private worldGeneration = 0;
 
-  constructor(options: GameOptions = {}) {
-    const seed = options.seed ?? DEFAULT_WORLD_SEED;
+  /**
+   * Founds a new settlement, discarding the current one.
+   *
+   * The Game object survives, so the renderer, HUD and input controllers keep
+   * the same GameContext they were given — only the world beneath it changes.
+   * Selections and placements are dropped because they refer to things that no
+   * longer exist.
+   */
+  public startNewSettlement(seed?: number): void {
+    this.currentSeed = seed ?? this.currentSeed + 1;
+    this.simulation = Game.foundSettlement(this.currentSeed);
+    this.worldGeneration += 1;
 
-    this.simulation = new Simulation({
+    this.clock.restore(0, 1);
+    this.currentSelection = null;
+    this.selectionChanges += 1;
+    this.currentPlacement = null;
+    this.placementChanges += 1;
+    this.ticksUntilAutosave = AUTOSAVE_INTERVAL_TICKS;
+    const bounds = this.simulation.world.sceneBounds;
+    this.camera.centreOn({
+      px: (bounds.minX + bounds.maxX) / 2,
+      py: (bounds.minY + bounds.maxY) / 2,
+    });
+  }
+
+  /** Increments whenever the world is replaced. */
+  public get worldVersion(): number {
+    return this.worldGeneration;
+  }
+
+  private static foundSettlement(seed: number): Simulation {
+    return new Simulation({
       seed,
       worldWidth: WORLD_WIDTH,
       worldHeight: WORLD_HEIGHT,
       startingVillagers: STARTING_VILLAGERS,
     });
+  }
+
+  constructor(options: GameOptions = {}) {
+    const seed = options.seed ?? DEFAULT_WORLD_SEED;
+    this.currentSeed = seed;
+
+    this.simulation = Game.foundSettlement(seed);
     // Falls back to memory when the browser has no IndexedDB, so the game runs
     // rather than crashing; saves simply do not survive a refresh.
     this.presentationRng = new SeededRandom(deriveSeed(seed, 'presentation'));

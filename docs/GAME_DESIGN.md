@@ -232,6 +232,26 @@ cries wolf is one the player stops reading.
 
 ---
 
+## Telling the player what happened — Implemented
+
+Two channels, deliberately distinct:
+
+- **Advice** is a standing problem to fix, shown as one banner: people starving, no larder, no roof.
+- **Notices** are things that have already happened and need no reply — a birth, newcomers arriving,
+  a death — drifting up and fading out. A death is coloured differently from a birth, and a death of
+  old age is worded differently from one the player caused by running out of food, because only one
+  of those is a mistake.
+
+The population moves for four separate reasons, and before this the only sign of any of them was a
+number quietly changing in a corner.
+
+**Failure is now stated.** When the last villager is gone the game says so, reports how long the
+settlement lasted, and offers the only useful action left: begin again, on a new map. The simulation
+had always known — `hasFailed` existed from Phase 8 — and nothing had ever asked it, so a dead
+settlement simply carried on being drawn as an empty valley.
+
+---
+
 ## Open questions
 
 - **A do-nothing settlement dies in autumn, not winter.** Defensible — doing nothing for
@@ -239,7 +259,5 @@ cries wolf is one the player stops reading.
   the game is named for.
 - **Villagers idle around 30% of the time** in the measured runs, mostly when the player has not
   designated enough work. Whether that reads as calm or as broken is a question for a real playtest.
-- **Arrivals are not announced.** The population simply goes up. It is in the debug overlay but the
-  player has no notification, and a settlement that grows without telling anyone is confusing.
 - **No professions.** Villagers take whatever the job board offers rather than holding a trade, so a
   "worker slot" is a post rather than a career.

@@ -780,3 +780,133 @@
   color: var(--colour-ink);
   border-color: rgba(201, 162, 39, 0.5);
 }
+
+/*
+ * The settlement has failed.
+ *
+ * A full-screen stop rather than a toast: the game is over, and the player
+ * needs to be told plainly and offered the only useful action left. Until this
+ * existed the simulation knew perfectly well that everybody was dead and simply
+ * carried on drawing an empty valley.
+ */
+.failure {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+  background: rgba(10, 12, 9, 0.82);
+  backdrop-filter: blur(3px);
+  pointer-events: auto;
+  z-index: 5;
+}
+
+.failure[hidden] {
+  display: none;
+}
+
+.failure__title {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 500;
+  color: var(--colour-ink);
+}
+
+.failure__body,
+.failure__stat {
+  margin: 0;
+  max-width: 30ch;
+  font-size: 0.9rem;
+  color: var(--colour-ink-dim);
+}
+
+.failure__restart {
+  margin-top: 8px;
+  min-height: var(--touch-target);
+  padding: 0 22px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--colour-ink);
+  background: rgba(201, 162, 39, 0.16);
+  border: 1px solid rgba(201, 162, 39, 0.55);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.failure__restart:hover {
+  background: rgba(201, 162, 39, 0.26);
+}
+
+/*
+ * Transient notices: births, arrivals, deaths.
+ *
+ * Stacked above the advice banner, drifting up and fading out. Deliberately
+ * separate from that banner: advice is a standing problem to fix, and these are
+ * things that have already happened and need no reply.
+ */
+.events {
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.events__notice {
+  padding: 5px 12px;
+  font-size: 0.82rem;
+  color: var(--colour-ink);
+  background: rgba(12, 14, 11, 0.78);
+  border: 1px solid var(--colour-panel-edge);
+  border-radius: 5px;
+  white-space: nowrap;
+  animation: event-notice 4.5s ease-out forwards;
+}
+
+/* A death should not read like a birth. */
+.events__notice.is-loss {
+  color: #c9a08f;
+  border-color: rgba(201, 138, 106, 0.45);
+}
+
+@keyframes event-notice {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  12%,
+  70% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+/* Honour a player who has asked for less movement. */
+@media (prefers-reduced-motion: reduce) {
+  .events__notice {
+    animation-duration: 4.5s;
+    animation-name: event-notice-still;
+  }
+
+  @keyframes event-notice-still {
+    0%,
+    80% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+}

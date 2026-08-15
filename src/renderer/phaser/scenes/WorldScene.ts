@@ -39,6 +39,8 @@ export class WorldScene extends Phaser.Scene {
   private selectionMarker!: Phaser.GameObjects.Image;
   /** Season the world is currently painted and tinted for. */
   private renderedSeason = '';
+  /** The world generation currently drawn, so a new settlement rebuilds. */
+  private renderedWorldVersion = 0;
   /** Last selection version drawn, so the marker only moves when it changes. */
   private renderedSelectionVersion = -1;
   /** Turns Phaser's smoothed delta into real elapsed time. */
@@ -50,6 +52,9 @@ export class WorldScene extends Phaser.Scene {
 
   public init(data: { context: GameContext }): void {
     this.context = data.context;
+    this.renderedWorldVersion = data.context.worldVersion;
+    this.renderedSeason = '';
+    this.renderedSelectionVersion = -1;
   }
 
   public create(): void {
@@ -91,6 +96,15 @@ export class WorldScene extends Phaser.Scene {
     // FrameTimer. `Game.advance` clamps the result, which is what stops a long
     // stall from stampeding the settlement.
     this.context.advance(this.frameTimer.delta(time, delta));
+
+    // A new settlement is a whole new world: every sprite in the scene refers
+    // to terrain, trees and buildings that no longer exist.
+    if (this.context.worldVersion !== this.renderedWorldVersion) {
+      this.renderedWorldVersion = this.context.worldVersion;
+      this.scene.restart({ context: this.context });
+      return;
+    }
+
     this.cameraBinding.sync();
 
     // Villagers move every frame, so this runs unconditionally — unlike the

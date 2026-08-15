@@ -85,6 +85,14 @@ export const EN = {
   'warning.firewoodShort': 'Not enough firewood to last the winter',
   'warning.starving': 'People are starving',
 
+  'event.born': 'A child was born',
+  'event.arrived': 'Newcomers have arrived',
+  'event.died': 'Someone has died',
+  'event.diedOfOldAge': 'Someone died of old age',
+  'failure.title': 'The settlement is gone',
+  'failure.body': 'Nobody survived. The wilderness has it back.',
+  'failure.survived': 'Survived',
+  'failure.restart': 'Begin again',
   'app.rotate': 'Rotate your device for the best view',
   'app.noscript': 'Montija needs JavaScript and WebGL to run.',
 } as const;
@@ -166,6 +174,14 @@ export const ES: Messages = {
   'warning.firewoodShort': 'No hay leña suficiente para pasar el invierno',
   'warning.starving': 'La gente está pasando hambre',
 
+  'event.born': 'Ha nacido un niño',
+  'event.arrived': 'Han llegado nuevos pobladores',
+  'event.died': 'Alguien ha muerto',
+  'event.diedOfOldAge': 'Alguien ha muerto de viejo',
+  'failure.title': 'El asentamiento ha desaparecido',
+  'failure.body': 'No sobrevivió nadie. El bosque se lo ha quedado.',
+  'failure.survived': 'Sobrevivió',
+  'failure.restart': 'Empezar de nuevo',
   'app.rotate': 'Gira el dispositivo para ver mejor',
   'app.noscript': 'Montija necesita JavaScript y WebGL para funcionar.',
 };
