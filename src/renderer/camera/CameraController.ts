@@ -6,20 +6,22 @@
  * A thin adapter copies that state onto the actual Phaser camera each frame, so
  * this logic can be unit tested with no engine and no canvas.
  *
- * Naming note: `worldToViewport` / `viewportToWorld` below handle *camera*
- * transforms only (pan and zoom). The isometric projection between grid space
- * and world space is a separate Phase 2 subsystem and must not be duplicated
- * here.
+ * The camera operates in *scene* space — isometric pixels, the space Phaser
+ * positions objects in. It knows nothing about the projection that produced
+ * those pixels; that lives in `shared/math/isometric.ts`. Keeping the two
+ * apart is why `viewportToScene` is named that and not `viewportToWorld`:
+ * "world" is a different space entirely, and conflating them is the bug this
+ * separation exists to prevent.
  */
 
 import { clamp, damp } from '@/shared/math/numbers';
-import type { ScreenPoint, ViewportSize, WorldBounds, WorldPoint } from '@/shared/types/geometry';
+import type { SceneBounds, ScenePoint, ScreenPoint, ViewportSize } from '@/shared/types/geometry';
 
 export interface CameraLimits {
   readonly minZoom: number;
   readonly maxZoom: number;
-  /** The rectangle of world the camera may look at. */
-  readonly bounds: WorldBounds;
+  /** The rectangle of scene space the camera may look at. */
+  readonly bounds: SceneBounds;
 }
 
 export interface CameraFeel {
@@ -41,13 +43,13 @@ export interface CameraControllerOptions {
   readonly limits: CameraLimits;
   readonly feel?: CameraFeel;
   readonly viewport?: ViewportSize;
-  readonly initialCentre?: WorldPoint;
+  readonly initialCentre?: ScenePoint;
   readonly initialZoom?: number;
 }
 
 /** The state an adapter needs to drive a concrete renderer camera. */
 export interface CameraView {
-  /** World-space point at the centre of the viewport. */
+  /** Scene-space point at the centre of the viewport. */
   readonly centreX: number;
   readonly centreY: number;
   readonly zoom: number;
@@ -73,8 +75,8 @@ export class CameraController {
     this.viewport = options.viewport ?? { width: 1, height: 1 };
 
     const bounds = this.limits.bounds;
-    this.centreX = options.initialCentre?.wx ?? (bounds.minX + bounds.maxX) / 2;
-    this.centreY = options.initialCentre?.wy ?? (bounds.minY + bounds.maxY) / 2;
+    this.centreX = options.initialCentre?.px ?? (bounds.minX + bounds.maxX) / 2;
+    this.centreY = options.initialCentre?.py ?? (bounds.minY + bounds.maxY) / 2;
 
     this.currentZoom = clamp(options.initialZoom ?? 1, this.limits.minZoom, this.limits.maxZoom);
     this.targetZoom = this.currentZoom;
@@ -103,10 +105,10 @@ export class CameraController {
     this.clampCentre();
   }
 
-  /** Jumps the camera to a world position, cancelling any inertia. */
-  public centreOn(point: WorldPoint): void {
-    this.centreX = point.wx;
-    this.centreY = point.wy;
+  /** Jumps the camera to a scene position, cancelling any inertia. */
+  public centreOn(point: ScenePoint): void {
+    this.centreX = point.px;
+    this.centreY = point.py;
     this.stopMotion();
     this.clampCentre();
   }
@@ -156,12 +158,12 @@ export class CameraController {
     if (anchor) {
       // Keep the anchored world point stationary. Applied against the *current*
       // zoom so the anchor holds while the smoothing is still catching up.
-      const before = this.viewportToWorld(anchor);
+      const before = this.viewportToScene(anchor);
       this.targetZoom = clamped;
       this.currentZoom = clamped;
-      const after = this.viewportToWorld(anchor);
-      this.centreX += before.wx - after.wx;
-      this.centreY += before.wy - after.wy;
+      const after = this.viewportToScene(anchor);
+      this.centreX += before.px - after.px;
+      this.centreY += before.py - after.py;
       this.clampCentre();
     } else {
       this.targetZoom = clamped;
@@ -211,24 +213,24 @@ export class CameraController {
     }
   }
 
-  /** Converts a viewport pixel position into an un-projected world position. */
-  public viewportToWorld(point: ScreenPoint): WorldPoint {
+  /** Converts a viewport pixel position into an isometric scene position. */
+  public viewportToScene(point: ScreenPoint): ScenePoint {
     return {
-      wx: this.centreX + (point.sx - this.viewport.width / 2) / this.currentZoom,
-      wy: this.centreY + (point.sy - this.viewport.height / 2) / this.currentZoom,
+      px: this.centreX + (point.sx - this.viewport.width / 2) / this.currentZoom,
+      py: this.centreY + (point.sy - this.viewport.height / 2) / this.currentZoom,
     };
   }
 
-  /** Converts an un-projected world position into a viewport pixel position. */
-  public worldToViewport(point: WorldPoint): ScreenPoint {
+  /** Converts an isometric scene position into a viewport pixel position. */
+  public sceneToViewport(point: ScenePoint): ScreenPoint {
     return {
-      sx: (point.wx - this.centreX) * this.currentZoom + this.viewport.width / 2,
-      sy: (point.wy - this.centreY) * this.currentZoom + this.viewport.height / 2,
+      sx: (point.px - this.centreX) * this.currentZoom + this.viewport.width / 2,
+      sy: (point.py - this.centreY) * this.currentZoom + this.viewport.height / 2,
     };
   }
 
   /**
-   * Keeps the visible rectangle inside the world bounds.
+   * Keeps the visible rectangle inside the scene bounds.
    *
    * When the world is narrower than the viewport on an axis, the camera centres
    * on it instead of clamping, which would otherwise push it against one edge.

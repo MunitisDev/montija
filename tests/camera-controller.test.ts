@@ -14,12 +14,12 @@ function makeCamera(zoom = 1): CameraController {
     limits: LIMITS,
     viewport: VIEWPORT,
     initialZoom: zoom,
-    initialCentre: { wx: 500, wy: 500 },
+    initialCentre: { px: 500, py: 500 },
   });
 }
 
 describe('CameraController', () => {
-  it('starts centred on the world when no centre is given', () => {
+  it('starts centred on the scene bounds when no centre is given', () => {
     const camera = new CameraController({ limits: LIMITS, viewport: VIEWPORT });
 
     expect(camera.view.centreX).toBe(500);
@@ -30,23 +30,23 @@ describe('CameraController', () => {
     it('moves the world with the gesture', () => {
       const camera = makeCamera();
 
-      // Dragging right moves the camera left, so the world follows the finger.
+      // Dragging right moves the camera left, so the scene follows the finger.
       camera.panByScreenDelta(50, 20);
 
       expect(camera.view.centreX).toBe(450);
       expect(camera.view.centreY).toBe(480);
     });
 
-    it('pans further in world units when zoomed out', () => {
+    it('pans further in scene units when zoomed out', () => {
       const camera = makeCamera(0.5);
 
       camera.panByScreenDelta(50, 0);
 
-      // 50 screen px at 0.5 zoom is 100 world units.
+      // 50 screen px at 0.5 zoom is 100 scene units.
       expect(camera.view.centreX).toBe(400);
     });
 
-    it('keeps the view inside the world bounds', () => {
+    it('keeps the view inside the scene bounds', () => {
       const camera = makeCamera();
 
       camera.panByScreenDelta(10_000, 10_000);
@@ -56,7 +56,7 @@ describe('CameraController', () => {
       expect(camera.view.centreY).toBe(150);
     });
 
-    it('centres on the world when it is smaller than the viewport', () => {
+    it('centres on the scene when it is smaller than the viewport', () => {
       const camera = new CameraController({
         limits: LIMITS,
         viewport: { width: 4000, height: 4000 },
@@ -82,16 +82,16 @@ describe('CameraController', () => {
       expect(camera.zoom).toBeGreaterThanOrEqual(LIMITS.minZoom);
     });
 
-    it('keeps the anchored world point under the cursor', () => {
+    it('keeps the anchored scene point under the cursor', () => {
       const camera = makeCamera();
       const anchor = { sx: 320, sy: 90 };
-      const before = camera.viewportToWorld(anchor);
+      const before = camera.viewportToScene(anchor);
 
       camera.zoomBy(2, anchor);
 
-      const after = camera.viewportToWorld(anchor);
-      expect(after.wx).toBeCloseTo(before.wx, 4);
-      expect(after.wy).toBeCloseTo(before.wy, 4);
+      const after = camera.viewportToScene(anchor);
+      expect(after.px).toBeCloseTo(before.px, 4);
+      expect(after.py).toBeCloseTo(before.py, 4);
     });
 
     it('eases towards the target when no anchor is given', () => {
@@ -161,7 +161,7 @@ describe('CameraController', () => {
       expect(camera.view.centreX).toBe(restingX);
     });
 
-    it('does not drift outside the world bounds', () => {
+    it('does not drift outside the scene bounds', () => {
       const camera = makeCamera();
 
       camera.flick(-100_000, -100_000);
@@ -178,35 +178,35 @@ describe('CameraController', () => {
     it('maps the viewport centre to the camera centre', () => {
       const camera = makeCamera();
 
-      const world = camera.viewportToWorld({ sx: 200, sy: 150 });
+      const scene = camera.viewportToScene({ sx: 200, sy: 150 });
 
-      expect(world.wx).toBe(500);
-      expect(world.wy).toBe(500);
+      expect(scene.px).toBe(500);
+      expect(scene.py).toBe(500);
     });
 
-    it('round-trips world -> viewport -> world', () => {
+    it('round-trips scene -> viewport -> scene', () => {
       const camera = makeCamera(1.75);
-      const original = { wx: 512.5, wy: 437.25 };
+      const original = { px: 512.5, py: 437.25 };
 
-      const roundTripped = camera.viewportToWorld(camera.worldToViewport(original));
+      const roundTripped = camera.viewportToScene(camera.sceneToViewport(original));
 
-      expect(roundTripped.wx).toBeCloseTo(original.wx, 6);
-      expect(roundTripped.wy).toBeCloseTo(original.wy, 6);
+      expect(roundTripped.px).toBeCloseTo(original.px, 6);
+      expect(roundTripped.py).toBeCloseTo(original.py, 6);
     });
 
     it('accounts for zoom when converting', () => {
       const camera = makeCamera(2);
 
-      const world = camera.viewportToWorld({ sx: 400, sy: 150 });
+      const scene = camera.viewportToScene({ sx: 400, sy: 150 });
 
-      // 200px right of centre at zoom 2 is 100 world units.
-      expect(world.wx).toBe(600);
+      // 200px right of centre at zoom 2 is 100 scene units.
+      expect(scene.px).toBe(600);
     });
   });
 
   it('re-clamps the camera after a viewport resize', () => {
     const camera = makeCamera();
-    camera.centreOn({ wx: 950, wy: 950 });
+    camera.centreOn({ px: 950, py: 950 });
 
     camera.setViewportSize({ width: 1200, height: 900 });
 
