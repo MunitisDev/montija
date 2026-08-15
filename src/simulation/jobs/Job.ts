@@ -13,7 +13,17 @@
 
 import type { GridPoint } from '@/shared/types/geometry';
 
-export type JobType = 'move-to' | 'chop-tree';
+export type JobType = 'move-to' | 'chop-tree' | 'gather-stone' | 'haul';
+
+/**
+ * Which leg of a multi-stage job is being done.
+ *
+ * Hauling is two journeys, not one: fetch the pile, then deliver it. Modelling
+ * that as a field rather than as two separate jobs keeps the reservation on the
+ * pile intact for the whole round trip — splitting it would let a second
+ * villager claim the pile the moment the first picked it up.
+ */
+export type JobStage = 'work' | 'collect' | 'deliver';
 
 /**
  * Where a job is in its lifecycle.
@@ -53,12 +63,19 @@ export interface Job {
   state: JobState;
   /** Simulation ticks of work left once the villager is in position. */
   workRemaining: number;
+  /** Which leg of the job is current. `work` for single-stage jobs. */
+  stage: JobStage;
+  /** Where a hauled load is going. `null` for jobs that deliver nothing. */
+  deliverTo: GridPoint | null;
 }
 
 /** How long each kind of work takes, in ticks. Balance comes later. */
 export const JOB_WORK_TICKS: Readonly<Record<JobType, number>> = {
   'move-to': 0,
   'chop-tree': 25,
+  'gather-stone': 30,
+  // Hauling costs travel, not labour: picking up and setting down are instant.
+  haul: 0,
 };
 
 export function isFinished(job: Job): boolean {

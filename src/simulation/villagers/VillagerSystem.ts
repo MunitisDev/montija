@@ -32,8 +32,10 @@ import {
 import { gridToWorld } from '@/shared/math/isometric';
 import type { RandomSource } from '@/shared/math/random';
 import type { GridPoint } from '@/shared/types/geometry';
+import { resourceDefinition } from '@/data/resources';
 import type { Job } from '@/simulation/jobs/Job';
 import type { JobManager } from '@/simulation/jobs/JobManager';
+import type { StorageRegistry } from '@/simulation/logistics/Storage';
 import { findPath } from '@/simulation/pathfinding/AStar';
 import type { World } from '@/simulation/world/World';
 import { Villager } from './Villager';
@@ -76,15 +78,17 @@ export class VillagerSystem {
   private readonly villagers: Villager[] = [];
   private readonly world: World;
   private readonly jobs: JobManager;
+  private readonly storages: StorageRegistry;
   private readonly random: RandomSource;
   private nextId = 1;
 
   private totalPathRequests = 0;
   private totalPathFailures = 0;
 
-  constructor(world: World, jobs: JobManager, random: RandomSource) {
+  constructor(world: World, jobs: JobManager, storages: StorageRegistry, random: RandomSource) {
     this.world = world;
     this.jobs = jobs;
+    this.storages = storages;
     this.random = random;
   }
 
@@ -101,7 +105,7 @@ export class VillagerSystem {
     let working = 0;
     let employed = 0;
     for (const villager of this.villagers) {
-      if (villager.activity === 'walking') {
+      if (villager.activity === 'walking' || villager.activity === 'hauling') {
         walking += 1;
       } else if (villager.activity === 'working') {
         working += 1;
@@ -263,18 +267,30 @@ export class VillagerSystem {
     }
 
     this.jobs.beginWork(job.id);
-    villager.activity = 'working';
-    job.workRemaining -= 1;
+    villager.activity = job.type === 'haul' ? 'hauling' : 'working';
 
-    if (job.workRemaining > 0) {
-      return;
+    if (job.type === 'haul') {
+      if (!this.advanceHaul(villager, job)) {
+        // Loaded up; the next leg is a walk to the storage yard.
+        this.routeToCurrentStage(villager, job);
+        return;
+      }
+    } else {
+      job.workRemaining -= 1;
+      if (job.workRemaining > 0) {
+        return;
+      }
+      this.finishJob(job);
     }
-
-    this.finishJob(job);
     this.jobs.complete(job.id);
     villager.currentJobId = null;
     villager.activity = 'idle';
     villager.idleTicks = this.random.int(2, 8);
+  }
+
+  /** Where the villager needs to be for the job's current stage. */
+  private jobDestination(job: Job): GridPoint | null {
+    return job.stage === 'deliver' ? job.deliverTo : job.target;
   }
 
   /** Applies a completed job's effect on the world. */
@@ -285,10 +301,78 @@ export class VillagerSystem {
           this.world.fellTree(job.targetEntityId);
         }
         break;
+      case 'gather-stone':
+        this.world.mineStone(job.target);
+        break;
+      case 'haul':
       case 'move-to':
-        // Arriving is the whole job.
+        // Handled by the haul state machine, or arriving is the whole job.
         break;
     }
+  }
+
+  /**
+   * Advances a haul job that has reached its current destination.
+   *
+   * Two legs: load from the pile, then unload into storage. Resources move
+   * between real inventories at each step — nothing is created, and if the
+   * destination cannot take everything, the remainder stays with the villager
+   * rather than evaporating.
+   *
+   * @returns `true` when the whole haul is finished
+   */
+  private advanceHaul(villager: Villager, job: Job): boolean {
+    if (job.stage === 'collect') {
+      const pile =
+        job.targetEntityId === null ? null : this.world.piles.getById(job.targetEntityId);
+
+      if (!pile || pile.isEmpty) {
+        // Somebody got there first, or it was cleared. Nothing to carry.
+        return true;
+      }
+
+      const carryLimit = resourceDefinition(pile.resource).carryLimit;
+      const room = Math.min(carryLimit, villager.inventory.freeSpace);
+      pile.inventory.transfer(villager.inventory, pile.resource, room);
+      this.world.piles.removeIfEmpty(pile.id);
+
+      if (villager.inventory.isEmpty) {
+        return true;
+      }
+
+      job.stage = 'deliver';
+      villager.activity = 'hauling';
+      return false;
+    }
+
+    // Delivering: put down whatever the yard will take.
+    const storage = this.storageForCell(job.deliverTo);
+    if (storage) {
+      villager.inventory.transferAll(storage.inventory);
+      this.storages.markChanged();
+    }
+
+    if (!villager.inventory.isEmpty) {
+      // The yard filled up mid-delivery. Put the remainder back on the ground
+      // rather than deleting it — resources must never simply vanish.
+      for (const { resource, amount } of villager.inventory.contents) {
+        const dropped = this.world.piles.drop(villager.cell, resource, amount);
+        villager.inventory.remove(resource, dropped);
+      }
+    }
+
+    return true;
+  }
+
+  private storageForCell(cell: GridPoint | null) {
+    if (!cell) {
+      return null;
+    }
+    return (
+      this.storages.all.find(
+        (storage) => storage.cell.gx === cell.gx && storage.cell.gy === cell.gy,
+      ) ?? null
+    );
   }
 
   /**
@@ -302,11 +386,16 @@ export class VillagerSystem {
     job: Job,
   ): { cell: GridPoint; path: GridPoint[] } | null {
     const from = villager.cell;
+    const destination = this.jobDestination(job);
+    if (!destination) {
+      return null;
+    }
 
-    // Standing on the target itself is fine when it is walkable — a move-to job.
-    const candidates: GridPoint[] = this.world.isWalkable(job.target) ? [job.target] : [];
+    // Standing on the target itself is fine when it is walkable — a pile lies
+    // on open ground, and a move-to job goes to the cell itself.
+    const candidates: GridPoint[] = this.world.isWalkable(destination) ? [destination] : [];
     for (const [dx, dy] of ADJACENT) {
-      const cell = { gx: job.target.gx + dx, gy: job.target.gy + dy };
+      const cell = { gx: destination.gx + dx, gy: destination.gy + dy };
       if (this.world.isWalkable(cell)) {
         candidates.push(cell);
       }
@@ -328,6 +417,38 @@ export class VillagerSystem {
   }
 
   // --- movement ------------------------------------------------------------
+
+  /**
+   * Sends a villager to wherever its job's current stage happens.
+   *
+   * Used when a haul switches from collecting to delivering: the destination
+   * changes, so the route must be recomputed — one of the few cases the brief
+   * allows a path to be recalculated.
+   */
+  private routeToCurrentStage(villager: Villager, job: Job): void {
+    const standing = this.findWorkingPosition(villager, job);
+    if (!standing) {
+      // Cannot reach the yard. Put the load down where we stand so it is not
+      // lost, and hand the job back.
+      for (const { resource, amount } of villager.inventory.contents) {
+        const dropped = this.world.piles.drop(villager.cell, resource, amount);
+        villager.inventory.remove(resource, dropped);
+      }
+      this.jobs.complete(job.id);
+      villager.currentJobId = null;
+      villager.activity = 'idle';
+      return;
+    }
+
+    if (standing.path.length === 0) {
+      villager.activity = 'hauling';
+      return;
+    }
+
+    villager.path = standing.path;
+    villager.destination = standing.cell;
+    villager.activity = 'hauling';
+  }
 
   /**
    * Moves a villager along its path.
@@ -372,7 +493,8 @@ export class VillagerSystem {
 
     if (villager.currentJobId !== null) {
       // Arrived at the work site; the next tick starts the work itself.
-      villager.activity = 'working';
+      const job = this.jobs.get(villager.currentJobId);
+      villager.activity = job?.type === 'haul' ? 'hauling' : 'working';
       this.jobs.beginWork(villager.currentJobId);
       return;
     }

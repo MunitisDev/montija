@@ -1,7 +1,8 @@
 /**
  * The world: terrain, and everything standing on it.
  *
- * Status: Phase 4. Holds the terrain, the navigation grid and the trees.
+ * Status: Phase 5. Holds the terrain, the navigation grid, the trees and the
+ * resources lying on the ground.
  * Occupancy, buildings and resource nodes join in later phases, following the
  * structure in the project brief:
  *
@@ -10,16 +11,18 @@
  *  ├── TerrainGrid      implemented
  *  ├── NavigationGrid   implemented
  *  ├── TreeRegistry     implemented
+ *  ├── ResourcePiles    implemented
  *  ├── OccupancyGrid    Phase 6
  *  ├── Buildings        Phase 6
- *  ├── ResourceNodes    Phase 5
  *  └── Villagers        owned by the Simulation, not the World
  * ```
  */
 
+import { LOGS_PER_TREE, STONE_PER_DEPOSIT } from '@/data/resources';
 import { terrainDefinition, type TerrainType } from '@/data/terrain';
 import { gridBoundsToScene } from '@/shared/math/isometric';
 import type { GridPoint, SceneBounds } from '@/shared/types/geometry';
+import { ResourcePileRegistry } from '@/simulation/resources/ResourcePile';
 import { NavigationGrid } from './NavigationGrid';
 import type { TerrainGrid } from './TerrainGrid';
 import { TreeRegistry } from './TreeRegistry';
@@ -29,6 +32,7 @@ export class World {
   public readonly terrain: TerrainGrid;
   public readonly navigation: NavigationGrid;
   public readonly trees: TreeRegistry;
+  public readonly piles = new ResourcePileRegistry();
 
   constructor(options: { width: number; height: number; seed: number }) {
     const generated = generateWorld(options);
@@ -73,12 +77,16 @@ export class World {
   }
 
   /**
-   * Fells a tree and clears the ground it stood on.
+   * Fells a tree, drops its logs on the ground, and clears the tile.
+   *
+   * The logs are *physical*: they lie where the tree stood until somebody
+   * carries them away. Nothing about the settlement's stock changes here, which
+   * is the whole point — a felled tree is not wood in hand.
    *
    * Clearing the tile matters beyond cosmetics: forest is slow to cross and
-   * cannot be built on, so felling trees is how the player will open up land
-   * for the settlement in Phase 6. The navigation grid is updated in step,
-   * because a stale cost here would send villagers the long way round forever.
+   * cannot be built on, so felling trees is how the player opens up land for
+   * the settlement. The navigation grid is updated in step, because a stale
+   * cost here would send villagers the long way round forever.
    *
    * @returns `true` when a tree was actually removed
    */
@@ -94,6 +102,29 @@ export class World {
       this.navigation.refreshCell(this.terrain, cell.gx, cell.gy);
     }
 
+    this.piles.drop(cell, 'logs', LOGS_PER_TREE);
+    return true;
+  }
+
+  /**
+   * Mines a surface stone deposit, dropping stone and opening the tile.
+   *
+   * Stone is impassable, so the deposit becomes walkable grass once worked out
+   * — the settlement literally clears a path through the rock.
+   *
+   * @returns `true` when a deposit was actually worked
+   */
+  public mineStone(cell: GridPoint): boolean {
+    if (this.terrain.getAt(cell) !== 'stone') {
+      return false;
+    }
+
+    this.terrain.set(cell.gx, cell.gy, 'grass');
+    this.navigation.refreshCell(this.terrain, cell.gx, cell.gy);
+
+    // Safe to drop on the deposit's own tile: it became walkable grass on the
+    // line above, so a hauler can reach the stone that was just cut from it.
+    this.piles.drop(cell, 'stone', STONE_PER_DEPOSIT);
     return true;
   }
 }

@@ -3,6 +3,7 @@ import { VILLAGER_WALK_SPEED } from '@/data/villagers';
 import { SeededRandom } from '@/shared/math/random';
 import { Simulation } from '@/simulation/Simulation';
 import { JobManager } from '@/simulation/jobs/JobManager';
+import { StorageRegistry } from '@/simulation/logistics/Storage';
 import { Villager } from '@/simulation/villagers/Villager';
 import { VillagerSystem } from '@/simulation/villagers/VillagerSystem';
 import { World } from '@/simulation/world/World';
@@ -21,7 +22,12 @@ function openWorld(size = 32): World {
 }
 
 function makeSystem(size = 32, seed = 1): VillagerSystem {
-  return new VillagerSystem(openWorld(size), new JobManager(), new SeededRandom(seed));
+  return new VillagerSystem(
+    openWorld(size),
+    new JobManager(),
+    new StorageRegistry(),
+    new SeededRandom(seed),
+  );
 }
 
 describe('Villager', () => {
@@ -71,7 +77,12 @@ describe('VillagerSystem', () => {
         world.terrain.set(gx, gy, island ? 'grass' : 'water');
       });
       world.navigation.rebuild(world.terrain);
-      const system = new VillagerSystem(world, new JobManager(), new SeededRandom(3));
+      const system = new VillagerSystem(
+        world,
+        new JobManager(),
+        new StorageRegistry(),
+        new SeededRandom(3),
+      );
 
       system.spawnNear({ gx: 12, gy: 12 }, 10);
 
@@ -84,7 +95,12 @@ describe('VillagerSystem', () => {
       const world = openWorld(8);
       world.terrain.forEach((gx, gy) => world.terrain.set(gx, gy, 'water'));
       world.navigation.rebuild(world.terrain);
-      const system = new VillagerSystem(world, new JobManager(), new SeededRandom(1));
+      const system = new VillagerSystem(
+        world,
+        new JobManager(),
+        new StorageRegistry(),
+        new SeededRandom(1),
+      );
 
       expect(system.spawnNear({ gx: 4, gy: 4 }, 10)).toBe(0);
       expect(system.count).toBe(0);
@@ -244,7 +260,12 @@ describe('VillagerSystem', () => {
 
     it('keeps every villager on walkable ground', () => {
       const world = openWorld(32);
-      const system = new VillagerSystem(world, new JobManager(), new SeededRandom(9));
+      const system = new VillagerSystem(
+        world,
+        new JobManager(),
+        new StorageRegistry(),
+        new SeededRandom(9),
+      );
       system.spawnNear({ gx: 16, gy: 16 }, 10);
 
       for (let tick = 0; tick < 400; tick += 1) {

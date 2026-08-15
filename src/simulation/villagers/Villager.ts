@@ -4,7 +4,8 @@
  * The authoritative one. A sprite elsewhere is a picture of this object, never
  * a second copy of it.
  *
- * Status: Phase 4. Identity, position, movement and job assignment are live.
+ * Status: Phase 5. Identity, position, movement, job assignment and a carried
+ * inventory are live.
  * `hunger`, `warmth` and `health` exist because the brief's initial model calls
  * for them, but **nothing changes them until Phase 8** — they are inert fields,
  * not a working needs system. `homeId` and `profession` arrive with Phases 6
@@ -12,9 +13,13 @@
  */
 
 import type { GridPoint, WorldPoint } from '@/shared/types/geometry';
+import { Inventory } from '@/simulation/resources/Inventory';
+
+/** How many units a villager can carry at once, across all resources. */
+const CARRY_CAPACITY = 10;
 
 /** What a villager is doing, as far as the renderer needs to know. */
-export type VillagerActivity = 'idle' | 'walking' | 'working';
+export type VillagerActivity = 'idle' | 'walking' | 'working' | 'hauling';
 
 export interface VillagerNeeds {
   /** 0 = starving, 100 = full. Inert until Phase 8. */
@@ -43,6 +48,8 @@ export class Villager {
 
   public activity: VillagerActivity = 'idle';
   public readonly needs: VillagerNeeds = { hunger: 100, warmth: 100, health: 100 };
+  /** What the villager is physically carrying. */
+  public readonly inventory = new Inventory(CARRY_CAPACITY);
 
   /** Remaining waypoints. Empty when standing still. */
   public path: GridPoint[] = [];

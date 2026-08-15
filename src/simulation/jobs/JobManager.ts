@@ -32,6 +32,8 @@ export interface CreateJobOptions {
   readonly target: GridPoint;
   readonly priority: number;
   readonly targetEntityId?: number | null;
+  /** Where a hauled load should be delivered. */
+  readonly deliverTo?: GridPoint | null;
 }
 
 export class JobManager {
@@ -108,6 +110,8 @@ export class JobManager {
       assignedVillager: null,
       state: 'available',
       workRemaining: JOB_WORK_TICKS[options.type],
+      stage: options.type === 'haul' ? 'collect' : 'work',
+      deliverTo: options.deliverTo ?? null,
     };
 
     this.nextId += 1;
