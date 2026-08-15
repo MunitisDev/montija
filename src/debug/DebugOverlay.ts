@@ -75,6 +75,11 @@ export class DebugOverlay {
     this.element.textContent = lines.join('\n');
   }
 
+  /** Whether the overlay is on screen, so the controls can follow it. */
+  public get isVisible(): boolean {
+    return !this.element.hidden;
+  }
+
   public toggle(): void {
     this.element.hidden = !this.element.hidden;
   }

@@ -673,3 +673,43 @@
     padding-top: 0;
   }
 }
+
+/*
+ * Development-only controls.
+ *
+ * Styled here because the stylesheet is one file, but the markup only ever
+ * exists in a dev build — `DebugControls` creates it in code, and bootstrap
+ * only constructs it under `import.meta.env.DEV`.
+ */
+.debug-controls {
+  position: absolute;
+  right: 10px;
+  bottom: 120px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+  max-width: 40vw;
+  pointer-events: auto;
+}
+
+.debug-controls[hidden] {
+  display: none;
+}
+
+.debug-controls__button {
+  min-height: 28px;
+  padding: 0 8px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--colour-ink-dim);
+  background: rgba(12, 14, 11, 0.82);
+  border: 1px solid var(--colour-panel-edge);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.debug-controls__button:hover {
+  color: var(--colour-ink);
+  border-color: rgba(201, 162, 39, 0.5);
+}

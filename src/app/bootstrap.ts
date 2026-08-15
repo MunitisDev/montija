@@ -18,6 +18,7 @@ import { createPhaserGame } from '@/renderer/phaser/createPhaserGame';
 import { Hud } from '@/ui/hud/Hud';
 import { BuildMenu } from '@/ui/build-menu/BuildMenu';
 import { I18n } from '@/ui/i18n/I18n';
+import { DebugControls } from '@/debug/DebugControls';
 import { DebugOverlay } from '@/debug/DebugOverlay';
 
 function requireElement<T extends HTMLElement>(selector: string): T {
@@ -61,10 +62,21 @@ export function start(): void {
     ? new DebugOverlay(requireElement<HTMLPreElement>('#debug-overlay'), game)
     : null;
 
+  // Built in code, not in index.html, so the bundler drops every trace of it
+  // from a production build.
+  const debugControls = import.meta.env.DEV ? new DebugControls(hudRoot, game) : null;
+
+  // The overlay starts on screen, so the controls must start there too rather
+  // than waiting for a toggle that would then hide both.
+  debugControls?.setVisible(debugOverlay?.isVisible ?? false);
+
   if (debugOverlay) {
     const toggle = requireElement<HTMLButtonElement>('#debug-toggle');
     toggle.hidden = false;
-    toggle.addEventListener('click', () => debugOverlay.toggle());
+    toggle.addEventListener('click', () => {
+      debugOverlay.toggle();
+      debugControls?.setVisible(debugOverlay.isVisible);
+    });
   }
 
   // The HUD refreshes on its own rAF rather than inside the Phaser scene: DOM
