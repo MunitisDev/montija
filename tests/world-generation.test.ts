@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TERRAIN_TYPES, terrainDefinition, type TerrainType } from '@/data/terrain';
 import { TerrainGrid } from '@/simulation/world/TerrainGrid';
-import { generateWorld } from '@/simulation/world/WorldGenerator';
+import { generateWorld, TREE_VARIANTS } from '@/simulation/world/WorldGenerator';
 import { World } from '@/simulation/world/World';
 import { ValueNoise2D } from '@/shared/math/noise';
 import { SeededRandom } from '@/shared/math/random';
@@ -186,7 +186,7 @@ describe('world generation', () => {
 
     for (const tree of trees) {
       expect(tree.variant).toBeGreaterThanOrEqual(0);
-      expect(tree.variant).toBeLessThan(3);
+      expect(tree.variant).toBeLessThan(TREE_VARIANTS);
       expect(tree.scale).toBeGreaterThanOrEqual(0.85);
       expect(tree.scale).toBeLessThan(1.15);
     }

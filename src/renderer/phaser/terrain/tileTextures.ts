@@ -23,18 +23,9 @@ import { TERRAIN_TYPES, type TerrainType } from '@/data/terrain';
 import { TILE_HEIGHT, TILE_WIDTH } from '@/shared/math/isometric';
 import { BUILDING_IDS, type BuildingId } from '@/data/buildings';
 import { SEASONS, type Season } from '@/simulation/seasons/SeasonClock';
-import {
-  canopyColour,
-  canopyFullness,
-  hasSnow,
-  terrainPalette,
-  trunkColour,
-} from './seasonalPalette';
+import { drawGroundTile, TERRAIN_VARIANTS, shade } from './groundArt';
+import { drawTree, TREE_HEIGHT, TREE_SHAPES, TREE_WIDTH } from './treeArt';
 import { BUILDING_COLOURS, buildingTextureSpec, drawBuilding } from './buildingArt';
-
-/** Placeholder building palettes: aged timber, thatch and dark stone. */
-/** How many canopy shapes exist, so a wood is not one repeated tree. */
-const TREE_VARIANTS = 3;
 
 /** Texture and frame keys, so call sites never pass raw strings around. */
 export const TextureKeys = {
@@ -52,14 +43,11 @@ export const TextureKeys = {
   ghostCell: 'ghost-cell',
   road: 'road-tile',
   /** Frame name within the terrain atlas. */
-  terrainFrame: (type: TerrainType, season: Season): string => `${type}-${season}`,
+  terrainFrame: (type: TerrainType, season: Season, variant = 0): string =>
+    `${type}-${season}-${variant % TERRAIN_VARIANTS}`,
   /** Frame name within the tree atlas. */
-  treeFrame: (variant: number, season: Season): string => `tree-${variant}-${season}`,
+  treeFrame: (variant: number, season: Season): string => `tree-${variant % TREE_SHAPES}-${season}`,
 } as const;
-
-/** Tree sprite dimensions, per the art bible. */
-const TREE_WIDTH = 64;
-const TREE_HEIGHT = 96;
 
 /**
  * Villager sprite height, per the art bible.
@@ -190,52 +178,64 @@ export function createPlaceholderTextures(scene: Phaser.Scene): void {
   graphics.destroy();
 }
 
-/** Packs every terrain diamond into one strip, then names each slice a frame. */
+/**
+ * Packs every ground tile into one image, then names each slice a frame.
+ *
+ * The grid is **type × variant across, season down**. Four variants per type is
+ * what stops nine thousand tiles being the same tile; keeping them in the same
+ * atlas is what stops that costing anything, because the depth-sorted display
+ * list still shares a single GPU batch however the variants interleave.
+ */
 function buildTerrainAtlas(scene: Phaser.Scene, graphics: Phaser.GameObjects.Graphics): void {
   if (scene.textures.exists(TextureKeys.terrainAtlas)) {
     return;
   }
 
-  // Every terrain type in every season, packed into one image: a grid of
-  // types across and seasons down. Still one texture, so the depth-sorted
-  // display list keeps sharing a single GPU batch.
-  TERRAIN_TYPES.forEach((type, column) => {
-    SEASONS.forEach((season, row) => {
-      const palette = terrainPalette(season, type);
-      graphics.translateCanvas(column * TILE_WIDTH, row * TILE_HEIGHT);
-      drawDiamond(graphics, palette.fill, palette.edge);
-      graphics.translateCanvas(-column * TILE_WIDTH, -row * TILE_HEIGHT);
-    });
+  const columns = TERRAIN_TYPES.length * TERRAIN_VARIANTS;
+
+  TERRAIN_TYPES.forEach((type, typeIndex) => {
+    for (let variant = 0; variant < TERRAIN_VARIANTS; variant += 1) {
+      const column = typeIndex * TERRAIN_VARIANTS + variant;
+      SEASONS.forEach((season, row) => {
+        graphics.translateCanvas(column * TILE_WIDTH, row * TILE_HEIGHT);
+        drawGroundTile(graphics, type, season, variant);
+        graphics.translateCanvas(-column * TILE_WIDTH, -row * TILE_HEIGHT);
+      });
+    }
   });
+
   graphics.generateTexture(
     TextureKeys.terrainAtlas,
-    TERRAIN_TYPES.length * TILE_WIDTH,
+    columns * TILE_WIDTH,
     SEASONS.length * TILE_HEIGHT,
   );
   graphics.clear();
 
   const texture = scene.textures.get(TextureKeys.terrainAtlas);
-  TERRAIN_TYPES.forEach((type, column) => {
-    SEASONS.forEach((season, row) => {
-      texture.add(
-        TextureKeys.terrainFrame(type, season),
-        0,
-        column * TILE_WIDTH,
-        row * TILE_HEIGHT,
-        TILE_WIDTH,
-        TILE_HEIGHT,
-      );
-    });
+  TERRAIN_TYPES.forEach((type, typeIndex) => {
+    for (let variant = 0; variant < TERRAIN_VARIANTS; variant += 1) {
+      const column = typeIndex * TERRAIN_VARIANTS + variant;
+      SEASONS.forEach((season, row) => {
+        texture.add(
+          TextureKeys.terrainFrame(type, season, variant),
+          0,
+          column * TILE_WIDTH,
+          row * TILE_HEIGHT,
+          TILE_WIDTH,
+          TILE_HEIGHT,
+        );
+      });
+    }
   });
 }
 
-/** Same idea for trees, so a forest is one batch rather than one per variant. */
+/** Same idea for trees, so a mixed wood is one batch rather than one per shape. */
 function buildTreeAtlas(scene: Phaser.Scene, graphics: Phaser.GameObjects.Graphics): void {
   if (scene.textures.exists(TextureKeys.treeAtlas)) {
     return;
   }
 
-  for (let variant = 0; variant < TREE_VARIANTS; variant += 1) {
+  for (let variant = 0; variant < TREE_SHAPES; variant += 1) {
     SEASONS.forEach((season, row) => {
       graphics.translateCanvas(variant * TREE_WIDTH, row * TREE_HEIGHT);
       drawTree(graphics, variant, season);
@@ -244,13 +244,13 @@ function buildTreeAtlas(scene: Phaser.Scene, graphics: Phaser.GameObjects.Graphi
   }
   graphics.generateTexture(
     TextureKeys.treeAtlas,
-    TREE_VARIANTS * TREE_WIDTH,
+    TREE_SHAPES * TREE_WIDTH,
     SEASONS.length * TREE_HEIGHT,
   );
   graphics.clear();
 
   const texture = scene.textures.get(TextureKeys.treeAtlas);
-  for (let variant = 0; variant < TREE_VARIANTS; variant += 1) {
+  for (let variant = 0; variant < TREE_SHAPES; variant += 1) {
     SEASONS.forEach((season, row) => {
       texture.add(
         TextureKeys.treeFrame(variant, season),
@@ -261,82 +261,6 @@ function buildTreeAtlas(scene: Phaser.Scene, graphics: Phaser.GameObjects.Graphi
         TREE_HEIGHT,
       );
     });
-  }
-}
-
-/** A single 2:1 tile diamond, filled and outlined. */
-function drawDiamond(graphics: Phaser.GameObjects.Graphics, fill: number, edge: number): void {
-  const halfWidth = TILE_WIDTH / 2;
-  const halfHeight = TILE_HEIGHT / 2;
-
-  graphics.fillStyle(fill, 1);
-  graphics.beginPath();
-  graphics.moveTo(halfWidth, 0);
-  graphics.lineTo(TILE_WIDTH, halfHeight);
-  graphics.lineTo(halfWidth, TILE_HEIGHT);
-  graphics.lineTo(0, halfHeight);
-  graphics.closePath();
-  graphics.fillPath();
-
-  // A hairline edge in a *darker shade of the fill*, never black — the art
-  // direction rules out hard outlines. It only exists so tiles stay legible.
-  graphics.lineStyle(1, edge, 0.55);
-  graphics.strokePath();
-}
-
-/**
- * A placeholder conifer.
- *
- * Anchored so the trunk base sits at the bottom centre of the sprite, matching
- * the building and character anchor convention in the art bible.
- */
-function drawTree(graphics: Phaser.GameObjects.Graphics, variant: number, season: Season): void {
-  const centreX = TREE_WIDTH / 2;
-  const canopy = canopyColour(season, variant);
-  // Autumn thins the canopy and winter strips it. Drawn rather than tinted,
-  // because a bare tree has a different silhouette from a full one and the
-  // silhouette is what the player actually reads at this zoom.
-  const fullness = canopyFullness(season);
-
-  // Trunk. Taller in winter, because there is less canopy hiding it.
-  graphics.fillStyle(trunkColour(season), 1);
-  graphics.fillRect(centreX - 3, TREE_HEIGHT - 26, 6, 22);
-
-  graphics.fillStyle(canopy, 1);
-  const tiers = [
-    { y: TREE_HEIGHT - 20, halfWidth: 22 * fullness, height: 26 * fullness },
-    { y: TREE_HEIGHT - 38 * fullness, halfWidth: 18 * fullness, height: 24 * fullness },
-    { y: TREE_HEIGHT - 56 * fullness, halfWidth: 13 * fullness, height: 22 * fullness },
-  ];
-  for (const tier of tiers) {
-    graphics.beginPath();
-    graphics.moveTo(centreX, tier.y - tier.height);
-    graphics.lineTo(centreX + tier.halfWidth, tier.y);
-    graphics.lineTo(centreX - tier.halfWidth, tier.y);
-    graphics.closePath();
-    graphics.fillPath();
-  }
-
-  // Key light from the upper left, per the art bible: a lighter left face.
-  graphics.fillStyle(0xffffff, 0.06);
-  graphics.beginPath();
-  graphics.moveTo(centreX, TREE_HEIGHT - 78 * fullness);
-  graphics.lineTo(centreX, TREE_HEIGHT - 20);
-  graphics.lineTo(centreX - 22 * fullness, TREE_HEIGHT - 20);
-  graphics.closePath();
-  graphics.fillPath();
-
-  // Snow catches on what canopy is left, and on the branches beneath it.
-  if (hasSnow(season)) {
-    graphics.fillStyle(0xdfe6ea, 0.55);
-    for (const tier of tiers) {
-      graphics.beginPath();
-      graphics.moveTo(centreX, tier.y - tier.height);
-      graphics.lineTo(centreX + tier.halfWidth * 0.55, tier.y - tier.height * 0.45);
-      graphics.lineTo(centreX - tier.halfWidth * 0.55, tier.y - tier.height * 0.45);
-      graphics.closePath();
-      graphics.fillPath();
-    }
   }
 }
 
@@ -356,57 +280,99 @@ function drawSelectionDiamond(graphics: Phaser.GameObjects.Graphics): void {
 }
 
 /**
- * A placeholder villager: a hooded figure, no face, adult proportions.
+ * A villager: a hooded figure, faceted, no face, adult proportions.
  *
- * Anchored at the feet by the renderer. Two readability constraints drive the
- * shape, both learned from looking at it in the world: the silhouette must be
- * clearly humanoid at small size, and it must not resemble a conifer, since
- * trees share the scene and a pointed hood reads as a sapling. Hence rounded
- * head and hood, and shoulders wider than the head.
+ * Anchored at the feet by the renderer. Three readability constraints drive the
+ * shape, all learned from looking at it in the world: the silhouette must be
+ * clearly humanoid at small size; it must not resemble a conifer, since trees
+ * share the scene and a pointed hood reads as a sapling; and it must have a lit
+ * and a shaded side like everything else, or a person standing beside a
+ * faceted building looks like a sticker on it.
  *
- * Deliberately not a chibi — the art direction rules out cartoon proportions.
+ * Deliberately not a chibi — the art direction rules out cartoon proportions —
+ * and deliberately small against a 96px tree. The settlement is the subject.
  */
 function drawVillager(graphics: Phaser.GameObjects.Graphics): void {
-  const centreX = VILLAGER_WIDTH / 2;
+  const cx = VILLAGER_WIDTH / 2;
   const feet = VILLAGER_HEIGHT;
 
   // Soft contact shadow, so the figure sits on the ground rather than floats.
-  graphics.fillStyle(0x000000, 0.22);
-  graphics.fillEllipse(centreX, feet - 2, 18, 7);
+  graphics.fillStyle(0x000000, 0.24);
+  graphics.fillEllipse(cx, feet - 2, 18, 7);
 
-  // Legs, set apart so the gap reads at a glance.
-  graphics.fillStyle(VILLAGER_CLOAK, 1);
-  graphics.fillRect(centreX - 6, feet - 17, 4, 15);
-  graphics.fillRect(centreX + 2, feet - 17, 4, 15);
+  // Boots, darker than the leggings above them.
+  graphics.fillStyle(shade(VILLAGER_CLOAK, 0.7), 1);
+  graphics.fillRect(cx - 6.5, feet - 6, 5, 5);
+  graphics.fillRect(cx + 1.5, feet - 6, 5, 5);
+
+  // Legs, set apart so the gap reads at a glance. Lit on the left.
+  graphics.fillStyle(shade(VILLAGER_CLOAK, 1.1), 1);
+  graphics.fillRect(cx - 6, feet - 17, 4, 12);
+  graphics.fillStyle(shade(VILLAGER_CLOAK, 0.86), 1);
+  graphics.fillRect(cx + 2, feet - 17, 4, 12);
 
   // Body: shoulders wider than the head, tapering to the waist. The shoulder
-  // line is what makes the shape read as a person rather than a cone.
-  graphics.fillStyle(VILLAGER_CLOTH, 1);
-  graphics.beginPath();
-  graphics.moveTo(centreX - 9, feet - 33);
-  graphics.lineTo(centreX + 9, feet - 33);
-  graphics.lineTo(centreX + 7, feet - 15);
-  graphics.lineTo(centreX - 7, feet - 15);
-  graphics.closePath();
-  graphics.fillPath();
+  // line is what makes the shape read as a person rather than a cone. Split
+  // down the middle so the torso has two planes.
+  graphics.fillStyle(shade(VILLAGER_CLOTH, 1.14), 1);
+  polygonAt(graphics, [
+    [cx - 9, feet - 33],
+    [cx, feet - 33],
+    [cx, feet - 15],
+    [cx - 7, feet - 15],
+  ]);
+  graphics.fillStyle(shade(VILLAGER_CLOTH, 0.86), 1);
+  polygonAt(graphics, [
+    [cx, feet - 33],
+    [cx + 9, feet - 33],
+    [cx + 7, feet - 15],
+    [cx, feet - 15],
+  ]);
+
+  // A belt, which is most of what stops the torso reading as a sack.
+  graphics.fillStyle(shade(VILLAGER_CLOAK, 0.72), 1);
+  graphics.fillRect(cx - 7.5, feet - 20, 15, 2.5);
 
   // Arms, hanging close to the body.
-  graphics.fillStyle(VILLAGER_CLOAK, 1);
-  graphics.fillRect(centreX - 11, feet - 32, 3, 13);
-  graphics.fillRect(centreX + 8, feet - 32, 3, 13);
+  graphics.fillStyle(shade(VILLAGER_CLOAK, 1.06), 1);
+  graphics.fillRect(cx - 11, feet - 32, 3, 13);
+  graphics.fillStyle(shade(VILLAGER_CLOAK, 0.82), 1);
+  graphics.fillRect(cx + 8, feet - 32, 3, 13);
 
   // Rounded hood behind the head — never a point.
-  graphics.fillStyle(VILLAGER_CLOAK, 1);
-  graphics.fillCircle(centreX, feet - 38, 6.5);
-  graphics.fillRect(centreX - 6.5, feet - 38, 13, 6);
+  graphics.fillStyle(shade(VILLAGER_CLOAK, 1.04), 1);
+  graphics.fillCircle(cx, feet - 38, 6.5);
+  graphics.fillRect(cx - 6.5, feet - 38, 13, 6);
+  // The hood's shaded right side.
+  graphics.fillStyle(shade(VILLAGER_CLOAK, 0.82), 1);
+  polygonAt(graphics, [
+    [cx + 1, feet - 44.5],
+    [cx + 6.5, feet - 38],
+    [cx + 6.5, feet - 32],
+    [cx + 1, feet - 32],
+  ]);
 
-  // Face opening.
-  graphics.fillStyle(VILLAGER_SKIN, 1);
-  graphics.fillCircle(centreX, feet - 38, 4);
+  // Face opening, in shadow inside the hood.
+  graphics.fillStyle(shade(VILLAGER_SKIN, 0.86), 1);
+  graphics.fillCircle(cx - 0.5, feet - 37.5, 3.6);
+}
 
-  // Key light from the upper left.
-  graphics.fillStyle(0xffffff, 0.07);
-  graphics.fillRect(centreX - 9, feet - 33, 5, 18);
+/** Fills a polygon from pixel points. */
+function polygonAt(
+  graphics: Phaser.GameObjects.Graphics,
+  points: readonly (readonly [number, number])[],
+): void {
+  const [first, ...rest] = points;
+  if (!first) {
+    return;
+  }
+  graphics.beginPath();
+  graphics.moveTo(first[0], first[1]);
+  for (const point of rest) {
+    graphics.lineTo(point[0], point[1]);
+  }
+  graphics.closePath();
+  graphics.fillPath();
 }
 
 /** The ring drawn under a selected villager. */
@@ -443,12 +409,12 @@ function strokeCross(graphics: Phaser.GameObjects.Graphics, cx: number, cy: numb
   graphics.strokePath();
 }
 
-/** A stack of cut logs, seen end-on. */
+/** A stack of cut logs, seen end-on, with sawn faces catching the light. */
 function drawLogPile(graphics: Phaser.GameObjects.Graphics): void {
   const cx = TILE_WIDTH / 2;
   const base = PILE_HEIGHT;
 
-  graphics.fillStyle(0x000000, 0.22);
+  graphics.fillStyle(0x000000, 0.24);
   graphics.fillEllipse(cx, base - 3, 34, 12);
 
   const bark = 0x4a3b2a;
@@ -460,42 +426,73 @@ function drawLogPile(graphics: Phaser.GameObjects.Graphics): void {
   ];
   for (const row of rows) {
     for (const x of row.xs) {
-      graphics.fillStyle(bark, 1);
-      graphics.fillEllipse(cx + x, row.y, 9, 8);
+      // Bark ring, lit above and shaded below.
+      graphics.fillStyle(shade(bark, 1.08), 1);
+      graphics.fillEllipse(cx + x, row.y, 9.5, 8.5);
+      graphics.fillStyle(shade(bark, 0.78), 1);
+      graphics.fillEllipse(cx + x, row.y + 1.2, 9.5, 6);
+      // The sawn face, which is the pale thing the eye actually picks out.
       graphics.fillStyle(cut, 1);
       graphics.fillEllipse(cx + x, row.y, 5, 4.5);
+      graphics.fillStyle(shade(cut, 0.82), 1);
+      graphics.fillEllipse(cx + x, row.y + 1, 5, 2.6);
+      // Two growth rings. Small, but they read as wood rather than as beads.
+      graphics.fillStyle(shade(cut, 1.16), 1);
+      graphics.fillEllipse(cx + x, row.y - 0.4, 2, 1.8);
     }
   }
 }
 
-/** A heap of quarried stone. */
+/** A heap of quarried stone: blocks with a top, a lit face and a shaded one. */
 function drawStonePile(graphics: Phaser.GameObjects.Graphics): void {
   const cx = TILE_WIDTH / 2;
   const base = PILE_HEIGHT;
 
-  graphics.fillStyle(0x000000, 0.22);
+  graphics.fillStyle(0x000000, 0.24);
   graphics.fillEllipse(cx, base - 3, 32, 12);
 
   const blocks = [
-    { x: -11, y: base - 8, w: 13, h: 10, c: 0x5a5750 },
-    { x: 2, y: base - 8, w: 14, h: 11, c: 0x646159 },
-    { x: -5, y: base - 17, w: 13, h: 10, c: 0x6d6a61 },
-    { x: 5, y: base - 20, w: 10, h: 8, c: 0x5f5c55 },
+    { x: -11, y: base - 7, w: 13, h: 9, c: 0x5a5750 },
+    { x: 2, y: base - 7, w: 14, h: 10, c: 0x646159 },
+    { x: -5, y: base - 16, w: 12, h: 9, c: 0x6d6a61 },
+    { x: 5, y: base - 19, w: 10, h: 7, c: 0x5f5c55 },
   ];
   for (const b of blocks) {
-    graphics.fillStyle(b.c, 1);
-    graphics.fillRect(cx + b.x, b.y - b.h, b.w, b.h);
-    // Key light from the upper left.
-    graphics.fillStyle(0xffffff, 0.07);
-    graphics.fillRect(cx + b.x, b.y - b.h, 4, b.h);
+    const top = b.y - b.h;
+    // Top face, brightest: the light comes from above and to the left.
+    graphics.fillStyle(shade(b.c, 1.3), 1);
+    polygonAt(graphics, [
+      [cx + b.x, top],
+      [cx + b.x + b.w * 0.5, top - 3.5],
+      [cx + b.x + b.w, top],
+      [cx + b.x + b.w * 0.5, top + 3.5],
+    ]);
+    // Left face.
+    graphics.fillStyle(shade(b.c, 1.02), 1);
+    polygonAt(graphics, [
+      [cx + b.x, top],
+      [cx + b.x + b.w * 0.5, top + 3.5],
+      [cx + b.x + b.w * 0.5, b.y + 3.5],
+      [cx + b.x, b.y],
+    ]);
+    // Right face, away from the key light.
+    graphics.fillStyle(shade(b.c, 0.74), 1);
+    polygonAt(graphics, [
+      [cx + b.x + b.w, top],
+      [cx + b.x + b.w * 0.5, top + 3.5],
+      [cx + b.x + b.w * 0.5, b.y + 3.5],
+      [cx + b.x + b.w, b.y],
+    ]);
   }
 }
 
 /**
  * The founding storage yard: a low fenced platform stacked with goods.
  *
- * Open rather than enclosed, so it reads as a stockpile rather than a building
- * — construction proper arrives in Phase 6.
+ * Open rather than enclosed, so it reads as a stockpile rather than a building.
+ * It is the first thing a new player sees and the thing they will look at most,
+ * so it earns more detail than anything else at this size: a planked floor, a
+ * rail between the posts, and goods with real faces on them.
  */
 function drawStorageYard(graphics: Phaser.GameObjects.Graphics): void {
   const cx = STORAGE_WIDTH / 2;
@@ -503,70 +500,176 @@ function drawStorageYard(graphics: Phaser.GameObjects.Graphics): void {
   const halfW = 88;
   const halfH = 44;
 
-  // The isometric footprint: a 3x3 diamond of trodden earth.
-  graphics.fillStyle(0x4a3f30, 1);
-  graphics.beginPath();
-  graphics.moveTo(cx, baseY - halfH);
-  graphics.lineTo(cx + halfW, baseY);
-  graphics.lineTo(cx, baseY + halfH);
-  graphics.lineTo(cx - halfW, baseY);
-  graphics.closePath();
-  graphics.fillPath();
-  graphics.lineStyle(2, 0x3a3126, 0.8);
-  graphics.strokePath();
+  // The isometric footprint: a 3x3 diamond of trodden earth, split into two
+  // facets like the ground it stands on.
+  graphics.fillStyle(0x473d2f, 1);
+  polygonAt(graphics, [
+    [cx, baseY - halfH],
+    [cx + halfW, baseY],
+    [cx, baseY + halfH],
+  ]);
+  graphics.fillStyle(0x3f3628, 1);
+  polygonAt(graphics, [
+    [cx, baseY - halfH],
+    [cx - halfW, baseY],
+    [cx, baseY + halfH],
+  ]);
 
-  // Corner posts.
-  graphics.fillStyle(0x4f4132, 1);
-  for (const [px, py] of [
+  // Planking, running along one axis. Faint, so it suggests a floor without
+  // turning into a grid the eye has to read.
+  graphics.lineStyle(1, 0x3a3126, 0.45);
+  for (let t = -0.7; t <= 0.7; t += 0.35) {
+    graphics.beginPath();
+    graphics.moveTo(cx + halfW * t, baseY - halfH * (1 - Math.abs(t)));
+    graphics.lineTo(cx + halfW * t, baseY + halfH * (1 - Math.abs(t)));
+    graphics.strokePath();
+  }
+
+  const corners: readonly (readonly [number, number])[] = [
     [cx, baseY - halfH],
     [cx + halfW, baseY],
     [cx, baseY + halfH],
     [cx - halfW, baseY],
-  ] as const) {
-    graphics.fillRect(px - 2.5, py - 16, 5, 16);
+  ];
+
+  // A rail between the posts, along the two back edges only — a fence across
+  // the front would hide the goods the yard exists to show.
+  graphics.lineStyle(2.5, 0x5a4a36, 0.9);
+  graphics.beginPath();
+  graphics.moveTo(cx - halfW, baseY - 9);
+  graphics.lineTo(cx, baseY - halfH - 9);
+  graphics.lineTo(cx + halfW, baseY - 9);
+  graphics.strokePath();
+
+  // Corner posts, each with a lit and a shaded side.
+  for (const [px, py] of corners) {
+    graphics.fillStyle(0x5a4b39, 1);
+    graphics.fillRect(px - 2.5, py - 16, 2.5, 16);
+    graphics.fillStyle(0x453927, 1);
+    graphics.fillRect(px, py - 16, 2.5, 16);
   }
 
-  // A few crates and sacks, so the yard reads as holding something.
-  graphics.fillStyle(0x6b573c, 1);
-  graphics.fillRect(cx - 34, baseY - 26, 22, 18);
-  graphics.fillRect(cx - 8, baseY - 30, 24, 22);
-  graphics.fillStyle(0x7a6748, 1);
-  graphics.fillRect(cx + 18, baseY - 24, 20, 16);
-  graphics.fillStyle(0xffffff, 0.06);
-  graphics.fillRect(cx - 34, baseY - 26, 6, 18);
-  graphics.fillRect(cx - 8, baseY - 30, 6, 22);
+  // Crates and sacks, drawn as boxes rather than rectangles.
+  crate(graphics, cx - 46, baseY - 6, 28, 22, 0x6b573c);
+  crate(graphics, cx - 14, baseY - 4, 32, 28, 0x74603f);
+  crate(graphics, cx + 22, baseY - 2, 26, 19, 0x7a6748);
+  // A sack leaning on the stack, so the yard is not all right angles.
+  graphics.fillStyle(0x8a7a5a, 1);
+  polygonAt(graphics, [
+    [cx + 4, baseY - 4],
+    [cx + 12, baseY - 24],
+    [cx + 20, baseY - 4],
+  ]);
+  graphics.fillStyle(0x6f6248, 1);
+  polygonAt(graphics, [
+    [cx + 12, baseY - 24],
+    [cx + 20, baseY - 4],
+    [cx + 15, baseY - 4],
+  ]);
 }
 
-/** A half-built frame: posts and a partial floor. */
+/** A box standing on the ground: top, lit face, shaded face. */
+function crate(
+  graphics: Phaser.GameObjects.Graphics,
+  x: number,
+  groundY: number,
+  width: number,
+  height: number,
+  colour: number,
+): void {
+  const top = groundY - height;
+  const depth = width * 0.28;
+
+  graphics.fillStyle(shade(colour, 1.26), 1);
+  polygonAt(graphics, [
+    [x, top],
+    [x + width * 0.5, top - depth * 0.5],
+    [x + width, top],
+    [x + width * 0.5, top + depth * 0.5],
+  ]);
+  graphics.fillStyle(shade(colour, 1.02), 1);
+  polygonAt(graphics, [
+    [x, top],
+    [x + width * 0.5, top + depth * 0.5],
+    [x + width * 0.5, groundY + depth * 0.5],
+    [x, groundY],
+  ]);
+  graphics.fillStyle(shade(colour, 0.76), 1);
+  polygonAt(graphics, [
+    [x + width, top],
+    [x + width * 0.5, top + depth * 0.5],
+    [x + width * 0.5, groundY + depth * 0.5],
+    [x + width, groundY],
+  ]);
+}
+
+/**
+ * A half-built frame: posts, a partial floor, and the materials to finish it.
+ *
+ * The sawhorse and the stacked timber are the point. A construction site with
+ * nothing lying around it reads as a ruin; a site with work in progress reads
+ * as something somebody is coming back to.
+ */
 function drawConstructionSite(graphics: Phaser.GameObjects.Graphics): void {
   const cx = 64;
   const base = 86;
 
-  graphics.fillStyle(0x4a3f30, 0.85);
-  graphics.beginPath();
-  graphics.moveTo(cx, base - 24);
-  graphics.lineTo(cx + 48, base);
-  graphics.lineTo(cx, base + 24);
-  graphics.lineTo(cx - 48, base);
-  graphics.closePath();
-  graphics.fillPath();
+  // The plot, in two facets.
+  graphics.fillStyle(0x4f4434, 0.9);
+  polygonAt(graphics, [
+    [cx, base - 24],
+    [cx + 48, base],
+    [cx, base + 24],
+  ]);
+  graphics.fillStyle(0x443a2c, 0.9);
+  polygonAt(graphics, [
+    [cx, base - 24],
+    [cx - 48, base],
+    [cx, base + 24],
+  ]);
 
-  graphics.fillStyle(0x7a6647, 1);
+  // Corner posts, lit and shaded.
   for (const [px, py] of [
     [cx, base - 24],
     [cx + 48, base],
     [cx, base + 24],
     [cx - 48, base],
   ] as const) {
-    graphics.fillRect(px - 3, py - 30, 6, 30);
+    graphics.fillStyle(0x86714f, 1);
+    graphics.fillRect(px - 3, py - 30, 3, 30);
+    graphics.fillStyle(0x6a5940, 1);
+    graphics.fillRect(px, py - 30, 3, 30);
   }
 
-  // A cross-beam, so it reads as a frame rather than four posts.
+  // Cross-beams, so it reads as a frame rather than four posts.
   graphics.lineStyle(4, 0x7a6647, 1);
   graphics.beginPath();
   graphics.moveTo(cx - 48, base - 26);
   graphics.lineTo(cx, base - 50);
   graphics.lineTo(cx + 48, base - 26);
+  graphics.strokePath();
+
+  // A tie-beam across the middle, at wall height.
+  graphics.lineStyle(3, 0x6d5b3f, 1);
+  graphics.beginPath();
+  graphics.moveTo(cx - 46, base - 12);
+  graphics.lineTo(cx + 46, base - 12);
+  graphics.strokePath();
+
+  // Timber stacked on the plot, waiting to be used.
+  graphics.fillStyle(0x7d6845, 1);
+  graphics.fillRect(cx - 26, base + 2, 30, 3.5);
+  graphics.fillStyle(0x6a5738, 1);
+  graphics.fillRect(cx - 24, base + 6, 30, 3.5);
+
+  // A sawhorse, which is the single clearest sign of work rather than ruin.
+  graphics.lineStyle(2, 0x6a5738, 1);
+  graphics.beginPath();
+  graphics.moveTo(cx + 14, base + 12);
+  graphics.lineTo(cx + 20, base + 2);
+  graphics.lineTo(cx + 26, base + 12);
+  graphics.moveTo(cx + 13, base + 3);
+  graphics.lineTo(cx + 28, base + 3);
   graphics.strokePath();
 }
 
@@ -585,21 +688,29 @@ function drawRoad(graphics: Phaser.GameObjects.Graphics): void {
   const halfWidth = TILE_WIDTH / 2 - 1;
   const halfHeight = TILE_HEIGHT / 2 - 1;
 
-  // Two passes: a wider, darker damp margin, then the drier trodden centre.
+  // Three passes: a damp margin, the trodden bed, and a lit crown down the
+  // middle where the traffic has worn it smooth.
   const passes = [
     { inset: 0.98, colour: 0x4a4034, alpha: 0.75 },
-    { inset: 0.72, colour: 0x6a5a45, alpha: 0.85 },
+    { inset: 0.72, colour: 0x6a5a45, alpha: 0.9 },
   ];
   for (const pass of passes) {
     graphics.fillStyle(pass.colour, pass.alpha);
-    graphics.beginPath();
-    graphics.moveTo(cx, cy - halfHeight * pass.inset);
-    graphics.lineTo(cx + halfWidth * pass.inset, cy);
-    graphics.lineTo(cx, cy + halfHeight * pass.inset);
-    graphics.lineTo(cx - halfWidth * pass.inset, cy);
-    graphics.closePath();
-    graphics.fillPath();
+    polygonAt(graphics, [
+      [cx, cy - halfHeight * pass.inset],
+      [cx + halfWidth * pass.inset, cy],
+      [cx, cy + halfHeight * pass.inset],
+      [cx - halfWidth * pass.inset, cy],
+    ]);
   }
+
+  graphics.fillStyle(0x7b6a51, 0.75);
+  polygonAt(graphics, [
+    [cx, cy - halfHeight * 0.44],
+    [cx + halfWidth * 0.44, cy],
+    [cx, cy + halfHeight * 0.2],
+    [cx - halfWidth * 0.44, cy],
+  ]);
 
   // A fixed scatter of grit, so a long road is not a flat band of one colour.
   // Fixed rather than random: every road cell shares this one texture, and a

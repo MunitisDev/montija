@@ -39,6 +39,7 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 12    | Homes and population  | **Implemented** |
 | 13    | Seasons on screen     | **Implemented** |
 | 14    | Roads                 | **Implemented** |
+| 15    | Art pass              | **Implemented** |
 
 ---
 
@@ -381,3 +382,27 @@ heuristic stops A\* looking, so it would have routed villagers straight across a
 beside it. The heuristic is now priced at the cheapest step the grid can offer, and only while roads
 actually exist, so a village that never laid one pays nothing for the fix. Benchmarks confirm no
 regression.
+
+---
+
+## Phase 15 — Art pass — Implemented
+
+The house style is low-poly, and until this pass most of the world was not: terrain was one flat
+diamond per type, and a tree was three triangles in a single colour. Repeated nine thousand and two
+thousand times respectively, that reads as coloured paper.
+
+- **Ground is faceted**, with four hashed variants per terrain type. Rock became outcrops rather than
+  grey floor, water got ripples, forest floor got litter.
+- **Trees are volumes**, each with a lit and a shaded side, and there are now broadleaves as well as
+  conifers — a mixed wood has a silhouette, a plantation does not.
+- **Buildings gained** stone plinths, timber framing, windows, doors with lintels, roof courses,
+  thatch for the cheap ones and a chimney for the house — the only building with a hearth.
+- **Villagers, piles, yards and construction sites** were all redrawn with the same lit/shaded
+  treatment. A site now has a sawhorse and stacked timber, so it reads as work rather than as ruin.
+- **Terrain lost its outline.** It was there so tiles stayed legible where two of the same type met,
+  which is not worth a lattice ruled over the whole map.
+
+**Found while building it:** the per-cell variant hash produced exactly the diagonal stripes its own
+comment claimed to avoid, because only its low bits survive a modulo and the low bits of a product
+depend only on the low bits of its factors. A test written for that property caught it before it was
+ever committed, and it now guards rows, columns and diagonals.

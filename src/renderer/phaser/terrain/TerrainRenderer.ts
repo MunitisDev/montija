@@ -20,6 +20,7 @@ import type { World } from '@/simulation/world/World';
 import type { Season } from '@/simulation/seasons/SeasonClock';
 import { RenderLayer, depthFor } from '@/renderer/phaser/sorting';
 import { TextureKeys, createPlaceholderTextures } from './tileTextures';
+import { tileVariant } from './groundArt';
 
 export interface TerrainRenderStats {
   readonly tileCount: number;
@@ -72,7 +73,7 @@ export class TerrainRenderer {
           position.px,
           position.py,
           TextureKeys.terrainAtlas,
-          TextureKeys.terrainFrame(type, season),
+          TextureKeys.terrainFrame(type, season, tileVariant(gx, gy)),
         )
         // The diamond is centred in its texture, so the tile's scene position
         // is its centre.
@@ -144,7 +145,11 @@ export class TerrainRenderer {
     const tile = this.tileSprites.get(cell.gy * this.mapWidth + cell.gx);
     tile?.setTexture(
       TextureKeys.terrainAtlas,
-      TextureKeys.terrainFrame(world.terrain.getAt(cell), this.paintedSeason),
+      TextureKeys.terrainFrame(
+        world.terrain.getAt(cell),
+        this.paintedSeason,
+        tileVariant(cell.gx, cell.gy),
+      ),
     );
   }
 
@@ -164,7 +169,10 @@ export class TerrainRenderer {
 
     world.terrain.forEach((gx, gy, type) => {
       const tile = this.tileSprites.get(gy * this.mapWidth + gx);
-      tile?.setTexture(TextureKeys.terrainAtlas, TextureKeys.terrainFrame(type, season));
+      tile?.setTexture(
+        TextureKeys.terrainAtlas,
+        TextureKeys.terrainFrame(type, season, tileVariant(gx, gy)),
+      );
     });
 
     for (const [id, sprite] of this.treeSprites) {

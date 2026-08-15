@@ -65,14 +65,54 @@ const TERRAIN_BY_SEASON: Readonly<Record<Season, Readonly<Record<TerrainType, Te
   },
 };
 
-/** Canopy colours per season. Three variants, so a wood is not one flat green. */
+/**
+ * Canopy colours per season.
+ *
+ * Six variants rather than three, because the tree shapes went from three
+ * conifers to three conifers and three broadleaves — and a birch the same green
+ * as the pine beside it wastes the new silhouette. The later three run warmer
+ * and lighter, which is what separates a broadleaf from a conifer at a glance
+ * and is most of the reason a mixed wood reads as a wood.
+ */
 const CANOPY_BY_SEASON: Readonly<Record<Season, readonly number[]>> = {
-  spring: [0x2f4029, 0x35472d, 0x293823],
-  summer: [0x2c3f24, 0x334828, 0x263620],
-  autumn: [0x6b4a1f, 0x7a5622, 0x59401d],
+  spring: [0x2f4029, 0x35472d, 0x293823, 0x46583a, 0x4e603e, 0x3d5033],
+  summer: [0x2c3f24, 0x334828, 0x263620, 0x455728, 0x4d602c, 0x3c4e24],
+  autumn: [0x6b4a1f, 0x7a5622, 0x59401d, 0x8a5a1e, 0x94661f, 0x7a4b1b],
   // Bare branches under snow: barely any canopy left to colour.
-  winter: [0x4c5450, 0x545c57, 0x444b48],
+  winter: [0x4c5450, 0x545c57, 0x444b48, 0x565a52, 0x5e6259, 0x4e524b],
 };
+
+/**
+ * The small stuff scattered over the ground: tufts, pebbles, ripples.
+ *
+ * Kept beside the terrain palette rather than inside the drawing code so the
+ * whole year's colour lives in one file — which is what made a seasonal repaint
+ * a data change rather than an art rewrite in the first place.
+ */
+export interface GroundDetail {
+  /** Grass blades and forest litter. */
+  readonly tuft: number;
+  /** Bare earth and stones. */
+  readonly soil: number;
+  /** The lit edge of a tuft, or the crest of a ripple. */
+  readonly highlight: number;
+}
+
+const DETAIL_BY_SEASON: Readonly<Record<Season, GroundDetail>> = {
+  spring: { tuft: 0x5e7345, soil: 0x4a4034, highlight: 0x6f8551 },
+  summer: { tuft: 0x6b7a37, soil: 0x544935, highlight: 0x7d8c40 },
+  autumn: { tuft: 0x7a6a30, soil: 0x4e4230, highlight: 0x8d7b38 },
+  winter: { tuft: 0x9aa09a, soil: 0x60605c, highlight: 0xb4bcbb },
+};
+
+/** Detail colours for a terrain type. Water tints its own highlight. */
+export function groundDetail(season: Season, type: TerrainType): GroundDetail {
+  if (type === 'water') {
+    const base = DETAIL_BY_SEASON[season];
+    return { ...base, highlight: season === 'winter' ? 0x6d8898 : 0x456673 };
+  }
+  return DETAIL_BY_SEASON[season];
+}
 
 /** Trunk colours. Wet and dark in spring, frosted in winter. */
 const TRUNK_BY_SEASON: Readonly<Record<Season, number>> = {
@@ -105,6 +145,12 @@ const AMBIENT_BY_SEASON: Readonly<Record<Season, AmbientLight>> = {
 export function terrainPalette(season: Season, type: TerrainType): TerrainPalette {
   return TERRAIN_BY_SEASON[season][type];
 }
+
+/**
+ * How many distinct canopy colours exist, and so how many tree shapes are worth
+ * drawing. Exported so nothing has to hard-code the number twice.
+ */
+export const CANOPY_VARIANTS = CANOPY_BY_SEASON.spring.length;
 
 export function canopyColour(season: Season, variant: number): number {
   const canopy = CANOPY_BY_SEASON[season];

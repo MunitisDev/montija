@@ -163,6 +163,50 @@ every building is not affordable and not needed.
 
 ---
 
+## Faceted shading — Implemented
+
+The house style is **low-poly**: every surface is a small number of flat-shaded planes, and the form
+is implied by the shading rather than by texture or line. There are no gradients and no outlines
+anywhere in the world layer.
+
+The rules that follow from that, and that everything drawn so far obeys:
+
+- **Every mass gets at least a lit face and a shaded face**, split with the key light from the upper
+  left. A single-colour shape beside a faceted one reads as a sticker on the scene, which is what
+  made the first tree pass look like wallpaper.
+- **Ground is two facets**, meeting along one of the tile's diagonals, at a few percent apart. That
+  is enough for a field to read as undulating and little enough that it does not read as a
+  chequerboard.
+- **Detail is bought with facets, never with saturation.** A brighter colour to make something
+  visible breaks the muted direction; another plane does not.
+- **Nothing in a terrain tile may line up with the cell boundary.** This one was learned three times
+  over while drawing snow: an edge left showing, a darker drift along the tile's front, and a crease
+  running corner to corner all produced the same thing — a lattice ruled over the whole map, which
+  is the most conspicuous possible way to break the rule that terrain should hide the grid. Ground
+  detail lives strictly in the tile's interior.
+- **Terrain carries no outline at all.** It used to, so that two tiles of the same type stayed
+  legible where they met. Faceting and scatter do that job now, and the line was the grid, drawn.
+
+### Variants
+
+| Asset   | Variants | Chosen by                              |
+| ------- | -------- | -------------------------------------- |
+| Terrain | 4 / type | A hash of the cell's own `(gx, gy)`    |
+| Tree    | 6        | The simulation, from its seeded stream |
+
+Terrain variants are hashed rather than stored: the choice must survive a season change, a repaint
+after felling and a reload, and nothing about it belongs in a save. The hash needs real avalanche —
+the obvious `(gx * prime) ^ (gy * prime)` keeps only its low bits after the modulo, and the low bits
+of a product depend only on the low bits of its factors, so every cell on a diagonal came out
+identical. `tests/ground-art.test.ts` checks that rows, columns and diagonals all use more than one
+variant.
+
+Tree variants come from the simulation because they are saved; the renderer takes every variant
+modulo the number of shapes it can draw, so the two counts agree by intent rather than by
+construction — the simulation cannot import the renderer.
+
+---
+
 ## Animation
 
 Restrained and weighty. People in this world are tired and cold, not springy.
@@ -223,15 +267,23 @@ footprints, tile size and character scale. Colour and detail may be crude.
 The point is that replacing a placeholder with finished art becomes a file swap, never a layout
 rewrite.
 
-Current placeholder palette (`src/app/config.ts`):
+The whole palette lives in `src/renderer/phaser/terrain/seasonalPalette.ts` — terrain, canopy,
+trunk, ground detail and ambient light, for all four seasons. Keeping colour in one file is what
+makes a re-tint a data change rather than an art rewrite.
 
-| Name      | Hex       | Use               |
-| --------- | --------- | ----------------- |
-| Void      | `#12140f` | Background        |
-| Grass     | `#4a5b3a` | Open ground       |
-| Grass alt | `#536440` | Checker variation |
-| Forest    | `#2f4029` | Wooded            |
-| Water     | `#2c3f4a` | Water             |
-| Stone     | `#5a5750` | Rock              |
+It is muted and earthy on purpose. Even the prototype should never read as a bright toy.
 
-These are already muted and earthy on purpose. Even the prototype should never read as a bright toy.
+### Where the placeholder art lives
+
+| File              | Draws                                                      |
+| ----------------- | ---------------------------------------------------------- |
+| `groundArt.ts`    | Terrain tiles: facets, tufts, rock outcrops, ripples, snow |
+| `treeArt.ts`      | Conifers and broadleaves, through the year                 |
+| `buildingArt.ts`  | Walls, timber framing, roofs, plinths, chimneys, doors     |
+| `tileTextures.ts` | Atlas assembly, plus villagers, piles, yards, sites, roads |
+
+Everything is generated into **two atlases** — one for ground, one for trees — plus a handful of
+standalone textures. That is not tidiness: the display list is depth-sorted, which interleaves
+terrain types and tree shapes, and a GPU batch breaks whenever the texture changes between adjacent
+objects. Adding variants to an atlas costs nothing at draw time; adding textures would cost a batch
+break per variant on exactly the low-power tablet GPUs this project targets.

@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 import { TERRAIN_TYPES } from '@/data/terrain';
 import {
+  CANOPY_VARIANTS,
   ambientLight,
   canopyColour,
   canopyFullness,
@@ -87,7 +88,8 @@ describe('vegetation', () => {
   });
 
   it('wraps variants rather than running out of colours', () => {
-    expect(canopyColour('summer', 3)).toBe(canopyColour('summer', 0));
+    expect(canopyColour('summer', CANOPY_VARIANTS)).toBe(canopyColour('summer', 0));
+    expect(canopyColour('summer', CANOPY_VARIANTS + 2)).toBe(canopyColour('summer', 2));
   });
 
   it('strips the canopy through autumn and winter', () => {

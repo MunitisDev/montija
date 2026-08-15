@@ -66,6 +66,14 @@ interface BuildingMass {
   readonly eaves: number;
   /** Set for buildings that are a yard rather than a hall: no roof, low walls. */
   readonly open?: boolean;
+  /** A stone footing under the walls, in pixels. Damp-proofing, and weight. */
+  readonly plinth?: number;
+  /** Set when the building has a hearth, and so a chimney and smoke. */
+  readonly chimney?: boolean;
+  /** How many window openings the front wall carries. */
+  readonly windows?: number;
+  /** Set for a thatched roof rather than shingled: softer, straw-coloured. */
+  readonly thatch?: boolean;
 }
 
 /**
@@ -77,14 +85,20 @@ interface BuildingMass {
  * Steep pitches are also what the period asks for.
  */
 const MASS: Readonly<Record<BuildingId, BuildingMass>> = {
-  house: { wallHeight: 24, roofHeight: 48, eaves: 6 },
+  // The only building people live in, and the only one with a hearth — so it is
+  // the only one with smoke coming out of it, which is most of what makes a
+  // settlement look inhabited rather than built.
+  house: { wallHeight: 24, roofHeight: 48, eaves: 6, plinth: 5, chimney: true, windows: 2 },
   // An open yard. Low walls, no roof, so the player can see it is a place for
   // things rather than a place for people.
   'storage-yard': { wallHeight: 13, roofHeight: 0, eaves: 0, open: true },
   // A granary: shut tight, because its whole purpose is keeping weather out.
-  'food-storage': { wallHeight: 20, roofHeight: 40, eaves: 7 },
-  'gatherer-hut': { wallHeight: 20, roofHeight: 42, eaves: 6 },
-  woodcutter: { wallHeight: 22, roofHeight: 44, eaves: 6 },
+  // No windows for the same reason, and a stone footing to keep damp off grain.
+  'food-storage': { wallHeight: 20, roofHeight: 40, eaves: 7, plinth: 6 },
+  // A forager's shelter: thatched, cheap, one opening.
+  'gatherer-hut': { wallHeight: 20, roofHeight: 42, eaves: 6, thatch: true, windows: 1 },
+  // A workshop. Taller than it needs to be, because the work happens indoors.
+  woodcutter: { wallHeight: 22, roofHeight: 44, eaves: 6, plinth: 4, windows: 1 },
 };
 
 /** Muted, earthy, and distinguishable at a glance without being colourful. */
@@ -98,6 +112,15 @@ export const BUILDING_COLOURS: Readonly<Record<BuildingId, BuildingPalette>> = {
 
 /** Breathing room above the roof, so nothing touches the texture edge. */
 const TOP_MARGIN = 4;
+
+/** Rubble footing and chimney stone. Cold and grey against the warm timber. */
+const STONE_FOOTING = 0x6a675e;
+
+/** A window opening. Dark, because glass was for churches. */
+const WINDOW_DARK = 0x2a2620;
+
+/** Straw, for the buildings too cheap to be shingled. */
+const THATCH = 0x7d6a42;
 
 /**
  * How far the walls are pulled in from the footprint edge.
@@ -175,6 +198,8 @@ export function drawBuilding(
   });
 
   const ground = rhombus(groundY);
+  const plinthHeight = mass.plinth ?? 0;
+  const sill = rhombus(groundY - plinthHeight);
   const top = rhombus(groundY - mass.wallHeight);
 
   // A soft shadow on the plot itself, so the building is planted rather than
@@ -188,13 +213,29 @@ export function drawBuilding(
     { x: cx - halfW - 2, y: groundY },
   ]);
 
+  // A stone footing, where the building has one. Rubble rather than dressed
+  // masonry: this is a frontier settlement, not a cathedral.
+  if (plinthHeight > 0) {
+    graphics.fillStyle(STONE_FOOTING, 1);
+    polygon(graphics, [sill.left, sill.front, ground.front, ground.left]);
+    graphics.fillStyle(shade(STONE_FOOTING, 0.76), 1);
+    polygon(graphics, [sill.front, sill.right, ground.right, ground.front]);
+    // A couple of larger stones picked out along the lit face.
+    graphics.fillStyle(shade(STONE_FOOTING, 1.16), 1);
+    for (const t of [0.3, 0.62]) {
+      const x = cx - halfW + halfW * t;
+      const y = groundY + halfH * (t - 0.5) * 0.9 - plinthHeight * 0.55;
+      graphics.fillRect(x, y, 7, 3);
+    }
+  }
+
   // Left wall, catching the light.
   graphics.fillStyle(palette.wall, 1);
-  polygon(graphics, [top.left, top.front, ground.front, ground.left]);
+  polygon(graphics, [top.left, top.front, sill.front, sill.left]);
 
   // Right wall, in shadow: the key light comes from the upper left throughout.
   graphics.fillStyle(shade(palette.wall, 0.78), 1);
-  polygon(graphics, [top.front, top.right, ground.right, ground.front]);
+  polygon(graphics, [top.front, top.right, sill.right, sill.front]);
 
   if (mass.open) {
     // An open yard: show the floor inside the low walls rather than a roof.
@@ -204,25 +245,145 @@ export function drawBuilding(
     return;
   }
 
+  // Timber framing on both walls. Uprights only — a full cruck frame at this
+  // size turns into noise, whereas four posts read instantly as a timber
+  // building and cost four polygons.
+  drawFraming(graphics, {
+    palette,
+    cx,
+    halfW,
+    halfH,
+    sillY: groundY - plinthHeight,
+    topY: groundY - mass.wallHeight,
+  });
+
   drawRoof(graphics, {
     palette,
     top,
     cx,
     apexY: groundY - mass.wallHeight - mass.roofHeight,
     eaves: mass.eaves,
+    thatch: mass.thatch === true,
   });
 
   // A door on the left wall, which faces the camera.
-  const doorHeight = Math.min(mass.wallHeight - 4, 16);
+  const wallSpan = mass.wallHeight - plinthHeight;
+  const doorHeight = Math.min(wallSpan - 3, 16);
   if (doorHeight > 6) {
+    const doorY = groundY - plinthHeight;
     graphics.fillStyle(palette.trim, 1);
     polygon(graphics, [
-      { x: cx - halfW * 0.42, y: groundY + halfH * 0.42 - doorHeight },
-      { x: cx - halfW * 0.16, y: groundY + halfH * 0.16 - doorHeight },
-      { x: cx - halfW * 0.16, y: groundY + halfH * 0.16 },
-      { x: cx - halfW * 0.42, y: groundY + halfH * 0.42 },
+      { x: cx - halfW * 0.42, y: doorY + halfH * 0.42 - doorHeight },
+      { x: cx - halfW * 0.16, y: doorY + halfH * 0.16 - doorHeight },
+      { x: cx - halfW * 0.16, y: doorY + halfH * 0.16 },
+      { x: cx - halfW * 0.42, y: doorY + halfH * 0.42 },
+    ]);
+    // A lintel over it, one shade lighter, so the opening has an edge.
+    graphics.fillStyle(shade(palette.trim, 1.4), 1);
+    polygon(graphics, [
+      { x: cx - halfW * 0.46, y: doorY + halfH * 0.46 - doorHeight - 2 },
+      { x: cx - halfW * 0.12, y: doorY + halfH * 0.12 - doorHeight - 2 },
+      { x: cx - halfW * 0.12, y: doorY + halfH * 0.12 - doorHeight },
+      { x: cx - halfW * 0.46, y: doorY + halfH * 0.46 - doorHeight },
     ]);
   }
+
+  // Windows on the right wall, small and dark: glass was for churches.
+  for (let index = 0; index < (mass.windows ?? 0); index += 1) {
+    const t = 0.28 + index * 0.34;
+    const y = groundY - plinthHeight + halfH * t - wallSpan * 0.62;
+    const x = cx + halfW * t;
+    graphics.fillStyle(WINDOW_DARK, 1);
+    polygon(graphics, [
+      { x: x - 5, y: y - 2 },
+      { x: x + 1, y: y + 1 },
+      { x: x + 1, y: y + 8 },
+      { x: x - 5, y: y + 5 },
+    ]);
+  }
+
+  if (mass.chimney === true) {
+    // Placed *on* the roof plane, by interpolating along the left pitch from
+    // the apex to the eaves. Guessing a height instead put the stack below the
+    // roof surface, where it read as a post leaning against the gable.
+    const along = 0.34;
+    const apexY = groundY - mass.wallHeight - mass.roofHeight;
+    const eaveX = cx - halfW - mass.eaves;
+    const eaveY = groundY - mass.wallHeight + mass.eaves / 2;
+    drawChimney(graphics, cx + (eaveX - cx) * along, apexY + (eaveY - apexY) * along);
+  }
+}
+
+/** Four uprights, so a wall reads as a timber frame rather than as a slab. */
+function drawFraming(
+  graphics: Phaser.GameObjects.Graphics,
+  options: {
+    palette: BuildingPalette;
+    cx: number;
+    halfW: number;
+    halfH: number;
+    sillY: number;
+    topY: number;
+  },
+): void {
+  const { palette, cx, halfW, halfH, sillY, topY } = options;
+  const timber = shade(palette.trim, 1.18);
+  const shaded = shade(palette.trim, 0.86);
+
+  // Left wall: posts run from the sill to the wall head, following the slope.
+  graphics.fillStyle(timber, 1);
+  for (const t of [0.3, 0.66]) {
+    const x = cx - halfW * t;
+    const drop = halfH * t;
+    polygon(graphics, [
+      { x: x - 1.5, y: topY + drop },
+      { x: x + 1.5, y: topY + drop },
+      { x: x + 1.5, y: sillY + drop },
+      { x: x - 1.5, y: sillY + drop },
+    ]);
+  }
+
+  graphics.fillStyle(shaded, 1);
+  for (const t of [0.3, 0.66]) {
+    const x = cx + halfW * t;
+    const drop = halfH * t;
+    polygon(graphics, [
+      { x: x - 1.5, y: topY + drop },
+      { x: x + 1.5, y: topY + drop },
+      { x: x + 1.5, y: sillY + drop },
+      { x: x - 1.5, y: sillY + drop },
+    ]);
+  }
+
+  // A wall plate along the top, tying the posts together.
+  graphics.fillStyle(timber, 1);
+  polygon(graphics, [
+    { x: cx - halfW, y: topY },
+    { x: cx, y: topY + halfH },
+    { x: cx, y: topY + halfH + 2.5 },
+    { x: cx - halfW, y: topY + 2.5 },
+  ]);
+  graphics.fillStyle(shaded, 1);
+  polygon(graphics, [
+    { x: cx + halfW, y: topY },
+    { x: cx, y: topY + halfH },
+    { x: cx, y: topY + halfH + 2.5 },
+    { x: cx + halfW, y: topY + 2.5 },
+  ]);
+}
+
+/** A stone chimney breaking the roofline. Only houses have hearths. */
+function drawChimney(graphics: Phaser.GameObjects.Graphics, x: number, y: number): void {
+  const width = 7;
+  const height = 16;
+
+  graphics.fillStyle(STONE_FOOTING, 1);
+  graphics.fillRect(x - width / 2, y - height, width / 2, height);
+  graphics.fillStyle(shade(STONE_FOOTING, 0.74), 1);
+  graphics.fillRect(x, y - height, width / 2, height);
+  // The cap, brightest: it is the one face pointing at the sky.
+  graphics.fillStyle(shade(STONE_FOOTING, 1.3), 1);
+  graphics.fillRect(x - width / 2 - 1, y - height - 2.5, width + 2, 2.5);
 }
 
 /** A hipped roof: one silhouette, then the shaded half. */
@@ -234,9 +395,11 @@ function drawRoof(
     cx: number;
     apexY: number;
     eaves: number;
+    thatch: boolean;
   },
 ): void {
-  const { palette, top, cx, apexY, eaves } = options;
+  const { palette, top, cx, apexY, eaves, thatch } = options;
+  const roof = thatch ? THATCH : palette.roof;
 
   // The eaves oversail the walls on every side.
   const eL = { x: top.left.x - eaves, y: top.left.y + eaves / 2 };
@@ -247,21 +410,42 @@ function drawRoof(
 
   // The far pitches first, so their silhouette shows above the ridge without
   // being drawn over the near ones.
-  graphics.fillStyle(shade(palette.roof, 0.88), 1);
+  graphics.fillStyle(shade(roof, 0.88), 1);
   polygon(graphics, [apex, eB, eL]);
   polygon(graphics, [apex, eB, eR]);
 
   // Near-left pitch, catching the light.
-  graphics.fillStyle(palette.roof, 1);
+  graphics.fillStyle(roof, 1);
   polygon(graphics, [apex, eL, eF]);
 
   // Near-right pitch, away from it.
-  graphics.fillStyle(shade(palette.roof, 0.74), 1);
+  graphics.fillStyle(shade(roof, 0.74), 1);
   polygon(graphics, [apex, eR, eF]);
+
+  // Courses across the near pitches: shingle lines, or the bound bundles of a
+  // thatch. Three of them, faint — enough to say what the roof is made of
+  // without turning the largest surface on the building into a pattern.
+  const courses = thatch ? 3 : 4;
+  for (let index = 1; index <= courses; index += 1) {
+    const t = index / (courses + 1);
+    graphics.fillStyle(shade(roof, thatch ? 0.82 : 1.14), thatch ? 0.7 : 0.55);
+    polygon(graphics, [
+      { x: apex.x + (eL.x - apex.x) * t, y: apex.y + (eL.y - apex.y) * t },
+      { x: apex.x + (eF.x - apex.x) * t, y: apex.y + (eF.y - apex.y) * t },
+      { x: apex.x + (eF.x - apex.x) * t, y: apex.y + (eF.y - apex.y) * t + 1.5 },
+      { x: apex.x + (eL.x - apex.x) * t, y: apex.y + (eL.y - apex.y) * t + 1.5 },
+    ]);
+    polygon(graphics, [
+      { x: apex.x + (eR.x - apex.x) * t, y: apex.y + (eR.y - apex.y) * t },
+      { x: apex.x + (eF.x - apex.x) * t, y: apex.y + (eF.y - apex.y) * t },
+      { x: apex.x + (eF.x - apex.x) * t, y: apex.y + (eF.y - apex.y) * t + 1.5 },
+      { x: apex.x + (eR.x - apex.x) * t, y: apex.y + (eR.y - apex.y) * t + 1.5 },
+    ]);
+  }
 
   // A ridge line, so the two pitches read as separate planes rather than a
   // flat lozenge.
-  graphics.fillStyle(shade(palette.roof, 1.12), 1);
+  graphics.fillStyle(shade(roof, 1.12), 1);
   polygon(graphics, [
     { x: apex.x - 1, y: apex.y },
     { x: apex.x + 1, y: apex.y },

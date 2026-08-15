@@ -50,7 +50,15 @@ const MOISTURE_LATTICE = 8;
 
 /** Chance a forest tile carries a tree. Below 1 so woods have clearings. */
 const TREE_DENSITY = 0.72;
-const TREE_VARIANTS = 3;
+/**
+ * How many tree shapes the renderer can draw.
+ *
+ * A cosmetic index, drawn from the seeded stream so a seed always grows the
+ * same wood, and stored in the save so a loaded settlement looks like the one
+ * it came from. Exported rather than duplicated as a literal, because the only
+ * thing worse than one magic number is two that have to agree.
+ */
+export const TREE_VARIANTS = 6;
 
 export function generateWorld(options: WorldGenerationOptions): GeneratedWorld {
   const { width, height, seed } = options;
