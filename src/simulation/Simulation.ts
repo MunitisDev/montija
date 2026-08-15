@@ -1,9 +1,9 @@
 /**
  * The authoritative game state.
  *
- * Status: Phase 5. Owns the seed, the RNG, the tick counter, the world, the
- * villagers, the job board and the storage yards. Buildings, production and
- * seasons join in Phases 6-8.
+ * Status: Phase 6. Owns the seed, the RNG, the tick counter, the world, the
+ * villagers, the job board and the storage yards. Production and seasons join
+ * in Phases 7-8.
  *
  * Rules for everything added here later:
  * - no Phaser, no DOM, no `Math.random()` (all enforced by ESLint);
@@ -13,7 +13,10 @@
 
 import type { GridPoint } from '@/shared/types/geometry';
 import { SeededRandom, deriveSeed, type RandomSource } from '@/shared/math/random';
+import type { BuildingId } from '@/data/buildings';
 import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
+import type { Building } from './buildings/Building';
+import type { PlacementCheck } from './buildings/BuildingRegistry';
 import { JobPriority } from './jobs/Job';
 import { JobManager } from './jobs/JobManager';
 import { StorageRegistry } from './logistics/Storage';
@@ -34,6 +37,9 @@ export interface SimulationSnapshot {
   readonly jobsAssigned: number;
   readonly jobsCompleted: number;
   readonly pileCount: number;
+  readonly buildingCount: number;
+  readonly sitesUnderConstruction: number;
+  readonly housingCapacity: number;
   /**
    * Stored totals per resource.
    *
@@ -100,9 +106,10 @@ export class Simulation {
   /** Advances the world by exactly one fixed tick. */
   public update(tick: number, tickSeconds: number): void {
     this.currentTick = tick;
+    this.createConstructionJobs();
     this.createHaulJobs();
     this.villagers.update(tickSeconds);
-    // Phase 6+ : construction, production, seasons.
+    // Phase 7+ : production, seasons.
   }
 
   /**
@@ -167,6 +174,9 @@ export class Simulation {
       jobsAssigned: jobStats.assigned,
       jobsCompleted: jobStats.completed,
       pileCount: this.world.piles.count,
+      buildingCount: this.world.buildings.count,
+      sitesUnderConstruction: this.world.buildings.underConstruction().length,
+      housingCapacity: this.world.buildings.housingCapacity,
       stored: this.totalsFrom((resource) => this.storages.totalOf(resource)),
       loose: this.totalsFrom((resource) => this.world.piles.totalOf(resource)),
     };
@@ -210,6 +220,85 @@ export class Simulation {
   public isStoneDesignated(cell: GridPoint): boolean {
     const cellId = cell.gy * this.world.width + cell.gx;
     return this.jobs.isTargetReserved('gather-stone', cellId);
+  }
+
+  /** Whether a building may be placed here. Used by the ghost and the command. */
+  public canPlaceBuilding(buildingId: BuildingId, origin: GridPoint): PlacementCheck {
+    return this.world.buildings.canPlace(this.world, buildingId, origin);
+  }
+
+  /**
+   * Places a construction site.
+   *
+   * A command: the player states intent and the simulation decides. Nothing is
+   * built here — the site starts empty and needs materials carried to it.
+   */
+  public placeBuilding(buildingId: BuildingId, origin: GridPoint): Building | null {
+    return this.world.buildings.place(this.world, buildingId, origin);
+  }
+
+  /**
+   * Keeps construction sites supplied and staffed.
+   *
+   * Materials first: a site that still needs logs gets haul jobs pointed at it,
+   * sourced from the storage yards rather than from thin air. Only once
+   * everything has physically arrived is a build job posted.
+   */
+  private createConstructionJobs(): void {
+    for (const site of this.world.buildings.underConstruction()) {
+      if (!site.hasAllMaterials) {
+        this.requestMaterialsFor(site);
+        continue;
+      }
+
+      if (!this.jobs.isTargetReserved('build', site.id)) {
+        this.jobs.create({
+          type: 'build',
+          target: site.accessCell,
+          priority: JobPriority.high,
+          targetEntityId: site.id,
+          workTicks: site.definition.buildTicks,
+        });
+      }
+    }
+  }
+
+  /**
+   * Posts haul jobs that move stored materials to a site.
+   *
+   * Sourced from a yard that actually holds the material: a site cannot be
+   * built out of resources the settlement does not have, which is what makes
+   * gathering matter.
+   */
+  private requestMaterialsFor(site: Building): void {
+    for (const cost of site.definition.constructionCost) {
+      if (site.stillNeeds(cost.resource) <= 0) {
+        continue;
+      }
+      // One delivery run per material at a time; the next is posted after this
+      // one lands, which keeps the board short and the reservation simple.
+      const reservationId = site.id * 100 + RESOURCE_IDS.indexOf(cost.resource);
+      if (this.jobs.isTargetReserved('haul', reservationId)) {
+        continue;
+      }
+
+      const source = this.storages.all.find(
+        (storage) => storage.inventory.count(cost.resource) > 0,
+      );
+      if (!source) {
+        continue;
+      }
+
+      this.jobs.create({
+        type: 'haul',
+        target: source.cell,
+        deliverTo: site.accessCell,
+        priority: JobPriority.high,
+        targetEntityId: reservationId,
+        haulSource: 'storage',
+        haulResource: cost.resource,
+      });
+    }
   }
 
   /**

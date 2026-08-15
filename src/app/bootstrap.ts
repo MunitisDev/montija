@@ -16,6 +16,7 @@ import { PointerController } from '@/input/PointerController';
 import { TouchController } from '@/input/TouchController';
 import { createPhaserGame } from '@/renderer/phaser/createPhaserGame';
 import { Hud } from '@/ui/hud/Hud';
+import { BuildMenu } from '@/ui/build-menu/BuildMenu';
 import { DebugOverlay } from '@/debug/DebugOverlay';
 
 function requireElement<T extends HTMLElement>(selector: string): T {
@@ -43,6 +44,7 @@ export function start(): void {
   }
 
   const hud = new Hud(hudRoot, game);
+  const buildMenu = new BuildMenu(hudRoot, game);
 
   // Mouse and touch are separate controllers feeding one intent sink, so a
   // hybrid device never processes the same gesture through both paths.
@@ -66,6 +68,7 @@ export function start(): void {
   // the world scene is swapped out.
   const renderHud = (): void => {
     hud.update();
+    buildMenu.update();
     debugOverlay?.update();
     window.requestAnimationFrame(renderHud);
   };

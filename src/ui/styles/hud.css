@@ -168,10 +168,103 @@
   border-radius: 6px;
 }
 
+.build-bar {
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 .build-bar__hint {
   font-size: 0.78rem;
   color: var(--colour-ink-dim);
   font-style: italic;
+}
+
+/* Build buttons are full-size touch targets: this is the main mobile action. */
+.build-button {
+  min-height: 40px;
+  padding: 0 12px;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  color: var(--colour-ink);
+  background: rgba(40, 44, 34, 0.7);
+  border: 1px solid var(--colour-panel-edge);
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.build-button:focus-visible,
+.placement-bar button:focus-visible {
+  outline: 2px solid var(--colour-accent);
+  outline-offset: 2px;
+}
+
+.build-button.is-active {
+  color: var(--colour-accent);
+  border-color: rgba(201, 162, 39, 0.6);
+}
+
+/*
+ * Placement controls. Deliberately a confirm/cancel pair rather than
+ * tap-to-place: the brief requires that placement never demand precise
+ * tapping, so the player frames the ghost with the camera and commits.
+ */
+.placement-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--touch-target);
+  padding: 0 12px;
+  background: var(--colour-panel);
+  border: 1px solid rgba(201, 162, 39, 0.4);
+  border-radius: 6px;
+  backdrop-filter: blur(6px);
+}
+
+.placement-bar[hidden] {
+  display: none;
+}
+
+.placement-bar__label {
+  font-size: 0.9rem;
+}
+
+.placement-bar__hint {
+  font-size: 0.72rem;
+  font-style: italic;
+  color: #c98a6a;
+}
+
+.placement-bar__hint:empty {
+  display: none;
+}
+
+.placement-bar button {
+  min-height: 38px;
+  min-width: 76px;
+  padding: 0 14px;
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.placement-bar__confirm {
+  color: #0f120c;
+  background: var(--colour-accent);
+  border: 1px solid var(--colour-accent);
+}
+
+.placement-bar__confirm:disabled {
+  color: var(--colour-ink-dim);
+  background: rgba(90, 90, 80, 0.3);
+  border-color: var(--colour-panel-edge);
+  cursor: not-allowed;
+}
+
+.placement-bar__cancel {
+  color: var(--colour-ink-dim);
+  background: transparent;
+  border: 1px solid var(--colour-panel-edge);
 }
 
 .speed-controls {

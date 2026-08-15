@@ -36,6 +36,21 @@ const TERRAIN_COLOURS: Readonly<Record<TerrainType, TerrainPalette>> = {
   stone: { fill: 0x5a5750, edge: 0x4c4a44 },
 };
 
+/** Placeholder building palettes: aged timber, thatch and dark stone. */
+interface BuildingPalette {
+  readonly wall: number;
+  readonly roof: number;
+  readonly trim: number;
+}
+
+const BUILDING_COLOURS: Readonly<Record<string, BuildingPalette>> = {
+  house: { wall: 0x6b5a44, roof: 0x5a4a35, trim: 0x4a3d2c },
+  'storage-yard': { wall: 0x6b573c, roof: 0x574733, trim: 0x453824 },
+  'food-storage': { wall: 0x6a6048, roof: 0x565039, trim: 0x45402d },
+  'gatherer-hut': { wall: 0x5f6248, roof: 0x4c5039, trim: 0x3d402d },
+  woodcutter: { wall: 0x67543f, roof: 0x534431, trim: 0x423628 },
+};
+
 const TREE_TRUNK = 0x3d3227;
 const TREE_CANOPY = [0x2f4029, 0x35472d, 0x293823];
 
@@ -50,6 +65,9 @@ export const TextureKeys = {
   logPile: 'pile-logs',
   stonePile: 'pile-stone',
   storageYard: 'storage-yard',
+  building: (id: string): string => `building-${id}`,
+  site: 'construction-site',
+  ghostCell: 'ghost-cell',
   /** Frame name within the terrain atlas. */
   terrainFrame: (type: TerrainType): string => type,
   /** Frame name within the tree atlas. */
@@ -131,6 +149,28 @@ export function createPlaceholderTextures(scene: Phaser.Scene): void {
   if (!scene.textures.exists(TextureKeys.storageYard)) {
     drawStorageYard(graphics);
     graphics.generateTexture(TextureKeys.storageYard, STORAGE_WIDTH, STORAGE_HEIGHT);
+    graphics.clear();
+  }
+
+  if (!scene.textures.exists(TextureKeys.site)) {
+    drawConstructionSite(graphics);
+    graphics.generateTexture(TextureKeys.site, 128, 96);
+    graphics.clear();
+  }
+
+  if (!scene.textures.exists(TextureKeys.ghostCell)) {
+    drawGhostCell(graphics);
+    graphics.generateTexture(TextureKeys.ghostCell, TILE_WIDTH, TILE_HEIGHT);
+    graphics.clear();
+  }
+
+  for (const [id, colours] of Object.entries(BUILDING_COLOURS)) {
+    const key = TextureKeys.building(id);
+    if (scene.textures.exists(key)) {
+      continue;
+    }
+    drawBuilding(graphics, colours);
+    graphics.generateTexture(key, 128, 128);
     graphics.clear();
   }
 
@@ -441,4 +481,104 @@ function drawStorageYard(graphics: Phaser.GameObjects.Graphics): void {
   graphics.fillStyle(0xffffff, 0.06);
   graphics.fillRect(cx - 34, baseY - 26, 6, 18);
   graphics.fillRect(cx - 8, baseY - 30, 6, 22);
+}
+
+/**
+ * A placeholder building: walls, a pitched roof, a door.
+ *
+ * Anchored at the bottom centre of its footprint by the renderer, per the art
+ * bible, so the roof is free to overhang upward.
+ */
+function drawBuilding(graphics: Phaser.GameObjects.Graphics, palette: BuildingPalette): void {
+  const cx = 64;
+  const base = 118;
+
+  graphics.fillStyle(0x000000, 0.25);
+  graphics.fillEllipse(cx, base - 2, 92, 26);
+
+  // Walls: an isometric box.
+  graphics.fillStyle(palette.wall, 1);
+  graphics.beginPath();
+  graphics.moveTo(cx - 44, base - 44);
+  graphics.lineTo(cx, base - 66);
+  graphics.lineTo(cx + 44, base - 44);
+  graphics.lineTo(cx + 44, base - 12);
+  graphics.lineTo(cx, base + 10);
+  graphics.lineTo(cx - 44, base - 12);
+  graphics.closePath();
+  graphics.fillPath();
+
+  // Right face in shadow: key light comes from the upper left.
+  graphics.fillStyle(0x000000, 0.16);
+  graphics.beginPath();
+  graphics.moveTo(cx, base - 66 + 22);
+  graphics.lineTo(cx + 44, base - 44);
+  graphics.lineTo(cx + 44, base - 12);
+  graphics.lineTo(cx, base + 10);
+  graphics.closePath();
+  graphics.fillPath();
+
+  // Pitched roof.
+  graphics.fillStyle(palette.roof, 1);
+  graphics.beginPath();
+  graphics.moveTo(cx - 50, base - 46);
+  graphics.lineTo(cx, base - 86);
+  graphics.lineTo(cx + 50, base - 46);
+  graphics.lineTo(cx, base - 62);
+  graphics.closePath();
+  graphics.fillPath();
+
+  // Door.
+  graphics.fillStyle(palette.trim, 1);
+  graphics.fillRect(cx - 8, base - 30, 14, 26);
+}
+
+/** A half-built frame: posts and a partial floor. */
+function drawConstructionSite(graphics: Phaser.GameObjects.Graphics): void {
+  const cx = 64;
+  const base = 86;
+
+  graphics.fillStyle(0x4a3f30, 0.85);
+  graphics.beginPath();
+  graphics.moveTo(cx, base - 24);
+  graphics.lineTo(cx + 48, base);
+  graphics.lineTo(cx, base + 24);
+  graphics.lineTo(cx - 48, base);
+  graphics.closePath();
+  graphics.fillPath();
+
+  graphics.fillStyle(0x7a6647, 1);
+  for (const [px, py] of [
+    [cx, base - 24],
+    [cx + 48, base],
+    [cx, base + 24],
+    [cx - 48, base],
+  ] as const) {
+    graphics.fillRect(px - 3, py - 30, 6, 30);
+  }
+
+  // A cross-beam, so it reads as a frame rather than four posts.
+  graphics.lineStyle(4, 0x7a6647, 1);
+  graphics.beginPath();
+  graphics.moveTo(cx - 48, base - 26);
+  graphics.lineTo(cx, base - 50);
+  graphics.lineTo(cx + 48, base - 26);
+  graphics.strokePath();
+}
+
+/** One cell of the placement ghost. Tinted green or red by the renderer. */
+function drawGhostCell(graphics: Phaser.GameObjects.Graphics): void {
+  const halfWidth = TILE_WIDTH / 2;
+  const halfHeight = TILE_HEIGHT / 2;
+
+  graphics.fillStyle(0xffffff, 0.3);
+  graphics.beginPath();
+  graphics.moveTo(halfWidth, 1);
+  graphics.lineTo(TILE_WIDTH - 1, halfHeight);
+  graphics.lineTo(halfWidth, TILE_HEIGHT - 1);
+  graphics.lineTo(1, halfHeight);
+  graphics.closePath();
+  graphics.fillPath();
+  graphics.lineStyle(2, 0xffffff, 0.9);
+  graphics.strokePath();
 }

@@ -11,9 +11,19 @@
  * work and runs whatever it is handed.
  */
 
+import type { ResourceId } from '@/data/resources';
 import type { GridPoint } from '@/shared/types/geometry';
 
-export type JobType = 'move-to' | 'chop-tree' | 'gather-stone' | 'haul';
+/**
+ * Where a haul picks its load up from.
+ *
+ * Both exist because the two directions of the economy are different: gathered
+ * resources come off the ground into a yard, and construction materials come
+ * out of a yard to a site.
+ */
+export type HaulSource = 'pile' | 'storage';
+
+export type JobType = 'move-to' | 'chop-tree' | 'gather-stone' | 'haul' | 'build';
 
 /**
  * Which leg of a multi-stage job is being done.
@@ -67,6 +77,10 @@ export interface Job {
   stage: JobStage;
   /** Where a hauled load is going. `null` for jobs that deliver nothing. */
   deliverTo: GridPoint | null;
+  /** Where a haul collects from. `null` for jobs that carry nothing. */
+  haulSource: HaulSource | null;
+  /** Which resource a storage-sourced haul should take. */
+  haulResource: ResourceId | null;
 }
 
 /** How long each kind of work takes, in ticks. Balance comes later. */
@@ -76,6 +90,8 @@ export const JOB_WORK_TICKS: Readonly<Record<JobType, number>> = {
   'gather-stone': 30,
   // Hauling costs travel, not labour: picking up and setting down are instant.
   haul: 0,
+  // Overridden per building from its definition when the job is created.
+  build: 100,
 };
 
 export function isFinished(job: Job): boolean {

@@ -17,7 +17,8 @@
  */
 
 import type { GridPoint } from '@/shared/types/geometry';
-import { JOB_WORK_TICKS, isClaimable, type Job, type JobType } from './Job';
+import type { ResourceId } from '@/data/resources';
+import { JOB_WORK_TICKS, isClaimable, type HaulSource, type Job, type JobType } from './Job';
 
 export interface JobManagerStats {
   readonly total: number;
@@ -34,6 +35,10 @@ export interface CreateJobOptions {
   readonly targetEntityId?: number | null;
   /** Where a hauled load should be delivered. */
   readonly deliverTo?: GridPoint | null;
+  /** Overrides the default work time for this job type. */
+  readonly workTicks?: number;
+  readonly haulSource?: HaulSource;
+  readonly haulResource?: ResourceId;
 }
 
 export class JobManager {
@@ -109,9 +114,11 @@ export class JobManager {
       targetEntityId: entityId,
       assignedVillager: null,
       state: 'available',
-      workRemaining: JOB_WORK_TICKS[options.type],
+      workRemaining: options.workTicks ?? JOB_WORK_TICKS[options.type],
       stage: options.type === 'haul' ? 'collect' : 'work',
       deliverTo: options.deliverTo ?? null,
+      haulSource: options.type === 'haul' ? (options.haulSource ?? 'pile') : null,
+      haulResource: options.haulResource ?? null,
     };
 
     this.nextId += 1;

@@ -28,6 +28,8 @@ import type { InputIntentSink } from '@/input/types';
 import { gridToScene, isInsideGrid, sceneToGrid } from '@/shared/math/isometric';
 import type { GridPoint, ScreenPoint } from '@/shared/types/geometry';
 import type { TerrainType } from '@/data/terrain';
+import type { BuildingId } from '@/data/buildings';
+import type { PlacementCheck } from '@/simulation/buildings/BuildingRegistry';
 
 /** Per-frame statistics surfaced to the HUD and debug overlay. */
 export interface FrameStats {
@@ -86,6 +88,22 @@ export interface GameContext {
   designateSelectedTree(): boolean;
   /** Cancels the selected tree's felling order. */
   cancelSelectedDesignation(): boolean;
+
+  /** The building being placed, or `null` when not in placement mode. */
+  readonly placement: PlacementState | null;
+  /** Increments whenever placement state changes. */
+  readonly placementVersion: number;
+  beginPlacement(buildingId: BuildingId): void;
+  cancelPlacement(): void;
+  /** Commits the ghost. Returns `false` when the spot is not valid. */
+  confirmPlacement(): boolean;
+}
+
+/** Where the placement ghost is and whether it may be committed. */
+export interface PlacementState {
+  readonly buildingId: BuildingId;
+  readonly origin: GridPoint;
+  readonly check: PlacementCheck;
 }
 
 export interface GameOptions {
@@ -102,6 +120,8 @@ export class Game implements GameContext, InputIntentSink {
   private simulationMs = 0;
   private currentSelection: Selection | null = null;
   private selectionChanges = 0;
+  private currentPlacement: PlacementState | null = null;
+  private placementChanges = 0;
 
   constructor(options: GameOptions = {}) {
     const seed = options.seed ?? DEFAULT_WORLD_SEED;
@@ -146,6 +166,73 @@ export class Game implements GameContext, InputIntentSink {
     return this.selectionChanges;
   }
 
+  public get placement(): PlacementState | null {
+    return this.currentPlacement;
+  }
+
+  public get placementVersion(): number {
+    return this.placementChanges;
+  }
+
+  /**
+   * Enters placement mode, with the ghost in the middle of the view.
+   *
+   * Starting it centred rather than under the finger matters on touch: the
+   * player then drags the *camera* to position the ghost, so the building is
+   * never hidden beneath their own hand.
+   */
+  public beginPlacement(buildingId: BuildingId): void {
+    this.currentPlacement = this.describePlacement(buildingId, this.viewCentreCell());
+    this.placementChanges += 1;
+  }
+
+  public cancelPlacement(): void {
+    this.currentPlacement = null;
+    this.placementChanges += 1;
+  }
+
+  public confirmPlacement(): boolean {
+    const placement = this.currentPlacement;
+    if (!placement || !placement.check.ok) {
+      return false;
+    }
+
+    const placed = this.simulation.placeBuilding(placement.buildingId, placement.origin);
+    if (!placed) {
+      return false;
+    }
+
+    this.currentPlacement = null;
+    this.placementChanges += 1;
+    return true;
+  }
+
+  /** Keeps the ghost under the middle of the view as the camera moves. */
+  public updatePlacementGhost(): void {
+    const placement = this.currentPlacement;
+    if (!placement) {
+      return;
+    }
+
+    const origin = this.viewCentreCell();
+    if (origin.gx === placement.origin.gx && origin.gy === placement.origin.gy) {
+      return;
+    }
+
+    this.currentPlacement = this.describePlacement(placement.buildingId, origin);
+    this.placementChanges += 1;
+  }
+
+  private describePlacement(buildingId: BuildingId, origin: GridPoint): PlacementState {
+    return { buildingId, origin, check: this.simulation.canPlaceBuilding(buildingId, origin) };
+  }
+
+  /** The grid cell at the centre of the viewport. */
+  private viewCentreCell(): GridPoint {
+    const view = this.camera.view;
+    return sceneToGrid({ px: view.centreX, py: view.centreY });
+  }
+
   public get tickAlpha(): number {
     // Paused, nothing is in flight, so snap to the settled position rather
     // than freezing mid-stride between two cells.
@@ -169,6 +256,7 @@ export class Game implements GameContext, InputIntentSink {
     this.simulationMs = performance.now() - startedAt;
 
     this.camera.update(deltaSeconds);
+    this.updatePlacementGhost();
   }
 
   public stats(): FrameStats {

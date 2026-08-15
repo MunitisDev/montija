@@ -1,10 +1,14 @@
 /**
  * The world: terrain, and everything standing on it.
  *
- * Status: Phase 5. Holds the terrain, the navigation grid, the trees and the
- * resources lying on the ground.
- * Occupancy, buildings and resource nodes join in later phases, following the
- * structure in the project brief:
+ * Status: Phase 6. Holds the terrain, the navigation grid, the trees, the
+ * resources lying on the ground and the buildings.
+ *
+ * There is no separate occupancy grid: a building blocks its cells in the
+ * navigation grid when placed. A second grid holding the same truth is a second
+ * thing to keep in sync, and this game has no need for "occupied but walkable".
+ *
+ * Following the structure in the project brief:
  *
  * ```text
  * World
@@ -12,8 +16,7 @@
  *  ├── NavigationGrid   implemented
  *  ├── TreeRegistry     implemented
  *  ├── ResourcePiles    implemented
- *  ├── OccupancyGrid    Phase 6
- *  ├── Buildings        Phase 6
+ *  ├── Buildings        implemented (footprints block navigation directly)
  *  └── Villagers        owned by the Simulation, not the World
  * ```
  */
@@ -22,6 +25,7 @@ import { LOGS_PER_TREE, STONE_PER_DEPOSIT } from '@/data/resources';
 import { terrainDefinition, type TerrainType } from '@/data/terrain';
 import { gridBoundsToScene } from '@/shared/math/isometric';
 import type { GridPoint, SceneBounds } from '@/shared/types/geometry';
+import { BuildingRegistry } from '@/simulation/buildings/BuildingRegistry';
 import { ResourcePileRegistry } from '@/simulation/resources/ResourcePile';
 import { NavigationGrid } from './NavigationGrid';
 import type { TerrainGrid } from './TerrainGrid';
@@ -33,6 +37,7 @@ export class World {
   public readonly navigation: NavigationGrid;
   public readonly trees: TreeRegistry;
   public readonly piles = new ResourcePileRegistry();
+  public readonly buildings = new BuildingRegistry();
 
   constructor(options: { width: number; height: number; seed: number }) {
     const generated = generateWorld(options);
@@ -68,7 +73,7 @@ export class World {
     return this.navigation.isWalkable(cell.gx, cell.gy);
   }
 
-  /** `true` when a building could occupy this cell. Ignores occupancy for now. */
+  /** `true` when the terrain here would take a building. */
   public isBuildable(cell: GridPoint): boolean {
     if (!this.terrain.contains(cell.gx, cell.gy)) {
       return false;

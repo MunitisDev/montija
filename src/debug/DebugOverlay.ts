@@ -59,6 +59,8 @@ export class DebugOverlay {
       `jobs taken   ${snapshot.jobsAssigned}`,
       `jobs done    ${snapshot.jobsCompleted}`,
       `piles        ${snapshot.pileCount}`,
+      `buildings    ${snapshot.buildingCount} (${snapshot.sitesUnderConstruction} building)`,
+      `housing      ${snapshot.housingCapacity}`,
       `logs         ${snapshot.stored.logs} stored, ${snapshot.loose.logs} loose`,
       `stone        ${snapshot.stored.stone} stored, ${snapshot.loose.stone} loose`,
       `path reqs    ${snapshot.pathRequests} (${snapshot.pathFailures} failed)`,

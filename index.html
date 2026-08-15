@@ -71,9 +71,19 @@
               </button>
             </div>
 
-            <!-- Build menu placeholder: populated from data in Phase 6. -->
-            <div class="build-bar" aria-label="Build menu">
-              <span class="build-bar__hint">Build menu arrives in Phase 6</span>
+            <!-- Build menu. Buttons are generated from data/buildings.ts. -->
+            <div class="build-bar" data-hud="build-bar" aria-label="Build menu"></div>
+
+            <!-- Placement controls, shown only while positioning a building. -->
+            <div class="placement-bar" data-hud="placement" hidden>
+              <span class="placement-bar__label" data-hud="placement-label"></span>
+              <span class="placement-bar__hint" data-hud="placement-hint"></span>
+              <button type="button" class="placement-bar__confirm" data-hud="placement-confirm">
+                Place
+              </button>
+              <button type="button" class="placement-bar__cancel" data-hud="placement-cancel">
+                Cancel
+              </button>
             </div>
           </div>
 

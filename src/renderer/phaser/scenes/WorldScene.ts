@@ -14,6 +14,7 @@ import { TerrainRenderer } from '@/renderer/phaser/terrain/TerrainRenderer';
 import { VillagerRenderer } from '@/renderer/phaser/entities/VillagerRenderer';
 import { DesignationRenderer } from '@/renderer/phaser/entities/DesignationRenderer';
 import { ResourceRenderer } from '@/renderer/phaser/entities/ResourceRenderer';
+import { BuildingRenderer } from '@/renderer/phaser/entities/BuildingRenderer';
 import { TextureKeys } from '@/renderer/phaser/terrain/tileTextures';
 import { RenderLayer, depthFor } from '@/renderer/phaser/sorting';
 import { gridToScene } from '@/shared/math/isometric';
@@ -30,6 +31,7 @@ export class WorldScene extends Phaser.Scene {
   private villagerRenderer!: VillagerRenderer;
   private designationRenderer!: DesignationRenderer;
   private resourceRenderer!: ResourceRenderer;
+  private buildingRenderer!: BuildingRenderer;
   private selectionMarker!: Phaser.GameObjects.Image;
   /** Last selection version drawn, so the marker only moves when it changes. */
   private renderedSelectionVersion = -1;
@@ -51,6 +53,7 @@ export class WorldScene extends Phaser.Scene {
     this.villagerRenderer = new VillagerRenderer(this);
     this.designationRenderer = new DesignationRenderer(this);
     this.resourceRenderer = new ResourceRenderer(this);
+    this.buildingRenderer = new BuildingRenderer(this);
 
     this.selectionMarker = this.add
       .image(0, 0, TextureKeys.selection)
@@ -64,6 +67,7 @@ export class WorldScene extends Phaser.Scene {
       this.villagerRenderer.destroy();
       this.designationRenderer.destroy();
       this.resourceRenderer.destroy();
+      this.buildingRenderer.destroy();
     });
 
     this.cameraBinding.sync();
@@ -88,6 +92,8 @@ export class WorldScene extends Phaser.Scene {
     );
     // Cheap: returns immediately unless a tree was felled since last frame.
     this.terrainRenderer.syncTrees(this.context.simulation.world);
+    this.buildingRenderer.sync(this.context.simulation.world.buildings);
+    this.buildingRenderer.syncGhost(this.context.placement, this.context.placementVersion);
     this.syncSelectionMarker();
   }
 

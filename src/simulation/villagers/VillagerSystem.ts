@@ -277,6 +277,7 @@ export class VillagerSystem {
       }
     } else {
       job.workRemaining -= 1;
+      this.recordBuildProgress(job);
       if (job.workRemaining > 0) {
         return;
       }
@@ -293,6 +294,18 @@ export class VillagerSystem {
     return job.stage === 'deliver' ? job.deliverTo : job.target;
   }
 
+  /** Ticks of build progress are recorded on the building as well as the job. */
+  private recordBuildProgress(job: Job): void {
+    if (job.type !== 'build' || job.targetEntityId === null) {
+      return;
+    }
+    const building = this.world.buildings.getById(job.targetEntityId);
+    if (building && building.buildTicksRemaining > 0) {
+      building.buildTicksRemaining -= 1;
+      this.world.buildings.markChanged();
+    }
+  }
+
   /** Applies a completed job's effect on the world. */
   private finishJob(job: Job): void {
     switch (job.type) {
@@ -304,6 +317,14 @@ export class VillagerSystem {
       case 'gather-stone':
         this.world.mineStone(job.target);
         break;
+      case 'build': {
+        const building =
+          job.targetEntityId === null ? null : this.world.buildings.getById(job.targetEntityId);
+        if (building) {
+          this.world.buildings.complete(this.world, building);
+        }
+        break;
+      }
       case 'haul':
       case 'move-to':
         // Handled by the haul state machine, or arriving is the whole job.
@@ -323,20 +344,13 @@ export class VillagerSystem {
    */
   private advanceHaul(villager: Villager, job: Job): boolean {
     if (job.stage === 'collect') {
-      const pile =
-        job.targetEntityId === null ? null : this.world.piles.getById(job.targetEntityId);
+      const loaded =
+        job.haulSource === 'storage'
+          ? this.loadFromStorage(villager, job)
+          : this.loadFromPile(villager, job);
 
-      if (!pile || pile.isEmpty) {
-        // Somebody got there first, or it was cleared. Nothing to carry.
-        return true;
-      }
-
-      const carryLimit = resourceDefinition(pile.resource).carryLimit;
-      const room = Math.min(carryLimit, villager.inventory.freeSpace);
-      pile.inventory.transfer(villager.inventory, pile.resource, room);
-      this.world.piles.removeIfEmpty(pile.id);
-
-      if (villager.inventory.isEmpty) {
+      if (!loaded) {
+        // Somebody got there first, or the stock ran out. Nothing to carry.
         return true;
       }
 
@@ -345,11 +359,14 @@ export class VillagerSystem {
       return false;
     }
 
-    // Delivering: put down whatever the yard will take.
-    const storage = this.storageForCell(job.deliverTo);
-    if (storage) {
-      villager.inventory.transferAll(storage.inventory);
+    // Delivering. A construction site takes materials the same way a yard takes
+    // goods — same inventories, same transfer, so "villagers physically deliver
+    // construction materials" is enforced rather than merely intended.
+    const destination = this.deliveryInventory(job.deliverTo);
+    if (destination) {
+      villager.inventory.transferAll(destination);
       this.storages.markChanged();
+      this.world.buildings.markChanged();
     }
 
     if (!villager.inventory.isEmpty) {
@@ -364,15 +381,83 @@ export class VillagerSystem {
     return true;
   }
 
-  private storageForCell(cell: GridPoint | null) {
+  /** Loads from a pile on the ground. Returns `false` when there was nothing. */
+  private loadFromPile(villager: Villager, job: Job): boolean {
+    const pile = job.targetEntityId === null ? null : this.world.piles.getById(job.targetEntityId);
+    if (!pile || pile.isEmpty) {
+      return false;
+    }
+
+    const carryLimit = resourceDefinition(pile.resource).carryLimit;
+    const room = Math.min(carryLimit, villager.inventory.freeSpace);
+    pile.inventory.transfer(villager.inventory, pile.resource, room);
+    this.world.piles.removeIfEmpty(pile.id);
+
+    return !villager.inventory.isEmpty;
+  }
+
+  /**
+   * Loads construction materials out of a storage yard.
+   *
+   * Takes only what the site still needs, so a builder does not strip the yard
+   * and then carry the surplus back again.
+   */
+  private loadFromStorage(villager: Villager, job: Job): boolean {
+    if (!job.haulResource || !job.deliverTo) {
+      return false;
+    }
+
+    const storage = this.storages.all.find(
+      (candidate) => candidate.cell.gx === job.target.gx && candidate.cell.gy === job.target.gy,
+    );
+    if (!storage) {
+      return false;
+    }
+
+    const site = [...this.world.buildings.all].find(
+      (building) =>
+        !building.isComplete &&
+        building.accessCell.gx === job.deliverTo?.gx &&
+        building.accessCell.gy === job.deliverTo?.gy,
+    );
+    const needed = site ? site.stillNeeds(job.haulResource) : 0;
+    if (needed <= 0) {
+      return false;
+    }
+
+    const carryLimit = resourceDefinition(job.haulResource).carryLimit;
+    const room = Math.min(carryLimit, villager.inventory.freeSpace, needed);
+    storage.inventory.transfer(villager.inventory, job.haulResource, room);
+    this.storages.markChanged();
+
+    return !villager.inventory.isEmpty;
+  }
+
+  /**
+   * What accepts a delivery at a cell.
+   *
+   * Construction sites are checked first: a site standing next to a yard should
+   * receive the materials that were routed to it.
+   */
+  private deliveryInventory(cell: GridPoint | null) {
     if (!cell) {
       return null;
     }
-    return (
-      this.storages.all.find(
-        (storage) => storage.cell.gx === cell.gx && storage.cell.gy === cell.gy,
-      ) ?? null
+
+    for (const building of this.world.buildings.all) {
+      if (
+        !building.isComplete &&
+        building.accessCell.gx === cell.gx &&
+        building.accessCell.gy === cell.gy
+      ) {
+        return building.materials;
+      }
+    }
+
+    const storage = this.storages.all.find(
+      (candidate) => candidate.cell.gx === cell.gx && candidate.cell.gy === cell.gy,
     );
+    return storage?.inventory ?? null;
   }
 
   /**
