@@ -17,6 +17,7 @@ export const EN = {
   'hud.logs': 'Logs',
   'hud.firewood': 'Firewood',
   'hud.stone': 'Stone',
+  'hud.looseHint': 'on the ground, waiting to be carried in',
 
   'season.spring': 'Spring',
   'season.summer': 'Summer',
@@ -74,8 +75,10 @@ export const EN = {
   'placement.occupied': 'something is already here',
   'placement.treesInTheWay': 'clear the trees first',
 
-  'warning.foodLow': 'Food is running out — build a Gatherer Hut',
+  'warning.foodLow': 'Nobody is gathering food — build a Gatherer Hut',
+  'warning.needMoreHuts': 'One hut cannot feed everyone — build another Gatherer Hut',
   'warning.firewoodLow': 'No firewood for the winter — build a Woodcutter',
+  'warning.firewoodShort': 'Not enough firewood to last the winter',
   'warning.starving': 'People are starving',
 
   'app.rotate': 'Rotate your device for the best view',
@@ -91,6 +94,7 @@ export const ES: Messages = {
   'hud.logs': 'Troncos',
   'hud.firewood': 'Leña',
   'hud.stone': 'Piedra',
+  'hud.looseHint': 'en el suelo, esperando a que lo lleven al almacén',
 
   'season.spring': 'Primavera',
   'season.summer': 'Verano',
@@ -149,8 +153,10 @@ export const ES: Messages = {
   'placement.occupied': 'ya hay algo aquí',
   'placement.treesInTheWay': 'tala los árboles primero',
 
-  'warning.foodLow': 'Se acaba la comida: construye una Cabaña de recolección',
+  'warning.foodLow': 'Nadie recolecta comida: construye una Cabaña de recolección',
+  'warning.needMoreHuts': 'Una cabaña no alimenta a todos: construye otra Cabaña de recolección',
   'warning.firewoodLow': 'No hay leña para el invierno: construye un Leñador',
+  'warning.firewoodShort': 'No hay leña suficiente para pasar el invierno',
   'warning.starving': 'La gente está pasando hambre',
 
   'app.rotate': 'Gira el dispositivo para ver mejor',

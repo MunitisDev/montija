@@ -108,6 +108,9 @@ export class Hud {
       // last load had already been carried in.
       if (this.lastRenderedLoose.get(resource) !== loose) {
         element.dataset['loose'] = loose > 0 ? `+${loose}` : '';
+        // Said in words as well as symbols: "Food 0 +50" is alarming until you
+        // know the 50 is real and merely still in the field.
+        element.title = loose > 0 ? `+${loose} ${this.i18n.t('hud.looseHint')}` : '';
         this.lastRenderedLoose.set(resource, loose);
       }
     }

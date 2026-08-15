@@ -8,9 +8,15 @@ The repository must remain buildable and runnable after every phase.
 
 ## Where the project is
 
-**Phase 4 complete.** The settlement now does work. The player marks trees, villagers claim them,
-walk over and fell them, clearing the ground. Nothing is yet _produced_ — logs do not exist as
-physical resources until Phase 5.
+**Phases 0–10 complete.** The vertical slice is playable end to end: the player moves the camera,
+marks trees and stone, places buildings that villagers physically construct, and runs an economy that
+must be stockpiled through a winter capable of killing it. The game saves and loads, speaks English
+and Spanish, and needs neither mouse nor keyboard.
+
+**Phase 11 (performance) is not started.** No benchmark scenarios exist, so no villager-count claim
+is made beyond the 10 the settlement starts with.
+
+Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 
 | Phase | Name                  | Status          |
 | ----- | --------------------- | --------------- |
