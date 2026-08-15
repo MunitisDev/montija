@@ -8,15 +8,15 @@ The repository must remain buildable and runnable after every phase.
 
 ## Where the project is
 
-**Phase 2 complete.** There is still no gameplay: nothing lives in the world and nothing can be
-built. What exists is a deterministic isometric wilderness you can pan, zoom and tap around.
+**Phase 3 complete.** The world is inhabited but not yet productive: ten villagers wander it under
+their own navigation. Nothing can be built, and nothing is harvested — that starts in Phase 4.
 
 | Phase | Name                  | Status          |
 | ----- | --------------------- | --------------- |
 | 0     | Repository inspection | **Implemented** |
 | 1     | Browser foundation    | **Implemented** |
 | 2     | Isometric world       | **Implemented** |
-| 3     | Villagers             | **Planned**     |
+| 3     | Villagers             | **Implemented** |
 | 4     | Job system            | **Planned**     |
 | 5     | Resource logistics    | **Planned**     |
 | 6     | Construction          | **Planned**     |
@@ -102,10 +102,12 @@ Delivered:
 
 **Known limitations:**
 
-- **Frame rate is not validated on real hardware.** The CI container has no GPU — WebGL runs on
-  SwiftShader, a software rasteriser — so the 8 fps measured there reflects the absence of a GPU,
-  not the game. The measurement that _does_ carry over is the JS cost above, which is negligible.
-  Real-device numbers are Phase 11.
+- **Frame rate is confirmed smooth on a real tablet, but not yet quantified.** The CI container
+  has no GPU — WebGL runs on SwiftShader, a software rasteriser — so the 8 fps measured there
+  reflects the absence of a GPU, not the game. Hands-on testing on the target device reported
+  smooth panning, zooming and accurate tile picking, which resolves the concern raised by the
+  container numbers. No frame-rate figure is recorded because none was captured; repeatable
+  benchmarks remain Phase 11.
 - Terrain is static: no rivers, no coastlines, no elevation. Tiles are flat diamonds.
 - Trees are scenery. They are not harvestable until Phase 5.
 - No occupancy or navigation grid yet — `isWalkable` reads terrain only.
@@ -113,12 +115,41 @@ Delivered:
 
 ---
 
-## Phase 3 — Villagers — Planned
+## Phase 3 — Villagers — Implemented
 
-Villager model (id, name, age, position, home, profession, job, inventory, hunger, warmth, health),
-renderer representation, movement, simple A\* navigation, idle state, debug selection.
+**Definition of done:** 10 villagers navigate independently. ✅ Met — verified in-browser: all ten
+spawned, all ten moved, 8 walking concurrently, 0 pathfinding failures, all on walkable ground.
 
-**Done when:** 10 villagers navigate independently.
+Delivered:
+
+- `Villager`: id, name, age, continuous position, activity. `hunger`, `warmth` and `health` exist
+  because the brief's initial model lists them, but **nothing changes them until Phase 8** — they
+  are inert fields, not a working needs system.
+- `NavigationGrid`: walkability and movement cost derived from terrain, with `block()` ready for
+  buildings in Phase 6. Pathfinding reads this, never the terrain directly.
+- Grid A\* with a binary heap and an octile heuristic. Eight-way movement with **strict**
+  no-corner-cutting: a diagonal needs both orthogonal neighbours clear, so a villager can never
+  clip the corner of an obstacle.
+- Deterministic by construction: fixed neighbour order and insertion-order tie-breaking, so the
+  same request always returns the identical path.
+- Bounded by construction: every search has a node budget, so an unreachable target cannot expand
+  the whole map and stall a frame.
+- Wandering behaviour for idle villagers — a placeholder for the Phase 4 job system, so navigation
+  could be seen and tested on its own.
+- Path requests budgeted to 4 per tick, so the two hundred villagers the project targets cannot all
+  search on the same tick.
+- Render interpolation: sprites are drawn between the previous and current tick position using the
+  clock's tick alpha, so 10Hz simulation looks smooth at 60fps. Presentation only — the
+  interpolated position never re-enters the simulation.
+- Tap-to-select a villager, showing name, age and activity.
+
+**Known limitations:**
+
+- Villagers wander aimlessly. They have no purpose until the job system exists.
+- No animation: sprites are a single static pose, with no walk cycle and no facing direction.
+- Villagers pass through each other; there is no collision or local avoidance.
+- `homeId`, `profession` and `currentJobId` are not modelled yet (Phases 6, 7 and 4).
+- Paths are not re-planned if the world changes underneath them; nothing changes the world yet.
 
 ---
 

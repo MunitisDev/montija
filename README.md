@@ -11,9 +11,9 @@ Build a small settlement in an unforgiving wilderness, and help its people survi
 Inspired by deep settlement simulation games, but entirely original — no assets, code, text, UI or
 balance taken from any existing commercial game.
 
-**Status: Phase 2 of 11 — isometric world.** There is no gameplay yet: nothing lives in the world
-and nothing can be built. What exists is a deterministic isometric wilderness you can pan, zoom and
-tap around. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for what is built and what is not.
+**Status: Phase 3 of 11 — villagers.** Ten villagers now wander a deterministic isometric
+wilderness under their own A\* navigation. There is still no gameplay: nothing can be built and
+nothing is harvested. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for what is built and what is not.
 
 ## Requirements
 

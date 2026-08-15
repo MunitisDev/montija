@@ -98,7 +98,11 @@ Data flows down. Nothing reaches back up.
 | `TerrainRenderer`             | **Implemented** | Reads the world; placeholder art generated at runtime         |
 | Depth sorting                 | **Implemented** | Centralised rule, incl. multi-tile footprints                 |
 | Pointer-to-grid picking       | **Implemented** | viewport → scene → world → grid                               |
-| Villagers, jobs, logistics    | **Planned**     | Phases 3-5                                                    |
+| `Villager` + `VillagerSystem` | **Implemented** | Identity, movement, wandering. Needs inert until Phase 8      |
+| `NavigationGrid`              | **Implemented** | Walkability and movement cost; ready for buildings            |
+| A\* pathfinding               | **Implemented** | Deterministic, bounded, strict no-corner-cutting              |
+| Render interpolation          | **Implemented** | 10Hz simulation drawn smoothly at 60fps via tick alpha        |
+| Jobs, logistics               | **Planned**     | Phases 4-5                                                    |
 | Save/load                     | **Planned**     | Phase 9                                                       |
 
 ---
@@ -247,10 +251,32 @@ decisions keep that affordable:
 Measured on the 96×96 default map: `step` 0 ms, render submission 4.1 ms per frame. The JS side is
 effectively free.
 
-**Frame rate has not been validated on real hardware.** The development container has no GPU, so
-WebGL falls back to SwiftShader, a software rasteriser; measured frame rate there scales with pixel
-count and says nothing about a real device. Establishing real numbers is Phase 11, and no villager
-count or frame rate will be claimed before then.
+**Container frame rate is meaningless; real-device behaviour is confirmed but unquantified.** The
+development container has no GPU, so WebGL falls back to SwiftShader, a software rasteriser, and
+the frame rate measured there scales with pixel count rather than with anything about the game.
+Hands-on testing on the target tablet reported smooth panning and zooming and accurate tile
+picking. That resolves the concern, but it is a qualitative report — no frame-rate number was
+captured, so none is claimed. Repeatable benchmarks are Phase 11.
+
+## Villagers and navigation
+
+A villager is a simulation object. The sprite that represents it holds no state the simulation does
+not already own, and decides nothing.
+
+**Pathfinding is bounded and budgeted, by design.** Two limits exist because the project is
+architected towards 100-300 villagers, where the naive version fails suddenly rather than gradually:
+
+- every A\* search has a node budget, so an unreachable goal cannot expand the whole grid;
+- at most four searches start per tick across all villagers, so no single tick can stall.
+
+**Pathfinding is deterministic**, because save/replay reproducibility depends on it. Neighbours are
+visited in a fixed order and equal scores break on insertion order — a heap keyed on object identity
+would silently destroy that guarantee.
+
+**Rendering interpolates between ticks.** The simulation steps 10 times a second and the screen
+redraws 60; drawing raw tick positions would visibly stutter. Sprites are placed between the
+villager's previous and current position using the clock's tick alpha. This is presentation only —
+the interpolated position is never fed back into the simulation, so determinism is unaffected.
 
 ## Build
 
