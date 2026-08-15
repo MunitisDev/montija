@@ -33,6 +33,7 @@ export interface DayRecord {
   readonly foodEaten: number;
   readonly foodShortfall: number;
   readonly firewoodShortfall: number;
+  readonly spoiledFood: number;
   readonly lowestHunger: number;
   readonly lowestWarmth: number;
   readonly lowestHealth: number;
@@ -131,6 +132,7 @@ export function playtest(options: {
       foodEaten: snapshot.lastDay.foodEaten,
       foodShortfall: snapshot.lastDay.foodShortfall,
       firewoodShortfall: snapshot.lastDay.firewoodShortfall,
+      spoiledFood: snapshot.spoiled.lost.food ?? 0,
       lowestHunger: lowestNeed(simulation, 'hunger'),
       lowestWarmth: lowestNeed(simulation, 'warmth'),
       lowestHealth: snapshot.lowestHealth,

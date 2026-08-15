@@ -181,14 +181,21 @@ describe('winter in the running simulation', () => {
     expect(simulation.snapshot().deaths).toBeGreaterThan(0);
   });
 
-  it('a stocked settlement survives the same winter', () => {
+  it('a settlement stocked in a larder survives the same winter', () => {
     const simulation = new Simulation(OPTIONS);
     const yard = simulation.storages.all[0]!;
-    // The founding yard holds 2000 units in total, shared across resources, so
-    // stock both deliberately rather than filling it with one and starving the
-    // settlement of the other.
-    expect(yard.inventory.add('food', 600)).toBe(600);
+    // Firewood keeps anywhere; food does not, so it goes somewhere built for
+    // it. The founding yard holds 2000 units shared across resources, so stock
+    // deliberately rather than filling it with one and starving the settlement
+    // of the other.
     expect(yard.inventory.add('firewood', 600)).toBe(600);
+    const larder = simulation.storages.add({
+      cell: { gx: yard.cell.gx + 2, gy: yard.cell.gy },
+      capacity: 800,
+      accepts: ['food'],
+      preservation: 0.1,
+    });
+    expect(larder.inventory.add('food', 600)).toBe(600);
     simulation.storages.markChanged();
 
     for (let tick = 1; tick <= TICKS_PER_YEAR; tick += 1) {
@@ -197,6 +204,22 @@ describe('winter in the running simulation', () => {
 
     expect(simulation.snapshot().deaths).toBe(0);
     expect(simulation.snapshot().villagerCount).toBe(10);
+  });
+
+  it('the same stock left in an open yard rots away instead', () => {
+    // The larder is not decoration: food heaped in a general yard will not last
+    // a year, however much of it there is.
+    const simulation = new Simulation(OPTIONS);
+    const yard = simulation.storages.all[0]!;
+    yard.inventory.add('food', 600);
+    yard.inventory.add('firewood', 600);
+    simulation.storages.markChanged();
+
+    for (let tick = 1; tick <= TICKS_PER_YEAR && !simulation.hasFailed; tick += 1) {
+      simulation.update(tick, TICK);
+    }
+
+    expect(simulation.snapshot().deaths).toBeGreaterThan(0);
   });
 
   it('reports the calendar in its snapshot', () => {

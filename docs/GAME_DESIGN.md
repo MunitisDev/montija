@@ -43,12 +43,12 @@ before the settlement can spend them. The HUD's totals are a cached summary of w
 physically hold, and deliberately exclude what is still lying in the field — that is what the small
 `+n` beside a resource means.
 
-| Resource | Used for                                  |
-| -------- | ----------------------------------------- |
-| Food     | eaten, one per villager per day           |
-| Logs     | construction, and split into firewood     |
-| Firewood | burned, one per villager per freezing day |
-| Stone    | construction                              |
+| Resource | Used for                                  | Keeps?                     |
+| -------- | ----------------------------------------- | -------------------------- |
+| Food     | eaten, one per villager per day           | no — 10% a day in the open |
+| Logs     | construction, and split into firewood     | indefinitely               |
+| Firewood | burned, one per villager per freezing day | indefinitely               |
+| Stone    | construction                              | indefinitely               |
 
 The settlers arrive with 120 food, 30 logs and 12 stone. The food is about twelve days' grace for
 ten villagers — enough to raise a Gatherer Hut without hurrying, and not enough to ignore.
@@ -63,14 +63,45 @@ Definitions live in `src/data/buildings.ts`; the build menu is generated from th
 | ------------ | ---------------- | ----- | ---------------------------------- |
 | House        | 8 logs, 4 stone  | —     | houses 4                           |
 | Storage Yard | 6 logs           | —     | stores logs, stone, firewood       |
-| Food Storage | 6 logs, 2 stone  | —     | stores food                        |
+| Food Storage | 6 logs, 2 stone  | —     | stores food, and keeps it          |
 | Gatherer Hut | 10 logs, 2 stone | 2     | forages food, scaled by the season |
 | Woodcutter   | 8 logs, 4 stone  | 2     | 1 log → 4 firewood                 |
 
 The settlement is founded with one storage yard already standing, holding the settlers' supplies.
-That founding yard currently accepts **every** resource, which means the Food Storage building adds
-capacity rather than being required. That is a known inconsistency with the two buildings'
-descriptions, and is listed under [Open questions](#open-questions).
+It accepts every resource, which is what a settlers' communal store would — but it is an open yard,
+and food does not keep in one. See [Spoilage](#spoilage--implemented).
+
+---
+
+## Spoilage — Implemented
+
+Food rots. It loses a tenth of itself each day in an ordinary yard or lying in the field, and a
+hundredth in a Food Storage. Timber, stone and firewood are unaffected: the same timber a year later
+is the same timber, and pretending otherwise would be busywork rather than a decision.
+
+This is what gives the Food Storage a reason to exist. Making an ordinary yard _refuse_ food would
+have done that too, but it is a wall the player cannot see: a settlement whose food had nowhere to go
+would starve beside full piles with nothing on screen explaining why. Spoilage says the same thing
+gradually and legibly, and a player who ignores it loses a stockpile rather than a settlement.
+
+Measured across a full year, with the same player building the same three huts:
+
+|                     | Food banked entering winter |
+| ------------------- | --------------------------- |
+| with a Food Storage | 189                         |
+| without one         | 93                          |
+
+Ten villagers eat 120 across a winter, so that gap is the difference between comfort and famine.
+
+Two consequences worth knowing:
+
+- **Haulers take food to the larder in preference to a nearer open yard.** Carrying food past the
+  building meant to keep it, to watch it rot somewhere closer, is not what a person would do.
+- **Because of that, a larder placed badly costs throughput.** Every load walks further. With a
+  large surplus that is easily worth it; with a settlement living hand to mouth it can cost more
+  than the spoilage saves. Where the larder goes is a real decision.
+
+Spoilage is deterministic. A settlement losing a random amount each night would be unplannable.
 
 ---
 
@@ -128,12 +159,13 @@ Measured by `tests/balance.test.ts`, which plays a full year headlessly at four 
 Because the simulation is pure TypeScript and deterministic from its seed, a year takes a fraction of
 a second, so retuning a number is a measurement rather than a five-minute stare at the screen.
 
-| The player…                         | Outcome                                    |
-| ----------------------------------- | ------------------------------------------ |
-| does nothing at all                 | everyone dead by day 25, during autumn     |
-| leaves the food supply until day 15 | everyone dead by day 48, during winter     |
-| raises one hut for ten villagers    | survives winter, but ends it at 14 health  |
-| raises two huts and stockpiles      | survives, ending winter nearly out of food |
+| The player…                         | Outcome                                            |
+| ----------------------------------- | -------------------------------------------------- |
+| does nothing at all                 | everyone dead by day 25, during autumn             |
+| leaves the food supply until day 25 | everyone dead before the hut is even finished      |
+| builds one hut at midsummer         | survives, but reaches spring starving at 40 health |
+| builds one hut for ten villagers    | survives with empty stores and hungry people       |
+| builds three huts and a larder      | survives comfortably, ending winter with food left |
 
 One Gatherer Hut feeds roughly six villagers. Ten need two, and the settlement that has one usually
 believes it has solved food — so the HUD says so explicitly rather than leaving the player to lose to
@@ -151,8 +183,8 @@ The simulation reports the single most urgent thing wrong; the HUD shows it as o
 warning at a time on purpose — the player needs to know what to do next, not everything that could
 ever go wrong.
 
-In order of precedence: people starving, nobody gathering food, one hut for too many mouths, no
-woodcutter with winter in sight, not enough firewood to last it.
+In order of precedence: people starving, nobody gathering food, one hut for too many mouths, food
+rotting with nowhere to keep it, no woodcutter with winter in sight, not enough firewood to last it.
 
 "People are starving" fires on genuine hunger rather than on a day's missed delivery. A settlement
 living hand to mouth has shortfall days routinely while nobody is any thinner, and an alarm that
@@ -162,10 +194,6 @@ cries wolf is one the player stops reading.
 
 ## Open questions
 
-- **The founding yard accepts everything**, so Food Storage is optional. Making it a proper Storage
-  Yard would give that building a purpose and match its description, but a settlement whose food had
-  nowhere to go would starve beside full piles with no warning, so it needs the guidance to land
-  first.
 - **A do-nothing settlement dies in autumn, not winter.** Defensible — doing nothing for
   twenty-five days should be fatal — but it means the first failure most players see is not the one
   the game is named for.

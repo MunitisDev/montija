@@ -11,7 +11,7 @@
  * live.
  */
 
-import type { ResourceId } from '@/data/resources';
+import { RESOURCES, type ResourceId } from '@/data/resources';
 import type { GridPoint } from '@/shared/types/geometry';
 import { Inventory } from '@/simulation/resources/Inventory';
 
@@ -21,6 +21,14 @@ export interface StorageOptions {
   readonly capacity: number;
   /** Which resources this yard will take. Empty means anything. */
   readonly accepts?: readonly ResourceId[];
+  /**
+   * How much of a perishable good's ordinary spoilage this building prevents.
+   *
+   * `1` is an open yard, which does nothing to keep food; a purpose-built
+   * larder is far lower. This is the reason to build one: food keeps wherever
+   * there is room for it, but only keeps *well* somewhere built for it.
+   */
+  readonly preservation?: number;
 }
 
 export class Storage {
@@ -28,13 +36,21 @@ export class Storage {
   /** The cell haulers walk to. */
   public readonly cell: GridPoint;
   public readonly inventory: Inventory;
+  /** Multiplier on how fast perishable goods spoil here. */
+  public readonly preservation: number;
   private readonly accepted: ReadonlySet<ResourceId> | null;
 
   constructor(options: StorageOptions) {
     this.id = options.id;
     this.cell = options.cell;
     this.inventory = new Inventory(options.capacity);
+    this.preservation = options.preservation ?? 1;
     this.accepted = options.accepts && options.accepts.length > 0 ? new Set(options.accepts) : null;
+  }
+
+  /** The resources this yard is restricted to, or `null` when it takes any. */
+  public get acceptedResources(): readonly ResourceId[] | null {
+    return this.accepted ? [...this.accepted] : null;
   }
 
   public accepts(resource: ResourceId): boolean {
@@ -88,23 +104,51 @@ export class StorageRegistry {
   }
 
   /**
-   * The nearest yard that will take a resource.
+   * The best yard to take a resource to.
    *
-   * Ties break on id so hauling destinations stay reproducible.
+   * For anything that keeps — timber, stone — this is simply the nearest.
+   * For something that spoils it is the yard that will *keep* it, even if that
+   * means walking further: carrying food past the larder to the nearer open
+   * yard, and watching it rot there, is not what a person would do, and the
+   * player who built the larder would rightly read it as the game ignoring
+   * them.
+   *
+   * Ties break on distance and then on id, so hauling stays reproducible.
    */
   public findNearestAccepting(from: GridPoint, resource: ResourceId): Storage | null {
+    const perishable = RESOURCES[resource].spoilsPerDay > 0;
+
     let best: Storage | null = null;
     let bestDistance = Number.POSITIVE_INFINITY;
+    let bestPreservation = Number.POSITIVE_INFINITY;
 
     for (const storage of this.storages) {
       if (!storage.accepts(resource)) {
         continue;
       }
+
       const distance = Math.hypot(storage.cell.gx - from.gx, storage.cell.gy - from.gy);
-      if (
-        distance < bestDistance ||
-        (distance === bestDistance && best !== null && storage.id < best.id)
-      ) {
+      // Only perishables care where they end up; everything else is indifferent,
+      // so its "preservation" is held equal and distance decides as before.
+      const preservation = perishable ? storage.preservation : 0;
+
+      if (best === null) {
+        best = storage;
+        bestDistance = distance;
+        bestPreservation = preservation;
+        continue;
+      }
+
+      if (preservation !== bestPreservation) {
+        if (preservation < bestPreservation) {
+          best = storage;
+          bestDistance = distance;
+          bestPreservation = preservation;
+        }
+        continue;
+      }
+
+      if (distance < bestDistance || (distance === bestDistance && storage.id < best.id)) {
         best = storage;
         bestDistance = distance;
       }

@@ -21,13 +21,53 @@ export interface ResourceDefinition {
   readonly maxStack: number;
   /** How many units a villager can carry at once. */
   readonly carryLimit: number;
+  /**
+   * Fraction of a stock lost per day in ordinary storage, or 0 for goods that
+   * keep indefinitely.
+   *
+   * Only food spoils. Timber and stone sitting in a yard are the same timber
+   * and stone a year later, and pretending otherwise would be busywork rather
+   * than a decision.
+   */
+  readonly spoilsPerDay: number;
 }
 
 export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
-  logs: { id: 'logs', name: 'Logs', category: 'material', maxStack: 20, carryLimit: 5 },
-  firewood: { id: 'firewood', name: 'Firewood', category: 'fuel', maxStack: 40, carryLimit: 10 },
-  stone: { id: 'stone', name: 'Stone', category: 'material', maxStack: 20, carryLimit: 4 },
-  food: { id: 'food', name: 'Food', category: 'food', maxStack: 50, carryLimit: 15 },
+  logs: {
+    id: 'logs',
+    name: 'Logs',
+    category: 'material',
+    maxStack: 20,
+    carryLimit: 5,
+    spoilsPerDay: 0,
+  },
+  firewood: {
+    id: 'firewood',
+    name: 'Firewood',
+    category: 'fuel',
+    maxStack: 40,
+    carryLimit: 10,
+    spoilsPerDay: 0,
+  },
+  stone: {
+    id: 'stone',
+    name: 'Stone',
+    category: 'material',
+    maxStack: 20,
+    carryLimit: 4,
+    spoilsPerDay: 0,
+  },
+  food: {
+    id: 'food',
+    name: 'Food',
+    category: 'food',
+    maxStack: 50,
+    carryLimit: 15,
+    // Roughly a tenth of an open stockpile turns each day: enough that a heap
+    // of food in a general yard will not survive a winter, and not so much
+    // that the settlement cannot live hand to mouth in summer without a larder.
+    spoilsPerDay: 0.1,
+  },
 };
 
 /** Every resource, in a stable order. Used by the HUD and by tests. */

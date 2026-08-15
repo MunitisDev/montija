@@ -20,8 +20,8 @@ SaveGame
 ├── simulationTime   the tick, which fully identifies season, day and year
 ├── world            terrain buffer, trees, stone, resource piles
 ├── villagers        position, needs, inventory, job, path, activity
-├── buildings        definition id, origin, construction progress, stores
-├── storages         cells, capacities and contents
+├── buildings        definition id, origin, construction progress, stores, yard opened
+├── storages         cells, capacities, contents, and how well each keeps food
 ├── jobs             the whole board, verbatim
 ├── deaths           the settlement's toll
 └── random           each seeded stream's position
@@ -55,9 +55,18 @@ says so — "Save is from another version" — rather than loading something it 
 corrupting a settlement.
 
 Bump the version when a change would make an existing save load _incorrectly_. Additive changes that
-restore sensibly from a default do not need a bump: jobs gained a `reservationSlot` field when
-workshops learned to staff more than one worker, and a save written before that restores with slot 0,
-which is exactly right for every job that existed then.
+restore sensibly from a default do not need a bump, and there have been three:
+
+- jobs gained a `reservationSlot` when workshops learned to staff more than one worker, and an older
+  save restores with slot 0 — right for every job that existed then;
+- storages gained a `preservation` figure, defaulting to 1, which is the open yard every storage in
+  an older save was behaving as;
+- buildings gained the id of the yard they opened, and a finished storage building without one
+  simply opens its yard on the next tick.
+
+Doorways are the exception to storing things: a building's access cell is **recomputed** on load
+rather than saved, because which cell is standable depends on what every other building blocks, and
+that is only known once the whole save is in place.
 
 ---
 

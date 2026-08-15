@@ -48,7 +48,7 @@ const oneHut: PlayerScript = (sim, day) => {
   if (day % 8 === 0) designateNearbyStone(sim, 6);
 };
 
-/** Leaves everything until late summer. */
+/** Leaves everything until midsummer, and never builds a second hut. */
 const late: PlayerScript = (sim, day) => {
   if (day === 1) designateNearbyTrees(sim, 20);
   if (day === 15 && !ordered(sim, 'gatherer-hut')) {
@@ -59,10 +59,40 @@ const late: PlayerScript = (sim, day) => {
   if (day % 10 === 0) designateNearbyTrees(sim, 20);
 };
 
-/** Raises a second hut, which ten villagers need. */
+/** Leaves it so long that the settlers' own supplies run out first. */
+const tooLate: PlayerScript = (sim, day) => {
+  if (day === 1) designateNearbyTrees(sim, 20);
+  if (day === 25 && !ordered(sim, 'gatherer-hut')) {
+    designateNearbyStone(sim, 10);
+    buildNearby(sim, 'gatherer-hut');
+  }
+  if (day % 10 === 0) designateNearbyTrees(sim, 20);
+};
+
+/**
+ * Plays it properly: enough huts for ten mouths, and a larder to keep what
+ * they gather.
+ */
 const prepared: PlayerScript = (sim, day) => {
-  oneHut(sim, day);
-  if (day === 18 && countOf(sim, 'gatherer-hut') < 2) buildNearby(sim, 'gatherer-hut');
+  if (day === 1) {
+    designateNearbyTrees(sim, 40);
+    designateNearbyStone(sim, 16);
+  }
+  if (day === 2 && !ordered(sim, 'gatherer-hut')) buildNearby(sim, 'gatherer-hut');
+  if (day === 8 && !ordered(sim, 'woodcutter')) buildNearby(sim, 'woodcutter');
+  if (day === 12 && countOf(sim, 'gatherer-hut') < 2) buildNearby(sim, 'gatherer-hut');
+  if (day === 16 && countOf(sim, 'gatherer-hut') < 3) buildNearby(sim, 'gatherer-hut');
+  if (day === 20 && !ordered(sim, 'food-storage')) buildNearby(sim, 'food-storage');
+  if (day % 5 === 0) designateNearbyTrees(sim, 25);
+  if (day % 8 === 0) designateNearbyStone(sim, 6);
+};
+
+/** Exactly the same, but never builds anywhere to keep the food. */
+const noLarder: PlayerScript = (sim, day) => {
+  if (day === 20) {
+    return;
+  }
+  prepared(sim, day);
 };
 
 function runYear(script: PlayerScript) {
@@ -85,11 +115,20 @@ describe('the first winter', () => {
     expect(result.firstDeathDay).toBeGreaterThan(grace + 8);
   });
 
-  it('kills a settlement that leaves its food supply until late summer', () => {
-    const result = runYear(late);
+  it('kills a settlement that leaves its food supply too long', () => {
+    const result = runYear(tooLate);
     expect(result.deaths).toBeGreaterThan(0);
-    // The point of the game is that winter is what gets you.
-    expect(result.firstDeathDay).toBeGreaterThanOrEqual(firstDayOf('winter'));
+  });
+
+  it('leaves a late start alive but starving by the thaw', () => {
+    // Building the hut at midsummer is survivable and nothing more: this
+    // settlement reaches spring with empty stores and people on the point of
+    // dying, rather than being quietly bailed out.
+    const result = runYear(late);
+    const endOfWinter = result.log.filter((day) => day.season === 'winter').at(-1)!;
+    expect(endOfWinter.food).toBe(0);
+    expect(endOfWinter.lowestHunger).toBe(0);
+    expect(endOfWinter.lowestHealth).toBeLessThan(80);
   });
 
   it('is survived by a settlement that feeds itself properly', () => {
@@ -98,20 +137,28 @@ describe('the first winter', () => {
     expect(result.deaths).toBe(0);
   });
 
-  it('is survived only barely on a single hut for ten villagers', () => {
-    // One hut cannot feed ten. This settlement lives, but ends the winter on
-    // the brink — which is the intended lesson rather than a soft landing.
+  it('leaves a single hut for ten villagers with nothing spare', () => {
+    // One hut cannot feed ten. This settlement lives, but reaches the end of
+    // winter with empty stores and hungry people rather than a soft landing.
     const result = runYear(oneHut);
-    expect(result.survivors).toBe(10);
-    const endOfWinter = result.log[firstDayOf('spring') + DAYS_PER_YEAR - 1] ?? result.log.at(-1);
-    expect(endOfWinter).toBeDefined();
-    expect(result.log.at(-1)?.lowestHealth ?? 100).toBeLessThan(50);
+    const endOfWinter = result.log.filter((day) => day.season === 'winter').at(-1)!;
+    expect(endOfWinter.food).toBe(0);
+    expect(endOfWinter.lowestHunger).toBeLessThan(80);
   });
 
   it('lets a prepared settlement bank food before the cold', () => {
     const result = runYear(prepared);
-    // Not merely "some food": enough that stockpiling is a real strategy.
-    expect(result.atWinter.food).toBeGreaterThan(30);
+    // Not merely "some food": enough that stockpiling is a real strategy, and
+    // in the region of what a winter actually costs ten villagers.
+    expect(result.atWinter.food).toBeGreaterThan(100);
+  });
+
+  it('is far harder without somewhere to keep the food', () => {
+    // The same player, playing the same way, minus the larder. Food rots in the
+    // open yard, so roughly half of the autumn's work never reaches the cold.
+    const withLarder = runYear(prepared);
+    const without = runYear(noLarder);
+    expect(without.atWinter.food).toBeLessThan(withLarder.atWinter.food * 0.75);
   });
 
   it('makes winter draw down the stores it spent autumn filling', () => {

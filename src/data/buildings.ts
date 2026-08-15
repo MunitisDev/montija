@@ -27,7 +27,12 @@ export interface BuildingDefinition {
   readonly workerSlots: number;
 
   /** Set when the building stores resources. */
-  readonly storage?: { readonly capacity: number; readonly accepts?: readonly ResourceId[] };
+  readonly storage?: {
+    readonly capacity: number;
+    readonly accepts?: readonly ResourceId[];
+    /** Multiplier on spoilage here; 1 is an open yard, lower keeps food better. */
+    readonly preservation?: number;
+  };
   /** How many villagers can live here. */
   readonly housing?: number;
   /** The recipe produced here, from `data/recipes.ts`. Phase 7. */
@@ -67,7 +72,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
   'food-storage': {
     id: 'food-storage',
     name: 'Food Storage',
-    description: 'Keeps the settlement’s food through the winter.',
+    description: 'Keeps food from spoiling. Food left in an open yard rots.',
     footprint: { width: 2, height: 2 },
     constructionCost: [
       { resource: 'logs', amount: 6 },
@@ -75,7 +80,10 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     ],
     buildTicks: 90,
     workerSlots: 0,
-    storage: { capacity: 800, accepts: ['food'] },
+    // A tenth of the spoilage of an open yard. This is the whole reason the
+    // building exists: food will sit anywhere, but only keeps through a winter
+    // in here.
+    storage: { capacity: 800, accepts: ['food'], preservation: 0.1 },
   },
   'gatherer-hut': {
     id: 'gatherer-hut',

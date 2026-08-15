@@ -77,6 +77,7 @@ export const EN = {
 
   'warning.foodLow': 'Nobody is gathering food — build a Gatherer Hut',
   'warning.needMoreHuts': 'One hut cannot feed everyone — build another Gatherer Hut',
+  'warning.foodSpoiling': 'Food is rotting in the open — build a Food Storage',
   'warning.firewoodLow': 'No firewood for the winter — build a Woodcutter',
   'warning.firewoodShort': 'Not enough firewood to last the winter',
   'warning.starving': 'People are starving',
@@ -155,6 +156,7 @@ export const ES: Messages = {
 
   'warning.foodLow': 'Nadie recolecta comida: construye una Cabaña de recolección',
   'warning.needMoreHuts': 'Una cabaña no alimenta a todos: construye otra Cabaña de recolección',
+  'warning.foodSpoiling': 'La comida se pudre a la intemperie: construye una Despensa',
   'warning.firewoodLow': 'No hay leña para el invierno: construye un Leñador',
   'warning.firewoodShort': 'No hay leña suficiente para pasar el invierno',
   'warning.starving': 'La gente está pasando hambre',
