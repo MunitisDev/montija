@@ -27,13 +27,24 @@ export const FOOD_PER_VILLAGER_PER_DAY = 1;
 /** Firewood burned per villager per freezing day. */
 export const FIREWOOD_PER_VILLAGER_PER_COLD_DAY = 1;
 
-/** Need lost per day when the settlement cannot supply it. */
-const HUNGER_LOST_PER_DAY = 12;
-const WARMTH_LOST_PER_DAY = 14;
+/**
+ * Need lost per day on full rations' worth of shortfall.
+ *
+ * Deliberately steeper than the recovery below. When recovery outpaced decline
+ * — as it did at 34 restored against 12 lost — one fed day cancelled nearly
+ * three starving ones, so a settlement could live on half rations indefinitely
+ * and winter killed nobody. Poor planning has to cost something.
+ *
+ * At these rates an unfed settlement empties its hunger in four days and buries
+ * its first villager about ten days later: roughly one winter, which is the
+ * span the player is being asked to plan for.
+ */
+const HUNGER_LOST_PER_DAY = 25;
+const WARMTH_LOST_PER_DAY = 25;
 
-/** Need restored per day when it can. */
-const HUNGER_RESTORED_PER_DAY = 34;
-const WARMTH_RESTORED_PER_DAY = 40;
+/** Need restored per day when the settlement can supply it in full. */
+const HUNGER_RESTORED_PER_DAY = 20;
+const WARMTH_RESTORED_PER_DAY = 25;
 
 /** Health lost per day for each need that is exhausted. */
 const HEALTH_LOST_PER_DAY = 10;

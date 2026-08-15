@@ -22,6 +22,7 @@ import { JobPriority } from './jobs/Job';
 import { JobManager } from './jobs/JobManager';
 import { StorageRegistry } from './logistics/Storage';
 import {
+  DAYS_PER_SEASON,
   SEASON_FORAGE_SCALE,
   isDayBoundary,
   yearStateAt,
@@ -31,6 +32,25 @@ import {
 import { EMPTY_REPORT, runDay, type DailyReport } from './seasons/SurvivalSystem';
 import { VillagerSystem } from './villagers/VillagerSystem';
 import { World } from './world/World';
+
+/**
+ * What the settlement most needs to hear about, or `null` when all is well.
+ *
+ * The simulation reports the condition; whether and how to show it is the UI's
+ * business, and the wording is the translation layer's.
+ */
+export type Advice =
+  'starving' | 'foodLow' | 'needMoreHuts' | 'firewoodLow' | 'firewoodShort' | null;
+
+/**
+ * Roughly how many villagers one Gatherer Hut keeps fed.
+ *
+ * Measured rather than assumed: a two-slot hut yields around six food a day
+ * across the growing seasons, against one eaten per villager per day. It is
+ * used only for advice, so being approximate is fine — but it must track the
+ * recipe, or the game will tell the player something untrue.
+ */
+export const VILLAGERS_FED_PER_GATHERER_HUT = 6;
 
 /** A read-only view of the simulation, safe to hand to the renderer and HUD. */
 export interface SimulationSnapshot {
@@ -65,7 +85,7 @@ export interface SimulationSnapshot {
    * player needs to know what to do *next*, not everything that could ever go
    * wrong.
    */
-  readonly advice: 'starving' | 'foodLow' | 'firewoodLow' | null;
+  readonly advice: Advice;
   /**
    * Stored totals per resource.
    *
@@ -291,27 +311,46 @@ export class Simulation {
    * Thresholds are in days of supply rather than raw amounts, so the advice
    * stays right as the population changes.
    */
-  private adviseOn(year: YearState): 'starving' | 'foodLow' | 'firewoodLow' | null {
+  private adviseOn(year: YearState): Advice {
     const people = this.villagers.count;
     if (people === 0) {
       return null;
     }
 
-    if (this.lastDayReport.foodShortfall > 0) {
+    // Real hunger, not a missed delivery. A settlement living hand to mouth has
+    // shortfall days routinely while nobody is any thinner, and an alarm that
+    // cries wolf every other day is one the player stops reading.
+    const hungriest = this.villagers.all.reduce(
+      (lowest, villager) => Math.min(lowest, villager.needs.hunger),
+      100,
+    );
+    if (hungriest <= 25) {
       return 'starving';
     }
 
-    const foodDays = this.storages.totalOf('food') / people;
-    if (foodDays < 8 && this.world.buildings.countOf('gatherer-hut') === 0) {
+    const huts = this.world.buildings.countOf('gatherer-hut');
+    if (huts === 0) {
       return 'foodLow';
+    }
+
+    // One hut cannot feed everyone, and the settlement that has one usually
+    // believes it has solved food. Saying so is the difference between losing
+    // to the game and losing to an invisible rule.
+    if (huts * VILLAGERS_FED_PER_GATHERER_HUT < people) {
+      return 'needMoreHuts';
     }
 
     // Firewood only matters once the cold is in sight; warning in spring would
     // be noise the player learns to ignore.
     const winterIsNear = year.season === 'autumn' || year.season === 'winter';
-    const firewoodDays = this.storages.totalOf('firewood') / people;
-    if (winterIsNear && firewoodDays < 10 && this.world.buildings.countOf('woodcutter') === 0) {
-      return 'firewoodLow';
+    if (winterIsNear) {
+      const firewoodDays = this.storages.totalOf('firewood') / people;
+      if (this.world.buildings.countOf('woodcutter') === 0) {
+        return 'firewoodLow';
+      }
+      if (firewoodDays < DAYS_PER_SEASON) {
+        return 'firewoodShort';
+      }
     }
 
     return null;
@@ -451,15 +490,25 @@ export class Simulation {
         continue;
       }
 
-      // One batch in flight per building, so a workshop does not queue up more
-      // work than its inputs can support.
-      if (!this.jobs.isTargetReserved('produce', building.id)) {
+      // One batch per worker slot. Reserving the building as a whole meant a
+      // two-slot hut only ever worked one villager, so half of every workshop
+      // stood idle and `workerSlots` described nothing.
+      const slot = this.jobs.firstFreeSlot('produce', building.id, building.definition.workerSlots);
+      if (slot !== null) {
         this.jobs.create({
           type: 'produce',
           target: building.accessCell,
-          priority: JobPriority.normal,
+          // The highest priority in the game. A workshop has a fixed number of
+          // slots, so at most `workerSlots` villagers can be doing this at
+          // once and the rest are free for everything else; leaving those few
+          // posts unstaffed is never worth it. Below this, the nearest job
+          // wins, and a player who marked a stand of trees posted dozens of
+          // near jobs — starving the settlement of the work that feeds it, the
+          // harder they tried.
+          priority: JobPriority.urgent,
           targetEntityId: building.id,
           workTicks: recipe.workTicks,
+          reservationSlot: slot,
         });
       }
     }
@@ -520,7 +569,11 @@ export class Simulation {
         type: 'haul',
         target: pile.cell,
         deliverTo: storage.cell,
-        priority: JobPriority.normal,
+        // Carrying goods in outranks cutting more down. At equal priority the
+        // nearest job won, so a marked stand of trees buried the hauling: the
+        // settlement starved with fifty food lying in piles beside the hut,
+        // because nobody would stop chopping long enough to carry it in.
+        priority: JobPriority.high,
         targetEntityId: pile.id,
       });
     }
