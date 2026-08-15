@@ -35,6 +35,11 @@ export interface SavedVillager {
   readonly warmth: number;
   readonly health: number;
   readonly currentJobId: number | null;
+  /** Absent in saves written before villagers aged or had homes. */
+  readonly lifespan?: number;
+  readonly homeId?: number | null;
+  readonly daysSinceBirthday?: number;
+  readonly birthCooldownDays?: number;
   readonly carrying: SavedInventory;
   /**
    * The route being walked, and where it leads.

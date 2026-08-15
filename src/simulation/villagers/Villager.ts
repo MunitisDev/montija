@@ -4,14 +4,14 @@
  * The authoritative one. A sprite elsewhere is a picture of this object, never
  * a second copy of it.
  *
- * Status: Phase 5. Identity, position, movement, job assignment and a carried
- * inventory are live.
- * `hunger`, `warmth` and `health` exist because the brief's initial model calls
- * for them, but **nothing changes them until Phase 8** — they are inert fields,
- * not a working needs system. `homeId` and `profession` arrive with Phases 6
- * and 7.
+ * Status: Phase 12. Identity, position, movement, job assignment, a carried
+ * inventory, needs, a home and an age that actually advances are all live.
+ *
+ * `profession` is still not modelled: villagers take whatever work the job
+ * board offers rather than holding a trade.
  */
 
+import { WORKING_AGE } from '@/data/population';
 import type { GridPoint, WorldPoint } from '@/shared/types/geometry';
 import { Inventory } from '@/simulation/resources/Inventory';
 
@@ -22,11 +22,11 @@ const CARRY_CAPACITY = 10;
 export type VillagerActivity = 'idle' | 'walking' | 'working' | 'hauling';
 
 export interface VillagerNeeds {
-  /** 0 = starving, 100 = full. Inert until Phase 8. */
+  /** 0 = starving, 100 = full. */
   hunger: number;
-  /** 0 = freezing, 100 = warm. Inert until Phase 8. */
+  /** 0 = freezing, 100 = warm. */
   warmth: number;
-  /** 0 = dead, 100 = healthy. Inert until Phase 8. */
+  /** 0 = dead, 100 = healthy. */
   health: number;
 }
 
@@ -62,12 +62,42 @@ export class Villager {
   /** The job this villager has claimed, or `null` when unemployed. */
   public currentJobId: number | null = null;
 
-  constructor(options: { id: number; name: string; age: number; position: WorldPoint }) {
+  /**
+   * The house this villager lives in, or `null` when there is no room.
+   *
+   * Homelessness is survivable in the mild seasons and dangerous in winter: a
+   * fire warms a house, and someone with no house to go back to gets very
+   * little out of the settlement's firewood.
+   */
+  public homeId: number | null = null;
+
+  /** The age this villager will not outlive. Drawn from the seeded stream. */
+  public lifespan: number;
+
+  /** Days lived since the last birthday, so ageing is not a yearly jump. */
+  public daysSinceBirthday = 0;
+
+  /** Days until this villager's household will consider another child. */
+  public birthCooldownDays = 0;
+
+  constructor(options: {
+    id: number;
+    name: string;
+    age: number;
+    position: WorldPoint;
+    lifespan: number;
+  }) {
     this.id = options.id;
     this.name = options.name;
     this.age = options.age;
     this.position = options.position;
     this.previousPosition = options.position;
+    this.lifespan = options.lifespan;
+  }
+
+  /** Children do not work. They eat, and they grow up. */
+  public get isAdult(): boolean {
+    return this.age >= WORKING_AGE;
   }
 
   /** The cell the villager is currently standing in. */

@@ -29,6 +29,11 @@ import {
   type Season,
   type YearState,
 } from './seasons/SeasonClock';
+import {
+  NO_POPULATION_CHANGE,
+  runPopulationDay,
+  type PopulationReport,
+} from './population/PopulationSystem';
 import { NO_SPOILAGE, runSpoilage, type SpoilageReport } from './resources/SpoilageSystem';
 import { EMPTY_REPORT, runDay, type DailyReport } from './seasons/SurvivalSystem';
 import { VillagerSystem } from './villagers/VillagerSystem';
@@ -41,7 +46,15 @@ import { World } from './world/World';
  * business, and the wording is the translation layer's.
  */
 export type Advice =
-  'starving' | 'foodLow' | 'needMoreHuts' | 'foodSpoiling' | 'firewoodLow' | 'firewoodShort' | null;
+  | 'starving'
+  | 'freezing'
+  | 'noShelter'
+  | 'foodLow'
+  | 'needMoreHuts'
+  | 'foodSpoiling'
+  | 'firewoodLow'
+  | 'firewoodShort'
+  | null;
 
 /**
  * Roughly how many villagers one Gatherer Hut keeps fed.
@@ -78,6 +91,8 @@ export interface SimulationSnapshot {
   readonly lastDay: DailyReport;
   /** What went bad overnight, so the HUD can explain a falling total. */
   readonly spoiled: SpoilageReport;
+  /** Births, old age, homelessness and the split between adults and children. */
+  readonly population: PopulationReport;
   readonly deaths: number;
   /** Lowest health among the living, so the HUD can warn before people die. */
   readonly lowestHealth: number;
@@ -120,6 +135,7 @@ export class Simulation {
   private currentTick = 0;
   private lastDayReport: DailyReport = EMPTY_REPORT;
   private lastSpoilage: SpoilageReport = NO_SPOILAGE;
+  private lastPopulation: PopulationReport = NO_POPULATION_CHANGE;
   private totalDeaths = 0;
 
   constructor(options: SimulationOptions) {
@@ -248,6 +264,7 @@ export class Simulation {
       temperature: year.temperature,
       lastDay: this.lastDayReport,
       spoiled: this.lastSpoilage,
+      population: this.lastPopulation,
       deaths: this.totalDeaths,
       advice: this.adviseOn(year),
       lowestHealth: this.villagers.all.reduce(
@@ -310,6 +327,7 @@ export class Simulation {
     this.totalDeaths = deaths;
     this.lastDayReport = EMPTY_REPORT;
     this.lastSpoilage = NO_SPOILAGE;
+    this.lastPopulation = NO_POPULATION_CHANGE;
   }
 
   /**
@@ -333,6 +351,23 @@ export class Simulation {
     );
     if (hungriest <= 25) {
       return 'starving';
+    }
+
+    const coldest = this.villagers.all.reduce(
+      (lowest, villager) => Math.min(lowest, villager.needs.warmth),
+      100,
+    );
+    if (coldest <= 25) {
+      return 'freezing';
+    }
+
+    // A roof is the difference between surviving winter and not, and it is the
+    // least obvious of the settlement's needs: a player watching full yards and
+    // a healthy woodpile has no way to guess that the wood is not being burned
+    // for anyone. Said before the cold rather than during it.
+    const winterIsNear = year.season === 'autumn' || year.season === 'winter';
+    if (this.lastPopulation.homeless > 0 && winterIsNear) {
+      return 'noShelter';
     }
 
     const huts = this.world.buildings.countOf('gatherer-hut');
@@ -359,7 +394,6 @@ export class Simulation {
 
     // Firewood only matters once the cold is in sight; warning in spring would
     // be noise the player learns to ignore.
-    const winterIsNear = year.season === 'autumn' || year.season === 'winter';
     if (winterIsNear) {
       const firewoodDays = this.storages.totalOf('firewood') / people;
       if (this.world.buildings.countOf('woodcutter') === 0) {
@@ -401,6 +435,35 @@ export class Simulation {
     // People eat before anything turns. A settlement should never starve on a
     // day it had food, only to watch that same food rot the same night.
     this.lastSpoilage = runSpoilage(this.storages, this.world.piles);
+
+    this.runPopulationUpkeep();
+  }
+
+  /**
+   * A day of ageing, housing and births.
+   *
+   * Runs after eating, so a birth is judged on the stores the settlement
+   * actually has left rather than on what it had before breakfast.
+   */
+  private runPopulationUpkeep(): void {
+    const people = this.villagers.count;
+    const day = runPopulationDay({
+      villagers: this.villagers.all,
+      buildings: this.world.buildings,
+      random: this.villagers.random,
+      foodDaysPerPerson: people === 0 ? 0 : this.storages.totalOf('food') / people,
+    });
+
+    for (const villager of day.died) {
+      this.villagers.remove(villager.id);
+      this.totalDeaths += 1;
+    }
+
+    for (const { home } of day.born) {
+      this.villagers.bear(home.accessCell, home.id);
+    }
+
+    this.lastPopulation = day.report;
   }
 
   /** Whether a building may be placed here. Used by the ghost and the command. */

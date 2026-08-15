@@ -9,6 +9,7 @@
 import type { ResourceId } from '@/data/resources';
 import type { Simulation } from '@/simulation/Simulation';
 import type { Inventory } from '@/simulation/resources/Inventory';
+import { LIFESPAN_MAX } from '@/data/population';
 import { Building } from '@/simulation/buildings/Building';
 import { findAccessCell } from '@/simulation/buildings/BuildingRegistry';
 import { Villager } from '@/simulation/villagers/Villager';
@@ -47,6 +48,10 @@ export function serialise(simulation: Simulation, savedAt: string): SaveGame {
       warmth: villager.needs.warmth,
       health: villager.needs.health,
       currentJobId: villager.currentJobId,
+      lifespan: villager.lifespan,
+      homeId: villager.homeId,
+      daysSinceBirthday: villager.daysSinceBirthday,
+      birthCooldownDays: villager.birthCooldownDays,
       carrying: toRecord(villager.inventory),
       path: villager.path.map((step) => ({ gx: step.gx, gy: step.gy })),
       destination: villager.destination ? { ...villager.destination } : null,
@@ -158,7 +163,14 @@ export function restore(simulation: Simulation, save: SaveGame): void {
         name: saved.name,
         age: saved.age,
         position: { wx: saved.wx, wy: saved.wy },
+        // A save from before villagers aged has no lifespan. Giving them the
+        // longest one means nobody dies of old age the instant an old save is
+        // loaded, which would be a very strange way to greet the player.
+        lifespan: saved.lifespan ?? LIFESPAN_MAX,
       });
+      villager.homeId = saved.homeId ?? null;
+      villager.daysSinceBirthday = saved.daysSinceBirthday ?? 0;
+      villager.birthCooldownDays = saved.birthCooldownDays ?? 0;
       villager.needs.hunger = saved.hunger;
       villager.needs.warmth = saved.warmth;
       villager.needs.health = saved.health;

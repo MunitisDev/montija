@@ -49,7 +49,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
   house: {
     id: 'house',
     name: 'House',
-    description: 'Shelter for a family. Keeps its residents warm in winter.',
+    description: 'Shelter for four. Firewood only warms people who have a house.',
     footprint: { width: 2, height: 2 },
     constructionCost: [
       { resource: 'logs', amount: 8 },

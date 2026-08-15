@@ -60,7 +60,8 @@ export const EN = {
   'villager.hauling': 'hauling',
 
   'building.house': 'House',
-  'building.house.description': 'Shelter for a family. Keeps its residents warm in winter.',
+  'building.house.description':
+    'Shelter for a family of four. Firewood only warms people who have a house.',
   'building.storage-yard': 'Storage Yard',
   'building.storage-yard.description': 'Holds logs, stone and firewood.',
   'building.food-storage': 'Food Storage',
@@ -77,6 +78,8 @@ export const EN = {
 
   'warning.foodLow': 'Nobody is gathering food — build a Gatherer Hut',
   'warning.needMoreHuts': 'One hut cannot feed everyone — build another Gatherer Hut',
+  'warning.freezing': 'People are freezing',
+  'warning.noShelter': 'People have no house for the winter — build Houses',
   'warning.foodSpoiling': 'Food is rotting in the open — build a Food Storage',
   'warning.firewoodLow': 'No firewood for the winter — build a Woodcutter',
   'warning.firewoodShort': 'Not enough firewood to last the winter',
@@ -138,7 +141,7 @@ export const ES: Messages = {
   'villager.hauling': 'acarreando',
 
   'building.house': 'Casa',
-  'building.house.description': 'Refugio para una familia. Mantiene el calor en invierno.',
+  'building.house.description': 'Refugio para cuatro. La leña solo calienta a quien tiene casa.',
   'building.storage-yard': 'Almacén',
   'building.storage-yard.description': 'Guarda troncos, piedra y leña.',
   'building.food-storage': 'Despensa',
@@ -156,6 +159,8 @@ export const ES: Messages = {
 
   'warning.foodLow': 'Nadie recolecta comida: construye una Cabaña de recolección',
   'warning.needMoreHuts': 'Una cabaña no alimenta a todos: construye otra Cabaña de recolección',
+  'warning.freezing': 'La gente se está congelando',
+  'warning.noShelter': 'Hay gente sin casa para el invierno: construye Casas',
   'warning.foodSpoiling': 'La comida se pudre a la intemperie: construye una Despensa',
   'warning.firewoodLow': 'No hay leña para el invierno: construye un Leñador',
   'warning.firewoodShort': 'No hay leña suficiente para pasar el invierno',

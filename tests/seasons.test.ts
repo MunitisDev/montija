@@ -62,11 +62,24 @@ describe('the year', () => {
 });
 
 describe('daily survival', () => {
-  function makeVillagers(count: number): Villager[] {
-    return Array.from(
-      { length: count },
-      (_, i) => new Villager({ id: i + 1, name: `V${i}`, age: 30, position: { wx: 0.5, wy: 0.5 } }),
-    );
+  /**
+   * Villagers with a roof over their heads.
+   *
+   * Housed on purpose: firewood warms a *house*, so a test about burning wood
+   * needs somewhere to burn it. Sleeping rough is covered separately below.
+   */
+  function makeVillagers(count: number, homeId: number | null = 1): Villager[] {
+    return Array.from({ length: count }, (_, i) => {
+      const villager = new Villager({
+        id: i + 1,
+        name: `V${i}`,
+        age: 30,
+        position: { wx: 0.5, wy: 0.5 },
+        lifespan: 70,
+      });
+      villager.homeId = homeId;
+      return villager;
+    });
   }
 
   /**
@@ -169,6 +182,57 @@ describe('daily survival', () => {
   });
 });
 
+describe('shelter', () => {
+  const summer = yearStateAt(TICKS_PER_SEASON + 10);
+  const winter = yearStateAt(TICKS_PER_SEASON * 3 + 10);
+
+  function housed(count: number, homeId: number | null) {
+    return Array.from({ length: count }, (_, i) => {
+      const villager = new Villager({
+        id: i + 1,
+        name: `V${i}`,
+        age: 30,
+        position: { wx: 0.5, wy: 0.5 },
+        lifespan: 70,
+      });
+      villager.homeId = homeId;
+      return villager;
+    });
+  }
+
+  function stocked() {
+    const storages = new StorageRegistry();
+    const yard = storages.add({ cell: { gx: 0, gy: 0 }, capacity: 500 });
+    yard.inventory.add('food', 200);
+    yard.inventory.add('firewood', 200);
+    return storages;
+  }
+
+  it('burns no firewood for villagers with nowhere to burn it', () => {
+    const { report } = runDay(housed(5, null), stocked(), winter);
+    expect(report.firewoodBurned).toBe(0);
+    expect(report.sleepingRough).toBe(5);
+  });
+
+  it('leaves the unhoused colder than the housed, on the same woodpile', () => {
+    const outside = housed(5, null);
+    const inside = housed(5, 1);
+
+    runDay(outside, stocked(), winter);
+    runDay(inside, stocked(), winter);
+
+    expect(outside[0]!.needs.warmth).toBeLessThan(inside[0]!.needs.warmth);
+  });
+
+  it('does not punish homelessness in mild weather', () => {
+    // A missing roof is a winter problem. Being outdoors in summer is fine.
+    const outside = housed(5, null);
+    const { report } = runDay(outside, stocked(), summer);
+    expect(report.sleepingRough).toBe(0);
+    expect(outside[0]!.needs.warmth).toBe(100);
+  });
+});
+
 describe('winter in the running simulation', () => {
   it('kills an unprepared settlement', () => {
     const simulation = new Simulation(OPTIONS);
@@ -181,8 +245,36 @@ describe('winter in the running simulation', () => {
     expect(simulation.snapshot().deaths).toBeGreaterThan(0);
   });
 
-  it('a settlement stocked in a larder survives the same winter', () => {
+  /**
+   * Gives everyone a roof, without making the test build them one plank at a
+   * time. Houses are the point of a separate test; here they are a precondition.
+   */
+  function shelterEveryone(simulation: Simulation): void {
+    let housed = 0;
+    for (let radius = 3; radius < 14 && housed < simulation.villagers.count; radius += 1) {
+      for (let dy = -radius; dy <= radius && housed < simulation.villagers.count; dy += 1) {
+        for (let dx = -radius; dx <= radius && housed < simulation.villagers.count; dx += 1) {
+          const cell = {
+            gx: simulation.world.centreCell.gx + dx,
+            gy: simulation.world.centreCell.gy + dy,
+          };
+          if (!simulation.canPlaceBuilding('house', cell).ok) {
+            continue;
+          }
+          const house = simulation.placeBuilding('house', cell);
+          if (house) {
+            simulation.world.buildings.complete(simulation.world, house);
+            housed += house.definition.housing ?? 0;
+          }
+        }
+      }
+    }
+    expect(housed).toBeGreaterThanOrEqual(simulation.villagers.count);
+  }
+
+  it('a settlement stocked and housed survives the same winter', () => {
     const simulation = new Simulation(OPTIONS);
+    shelterEveryone(simulation);
     const yard = simulation.storages.all[0]!;
     // Firewood keeps anywhere; food does not, so it goes somewhere built for
     // it. The founding yard holds 2000 units shared across resources, so stock
@@ -203,7 +295,31 @@ describe('winter in the running simulation', () => {
     }
 
     expect(simulation.snapshot().deaths).toBe(0);
-    expect(simulation.snapshot().villagerCount).toBe(10);
+    // Fed, housed and warm, a settlement does not merely endure the year — it
+    // grows. Nobody was lost, and the population is no smaller than it started.
+    expect(simulation.snapshot().villagerCount).toBeGreaterThanOrEqual(10);
+  });
+
+  it('freezes a settlement that stocked everything but built no houses', () => {
+    // Supplies are not enough. Firewood warms a house, and a settlement with
+    // nowhere to burn it spends winter outdoors however full its yards are.
+    const simulation = new Simulation(OPTIONS);
+    const yard = simulation.storages.all[0]!;
+    yard.inventory.add('firewood', 600);
+    const larder = simulation.storages.add({
+      cell: { gx: yard.cell.gx + 2, gy: yard.cell.gy },
+      capacity: 800,
+      accepts: ['food'],
+      preservation: 0.1,
+    });
+    larder.inventory.add('food', 600);
+    simulation.storages.markChanged();
+
+    for (let tick = 1; tick <= TICKS_PER_YEAR && !simulation.hasFailed; tick += 1) {
+      simulation.update(tick, TICK);
+    }
+
+    expect(simulation.snapshot().deaths).toBeGreaterThan(0);
   });
 
   it('the same stock left in an open yard rots away instead', () => {

@@ -61,7 +61,7 @@ Definitions live in `src/data/buildings.ts`; the build menu is generated from th
 
 | Building     | Cost             | Slots | Effect                             |
 | ------------ | ---------------- | ----- | ---------------------------------- |
-| House        | 8 logs, 4 stone  | —     | houses 4                           |
+| House        | 8 logs, 4 stone  | —     | houses 4, and heats them           |
 | Storage Yard | 6 logs           | —     | stores logs, stone, firewood       |
 | Food Storage | 6 logs, 2 stone  | —     | stores food, and keeps it          |
 | Gatherer Hut | 10 logs, 2 stone | 2     | forages food, scaled by the season |
@@ -102,6 +102,36 @@ Two consequences worth knowing:
   than the spoilage saves. Where the larder goes is a real decision.
 
 Spoilage is deterministic. A settlement losing a random amount each night would be unplannable.
+
+---
+
+## Homes and the years — Implemented
+
+A House shelters four people, and **firewood only warms somebody who has one**.
+A settlement with full yards and a healthy woodpile but no houses spends winter
+outdoors: measured over a year, that settlement loses everyone on day 44 with
+149 food still in store. Somebody sleeping rough gets a quarter of the fire's
+benefit — there is a communal hearth, and standing beside it beats nothing.
+
+Villagers age a year for every year of days, and each is born with a lifespan
+between 55 and 78 drawn from the seeded stream, so a founding generation does
+not die together. Below fifteen they are children: they eat, they do not work,
+and they grow up.
+
+A settlement grows when it has earned it — a spare bed, two healthy adults of an
+age to raise a child, and twelve days of food per person in store. Growth is
+slow on purpose, roughly a couple of children a year at best, because the brief
+asks for many years rather than a boom. Measured over six years, a well-run
+settlement went from ten to twelve and then stopped, capped by its own housing:
+the way to grow is to build.
+
+Two failure modes are real and neither is a bug:
+
+- **Building no houses** kills the settlement in its first winter, however full
+  its stores.
+- **Building too many** starves it. Houses cost timber and the labour to raise
+  them, and a settlement that spends its spring on roofs has no food when the
+  cold comes.
 
 ---
 
@@ -183,8 +213,9 @@ The simulation reports the single most urgent thing wrong; the HUD shows it as o
 warning at a time on purpose — the player needs to know what to do next, not everything that could
 ever go wrong.
 
-In order of precedence: people starving, nobody gathering food, one hut for too many mouths, food
-rotting with nowhere to keep it, no woodcutter with winter in sight, not enough firewood to last it.
+In order of precedence: people starving, people freezing, people with no house as winter approaches,
+nobody gathering food, one hut for too many mouths, food rotting with nowhere to keep it, no
+woodcutter with winter in sight, not enough firewood to last it.
 
 "People are starving" fires on genuine hunger rather than on a day's missed delivery. A settlement
 living hand to mouth has shortfall days routinely while nobody is any thinner, and an alarm that
@@ -199,5 +230,7 @@ cries wolf is one the player stops reading.
   the game is named for.
 - **Villagers idle around 30% of the time** in the measured runs, mostly when the player has not
   designated enough work. Whether that reads as calm or as broken is a question for a real playtest.
-- **Population never grows.** There is no birth, ageing or immigration yet, so "over many years" is
-  not yet true.
+- **No immigration.** A settlement that loses its last childbearing adults cannot recover, and
+  nothing arrives from outside to help.
+- **No professions.** Villagers take whatever the job board offers rather than holding a trade, so a
+  "worker slot" is a post rather than a career.

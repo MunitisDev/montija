@@ -10,8 +10,12 @@
  * ```text
  * no food  ─▶ hunger falls ─┐
  *                           ├─▶ health falls ─▶ death
- * no firewood in the cold ─▶ warmth falls ─┘
+ * no fire, or no house ─▶ warmth falls ─┘
  * ```
+ *
+ * Firewood warms a *house*. Someone with nowhere to sleep gets very little out
+ * of the settlement's woodpile, which is what makes a House a building worth
+ * raising rather than the decoration it used to be.
  *
  * Poor planning must have consequences, and the consequence is people dying.
  */
@@ -24,8 +28,17 @@ import type { YearState } from './SeasonClock';
 /** Food eaten per villager per day. */
 export const FOOD_PER_VILLAGER_PER_DAY = 1;
 
-/** Firewood burned per villager per freezing day. */
+/** Firewood burned per housed villager per freezing day. */
 export const FIREWOOD_PER_VILLAGER_PER_COLD_DAY = 1;
+
+/**
+ * How much of a fire's warmth reaches somebody with no house.
+ *
+ * Not zero: there is a communal fire, and standing beside it is better than
+ * nothing. Not much, either — a quarter — because the House exists to be worth
+ * building, and the settlement that skips housing should feel winter properly.
+ */
+export const SHELTERLESS_WARMTH_SHARE = 0.25;
 
 /**
  * Need lost per day on full rations' worth of shortfall.
@@ -57,6 +70,8 @@ export interface DailyReport {
   readonly foodShortfall: number;
   readonly firewoodShortfall: number;
   readonly deaths: number;
+  /** Villagers who spent a freezing night with no house. */
+  readonly sleepingRough: number;
 }
 
 export const EMPTY_REPORT: DailyReport = {
@@ -65,6 +80,7 @@ export const EMPTY_REPORT: DailyReport = {
   foodShortfall: 0,
   firewoodShortfall: 0,
   deaths: 0,
+  sleepingRough: 0,
 };
 
 /**
@@ -85,24 +101,37 @@ export function runDay(
   const foodTaken = takeFromStorages(storages, 'food', foodWanted);
 
   const needsFire = year.isFreezing;
-  const firewoodWanted = needsFire ? villagers.length * FIREWOOD_PER_VILLAGER_PER_COLD_DAY : 0;
+  // Only houses are heated. Wood is not burned for people who have nowhere to
+  // burn it, so a settlement with no houses saves the firewood and pays for it
+  // in warmth.
+  const housed = villagers.filter((villager) => villager.homeId !== null).length;
+  const firewoodWanted = needsFire ? housed * FIREWOOD_PER_VILLAGER_PER_COLD_DAY : 0;
   const firewoodTaken = takeFromStorages(storages, 'firewood', firewoodWanted);
 
   // Rations are shared evenly rather than first-come: a settlement that is
   // half-fed should weaken together, not have some starve while others eat.
   const fedFraction = foodWanted === 0 ? 1 : foodTaken / foodWanted;
-  const warmFraction = firewoodWanted === 0 ? 1 : firewoodTaken / firewoodWanted;
+  // No houses means no hearths, so the fire fraction is zero rather than the
+  // "nothing was needed" 1. Otherwise a settlement with no houses at all scored
+  // a full fire, and having a home with no firewood came out *worse* than
+  // having no home — which is nonsense in both directions.
+  const warmFraction = firewoodWanted === 0 ? 0 : firewoodTaken / firewoodWanted;
 
   const dead: Villager[] = [];
+  let sleepingRough = 0;
 
   for (const villager of villagers) {
     applyNeed(villager.needs, 'hunger', fedFraction, HUNGER_RESTORED_PER_DAY, HUNGER_LOST_PER_DAY);
 
     if (needsFire) {
+      const sheltered = villager.homeId !== null;
+      if (!sheltered) {
+        sleepingRough += 1;
+      }
       applyNeed(
         villager.needs,
         'warmth',
-        warmFraction,
+        sheltered ? warmFraction : warmFraction * SHELTERLESS_WARMTH_SHARE,
         WARMTH_RESTORED_PER_DAY,
         WARMTH_LOST_PER_DAY,
       );
@@ -130,6 +159,7 @@ export function runDay(
       foodShortfall: foodWanted - foodTaken,
       firewoodShortfall: firewoodWanted - firewoodTaken,
       deaths: dead.length,
+      sleepingRough,
     },
     dead,
   };

@@ -32,25 +32,49 @@ function makeSystem(size = 32, seed = 1): VillagerSystem {
 
 describe('Villager', () => {
   it('reports the cell it is standing in', () => {
-    const villager = new Villager({ id: 1, name: 'Test', age: 20, position: { wx: 3.5, wy: 4.9 } });
+    const villager = new Villager({
+      id: 1,
+      name: 'Test',
+      age: 20,
+      position: { wx: 3.5, wy: 4.9 },
+      lifespan: 70,
+    });
     expect(villager.cell).toEqual({ gx: 3, gy: 4 });
   });
 
   it('starts idle and stationary', () => {
-    const villager = new Villager({ id: 1, name: 'Test', age: 20, position: { wx: 0.5, wy: 0.5 } });
+    const villager = new Villager({
+      id: 1,
+      name: 'Test',
+      age: 20,
+      position: { wx: 0.5, wy: 0.5 },
+      lifespan: 70,
+    });
 
     expect(villager.isMoving).toBe(false);
     expect(villager.activity).toBe('idle');
   });
 
   it('starts with full needs, which stay inert until Phase 8', () => {
-    const villager = new Villager({ id: 1, name: 'Test', age: 20, position: { wx: 0.5, wy: 0.5 } });
+    const villager = new Villager({
+      id: 1,
+      name: 'Test',
+      age: 20,
+      position: { wx: 0.5, wy: 0.5 },
+      lifespan: 70,
+    });
 
     expect(villager.needs).toEqual({ hunger: 100, warmth: 100, health: 100 });
   });
 
   it('clears its route on demand', () => {
-    const villager = new Villager({ id: 1, name: 'Test', age: 20, position: { wx: 0.5, wy: 0.5 } });
+    const villager = new Villager({
+      id: 1,
+      name: 'Test',
+      age: 20,
+      position: { wx: 0.5, wy: 0.5 },
+      lifespan: 70,
+    });
     villager.path = [{ gx: 1, gy: 0 }];
     villager.destination = { gx: 1, gy: 0 };
 

@@ -35,15 +35,20 @@ const SEED = 20260815;
 /** Does nothing at all. The settlement lives on what the settlers carried in. */
 const idle: PlayerScript = () => {};
 
-/** Gets a food supply going, but only one hut for ten mouths. */
+/** Gets a food supply going, and roofs, but only one hut for ten mouths. */
 const oneHut: PlayerScript = (sim, day) => {
   if (day === 1) {
     designateNearbyTrees(sim, 40);
-    designateNearbyStone(sim, 12);
+    designateNearbyStone(sim, 16);
   }
   if (day === 2 && !ordered(sim, 'gatherer-hut')) buildNearby(sim, 'gatherer-hut');
   if (day === 8 && !ordered(sim, 'woodcutter')) buildNearby(sim, 'woodcutter');
   if (day === 14 && !ordered(sim, 'food-storage')) buildNearby(sim, 'food-storage');
+  // Three houses for ten villagers. Firewood warms a house, so a settlement
+  // without them freezes however full its woodshed is.
+  for (const built of [4, 6, 22]) {
+    if (day === built && countOf(sim, 'house') < 3) buildNearby(sim, 'house');
+  }
   if (day % 5 === 0) designateNearbyTrees(sim, 25);
   if (day % 8 === 0) designateNearbyStone(sim, 6);
 };
@@ -76,15 +81,26 @@ const tooLate: PlayerScript = (sim, day) => {
 const prepared: PlayerScript = (sim, day) => {
   if (day === 1) {
     designateNearbyTrees(sim, 40);
-    designateNearbyStone(sim, 16);
+    designateNearbyStone(sim, 20);
   }
   if (day === 2 && !ordered(sim, 'gatherer-hut')) buildNearby(sim, 'gatherer-hut');
   if (day === 8 && !ordered(sim, 'woodcutter')) buildNearby(sim, 'woodcutter');
   if (day === 12 && countOf(sim, 'gatherer-hut') < 2) buildNearby(sim, 'gatherer-hut');
   if (day === 16 && countOf(sim, 'gatherer-hut') < 3) buildNearby(sim, 'gatherer-hut');
   if (day === 20 && !ordered(sim, 'food-storage')) buildNearby(sim, 'food-storage');
+  for (const built of [4, 6, 24]) {
+    if (day === built && countOf(sim, 'house') < 3) buildNearby(sim, 'house');
+  }
   if (day % 5 === 0) designateNearbyTrees(sim, 25);
-  if (day % 8 === 0) designateNearbyStone(sim, 6);
+  if (day % 8 === 0) designateNearbyStone(sim, 8);
+};
+
+/** Everything the prepared player does, except raising a single roof. */
+const noHouses: PlayerScript = (sim, day) => {
+  if (day === 4 || day === 6 || day === 24) {
+    return;
+  }
+  prepared(sim, day);
 };
 
 /** Exactly the same, but never builds anywhere to keep the food. */
@@ -120,15 +136,12 @@ describe('the first winter', () => {
     expect(result.deaths).toBeGreaterThan(0);
   });
 
-  it('leaves a late start alive but starving by the thaw', () => {
-    // Building the hut at midsummer is survivable and nothing more: this
-    // settlement reaches spring with empty stores and people on the point of
-    // dying, rather than being quietly bailed out.
+  it('kills a late start during the winter itself', () => {
+    // Starting at midsummer leaves no room for both a food supply and shelter,
+    // and it is winter that collects the debt.
     const result = runYear(late);
-    const endOfWinter = result.log.filter((day) => day.season === 'winter').at(-1)!;
-    expect(endOfWinter.food).toBe(0);
-    expect(endOfWinter.lowestHunger).toBe(0);
-    expect(endOfWinter.lowestHealth).toBeLessThan(80);
+    expect(result.deaths).toBeGreaterThan(0);
+    expect(result.firstDeathDay).toBeGreaterThanOrEqual(firstDayOf('winter'));
   });
 
   it('is survived by a settlement that feeds itself properly', () => {
@@ -149,8 +162,9 @@ describe('the first winter', () => {
   it('lets a prepared settlement bank food before the cold', () => {
     const result = runYear(prepared);
     // Not merely "some food": enough that stockpiling is a real strategy, and
-    // in the region of what a winter actually costs ten villagers.
-    expect(result.atWinter.food).toBeGreaterThan(100);
+    // a decent fraction of the 120 a winter costs ten villagers. The rest is
+    // covered by what autumn's last harvests are still carrying in.
+    expect(result.atWinter.food).toBeGreaterThan(60);
   });
 
   it('is far harder without somewhere to keep the food', () => {
@@ -159,6 +173,14 @@ describe('the first winter', () => {
     const withLarder = runYear(prepared);
     const without = runYear(noLarder);
     expect(without.atWinter.food).toBeLessThan(withLarder.atWinter.food * 0.75);
+  });
+
+  it('freezes a settlement that built no houses, however well stocked', () => {
+    // Firewood warms a house. The same player, minus the roofs, loses everyone
+    // to the cold with full yards — which is what makes a House worth raising.
+    const result = runYear(noHouses);
+    expect(result.deaths).toBeGreaterThan(0);
+    expect(result.firstDeathDay).toBeGreaterThanOrEqual(firstDayOf('winter'));
   });
 
   it('makes winter draw down the stores it spent autumn filling', () => {

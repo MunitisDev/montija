@@ -29,6 +29,8 @@ import {
   VILLAGER_WALK_SPEED,
   WAYPOINT_TOLERANCE,
 } from '@/data/villagers';
+import { FOUNDER_AGE_MAX, FOUNDER_AGE_MIN } from '@/data/population';
+import { rollLifespan } from '@/simulation/population/PopulationSystem';
 import { gridToWorld } from '@/shared/math/isometric';
 import type { RandomState, SeededRandom } from '@/shared/math/random';
 import type { GridPoint } from '@/shared/types/geometry';
@@ -80,7 +82,7 @@ export class VillagerSystem {
   private readonly world: World;
   private readonly jobs: JobManager;
   private readonly storages: StorageRegistry;
-  private readonly random: SeededRandom;
+  private readonly randomSource: SeededRandom;
   private nextId = 1;
 
   private totalPathRequests = 0;
@@ -90,7 +92,7 @@ export class VillagerSystem {
     this.world = world;
     this.jobs = jobs;
     this.storages = storages;
-    this.random = random;
+    this.randomSource = random;
   }
 
   public get all(): readonly Villager[] {
@@ -145,8 +147,9 @@ export class VillagerSystem {
           id: this.nextId,
           name: this.makeName(),
           // A founding settlement is adults, not children.
-          age: this.random.int(18, 46),
+          age: this.randomSource.int(FOUNDER_AGE_MIN, FOUNDER_AGE_MAX + 1),
           position: gridToWorld(cell),
+          lifespan: rollLifespan(this.random),
         }),
       );
       this.nextId += 1;
@@ -154,6 +157,27 @@ export class VillagerSystem {
     }
 
     return placed;
+  }
+
+  /**
+   * Adds a newborn at a cell.
+   *
+   * Born at home rather than at the map's centre, and with a lifespan of their
+   * own drawn from the same seeded stream, so a generation does not die
+   * together.
+   */
+  public bear(cell: GridPoint, homeId: number): Villager {
+    const villager = new Villager({
+      id: this.nextId,
+      name: this.makeName(),
+      age: 0,
+      position: gridToWorld(this.world.navigation.nearestWalkable(cell) ?? cell),
+      lifespan: rollLifespan(this.random),
+    });
+    villager.homeId = homeId;
+    this.nextId += 1;
+    this.villagers.push(villager);
+    return villager;
   }
 
   /** Advances every villager by one fixed tick. */
@@ -186,7 +210,9 @@ export class VillagerSystem {
       pathBudget -= 1;
 
       // Real work first; wandering is only what they do when there is none.
-      if (!this.tryTakeJob(villager)) {
+      // Children are not put to work — they eat and grow up, which is the cost
+      // of a population that renews itself.
+      if (!villager.isAdult || !this.tryTakeJob(villager)) {
         this.chooseWanderTarget(villager);
       }
     }
@@ -200,11 +226,22 @@ export class VillagerSystem {
    * jobs, and the two simulations quietly drift apart.
    */
   public get randomState(): RandomState {
-    return this.random.getState();
+    return this.randomSource.getState();
   }
 
   public restoreRandomState(state: RandomState): void {
-    this.random.setState(state);
+    this.randomSource.setState(state);
+  }
+
+  /**
+   * The villagers' seeded stream.
+   *
+   * Shared with the population system on purpose: births are villager business,
+   * and giving them their own stream would mean one more thing to save and one
+   * more way for a loaded settlement to diverge from the one it came from.
+   */
+  public get random(): SeededRandom {
+    return this.randomSource;
   }
 
   /** Replaces the population from a save. */
@@ -335,7 +372,7 @@ export class VillagerSystem {
     this.jobs.complete(job.id);
     villager.currentJobId = null;
     villager.activity = 'idle';
-    villager.idleTicks = this.random.int(2, 8);
+    villager.idleTicks = this.randomSource.int(2, 8);
   }
 
   /** Where the villager needs to be for the job's current stage. */
@@ -728,7 +765,7 @@ export class VillagerSystem {
     }
 
     villager.activity = 'idle';
-    villager.idleTicks = this.random.int(IDLE_TICKS_MIN, IDLE_TICKS_MAX);
+    villager.idleTicks = this.randomSource.int(IDLE_TICKS_MIN, IDLE_TICKS_MAX);
   }
 
   /** Picks a nearby reachable cell and routes to it. */
@@ -737,8 +774,8 @@ export class VillagerSystem {
 
     for (let attempt = 0; attempt < WANDER_ATTEMPTS; attempt += 1) {
       const target: GridPoint = {
-        gx: from.gx + this.random.int(-WANDER_RADIUS, WANDER_RADIUS + 1),
-        gy: from.gy + this.random.int(-WANDER_RADIUS, WANDER_RADIUS + 1),
+        gx: from.gx + this.randomSource.int(-WANDER_RADIUS, WANDER_RADIUS + 1),
+        gy: from.gy + this.randomSource.int(-WANDER_RADIUS, WANDER_RADIUS + 1),
       };
 
       if (!this.world.isWalkable(target)) {
@@ -763,15 +800,15 @@ export class VillagerSystem {
 
     // Nowhere to go right now — rest and try again shortly rather than
     // hammering the pathfinder every tick.
-    villager.idleTicks = this.random.int(IDLE_TICKS_MIN, IDLE_TICKS_MAX);
+    villager.idleTicks = this.randomSource.int(IDLE_TICKS_MIN, IDLE_TICKS_MAX);
   }
 
   private findSpawnCell(origin: GridPoint): GridPoint | null {
     // Try a scattered spot first so the founders do not stand in one stack.
     for (let attempt = 0; attempt < 32; attempt += 1) {
       const candidate: GridPoint = {
-        gx: origin.gx + this.random.int(-6, 7),
-        gy: origin.gy + this.random.int(-6, 7),
+        gx: origin.gx + this.randomSource.int(-6, 7),
+        gy: origin.gy + this.randomSource.int(-6, 7),
       };
       if (this.world.isWalkable(candidate)) {
         return candidate;
@@ -784,8 +821,8 @@ export class VillagerSystem {
   }
 
   private makeName(): string {
-    const given = this.random.pick(GIVEN_NAMES) ?? 'Villager';
-    const family = this.random.pick(FAMILY_NAMES) ?? 'Of the Vale';
+    const given = this.randomSource.pick(GIVEN_NAMES) ?? 'Villager';
+    const family = this.randomSource.pick(FAMILY_NAMES) ?? 'Of the Vale';
     return `${given} ${family}`;
   }
 }
