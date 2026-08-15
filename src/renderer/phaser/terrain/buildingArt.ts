@@ -44,6 +44,19 @@ export interface BuildingPalette {
 }
 
 /** How each building is massed. Footprint comes from the building data. */
+interface Point {
+  readonly x: number;
+  readonly y: number;
+}
+
+/** The four corners of a footprint rhombus, at some height. */
+interface Rhombus {
+  readonly back: Point;
+  readonly right: Point;
+  readonly front: Point;
+  readonly left: Point;
+}
+
 interface BuildingMass {
   /** Height of the walls, in pixels. */
   readonly wallHeight: number;
@@ -154,7 +167,7 @@ export function drawBuilding(
   const halfH = base.height / 2 - FOOTPRINT_INSET / 2;
 
   /** The four corners of a rhombus centred on `cx`, at height `y`. */
-  const rhombus = (y: number) => ({
+  const rhombus = (y: number): Rhombus => ({
     back: { x: cx, y: y - halfH },
     right: { x: cx + halfW, y },
     front: { x: cx, y: y + halfH },
@@ -197,8 +210,6 @@ export function drawBuilding(
     cx,
     apexY: groundY - mass.wallHeight - mass.roofHeight,
     eaves: mass.eaves,
-    halfW,
-    halfH,
   });
 
   // A door on the left wall, which faces the camera.
@@ -219,15 +230,13 @@ function drawRoof(
   graphics: Phaser.GameObjects.Graphics,
   options: {
     palette: BuildingPalette;
-    top: ReturnType<typeof rhombusType>;
+    top: Rhombus;
     cx: number;
     apexY: number;
     eaves: number;
-    halfW: number;
-    halfH: number;
   },
 ): void {
-  const { palette, top, cx, apexY, eaves, halfW, halfH } = options;
+  const { palette, top, cx, apexY, eaves } = options;
 
   // The eaves oversail the walls on every side.
   const eL = { x: top.left.x - eaves, y: top.left.y + eaves / 2 };
@@ -259,9 +268,6 @@ function drawRoof(
     { x: eF.x + 1, y: eF.y },
     { x: eF.x - 1, y: eF.y },
   ]);
-
-  void halfW;
-  void halfH;
 }
 
 /** Crates and sacks, so a storage yard reads as holding something. */
@@ -279,20 +285,7 @@ function drawStackedGoods(
   graphics.fillRect(cx - crate * 0.5, y - crate * 1.5, crate, crate * 0.9);
 }
 
-/** Declared only so the roof options can name the rhombus shape. */
-function rhombusType() {
-  return {
-    back: { x: 0, y: 0 },
-    right: { x: 0, y: 0 },
-    front: { x: 0, y: 0 },
-    left: { x: 0, y: 0 },
-  };
-}
-
-function polygon(
-  graphics: Phaser.GameObjects.Graphics,
-  points: readonly { x: number; y: number }[],
-): void {
+function polygon(graphics: Phaser.GameObjects.Graphics, points: readonly Point[]): void {
   graphics.beginPath();
   const [first, ...rest] = points;
   if (!first) {
