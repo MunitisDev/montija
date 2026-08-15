@@ -18,6 +18,7 @@ import { BuildingRenderer } from '@/renderer/phaser/entities/BuildingRenderer';
 import { TextureKeys } from '@/renderer/phaser/terrain/tileTextures';
 import { RenderLayer, depthFor } from '@/renderer/phaser/sorting';
 import { gridToScene } from '@/shared/math/isometric';
+import { FrameTimer } from '@/renderer/FrameTimer';
 
 export const WORLD_SCENE_KEY = 'world';
 
@@ -35,6 +36,8 @@ export class WorldScene extends Phaser.Scene {
   private selectionMarker!: Phaser.GameObjects.Image;
   /** Last selection version drawn, so the marker only moves when it changes. */
   private renderedSelectionVersion = -1;
+  /** Turns Phaser's smoothed delta into real elapsed time. */
+  private readonly frameTimer = new FrameTimer();
 
   constructor() {
     super(WORLD_SCENE_KEY);
@@ -73,8 +76,11 @@ export class WorldScene extends Phaser.Scene {
     this.cameraBinding.sync();
   }
 
-  public override update(_time: number, delta: number): void {
-    this.context.advance(delta);
+  public override update(time: number, delta: number): void {
+    // Phaser's `delta` is smoothed and must not drive the simulation; see
+    // FrameTimer. `Game.advance` clamps the result, which is what stops a long
+    // stall from stampeding the settlement.
+    this.context.advance(this.frameTimer.delta(time, delta));
     this.cameraBinding.sync();
 
     // Villagers move every frame, so this runs unconditionally — unlike the
