@@ -19,6 +19,10 @@ firewood, and try to survive the winter. Saves survive a browser refresh.
 both proven in tests — but nobody has played it yet, so whether it is _enjoyable_ is unknown. See
 [`docs/ROADMAP.md`](docs/ROADMAP.md) for what is built and what is not.
 
+On a phone or tablet, install it to the home screen to play without browser chrome — the manifest
+asks for fullscreen, so it launches like an app. In a tab, use the fullscreen button in the top bar:
+a page is not allowed to enter fullscreen on its own without a gesture.
+
 ## Requirements
 
 - Node.js 20.19+ or 22.12+ (developed on 22.22)

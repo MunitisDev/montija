@@ -37,6 +37,7 @@ interface HudElements {
   readonly failureSurvived: HTMLElement;
   readonly failureRestart: HTMLButtonElement;
   readonly language: HTMLButtonElement;
+  readonly fullscreen: HTMLButtonElement | null;
   readonly speedButtons: readonly HTMLButtonElement[];
   readonly saveButton: HTMLButtonElement;
   readonly loadButton: HTMLButtonElement;
@@ -62,6 +63,7 @@ export class Hud {
   /** The last day whose events were announced, so each is announced once. */
   private lastAnnouncedDay = -1;
   private lastRenderedSeason = '';
+  private isFullscreen = false;
   private lastRenderedTemperature = Number.NaN;
 
   constructor(root: HTMLElement, context: GameContext, i18n: I18n) {
@@ -387,8 +389,32 @@ export class Hud {
   }
 
   /** Writes the labels that never change except with the language. */
+  /**
+   * Names the fullscreen button for what it will do next.
+   *
+   * Driven by the browser's own event rather than by the click, because the
+   * player can leave fullscreen with Escape or a system gesture and a button
+   * still offering to enter it would be lying.
+   */
+  public setFullscreen(active: boolean): void {
+    this.isFullscreen = active;
+    this.labelFullscreenButton();
+  }
+
+  private labelFullscreenButton(): void {
+    const button = this.elements.fullscreen;
+    if (!button) {
+      return;
+    }
+    const label = this.i18n.t(this.isFullscreen ? 'action.exitFullscreen' : 'action.fullscreen');
+    button.setAttribute('aria-label', label);
+    button.title = label;
+    button.classList.toggle('is-active', this.isFullscreen);
+  }
+
   private applyStaticText(): void {
     this.elements.failureRestart.textContent = this.i18n.t('failure.restart');
+    this.labelFullscreenButton();
     for (const element of this.root.querySelectorAll<HTMLElement>('[data-i18n]')) {
       const key = element.dataset['i18n'] as MessageKey | undefined;
       if (key) {
@@ -443,6 +469,7 @@ function collectElements(root: HTMLElement): HudElements {
     season: requireElement(root, '[data-hud="season"]'),
     temperature: requireElement(root, '[data-hud="temperature"]'),
     advice: requireElement(root, '[data-hud="advice"]'),
+    fullscreen: root.querySelector<HTMLButtonElement>('[data-hud="fullscreen"]'),
     events: requireElement(root, '[data-hud="events"]'),
     failure: requireElement(root, '[data-hud="failure"]'),
     failureSurvived: requireElement(root, '[data-hud="failure-survived"]'),

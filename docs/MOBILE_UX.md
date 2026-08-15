@@ -250,3 +250,28 @@ worse than a word that does not fit.
 They are drawn inline rather than loaded: crisp at any pixel density, no request, and they take their
 colour from the stylesheet. The colours are the muted earthy ones the rest of the game is painted in
 — enough to tell timber from firewood at a glance, not a set of highlighter pens.
+
+## Fullscreen — Implemented
+
+**A page cannot put itself full screen on load.** The Fullscreen API requires a user gesture in every
+browser, by design, so "open the URL and it is already full screen" is not something any web game can
+do. There are two honest answers and the project ships both.
+
+**A button**, beside the language chip, hidden where the API is unavailable — notably an iPhone,
+where Safari supports fullscreen for video and not for elements. Offering a button that does nothing
+is worse than offering none.
+
+It fullscreens the whole `#game` element rather than the canvas. Phaser offers to fullscreen the
+canvas itself, and taking that offer would leave the HUD behind in the page: the player would gain a
+bigger world and lose every button around it.
+
+The label follows the browser's `fullscreenchange` event rather than the click, because the player
+can leave with Escape or a system gesture, and a button still offering to enter would be lying.
+
+**Installing to the home screen**, which is the real answer on a phone. The web manifest declares
+`display: fullscreen`, so launched from the home screen the game opens with no browser chrome at all
+and no gesture needed — the browser granted it when the game was installed. On Android: the browser
+menu, then "Install app" or "Add to home screen".
+
+Orientation is deliberately left unlocked. The game now supports both, and the player has already
+decided how to hold their phone.

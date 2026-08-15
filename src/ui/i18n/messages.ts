@@ -93,6 +93,8 @@ export const EN = {
   'failure.body': 'Nobody survived. The wilderness has it back.',
   'failure.survived': 'Survived',
   'failure.restart': 'Begin again',
+  'action.fullscreen': 'Fullscreen',
+  'action.exitFullscreen': 'Leave fullscreen',
   'app.rotate': 'Rotate your device for the best view',
   'app.noscript': 'Montija needs JavaScript and WebGL to run.',
 } as const;
@@ -182,6 +184,8 @@ export const ES: Messages = {
   'failure.body': 'No sobrevivió nadie. El bosque se lo ha quedado.',
   'failure.survived': 'Sobrevivió',
   'failure.restart': 'Empezar de nuevo',
+  'action.fullscreen': 'Pantalla completa',
+  'action.exitFullscreen': 'Salir de pantalla completa',
   'app.rotate': 'Gira el dispositivo para ver mejor',
   'app.noscript': 'Montija necesita JavaScript y WebGL para funcionar.',
 };

@@ -19,6 +19,7 @@ import { Hud } from '@/ui/hud/Hud';
 import { BuildMenu } from '@/ui/build-menu/BuildMenu';
 import { I18n } from '@/ui/i18n/I18n';
 import { StatsOverlay, requestedVillagers, statsRequested } from '@/ui/StatsOverlay';
+import { bindFullscreenButton } from '@/ui/Fullscreen';
 import { DebugControls } from '@/debug/DebugControls';
 import { DebugOverlay } from '@/debug/DebugOverlay';
 
@@ -55,6 +56,18 @@ export function start(): void {
   document.documentElement.lang = i18n.language;
 
   const hud = new Hud(hudRoot, game, i18n);
+
+  // The whole game element, not the canvas: fullscreening the canvas alone
+  // would leave the HUD behind in the page.
+  const gameRoot = requireElement<HTMLDivElement>('#game');
+  const fullscreenButton = hudRoot.querySelector<HTMLButtonElement>('[data-hud="fullscreen"]');
+  if (fullscreenButton) {
+    bindFullscreenButton({
+      button: fullscreenButton,
+      target: gameRoot,
+      onChange: (active) => hud.setFullscreen(active),
+    });
+  }
   const buildMenu = new BuildMenu(hudRoot, game, i18n);
 
   // Mouse and touch are separate controllers feeding one intent sink, so a

@@ -183,6 +183,38 @@
   color: #7fa8c9;
 }
 
+/* Square icon buttons in the top bar, sized like the language chip. */
+.icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-height: 34px;
+  min-width: 44px;
+  padding: 0 10px;
+  color: var(--colour-ink-dim);
+  background: var(--colour-panel);
+  border: 1px solid var(--colour-panel-edge);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.icon-button[hidden] {
+  display: none;
+}
+
+.icon-button:hover,
+.icon-button.is-active {
+  color: var(--colour-ink);
+  border-color: rgba(201, 162, 39, 0.45);
+}
+
+.icon-button__glyph {
+  width: 15px;
+  height: 15px;
+  fill: currentColor;
+}
+
 .language-button {
   flex: 0 0 auto;
   min-height: 34px;
