@@ -28,6 +28,7 @@ import type { InputIntentSink } from '@/input/types';
 import { gridToScene, isInsideGrid, sceneToGrid } from '@/shared/math/isometric';
 import type { GridPoint, ScreenPoint } from '@/shared/types/geometry';
 import type { TerrainType } from '@/data/terrain';
+import { SeededRandom, deriveSeed } from '@/shared/math/random';
 import type { BuildingId } from '@/data/buildings';
 import type { PlacementCheck } from '@/simulation/buildings/BuildingRegistry';
 import { restore, serialise } from '@/simulation/save/serialise';
@@ -84,6 +85,14 @@ export interface GameContext {
   readonly camera: CameraController;
   readonly input: InputIntentSink;
   advance(deltaMilliseconds: number): void;
+  /**
+   * A random number for presentation only — weather, flicker, drift.
+   *
+   * Seeded and kept apart from every simulation stream on purpose. Snowflakes
+   * must never be able to shift where a villager walks, and a settlement's
+   * history has to stay reproducible from its seed however much snow fell.
+   */
+  presentationRandom(): number;
   stats(): FrameStats;
   snapshot(): SimulationSnapshot;
   /** The current selection, or `null` when nothing is selected. */
@@ -160,6 +169,8 @@ export class Game implements GameContext, InputIntentSink {
   private saveStatusChanges = 0;
   /** Ticks until the next autosave. */
   private ticksUntilAutosave = AUTOSAVE_INTERVAL_TICKS;
+  /** Randomness for the renderer, deliberately outside the simulation. */
+  private readonly presentationRng: SeededRandom;
 
   constructor(options: GameOptions = {}) {
     const seed = options.seed ?? DEFAULT_WORLD_SEED;
@@ -172,6 +183,7 @@ export class Game implements GameContext, InputIntentSink {
     });
     // Falls back to memory when the browser has no IndexedDB, so the game runs
     // rather than crashing; saves simply do not survive a refresh.
+    this.presentationRng = new SeededRandom(deriveSeed(seed, 'presentation'));
     this.saveStore = isPersistenceAvailable() ? new IndexedDbSaveStore() : new MemorySaveStore();
 
     this.clock = new SimulationClock({
@@ -290,6 +302,10 @@ export class Game implements GameContext, InputIntentSink {
    * Order matters: the simulation steps first so the camera and renderer always
    * present state that has already settled for this frame.
    */
+  public presentationRandom(): number {
+    return this.presentationRng.next();
+  }
+
   public advance(deltaMilliseconds: number): void {
     const deltaSeconds = Math.min(deltaMilliseconds, 250) / 1000;
     this.lastFrameFps = deltaSeconds > 0 ? 1 / deltaSeconds : 0;

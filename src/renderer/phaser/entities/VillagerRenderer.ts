@@ -22,6 +22,8 @@ import type { Villager } from '@/simulation/villagers/Villager';
 export class VillagerRenderer {
   private readonly scene: Phaser.Scene;
   private readonly sprites = new Map<number, Phaser.GameObjects.Image>();
+  /** Seasonal light, applied to new arrivals as well as everyone present. */
+  private seasonTint = 0xffffff;
   private readonly selectionRing: Phaser.GameObjects.Image;
 
   constructor(scene: Phaser.Scene) {
@@ -75,6 +77,19 @@ export class VillagerRenderer {
     }
   }
 
+  /**
+   * Tints everyone for the season.
+   *
+   * The art is painted neutral precisely so it can take this, which is what
+   * lets one set of sprites carry four seasons.
+   */
+  public applyTint(tint: number): void {
+    this.seasonTint = tint;
+    for (const sprite of this.sprites.values()) {
+      sprite.setTint(tint);
+    }
+  }
+
   public destroy(): void {
     for (const sprite of this.sprites.values()) {
       sprite.destroy();
@@ -94,7 +109,9 @@ export class VillagerRenderer {
       // Anchored at the feet, per the art bible, so the villager stands on the
       // tile rather than hovering over its centre.
       .setOrigin(0.5, 1)
-      .setDisplaySize(VILLAGER_HEIGHT / 2, VILLAGER_HEIGHT);
+      .setDisplaySize(VILLAGER_HEIGHT / 2, VILLAGER_HEIGHT)
+      // Someone born in winter arrives in winter's light, not summer's.
+      .setTint(this.seasonTint);
     this.sprites.set(villager.id, sprite);
     return sprite;
   }

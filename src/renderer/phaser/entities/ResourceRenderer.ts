@@ -26,6 +26,8 @@ export class ResourceRenderer {
   private readonly storageSprites = new Map<number, Phaser.GameObjects.Image>();
   private renderedPileVersion = -1;
   private renderedStorageVersion = -1;
+  /** Seasonal light, so the founding yard is not the one warm thing in winter. */
+  private seasonTint = 0xffffff;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -98,6 +100,7 @@ export class ResourceRenderer {
       const centre = gridToScene(storage.cell);
       const sprite = this.scene.add
         .image(centre.px, centre.py, TextureKeys.building('storage-yard'))
+        .setTint(this.seasonTint)
         .setOrigin(0.5, buildingGroundLine('storage-yard'))
         // Sorted on the footprint's front corner, so a villager standing beside
         // the yard is not incorrectly drawn behind it.
@@ -111,6 +114,14 @@ export class ResourceRenderer {
           ),
         );
       this.storageSprites.set(storage.id, sprite);
+    }
+  }
+
+  /** Tints the yards for the season. Piles are goods, and keep their own colour. */
+  public applyTint(tint: number): void {
+    this.seasonTint = tint;
+    for (const sprite of this.storageSprites.values()) {
+      sprite.setTint(tint);
     }
   }
 

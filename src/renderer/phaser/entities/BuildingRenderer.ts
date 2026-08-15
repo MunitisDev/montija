@@ -36,6 +36,8 @@ export class BuildingRenderer {
   private readonly sprites = new Map<number, BuildingSprites>();
   private readonly ghostCells: Phaser.GameObjects.Image[] = [];
   private renderedVersion = -1;
+  /** Seasonal light, applied to buildings raised later as well. */
+  private seasonTint = 0xffffff;
   private renderedPlacementVersion = -1;
 
   constructor(scene: Phaser.Scene) {
@@ -114,6 +116,14 @@ export class BuildingRenderer {
     }
   }
 
+  /** Tints every building for the season. */
+  public applyTint(tint: number): void {
+    this.seasonTint = tint;
+    for (const sprites of this.sprites.values()) {
+      sprites.body.setTint(tint);
+    }
+  }
+
   public destroy(): void {
     for (const sprites of this.sprites.values()) {
       sprites.body.destroy();
@@ -145,6 +155,8 @@ export class BuildingRenderer {
 
     const body = this.scene.add
       .image(anchor.px, anchor.py, texture)
+      // A building finished in winter stands in winter's light straight away.
+      .setTint(this.seasonTint)
       // Anchored on the *drawn ground line*, not the bottom of the image, and
       // placed at the centre of the footprint. Anchoring at the image edge and
       // nudging by a guessed offset put buildings a whole tile from the cells

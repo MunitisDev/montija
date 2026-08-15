@@ -19,6 +19,8 @@ import { TextureKeys } from '@/renderer/phaser/terrain/tileTextures';
 import { RenderLayer, depthFor } from '@/renderer/phaser/sorting';
 import { gridToScene } from '@/shared/math/isometric';
 import { FrameTimer } from '@/renderer/FrameTimer';
+import { WeatherRenderer } from '@/renderer/phaser/effects/WeatherRenderer';
+import { structureTint } from '@/renderer/phaser/terrain/seasonalPalette';
 
 export const WORLD_SCENE_KEY = 'world';
 
@@ -33,7 +35,10 @@ export class WorldScene extends Phaser.Scene {
   private designationRenderer!: DesignationRenderer;
   private resourceRenderer!: ResourceRenderer;
   private buildingRenderer!: BuildingRenderer;
+  private weatherRenderer!: WeatherRenderer;
   private selectionMarker!: Phaser.GameObjects.Image;
+  /** Season the world is currently painted and tinted for. */
+  private renderedSeason = '';
   /** Last selection version drawn, so the marker only moves when it changes. */
   private renderedSelectionVersion = -1;
   /** Turns Phaser's smoothed delta into real elapsed time. */
@@ -52,11 +57,15 @@ export class WorldScene extends Phaser.Scene {
     this.cameraBinding = new PhaserCameraBinding(this.cameras.main, this.context.camera);
 
     this.terrainRenderer = new TerrainRenderer(this);
-    this.terrainRenderer.build(this.context.simulation.world);
+    this.terrainRenderer.build(
+      this.context.simulation.world,
+      this.context.simulation.snapshot().season,
+    );
     this.villagerRenderer = new VillagerRenderer(this);
     this.designationRenderer = new DesignationRenderer(this);
     this.resourceRenderer = new ResourceRenderer(this);
     this.buildingRenderer = new BuildingRenderer(this);
+    this.weatherRenderer = new WeatherRenderer(this);
 
     this.selectionMarker = this.add
       .image(0, 0, TextureKeys.selection)
@@ -67,6 +76,7 @@ export class WorldScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       this.terrainRenderer.destroy();
+      this.weatherRenderer.destroy();
       this.villagerRenderer.destroy();
       this.designationRenderer.destroy();
       this.resourceRenderer.destroy();
@@ -91,6 +101,7 @@ export class WorldScene extends Phaser.Scene {
       this.context.selection?.villager?.id ?? null,
     );
 
+    this.syncSeason(delta);
     this.designationRenderer.sync(this.context.simulation.jobs);
     this.resourceRenderer.sync(
       this.context.simulation.world.piles,
@@ -103,6 +114,31 @@ export class WorldScene extends Phaser.Scene {
     this.syncSelectionMarker();
   }
 
+  /**
+   * Repaints the world and runs the weather for the current season.
+   *
+   * The heavy part — re-framing every tile and tree — happens inside
+   * `applySeason`, which returns immediately unless the season actually turned.
+   * The weather runs on *real* elapsed time rather than simulation time, so
+   * snow does not fall four times faster because the player pressed 4x.
+   */
+  private syncSeason(deltaMilliseconds: number): void {
+    const season = this.context.simulation.snapshot().season;
+
+    if (season !== this.renderedSeason) {
+      this.renderedSeason = season;
+      this.terrainRenderer.applySeason(this.context.simulation.world, season);
+      const tint = structureTint(season);
+      this.buildingRenderer.applyTint(tint);
+      this.villagerRenderer.applyTint(tint);
+      this.resourceRenderer.applyTint(tint);
+    }
+
+    this.weatherRenderer.update(season, deltaMilliseconds / 1000, () =>
+      this.context.presentationRandom(),
+    );
+  }
+
   /** Exposed so the debug overlay can report render object counts. */
   public get renderStats(): { tileCount: number; treeCount: number } {
     return this.terrainRenderer.renderStats;
@@ -111,6 +147,7 @@ export class WorldScene extends Phaser.Scene {
   private handleResize(): void {
     this.cameraBinding.syncViewport();
     this.cameraBinding.sync();
+    this.weatherRenderer.resize(this.scale.width, this.scale.height);
   }
 
   /**

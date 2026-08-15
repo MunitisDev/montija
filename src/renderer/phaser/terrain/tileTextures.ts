@@ -19,28 +19,22 @@
  */
 
 import type Phaser from 'phaser';
-import type { TerrainType } from '@/data/terrain';
+import { TERRAIN_TYPES, type TerrainType } from '@/data/terrain';
 import { TILE_HEIGHT, TILE_WIDTH } from '@/shared/math/isometric';
 import { BUILDING_IDS, type BuildingId } from '@/data/buildings';
+import { SEASONS, type Season } from '@/simulation/seasons/SeasonClock';
+import {
+  canopyColour,
+  canopyFullness,
+  hasSnow,
+  terrainPalette,
+  trunkColour,
+} from './seasonalPalette';
 import { BUILDING_COLOURS, buildingTextureSpec, drawBuilding } from './buildingArt';
 
-/** Placeholder colours, keyed by terrain id. Art, so it lives in the renderer. */
-interface TerrainPalette {
-  readonly fill: number;
-  readonly edge: number;
-}
-
-const TERRAIN_COLOURS: Readonly<Record<TerrainType, TerrainPalette>> = {
-  grass: { fill: 0x4a5b3a, edge: 0x415031 },
-  meadow: { fill: 0x56683f, edge: 0x4a5b37 },
-  forest: { fill: 0x35452c, edge: 0x2c3a24 },
-  water: { fill: 0x2c3f4a, edge: 0x263742 },
-  stone: { fill: 0x5a5750, edge: 0x4c4a44 },
-};
-
 /** Placeholder building palettes: aged timber, thatch and dark stone. */
-const TREE_TRUNK = 0x3d3227;
-const TREE_CANOPY = [0x2f4029, 0x35472d, 0x293823];
+/** How many canopy shapes exist, so a wood is not one repeated tree. */
+const TREE_VARIANTS = 3;
 
 /** Texture and frame keys, so call sites never pass raw strings around. */
 export const TextureKeys = {
@@ -57,9 +51,9 @@ export const TextureKeys = {
   site: 'construction-site',
   ghostCell: 'ghost-cell',
   /** Frame name within the terrain atlas. */
-  terrainFrame: (type: TerrainType): string => type,
+  terrainFrame: (type: TerrainType, season: Season): string => `${type}-${season}`,
   /** Frame name within the tree atlas. */
-  treeFrame: (variant: number): string => `tree-${variant}`,
+  treeFrame: (variant: number, season: Season): string => `tree-${variant}-${season}`,
 } as const;
 
 /** Tree sprite dimensions, per the art bible. */
@@ -195,19 +189,36 @@ function buildTerrainAtlas(scene: Phaser.Scene, graphics: Phaser.GameObjects.Gra
     return;
   }
 
-  const entries = Object.entries(TERRAIN_COLOURS) as [TerrainType, TerrainPalette][];
-
-  entries.forEach(([, colours], index) => {
-    graphics.translateCanvas(index * TILE_WIDTH, 0);
-    drawDiamond(graphics, colours.fill, colours.edge);
-    graphics.translateCanvas(-index * TILE_WIDTH, 0);
+  // Every terrain type in every season, packed into one image: a grid of
+  // types across and seasons down. Still one texture, so the depth-sorted
+  // display list keeps sharing a single GPU batch.
+  TERRAIN_TYPES.forEach((type, column) => {
+    SEASONS.forEach((season, row) => {
+      const palette = terrainPalette(season, type);
+      graphics.translateCanvas(column * TILE_WIDTH, row * TILE_HEIGHT);
+      drawDiamond(graphics, palette.fill, palette.edge);
+      graphics.translateCanvas(-column * TILE_WIDTH, -row * TILE_HEIGHT);
+    });
   });
-  graphics.generateTexture(TextureKeys.terrainAtlas, entries.length * TILE_WIDTH, TILE_HEIGHT);
+  graphics.generateTexture(
+    TextureKeys.terrainAtlas,
+    TERRAIN_TYPES.length * TILE_WIDTH,
+    SEASONS.length * TILE_HEIGHT,
+  );
   graphics.clear();
 
   const texture = scene.textures.get(TextureKeys.terrainAtlas);
-  entries.forEach(([type], index) => {
-    texture.add(TextureKeys.terrainFrame(type), 0, index * TILE_WIDTH, 0, TILE_WIDTH, TILE_HEIGHT);
+  TERRAIN_TYPES.forEach((type, column) => {
+    SEASONS.forEach((season, row) => {
+      texture.add(
+        TextureKeys.terrainFrame(type, season),
+        0,
+        column * TILE_WIDTH,
+        row * TILE_HEIGHT,
+        TILE_WIDTH,
+        TILE_HEIGHT,
+      );
+    });
   });
 }
 
@@ -217,24 +228,32 @@ function buildTreeAtlas(scene: Phaser.Scene, graphics: Phaser.GameObjects.Graphi
     return;
   }
 
-  for (let variant = 0; variant < TREE_CANOPY.length; variant += 1) {
-    graphics.translateCanvas(variant * TREE_WIDTH, 0);
-    drawTree(graphics, variant);
-    graphics.translateCanvas(-variant * TREE_WIDTH, 0);
+  for (let variant = 0; variant < TREE_VARIANTS; variant += 1) {
+    SEASONS.forEach((season, row) => {
+      graphics.translateCanvas(variant * TREE_WIDTH, row * TREE_HEIGHT);
+      drawTree(graphics, variant, season);
+      graphics.translateCanvas(-variant * TREE_WIDTH, -row * TREE_HEIGHT);
+    });
   }
-  graphics.generateTexture(TextureKeys.treeAtlas, TREE_CANOPY.length * TREE_WIDTH, TREE_HEIGHT);
+  graphics.generateTexture(
+    TextureKeys.treeAtlas,
+    TREE_VARIANTS * TREE_WIDTH,
+    SEASONS.length * TREE_HEIGHT,
+  );
   graphics.clear();
 
   const texture = scene.textures.get(TextureKeys.treeAtlas);
-  for (let variant = 0; variant < TREE_CANOPY.length; variant += 1) {
-    texture.add(
-      TextureKeys.treeFrame(variant),
-      0,
-      variant * TREE_WIDTH,
-      0,
-      TREE_WIDTH,
-      TREE_HEIGHT,
-    );
+  for (let variant = 0; variant < TREE_VARIANTS; variant += 1) {
+    SEASONS.forEach((season, row) => {
+      texture.add(
+        TextureKeys.treeFrame(variant, season),
+        0,
+        variant * TREE_WIDTH,
+        row * TREE_HEIGHT,
+        TREE_WIDTH,
+        TREE_HEIGHT,
+      );
+    });
   }
 }
 
@@ -264,20 +283,23 @@ function drawDiamond(graphics: Phaser.GameObjects.Graphics, fill: number, edge: 
  * Anchored so the trunk base sits at the bottom centre of the sprite, matching
  * the building and character anchor convention in the art bible.
  */
-function drawTree(graphics: Phaser.GameObjects.Graphics, variant: number): void {
+function drawTree(graphics: Phaser.GameObjects.Graphics, variant: number, season: Season): void {
   const centreX = TREE_WIDTH / 2;
-  const canopy = TREE_CANOPY[variant] ?? TREE_CANOPY[0] ?? 0x2f4029;
+  const canopy = canopyColour(season, variant);
+  // Autumn thins the canopy and winter strips it. Drawn rather than tinted,
+  // because a bare tree has a different silhouette from a full one and the
+  // silhouette is what the player actually reads at this zoom.
+  const fullness = canopyFullness(season);
 
-  // Trunk.
-  graphics.fillStyle(TREE_TRUNK, 1);
+  // Trunk. Taller in winter, because there is less canopy hiding it.
+  graphics.fillStyle(trunkColour(season), 1);
   graphics.fillRect(centreX - 3, TREE_HEIGHT - 26, 6, 22);
 
-  // Three stacked tiers, widest at the bottom.
   graphics.fillStyle(canopy, 1);
   const tiers = [
-    { y: TREE_HEIGHT - 20, halfWidth: 22, height: 26 },
-    { y: TREE_HEIGHT - 38, halfWidth: 18, height: 24 },
-    { y: TREE_HEIGHT - 56, halfWidth: 13, height: 22 },
+    { y: TREE_HEIGHT - 20, halfWidth: 22 * fullness, height: 26 * fullness },
+    { y: TREE_HEIGHT - 38 * fullness, halfWidth: 18 * fullness, height: 24 * fullness },
+    { y: TREE_HEIGHT - 56 * fullness, halfWidth: 13 * fullness, height: 22 * fullness },
   ];
   for (const tier of tiers) {
     graphics.beginPath();
@@ -291,11 +313,24 @@ function drawTree(graphics: Phaser.GameObjects.Graphics, variant: number): void 
   // Key light from the upper left, per the art bible: a lighter left face.
   graphics.fillStyle(0xffffff, 0.06);
   graphics.beginPath();
-  graphics.moveTo(centreX, TREE_HEIGHT - 78);
+  graphics.moveTo(centreX, TREE_HEIGHT - 78 * fullness);
   graphics.lineTo(centreX, TREE_HEIGHT - 20);
-  graphics.lineTo(centreX - 22, TREE_HEIGHT - 20);
+  graphics.lineTo(centreX - 22 * fullness, TREE_HEIGHT - 20);
   graphics.closePath();
   graphics.fillPath();
+
+  // Snow catches on what canopy is left, and on the branches beneath it.
+  if (hasSnow(season)) {
+    graphics.fillStyle(0xdfe6ea, 0.55);
+    for (const tier of tiers) {
+      graphics.beginPath();
+      graphics.moveTo(centreX, tier.y - tier.height);
+      graphics.lineTo(centreX + tier.halfWidth * 0.55, tier.y - tier.height * 0.45);
+      graphics.lineTo(centreX - tier.halfWidth * 0.55, tier.y - tier.height * 0.45);
+      graphics.closePath();
+      graphics.fillPath();
+    }
+  }
 }
 
 /** The ring drawn under a tapped tile. */
