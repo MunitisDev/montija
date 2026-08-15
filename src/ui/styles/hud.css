@@ -910,3 +910,34 @@
     }
   }
 }
+
+/*
+ * Frame-rate readout, shown only with `?stats` in the URL.
+ *
+ * Top-left, small, and out of the way of everything the player touches. It sits
+ * below the resource strip rather than over it, because someone measuring a
+ * device is still playing the game while they do it.
+ */
+.stats-overlay {
+  position: absolute;
+  left: calc(var(--safe-left) + 10px);
+  top: calc(var(--safe-top) + 62px);
+  margin: 0;
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  line-height: 1.5;
+  color: var(--colour-ink);
+  background: rgba(12, 14, 11, 0.8);
+  border: 1px solid var(--colour-panel-edge);
+  border-radius: 4px;
+  white-space: pre;
+  pointer-events: none;
+}
+
+/* In portrait the resource strip wraps to two lines and needs the room. */
+@media (orientation: portrait) {
+  .stats-overlay {
+    top: calc(var(--safe-top) + 100px);
+  }
+}

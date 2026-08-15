@@ -18,6 +18,7 @@ import { createPhaserGame } from '@/renderer/phaser/createPhaserGame';
 import { Hud } from '@/ui/hud/Hud';
 import { BuildMenu } from '@/ui/build-menu/BuildMenu';
 import { I18n } from '@/ui/i18n/I18n';
+import { StatsOverlay, statsRequested } from '@/ui/StatsOverlay';
 import { DebugControls } from '@/debug/DebugControls';
 import { DebugOverlay } from '@/debug/DebugOverlay';
 
@@ -58,6 +59,13 @@ export function start(): void {
   pointerController.attach();
   touchController.attach();
 
+  // Kept out of `src/debug` on purpose: that whole folder is stripped from a
+  // release, and frame rate is the one measurement that only means anything on
+  // the device somebody actually plays on. Hidden unless the URL asks for it.
+  const statsOverlay = statsRequested(window.location.search)
+    ? new StatsOverlay(hudRoot, game)
+    : null;
+
   const debugOverlay = import.meta.env.DEV
     ? new DebugOverlay(requireElement<HTMLPreElement>('#debug-overlay'), game)
     : null;
@@ -86,6 +94,7 @@ export function start(): void {
     hud.update();
     buildMenu.update();
     debugOverlay?.update();
+    statsOverlay?.update();
     window.requestAnimationFrame(renderHud);
   };
   window.requestAnimationFrame(renderHud);

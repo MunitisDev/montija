@@ -58,6 +58,32 @@ Worth stating, because all three were plausible suspects before measurement:
 
 ---
 
+## Measuring on a real device
+
+Add `?stats` to the URL:
+
+```text
+https://munitisdev.github.io/montija/?stats
+```
+
+A small readout appears under the resource strip with the current frame rate, the **average** and the
+**worst** frame since loading, the simulation's cost per frame, the population, and the viewport size
+and zoom. The worst frame is there because an average hides exactly the stutter a player notices.
+
+It is off unless asked for, so an ordinary player never sees it, and it is deliberately **not** in
+`src/debug` — that whole folder is stripped from a release, which is right for a tool that can
+conjure grain and skip winters, and wrong for the one number that can only be measured on the machine
+somebody actually plays on.
+
+The first two seconds are ignored while textures are built and the JIT warms up. That warm-up is
+counted in time rather than frames, because a frame count finishes instantly at 60 FPS and never
+finishes at all on a device slow enough to be worth measuring.
+
+Useful things to record: the figures sitting still, the figures while panning, and the figures zoomed
+right out — the last is where the object count bites hardest.
+
+---
+
 ## Rendering — measured only on a software renderer
 
 Measured in a headless browser whose WebGL is SwiftShader: a CPU rasteriser with no GPU behind it.
