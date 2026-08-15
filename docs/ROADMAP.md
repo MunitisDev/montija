@@ -19,7 +19,7 @@ physical resources until Phase 5.
 | 2     | Isometric world       | **Implemented** |
 | 3     | Villagers             | **Implemented** |
 | 4     | Job system            | **Implemented** |
-| 5     | Resource logistics    | **Planned**     |
+| 5     | Resource logistics    | **Implemented** |
 | 6     | Construction          | **Planned**     |
 | 7     | Economy               | **Planned**     |
 | 8     | Seasons and survival  | **Planned**     |
@@ -189,14 +189,45 @@ the same job, and one that asserts the whole run stays deterministic with jobs i
 
 ---
 
-## Phase 5 — Resource logistics — Planned
+## Phase 5 — Resource logistics — Implemented
 
-Trees, logs, stone, inventories, resource piles, storage, hauling. Resources exist _physically_ —
-cutting a tree does not increment a counter, it drops logs that someone must carry.
+**Definition of done:** a tree is cut, logs appear on the ground, and another villager hauls them to
+storage. ✅ Met — verified in-browser: six trees felled, up to 12 logs lying in the field and 8 in
+villagers' arms at once, all delivered to the yard.
 
-**Done when:** a tree is cut, logs appear on the ground, and another villager hauls them to storage.
+Delivered:
 
-The critical milestone. Faking logistics here would undermine every later phase.
+- Data-driven resources: logs, firewood, stone, food, each with a stack size and a carry limit.
+- One `Inventory` class serving villagers, ground piles and storage yards. **Every transfer in the
+  game goes through `Inventory.transfer`**, which conserves: it removes exactly what the destination
+  accepted, so nothing is created and nothing evaporates in transit.
+- `ResourcePile`: resources lying on a cell, merging by resource, reserved while a hauler is en
+  route.
+- `Storage` and a founding storage yard, since construction does not exist until Phase 6.
+- Two-stage `haul` jobs — collect, then deliver — modelled as a stage on one job so the pile stays
+  reserved for the whole round trip.
+- `gather-stone`: mining a surface deposit drops stone and turns impassable rock into walkable
+  grass.
+- HUD totals that are an explicit **cached summary** of what the yards hold, with a `+n` hint for
+  units still in the field.
+
+**The invariant that makes this honest**, asserted in the tests: for any run,
+
+```text
+trees felled x logs per tree  ==  stored + lying on the ground + carried by villagers
+```
+
+**Tested:** 32 logistics tests, including that invariant, that a full yard makes a hauler put the
+remainder back on the ground rather than deleting it, and that no two villagers ever haul the same
+pile across 3,000 ticks.
+
+**Known limitations:**
+
+- Nothing consumes resources yet. Firewood and food have definitions but no source.
+- Only one storage yard, granted at founding; the player cannot place more until Phase 6.
+- Haulers carry from one pile at a time — no route planning or multi-pickup trips.
+- A villager whose destination yard fills mid-delivery drops the remainder where they stand, which
+  is safe but not clever.
 
 ---
 

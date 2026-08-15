@@ -104,7 +104,9 @@ Data flows down. Nothing reaches back up.
 | Render interpolation          | **Implemented** | 10Hz simulation drawn smoothly at 60fps via tick alpha        |
 | `JobManager` + jobs           | **Implemented** | Priority, reservation, assignment, completion                 |
 | Tree felling + designation    | **Implemented** | Clears ground and updates navigation                          |
-| Logistics, resource piles     | **Planned**     | Phase 5                                                       |
+| `Inventory` (one class)       | **Implemented** | Villagers, piles and yards; every transfer conserves          |
+| Resource piles + hauling      | **Implemented** | Physical resources, two-stage haul jobs                       |
+| Storage yards                 | **Implemented** | One granted at founding; player-placed in Phase 6             |
 | Save/load                     | **Planned**     | Phase 9                                                       |
 
 ---
@@ -303,6 +305,27 @@ Unreachable work is _released_, not dropped: it returns to the board for someone
 One sanctioned exception to isometric sorting lives in `renderer/phaser/sorting.ts`: designation
 marks draw in a band above every world object. They are the player's orders rather than things
 standing in the world, and sorting them as scenery buried them behind whatever tree stood in front.
+
+## Resources
+
+The project's central rule is that resources physically exist. Felling a tree does not increment a
+counter — it drops a pile where the tree stood, and those logs are not part of the settlement's
+stock until somebody has walked over, picked them up and carried them to a yard.
+
+```text
+tree ──fell──▶ pile on the ground ──haul job──▶ villager's arms ──▶ storage yard ──▶ HUD total
+```
+
+**One `Inventory` class** serves villagers, piles and yards, differing only in capacity. Every
+movement goes through `transfer`, which asks the destination what it will accept and removes only
+that much. Resources therefore cannot be created or destroyed by a bug in a caller — the worst that
+happens is they stay where they were.
+
+**The HUD's numbers are a cached summary**, never the authority. They report what the yards hold,
+and deliberately exclude what is lying in the field, so the player sees the difference between wood
+cut and wood collected. A small `+n` marks the backlog.
+
+The invariant asserted in the tests: `felled x logs per tree == stored + loose + carried`.
 
 ## Build
 

@@ -11,8 +11,9 @@ Build a small settlement in an unforgiving wilderness, and help its people survi
 Inspired by deep settlement simulation games, but entirely original — no assets, code, text, UI or
 balance taken from any existing commercial game.
 
-**Status: Phase 4 of 11 — job system.** Mark a tree and a villager will walk over and fell it,
-clearing the ground. Felling produces nothing yet — logs become physical resources in Phase 5. See
+**Status: Phase 5 of 11 — resource logistics.** Mark a tree; a villager fells it and logs drop on
+the ground; another carries them to the storage yard, and only then does the counter move. Nothing
+is consumed yet — that starts with production in Phase 7. See
 [`docs/ROADMAP.md`](docs/ROADMAP.md) for what is built and what is not.
 
 ## Requirements
@@ -51,7 +52,8 @@ Landscape orientation is the target. Nothing requires a keyboard or a mouse.
 | Zoom   | Mouse wheel         | Pinch           |
 | Select | Click               | Tap             |
 
-Tap a tree and press **Fell** to mark it for felling; press **Cancel** to call it off.
+Tap a tree and press **Fell**, or a rock and press **Mine**, to order the work; **Cancel** calls it
+off. Felled logs and quarried stone lie where they fall until a villager hauls them in.
 
 Simulation speed (pause / 1x / 2x / 4x) is set from the buttons at the bottom right.
 
