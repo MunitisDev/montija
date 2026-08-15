@@ -135,7 +135,7 @@
 
 /* Sized for a fingertip, not a cursor — designation is a core mobile action. */
 .tile-panel__action {
-  min-height: 36px;
+  min-height: var(--touch-target);
   min-width: 72px;
   margin-left: 4px;
   padding: 0 14px;
@@ -173,9 +173,25 @@
   border-radius: 6px;
 }
 
+/*
+ * The build bar scrolls sideways rather than wrapping.
+ *
+ * Wrapping cost a whole row of height on a landscape phone, where vertical
+ * space is the scarce resource. Scrolling keeps the settlement visible and
+ * still reaches every building.
+ */
 .build-bar {
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  max-width: 100%;
+  scrollbar-width: none;
+  /* The bar scrolls; the world still owns every other gesture. */
+  touch-action: pan-x;
+}
+
+.build-bar::-webkit-scrollbar {
+  display: none;
 }
 
 .build-bar__hint {
@@ -184,9 +200,14 @@
   font-style: italic;
 }
 
-/* Build buttons are full-size touch targets: this is the main mobile action. */
+/*
+ * Build buttons are full-size touch targets: this is the main mobile action,
+ * so they honour the same 44px floor as everything else rather than being
+ * squeezed to fit more of them on screen.
+ */
 .build-button {
-  min-height: 40px;
+  min-height: var(--touch-target);
+  flex: 0 0 auto;
   padding: 0 12px;
   font-family: var(--font-ui);
   font-size: 0.82rem;
@@ -195,6 +216,7 @@
   border: 1px solid var(--colour-panel-edge);
   border-radius: 5px;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .build-button:focus-visible,
@@ -244,7 +266,7 @@
 }
 
 .placement-bar button {
-  min-height: 38px;
+  min-height: var(--touch-target);
   min-width: 76px;
   padding: 0 14px;
   font-family: var(--font-ui);
@@ -275,6 +297,43 @@
 .speed-controls {
   display: flex;
   gap: 6px;
+}
+
+.session-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 8px;
+}
+
+.session-button {
+  min-height: var(--touch-target);
+  min-width: 64px;
+  padding: 0 12px;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  color: var(--colour-ink-dim);
+  background: var(--colour-panel);
+  border: 1px solid var(--colour-panel-edge);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.session-button:hover {
+  color: var(--colour-ink);
+}
+
+.session-button:focus-visible {
+  outline: 2px solid var(--colour-accent);
+  outline-offset: 2px;
+}
+
+/* Confirmation of the last save or load. Quiet, and never blocks anything. */
+.session-status {
+  font-size: 0.72rem;
+  font-style: italic;
+  color: var(--colour-ink-dim);
+  min-width: 0;
 }
 
 .speed-button {
@@ -350,11 +409,46 @@
 @media (max-height: 460px) {
   :root {
     --hud-gap: 6px;
+    /* The accessibility floor, never below it. */
     --touch-target: 44px;
   }
 
   .resource__label {
     font-size: 0.65rem;
+  }
+
+  /*
+   * Keep the bottom bar to a single row. Two rows on a 390px-tall phone eats a
+   * quarter of the screen, and the settlement is what the player came for.
+   */
+  .hud-bar--bottom {
+    flex-wrap: nowrap;
+    align-items: flex-end;
+  }
+
+  .bottom-left {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .build-button {
+    padding: 0 10px;
+    font-size: 0.78rem;
+  }
+
+  .session-controls {
+    margin-right: 4px;
+  }
+
+  /* Status text is a nicety; the buttons are not. */
+  .session-status {
+    display: none;
+  }
+
+  .session-button {
+    min-width: 56px;
+    padding: 0 8px;
+    font-size: 0.76rem;
   }
 
   /* Shrink the hint rather than hiding it, which would leave an empty box. */

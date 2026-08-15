@@ -123,6 +123,20 @@ export class BuildingRegistry {
     this.changeVersion += 1;
   }
 
+  /** Removes every building. Used before restoring a save. */
+  public clear(): void {
+    this.byId.clear();
+    this.nextId = 1;
+    this.changeVersion += 1;
+  }
+
+  /** Re-adds a building from a save, preserving its id. */
+  public restoreOne(building: Building): void {
+    this.byId.set(building.id, building);
+    this.nextId = Math.max(this.nextId, building.id + 1);
+    this.changeVersion += 1;
+  }
+
   public markChanged(): void {
     this.changeVersion += 1;
   }

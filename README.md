@@ -11,9 +11,12 @@ Build a small settlement in an unforgiving wilderness, and help its people survi
 Inspired by deep settlement simulation games, but entirely original — no assets, code, text, UI or
 balance taken from any existing commercial game.
 
-**Status: Phase 5 of 11 — resource logistics.** Mark a tree; a villager fells it and logs drop on
-the ground; another carries them to the storage yard, and only then does the counter move. Nothing
-is consumed yet — that starts with production in Phase 7. See
+**Status: Phases 0-10 complete — the MVP loop is playable.** Fell trees and quarry stone, haul them
+in, place buildings and watch villagers carry the materials and construct them, produce food and
+firewood, and try to survive the winter. Saves survive a browser refresh.
+
+**What is not done: balance.** Winter can kill an unprepared settlement and a stocked one survives,
+both proven in tests — but nobody has played it yet, so whether it is _enjoyable_ is unknown. See
 [`docs/ROADMAP.md`](docs/ROADMAP.md) for what is built and what is not.
 
 ## Requirements
@@ -54,6 +57,9 @@ Landscape orientation is the target. Nothing requires a keyboard or a mouse.
 
 Tap a tree and press **Fell**, or a rock and press **Mine**, to order the work; **Cancel** calls it
 off. Felled logs and quarried stone lie where they fall until a villager hauls them in.
+
+To build: pick a building from the bottom bar, move the camera until the ghost sits where you want
+it, and press **Place**. Villagers carry the materials from storage and construct it.
 
 Simulation speed (pause / 1x / 2x / 4x) is set from the buttons at the bottom right.
 

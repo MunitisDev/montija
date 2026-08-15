@@ -192,6 +192,13 @@ export class VillagerSystem {
     }
   }
 
+  /** Replaces the population from a save. */
+  public restore(villagers: Villager[]): void {
+    this.villagers.length = 0;
+    this.villagers.push(...villagers);
+    this.nextId = villagers.reduce((highest, v) => Math.max(highest, v.id + 1), 1);
+  }
+
   /**
    * Nearest villager to a cell, within `radius`.
    *

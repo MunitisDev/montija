@@ -76,6 +76,13 @@ export class StorageRegistry {
     return storage;
   }
 
+  /** Removes every yard. Used before restoring a save. */
+  public clear(): void {
+    this.storages.length = 0;
+    this.nextId = 1;
+    this.changeVersion += 1;
+  }
+
   public getById(id: number): Storage | null {
     return this.storages.find((storage) => storage.id === id) ?? null;
   }

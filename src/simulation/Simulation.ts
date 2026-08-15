@@ -263,6 +263,18 @@ export class Simulation {
     return this.jobs.isTargetReserved('gather-stone', cellId);
   }
 
+  /**
+   * Restores the clock and the death toll after a save is loaded.
+   *
+   * Everything else is restored by the serialiser through the registries; this
+   * is the small amount of state the Simulation itself owns.
+   */
+  public restoreClock(tick: number, deaths: number): void {
+    this.currentTick = tick;
+    this.totalDeaths = deaths;
+    this.lastDayReport = EMPTY_REPORT;
+  }
+
   /** The calendar at the current tick. */
   public get year(): YearState {
     return yearStateAt(this.currentTick);

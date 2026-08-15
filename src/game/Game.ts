@@ -30,6 +30,14 @@ import type { GridPoint, ScreenPoint } from '@/shared/types/geometry';
 import type { TerrainType } from '@/data/terrain';
 import type { BuildingId } from '@/data/buildings';
 import type { PlacementCheck } from '@/simulation/buildings/BuildingRegistry';
+import { restore, serialise } from '@/simulation/save/serialise';
+import {
+  AUTOSAVE_SLOT,
+  IndexedDbSaveStore,
+  MemorySaveStore,
+  isPersistenceAvailable,
+  type SaveStore,
+} from '@/simulation/save/SaveStore';
 
 /** Per-frame statistics surfaced to the HUD and debug overlay. */
 export interface FrameStats {
@@ -97,6 +105,13 @@ export interface GameContext {
   cancelPlacement(): void;
   /** Commits the ghost. Returns `false` when the spot is not valid. */
   confirmPlacement(): boolean;
+
+  save(): Promise<boolean>;
+  load(): Promise<boolean>;
+  hasSave(): Promise<boolean>;
+  /** Human-readable result of the last save or load, for the HUD. */
+  readonly saveStatus: string;
+  readonly saveVersion: number;
 }
 
 /** Where the placement ghost is and whether it may be committed. */
@@ -104,6 +119,24 @@ export interface PlacementState {
   readonly buildingId: BuildingId;
   readonly origin: GridPoint;
   readonly check: PlacementCheck;
+}
+
+/** Ticks between autosaves. 3,000 is five in-game days. */
+const AUTOSAVE_INTERVAL_TICKS = 3000;
+
+function describeError(error: unknown): string {
+  return error instanceof Error ? error.message : 'unknown error';
+}
+
+function describeFailure(kind: string): string {
+  switch (kind) {
+    case 'missing':
+      return 'No saved settlement';
+    case 'unsupported-version':
+      return 'Save is from another version';
+    default:
+      return 'Save is unreadable';
+  }
 }
 
 export interface GameOptions {
@@ -122,6 +155,11 @@ export class Game implements GameContext, InputIntentSink {
   private selectionChanges = 0;
   private currentPlacement: PlacementState | null = null;
   private placementChanges = 0;
+  private readonly saveStore: SaveStore;
+  private lastSaveStatus = '';
+  private saveStatusChanges = 0;
+  /** Ticks until the next autosave. */
+  private ticksUntilAutosave = AUTOSAVE_INTERVAL_TICKS;
 
   constructor(options: GameOptions = {}) {
     const seed = options.seed ?? DEFAULT_WORLD_SEED;
@@ -132,6 +170,10 @@ export class Game implements GameContext, InputIntentSink {
       worldHeight: WORLD_HEIGHT,
       startingVillagers: STARTING_VILLAGERS,
     });
+    // Falls back to memory when the browser has no IndexedDB, so the game runs
+    // rather than crashing; saves simply do not survive a refresh.
+    this.saveStore = isPersistenceAvailable() ? new IndexedDbSaveStore() : new MemorySaveStore();
+
     this.clock = new SimulationClock({
       ticksPerSecond: TICKS_PER_SECOND,
       maxTicksPerAdvance: MAX_TICKS_PER_ADVANCE,
@@ -257,6 +299,74 @@ export class Game implements GameContext, InputIntentSink {
 
     this.camera.update(deltaSeconds);
     this.updatePlacementGhost();
+
+    if (this.ticksLastFrame > 0) {
+      this.ticksUntilAutosave -= this.ticksLastFrame;
+      if (this.ticksUntilAutosave <= 0) {
+        this.ticksUntilAutosave = AUTOSAVE_INTERVAL_TICKS;
+        // Fire and forget: a slow disk must never stall a frame.
+        void this.save();
+      }
+    }
+  }
+
+  public get saveStatus(): string {
+    return this.lastSaveStatus;
+  }
+
+  public get saveVersion(): number {
+    return this.saveStatusChanges;
+  }
+
+  /** Writes the settlement to the autosave slot. */
+  public async save(): Promise<boolean> {
+    try {
+      await this.saveStore.write(
+        AUTOSAVE_SLOT,
+        serialise(this.simulation, new Date().toISOString()),
+      );
+      this.setSaveStatus('Saved');
+      return true;
+    } catch (error) {
+      this.setSaveStatus(`Save failed: ${describeError(error)}`);
+      return false;
+    }
+  }
+
+  /**
+   * Loads the autosave over the running settlement.
+   *
+   * The renderer is not told anything special: every renderer syncs off a
+   * version counter, and restoring bumps all of them, so the world redraws
+   * itself on the next frame.
+   */
+  public async load(): Promise<boolean> {
+    try {
+      const result = await this.saveStore.read(AUTOSAVE_SLOT);
+      if (!result.ok) {
+        this.setSaveStatus(describeFailure(result.failure.kind));
+        return false;
+      }
+
+      restore(this.simulation, result.save);
+      this.clock.restore(result.save.simulationTime, this.clock.speed);
+      this.currentSelection = null;
+      this.selectionChanges += 1;
+      this.setSaveStatus('Loaded');
+      return true;
+    } catch (error) {
+      this.setSaveStatus(`Load failed: ${describeError(error)}`);
+      return false;
+    }
+  }
+
+  public hasSave(): Promise<boolean> {
+    return this.saveStore.has(AUTOSAVE_SLOT).catch(() => false);
+  }
+
+  private setSaveStatus(status: string): void {
+    this.lastSaveStatus = status;
+    this.saveStatusChanges += 1;
   }
 
   public stats(): FrameStats {

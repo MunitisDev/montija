@@ -135,6 +135,13 @@ export class ResourcePileRegistry {
     }
   }
 
+  /** Empties the ground. Used before restoring a save. */
+  public clear(): void {
+    this.byId.clear();
+    this.byCell.clear();
+    this.changeVersion += 1;
+  }
+
   /** Total of one resource lying on the ground, not yet stored. */
   public totalOf(resource: ResourceId): number {
     let total = 0;

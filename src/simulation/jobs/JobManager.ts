@@ -238,6 +238,22 @@ export class JobManager {
     return null;
   }
 
+  /** Replaces the whole board from a save. */
+  public restore(jobs: readonly Job[]): void {
+    this.jobs.clear();
+    this.reservedTargets.clear();
+    this.nextId = 1;
+
+    for (const job of jobs) {
+      this.jobs.set(job.id, { ...job });
+      this.nextId = Math.max(this.nextId, job.id + 1);
+      if (job.targetEntityId !== null) {
+        this.reservedTargets.add(targetKey(job.type, job.targetEntityId));
+      }
+    }
+    this.changeVersion += 1;
+  }
+
   /** Drops a finished job from the board and frees its target. */
   private forget(job: Job): void {
     this.changeVersion += 1;

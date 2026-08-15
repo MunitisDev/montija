@@ -29,6 +29,9 @@ interface HudElements {
   readonly season: HTMLElement;
   readonly temperature: HTMLElement;
   readonly speedButtons: readonly HTMLButtonElement[];
+  readonly saveButton: HTMLButtonElement;
+  readonly loadButton: HTMLButtonElement;
+  readonly saveStatus: HTMLElement;
 }
 
 export class Hud {
@@ -41,6 +44,7 @@ export class Hud {
   private readonly lastRenderedTotals = new Map<ResourceId, number>();
   /** Loose totals last written, tracked apart from stored ones. */
   private readonly lastRenderedLoose = new Map<ResourceId, number>();
+  private lastRenderedSaveVersion = -1;
   private lastRenderedSeason = '';
   private lastRenderedTemperature = Number.NaN;
 
@@ -49,6 +53,7 @@ export class Hud {
     this.elements = collectElements(root);
     this.bindSpeedButtons();
     this.bindSelectionAction();
+    this.bindSessionButtons();
     this.update();
   }
 
@@ -106,6 +111,11 @@ export class Hud {
     if (speed !== this.lastRenderedSpeed) {
       this.renderSpeed(speed);
       this.lastRenderedSpeed = speed;
+    }
+
+    if (this.context.saveVersion !== this.lastRenderedSaveVersion) {
+      this.elements.saveStatus.textContent = this.context.saveStatus;
+      this.lastRenderedSaveVersion = this.context.saveVersion;
     }
 
     if (this.context.selectionVersion !== this.lastRenderedSelection) {
@@ -200,6 +210,27 @@ export class Hud {
     }
   }
 
+  private bindSessionButtons(): void {
+    // Both are async and both disable themselves while running, so an
+    // impatient double-tap cannot start two writes at once.
+    this.elements.saveButton.addEventListener('click', () => {
+      void this.runSession(this.elements.saveButton, () => this.context.save());
+    });
+    this.elements.loadButton.addEventListener('click', () => {
+      void this.runSession(this.elements.loadButton, () => this.context.load());
+    });
+  }
+
+  private async runSession(button: HTMLButtonElement, action: () => Promise<boolean>) {
+    button.disabled = true;
+    try {
+      await action();
+    } finally {
+      button.disabled = false;
+      this.update();
+    }
+  }
+
   private bindSpeedButtons(): void {
     for (const button of this.elements.speedButtons) {
       button.addEventListener('click', () => {
@@ -238,6 +269,9 @@ function collectElements(root: HTMLElement): HudElements {
     season: requireElement(root, '[data-hud="season"]'),
     temperature: requireElement(root, '[data-hud="temperature"]'),
     speedButtons: Array.from(root.querySelectorAll<HTMLButtonElement>('[data-speed]')),
+    saveButton: requireElement(root, '[data-hud="save"]') as HTMLButtonElement,
+    loadButton: requireElement(root, '[data-hud="load"]') as HTMLButtonElement,
+    saveStatus: requireElement(root, '[data-hud="save-status"]'),
   };
 }
 

@@ -67,6 +67,17 @@ export class TreeRegistry {
     return tree;
   }
 
+  /** Repopulates from a save. Replaces whatever is standing. */
+  public restore(trees: readonly TreeInstance[]): void {
+    this.byId.clear();
+    this.byCell.clear();
+    for (const tree of trees) {
+      this.byId.set(tree.id, tree);
+      this.byCell.set(this.cellIndex(tree.gx, tree.gy), tree.id);
+    }
+    this.changeVersion += 1;
+  }
+
   private cellIndex(gx: number, gy: number): number {
     return gy * this.width + gx;
   }

@@ -20,11 +20,11 @@ physical resources until Phase 5.
 | 3     | Villagers             | **Implemented** |
 | 4     | Job system            | **Implemented** |
 | 5     | Resource logistics    | **Implemented** |
-| 6     | Construction          | **Planned**     |
-| 7     | Economy               | **Planned**     |
-| 8     | Seasons and survival  | **Planned**     |
-| 9     | Save / load           | **Planned**     |
-| 10    | Mobile UX             | **Planned**     |
+| 6     | Construction          | **Implemented** |
+| 7     | Economy               | **Implemented** |
+| 8     | Seasons and survival  | **Implemented** |
+| 9     | Save / load           | **Implemented** |
+| 10    | Mobile UX             | **Implemented** |
 | 11    | Performance           | **Planned**     |
 
 ---
@@ -231,50 +231,78 @@ pile across 3,000 ticks.
 
 ---
 
-## Phase 6 — Construction — Planned
+## Phase 6 — Construction — Implemented
 
-Build menu driven by data, ghost placement, footprint validation, construction sites, material
-requirements, physical delivery, builder jobs, completion.
+**Done:** the player places a house and villagers physically construct it.
 
-**Done when:** the player places a house and villagers physically construct it.
-
----
-
-## Phase 7 — Economy — Planned
-
-Gatherer Hut, Woodcutter, profession slots, recipes, production jobs.
-
-**Done when:** the settlement produces food and firewood through real worker activity.
+- Build menu generated from `data/buildings.ts`; adding a building is a data row.
+- Frame-and-confirm placement: the ghost sits at the centre of the view and the camera positions
+  it, so placement never needs precision tapping.
+- One validation method shared by ghost and command, so a green ghost cannot refuse.
+- Sites stay walkable until finished — blocking at placement let a site seal itself off from its
+  own delivery point.
+- Materials are hauled from storage through the same inventories as any other load.
 
 ---
 
-## Phase 8 — Seasons and survival — Planned
+## Phase 7 — Economy — Implemented
 
-Year clock, four seasons, temperature, food and firewood consumption, health consequences, death.
+**Done:** the settlement produces food and firewood through real worker activity.
 
-**Done when:** winter can kill an unprepared settlement.
+- Data-driven recipes; the production system never names a specific good.
+- Produced goods drop on the ground beside the workshop and are hauled in, exactly like felled
+  logs. Production is not a shortcut past the logistics.
+- A woodcutter with no logs posts a haul and waits. It cannot split logs it does not have.
 
-At this point the MVP goal — _survive the first winter_ — becomes playable.
-
----
-
-## Phase 9 — Save / load — Planned
-
-Versioned save schema, IndexedDB persistence, autosave, manual save/load. Authoritative simulation
-state only; never serialised Phaser objects.
-
-`docs/SAVE_FORMAT.md` is written in this phase, when there is a real format to describe.
-
-**Done when:** a running settlement survives a browser refresh.
+**Limitation:** villagers are not assigned to professions; anyone takes any job.
 
 ---
 
-## Phase 10 — Mobile UX — Planned
+## Phase 8 — Seasons and survival — Implemented
 
-Real-device testing and refinement of touch camera, pinch zoom, building placement, selection,
-menus, text size, safe areas, landscape phone and tablet.
+**Done:** winter is capable of killing an unprepared settlement. Asserted both ways in tests — an
+unprepared settlement loses people within the first year, a stocked one loses none.
 
-**Done when:** no mouse or keyboard is required to play.
+- The year is pure arithmetic over the tick, so a save recording the tick records the season.
+- Temperature eases across the back half of each season rather than stepping, which is what gives
+  autumn the feeling of the cold closing in.
+- Daily upkeep: everyone eats, and below freezing everyone burns firewood. Short rations are shared
+  evenly, so a half-fed settlement weakens together.
+- Exhausted hunger or warmth costs health; health reaching zero kills. The dead drop what they
+  carried and release their job.
+
+**Limitation — the important one:** the numbers are untested by play. Nothing here has been
+balanced against actual enjoyment.
+
+---
+
+## Phase 9 — Save / load — Implemented
+
+**Done:** a running settlement survives a browser refresh. Verified in a real browser through
+IndexedDB across a full page reload: a fresh page showed a new world, and loading restored the
+saved one exactly.
+
+- Versioned format, validated before anything is trusted. A save from another version refuses
+  cleanly rather than loading into a broken world.
+- Only authoritative simulation state is stored — no Phaser objects, asserted by a test.
+- Terrain is saved rather than regenerated, because villagers reshape it; regenerating would undo
+  every clearing they made.
+- Autosave every five in-game days, plus manual save and load.
+- The strongest test: a loaded settlement continues tick-for-tick identically to the original.
+
+---
+
+## Phase 10 — Mobile UX — Implemented, pending real-device testing
+
+**Done in the browser:** audited at 844x390, 1024x768 and 1280x800. No HUD overflow, no page
+scrolling, the canvas fills the viewport at every size, and every control meets the 44px floor.
+
+- The audit caught build buttons at 40px, below the floor this project documented for itself.
+- The bottom bar wrapped to two rows on a landscape phone, costing a quarter of the screen. The
+  build bar now scrolls sideways instead.
+
+**Not done, and cannot be done from here:** testing on a physical tablet and phone. Gesture feel,
+thumb reach and real safe-area insets need hands.
 
 ---
 
