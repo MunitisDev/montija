@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+*.local
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Logs
+*.log
+npm-debug.log*
+.eslintcache
+.vite/
