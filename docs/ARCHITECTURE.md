@@ -102,7 +102,9 @@ Data flows down. Nothing reaches back up.
 | `NavigationGrid`              | **Implemented** | Walkability and movement cost; ready for buildings            |
 | A\* pathfinding               | **Implemented** | Deterministic, bounded, strict no-corner-cutting              |
 | Render interpolation          | **Implemented** | 10Hz simulation drawn smoothly at 60fps via tick alpha        |
-| Jobs, logistics               | **Planned**     | Phases 4-5                                                    |
+| `JobManager` + jobs           | **Implemented** | Priority, reservation, assignment, completion                 |
+| Tree felling + designation    | **Implemented** | Clears ground and updates navigation                          |
+| Logistics, resource piles     | **Planned**     | Phase 5                                                       |
 | Save/load                     | **Planned**     | Phase 9                                                       |
 
 ---
@@ -277,6 +279,30 @@ would silently destroy that guarantee.
 redraws 60; drawing raw tick positions would visibly stutter. Sprites are placed between the
 villager's previous and current position using the clock's tick alpha. This is presentation only —
 the interpolated position is never fed back into the simulation, so determinism is unaffected.
+
+## Jobs
+
+Villagers do not decide what to do. They ask the job board, and run whatever they are handed. That
+is what keeps villager logic from collapsing into one giant conditional as work types multiply.
+
+**Jobs are plain data.** Behaviour is keyed by `type` in the system that executes them, not carried
+by the job itself. A job holding closures or subclass identity cannot be written to a save and read
+back; this design serialises as-is, which Phase 9 depends on.
+
+**Reservation is enforced twice**, because a race here produces bugs that only appear under load:
+
+- a job can only be claimed while `available`, and claiming assigns it within the same tick;
+- the _target_ is reserved as well, so a second job against the same tree cannot be created at all.
+
+Assignment is deterministic: highest priority, then nearest, then lowest job id. That last tiebreak
+is not cosmetic — without it, two villagers equidistant from two equal jobs could be assigned in an
+order that depends on map iteration, and the simulation would stop being reproducible.
+
+Unreachable work is _released_, not dropped: it returns to the board for someone else to attempt.
+
+One sanctioned exception to isometric sorting lives in `renderer/phaser/sorting.ts`: designation
+marks draw in a band above every world object. They are the player's orders rather than things
+standing in the world, and sorting them as scenery buried them behind whatever tree stood in front.
 
 ## Build
 

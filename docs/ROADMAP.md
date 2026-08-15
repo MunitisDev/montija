@@ -8,8 +8,9 @@ The repository must remain buildable and runnable after every phase.
 
 ## Where the project is
 
-**Phase 3 complete.** The world is inhabited but not yet productive: ten villagers wander it under
-their own navigation. Nothing can be built, and nothing is harvested — that starts in Phase 4.
+**Phase 4 complete.** The settlement now does work. The player marks trees, villagers claim them,
+walk over and fell them, clearing the ground. Nothing is yet _produced_ — logs do not exist as
+physical resources until Phase 5.
 
 | Phase | Name                  | Status          |
 | ----- | --------------------- | --------------- |
@@ -17,7 +18,7 @@ their own navigation. Nothing can be built, and nothing is harvested — that st
 | 1     | Browser foundation    | **Implemented** |
 | 2     | Isometric world       | **Implemented** |
 | 3     | Villagers             | **Implemented** |
-| 4     | Job system            | **Planned**     |
+| 4     | Job system            | **Implemented** |
 | 5     | Resource logistics    | **Planned**     |
 | 6     | Construction          | **Planned**     |
 | 7     | Economy               | **Planned**     |
@@ -153,14 +154,38 @@ Delivered:
 
 ---
 
-## Phase 4 — Job system — Planned
+## Phase 4 — Job system — Implemented
 
-`JobManager`, job creation, priority, **reservation**, assignment, completion. `MoveToJob` first,
-then `ChopTreeJob`.
+**Definition of done:** villagers autonomously find available work. ✅ Met — verified in-browser:
+10 trees designated, jobs claimed and worked without intervention, trees felled, ground cleared.
 
-Reservation matters: two villagers must never claim the same tree.
+Delivered:
 
-**Done when:** villagers autonomously find available work.
+- Jobs are **plain data**, not objects with behaviour. Behaviour lives in the system that runs
+  them, keyed by type. A job carrying closures or subclass identity could not be written to a save;
+  this serialises as-is, which is what Phase 9 will need.
+- `JobManager` with priority, distance and id tie-breaking, so assignment is reproducible.
+- **Reservation enforced twice.** A job can only be claimed while available, _and_ its target is
+  reserved so a second job against the same tree cannot even be created. Two villagers claiming one
+  tree is the failure this phase exists to prevent.
+- Full lifecycle: available → reserved → inProgress → complete, plus release (unreachable work goes
+  back on the board rather than vanishing) and cancel.
+- `chop-tree` jobs, designated by tapping a tree and pressing Fell.
+- Felling clears the ground: forest becomes grass, and the navigation grid is updated in step. This
+  is how the player will open land for building in Phase 6.
+- Villagers walk to an adjacent cell to work, since a tree occupies its own.
+- Debug overlay reports open, taken and completed jobs.
+
+**Tested:** 31 job tests, including one that runs 600 ticks asserting no two villagers ever hold
+the same job, and one that asserts the whole run stays deterministic with jobs in play.
+
+**Known limitations:**
+
+- Felling a tree produces nothing. Logs become physical resources in Phase 5.
+- Only two job types exist, and `move-to` is not yet reachable from the UI.
+- No job cancellation from the villager's side — a villager holding an unreachable job releases it
+  only at claim time, not if the world changes mid-walk.
+- No professions or work priorities per villager; anyone takes any job.
 
 ---
 
