@@ -42,6 +42,7 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 15    | Art pass              | **Implemented** |
 | 16    | Land use              | **Implemented** |
 | 17    | Professions           | **Implemented** |
+| 18    | Clothing              | **Implemented** |
 
 ---
 
@@ -458,3 +459,22 @@ nearest. Set out in [GAME_DESIGN.md](./GAME_DESIGN.md).
 of ten people to workshops is a genuine cost. The balance tests were rewritten
 to describe the new curve rather than retuned to hide it — one hut now starves,
 two scrape through, three prosper.
+
+---
+
+## Phase 18 — Clothing — Implemented
+
+The third need, with a production chain behind it rather than a number bolted
+on. Set out in [GAME_DESIGN.md](./GAME_DESIGN.md).
+
+- A **Hunter's Cabin** yields meat and hides, and is the only work in the game
+  that still pays under snow.
+- A **Tailor** sews hides into clothing.
+- A coat is a second line of warmth, never a replacement for a fire: measured,
+  it turns an empty woodshed from fatal on day 13 into survivable past day 17,
+  against a season of 15.
+
+The resource strip only shows a readout once the settlement has ever had any of
+it. Eight resources plus a population count do not fit across a phone held
+upright, and a strip that scrolls sideways to reveal a row of zeroes is worse
+than one that shows what the settlement actually has.

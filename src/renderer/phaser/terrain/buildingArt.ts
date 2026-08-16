@@ -113,6 +113,10 @@ const MASS: Readonly<Record<BuildingId, BuildingMass>> = {
   blacksmith: { wallHeight: 20, roofHeight: 34, eaves: 6, plinth: 6, chimney: true, windows: 1 },
   // Not buildings at all: broken ground inside a low fence. Drawn flat so the
   // settlement's skyline stays buildings, and a field reads as worked land.
+  // A cabin out at the treeline: thatched, low, no stone.
+  hunter: { wallHeight: 17, roofHeight: 34, eaves: 7, thatch: true, windows: 1 },
+  // A workshop with good light: two windows, which nothing else has.
+  tailor: { wallHeight: 20, roofHeight: 36, eaves: 6, plinth: 4, windows: 2 },
   'crop-field': { wallHeight: 4, roofHeight: 0, eaves: 0, field: 'crop' },
   orchard: { wallHeight: 4, roofHeight: 0, eaves: 0, field: 'orchard' },
 };
@@ -128,6 +132,8 @@ export const BUILDING_COLOURS: Readonly<Record<BuildingId, BuildingPalette>> = {
   quarry: { wall: 0x6c6960, roof: 0x565349, trim: 0x413f38 },
   mine: { wall: 0x615d55, roof: 0x4b4840, trim: 0x38352f },
   blacksmith: { wall: 0x5e5044, roof: 0x413a33, trim: 0x332e28 },
+  hunter: { wall: 0x63533f, roof: 0x7a6942, trim: 0x40362a },
+  tailor: { wall: 0x6a5a55, roof: 0x4e4340, trim: 0x3d3532 },
   'crop-field': { wall: 0x6d6234, roof: 0x5b5230, trim: 0x4a4128 },
   orchard: { wall: 0x4f5c37, roof: 0x44502f, trim: 0x3a4428 },
 };

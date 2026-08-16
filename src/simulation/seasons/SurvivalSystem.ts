@@ -55,6 +55,29 @@ export const TOOLS_PER_WORKER_PER_DAY = 0.05;
 export const TOOL_WORK_BONUS = 0.5;
 
 /**
+ * Coats worn out per villager per freezing day.
+ *
+ * Only in the cold: clothing is not consumed in July. A twentieth of a coat a
+ * cold day means one coat lasts a villager most of a winter.
+ */
+export const CLOTHING_PER_VILLAGER_PER_COLD_DAY = 0.05;
+
+/**
+ * How much warmth a fully clothed settlement keeps regardless of its fire.
+ *
+ * **This is a second line of defence, not a second tax.** Warmth came from one
+ * place — a house with firewood in it — so a settlement that ran short of
+ * either had nothing at all to fall back on, and the loss curve was the same
+ * whether they were a day short or a season short. A coat does not replace a
+ * hearth; it means running out of firewood is survivable for a while instead of
+ * immediately fatal, and it is the only thing that helps somebody with no roof.
+ *
+ * Deliberately below the fire's share, so houses and woodcutters stay the first
+ * answer and clothing stays the insurance.
+ */
+export const CLOTHING_WARMTH_SHARE = 0.45;
+
+/**
  * How much of a fire's warmth reaches somebody with no house.
  *
  * Not zero: there is a communal fire, and standing beside it is better than
@@ -96,6 +119,9 @@ export interface DailyReport {
   /** Villagers who spent a freezing night with no house. */
   readonly sleepingRough: number;
   readonly toolsWorn: number;
+  readonly clothingWorn: number;
+  /** How well clothed the settlement is today, in `0..1`. */
+  readonly clothingFraction: number;
   /**
    * How well equipped the settlement is today, in `0..1`.
    *
@@ -114,6 +140,8 @@ export const EMPTY_REPORT: DailyReport = {
   sleepingRough: 0,
   toolsWorn: 0,
   toolFraction: 0,
+  clothingWorn: 0,
+  clothingFraction: 0,
 };
 
 /**
@@ -158,6 +186,13 @@ export function runDay(
   const toolsWorn = takeFromStorages(storages, 'tools', toolsWanted);
   const toolFraction = toolsWanted === 0 ? 0 : Math.min(1, toolsWorn / toolsWanted);
 
+  // Coats wear out on people's backs, and only in the cold. Nothing is taken
+  // from a settlement that has none, and nothing is lost by that: an unclothed
+  // settlement is exactly as warm as it always was.
+  const clothingWanted = needsFire ? villagers.length * CLOTHING_PER_VILLAGER_PER_COLD_DAY : 0;
+  const clothingWorn = takeFromStorages(storages, 'clothing', clothingWanted);
+  const clothingFraction = clothingWanted === 0 ? 0 : Math.min(1, clothingWorn / clothingWanted);
+
   const dead: Villager[] = [];
   let sleepingRough = 0;
 
@@ -169,10 +204,16 @@ export function runDay(
       if (!sheltered) {
         sleepingRough += 1;
       }
+      // A coat and a hearth add up rather than compete, and neither can carry
+      // the day alone: the sum is capped at 1, so being fully clothed *and*
+      // fully warmed is no better than being fully warmed, and being one of
+      // the two is much better than being neither.
+      const fromFire = sheltered ? warmFraction : warmFraction * SHELTERLESS_WARMTH_SHARE;
+      const fromCoat = clothingFraction * CLOTHING_WARMTH_SHARE;
       applyNeed(
         villager.needs,
         'warmth',
-        sheltered ? warmFraction : warmFraction * SHELTERLESS_WARMTH_SHARE,
+        Math.min(1, fromFire + fromCoat),
         WARMTH_RESTORED_PER_DAY,
         WARMTH_LOST_PER_DAY,
       );
@@ -203,6 +244,8 @@ export function runDay(
       sleepingRough,
       toolsWorn,
       toolFraction,
+      clothingWorn,
+      clothingFraction,
     },
     dead,
   };

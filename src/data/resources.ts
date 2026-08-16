@@ -6,9 +6,10 @@
  * here, not editing hauling or storage code.
  */
 
-export type ResourceId = 'logs' | 'firewood' | 'stone' | 'food' | 'iron' | 'tools';
+export type ResourceId =
+  'logs' | 'firewood' | 'stone' | 'food' | 'iron' | 'tools' | 'hides' | 'clothing';
 
-export type ResourceCategory = 'material' | 'fuel' | 'food' | 'tool';
+export type ResourceCategory = 'material' | 'fuel' | 'food' | 'tool' | 'clothing';
 
 export interface ResourceDefinition {
   readonly id: ResourceId;
@@ -78,6 +79,24 @@ export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
     // thing from spoilage and lives in the survival system.
     spoilsPerDay: 0,
   },
+  hides: {
+    id: 'hides',
+    name: 'Hides',
+    category: 'material',
+    maxStack: 20,
+    carryLimit: 6,
+    spoilsPerDay: 0,
+  },
+  clothing: {
+    id: 'clothing',
+    name: 'Clothing',
+    category: 'clothing',
+    maxStack: 20,
+    carryLimit: 5,
+    // Wears out on people's backs through a cold winter, not in a yard. Like
+    // tools, that wear is charged daily and lives in the survival system.
+    spoilsPerDay: 0,
+  },
   food: {
     id: 'food',
     name: 'Food',
@@ -99,6 +118,8 @@ export const RESOURCE_IDS: readonly ResourceId[] = [
   'stone',
   'iron',
   'tools',
+  'hides',
+  'clothing',
 ];
 
 export function resourceDefinition(id: ResourceId): ResourceDefinition {

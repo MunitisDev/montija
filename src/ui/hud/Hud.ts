@@ -13,6 +13,26 @@
  */
 
 import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
+
+/**
+ * The readouts that are always on the strip, even at zero.
+ *
+ * Everything else appears the first time the settlement has any, and stays.
+ * Eight resources plus a population count do not fit across a phone held
+ * upright, and a strip that scrolls sideways to reveal a row of zeroes is worse
+ * than one that shows what the settlement actually has — a village in its first
+ * spring has no iron, no tools, no hides and no coats, and does not need to be
+ * told so four times.
+ *
+ * The four here are the ones a settlement lives or dies by from day one, and a
+ * zero against any of them is information rather than clutter.
+ */
+const ALWAYS_SHOWN: ReadonlySet<ResourceId> = new Set<ResourceId>([
+  'food',
+  'logs',
+  'firewood',
+  'stone',
+]);
 import type { GameContext } from '@/game/Game';
 import type { SimulationSnapshot } from '@/simulation/Simulation';
 import { SIMULATION_SPEEDS, type SimulationSpeed } from '@/simulation/SimulationClock';
@@ -136,6 +156,14 @@ export class Hud {
       const stored = snapshot.stored[resource];
       const loose = snapshot.loose[resource];
       const element = this.elements.resources[resource];
+
+      // Shown once the settlement has ever had any, and not hidden again when
+      // the last one is spent: a coat count that vanishes the moment it hits
+      // zero hides exactly the number the player most needs to see.
+      const row = element.parentElement;
+      if (row && row.hidden && (ALWAYS_SHOWN.has(resource) || stored > 0 || loose > 0)) {
+        row.hidden = false;
+      }
 
       if (this.lastRenderedTotals.get(resource) !== stored) {
         element.textContent = String(stored);
@@ -611,6 +639,8 @@ function collectElements(root: HTMLElement): HudElements {
       stone: requireElement(root, '[data-hud="stone"]'),
       iron: requireElement(root, '[data-hud="iron"]'),
       tools: requireElement(root, '[data-hud="tools"]'),
+      hides: requireElement(root, '[data-hud="hides"]'),
+      clothing: requireElement(root, '[data-hud="clothing"]'),
     },
     selection: requireElement(root, '[data-hud="selection"]'),
     selectionTerrain: requireElement(root, '[data-hud="selection-terrain"]'),

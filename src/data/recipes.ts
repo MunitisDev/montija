@@ -89,6 +89,32 @@ export const RECIPES: Readonly<Record<string, Recipe>> = {
     workTicks: 50,
     seasonal: 'orchard',
   },
+  'hunt-game': {
+    id: 'hunt-game',
+    name: 'Hunt',
+    inputs: [],
+    // Two goods from one hunt. Meat is the reason to build it; the hides are
+    // what make winter survivable in a way firewood alone cannot, and getting
+    // both from one building is what stops clothing being a chore bolted on to
+    // an economy that had no room for it.
+    outputs: [
+      { resource: 'food', amount: 5 },
+      { resource: 'hides', amount: 2 },
+    ],
+    workTicks: 55,
+    // Game is thin in spring and fat before the cold, which is the opposite
+    // shape to a field and gives a settlement a second, differently-timed way
+    // to eat.
+    seasonal: 'game',
+  },
+  'sew-clothing': {
+    id: 'sew-clothing',
+    name: 'Sew clothing',
+    inputs: [{ resource: 'hides', amount: 3 }],
+    outputs: [{ resource: 'clothing', amount: 2 }],
+    workTicks: 55,
+    seasonal: 'none',
+  },
   'split-firewood': {
     id: 'split-firewood',
     name: 'Split firewood',

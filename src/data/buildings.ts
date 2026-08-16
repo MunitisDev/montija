@@ -20,7 +20,9 @@ export type BuildingId =
   | 'mine'
   | 'blacksmith'
   | 'crop-field'
-  | 'orchard';
+  | 'orchard'
+  | 'hunter'
+  | 'tailor';
 
 export interface ResourceAmount {
   readonly resource: ResourceId;
@@ -104,7 +106,10 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     constructionCost: [{ resource: 'logs', amount: 6 }],
     buildTicks: 80,
     workerSlots: 0,
-    storage: { capacity: 1000, accepts: ['logs', 'stone', 'firewood', 'iron', 'tools'] },
+    storage: {
+      capacity: 1000,
+      accepts: ['logs', 'stone', 'firewood', 'iron', 'tools', 'hides', 'clothing'],
+    },
   },
   'food-storage': {
     id: 'food-storage',
@@ -197,6 +202,29 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     workerSlots: 2,
     recipeId: 'tend-orchard',
   },
+  hunter: {
+    id: 'hunter',
+    name: "Hunter's Cabin",
+    description: 'Brings in meat and hides, and is the only work that pays in winter.',
+    footprint: { width: 2, height: 2 },
+    constructionCost: [{ resource: 'logs', amount: 10 }],
+    buildTicks: 90,
+    workerSlots: 2,
+    recipeId: 'hunt-game',
+  },
+  tailor: {
+    id: 'tailor',
+    name: 'Tailor',
+    description: 'Sews hides into clothing, which keeps people warm when the fire cannot.',
+    footprint: { width: 2, height: 2 },
+    constructionCost: [
+      { resource: 'logs', amount: 10 },
+      { resource: 'stone', amount: 4 },
+    ],
+    buildTicks: 120,
+    workerSlots: 2,
+    recipeId: 'sew-clothing',
+  },
   blacksmith: {
     id: 'blacksmith',
     name: 'Blacksmith',
@@ -255,6 +283,8 @@ export const BUILDING_IDS: readonly BuildingId[] = [
   'blacksmith',
   'crop-field',
   'orchard',
+  'hunter',
+  'tailor',
 ];
 
 export function buildingDefinition(id: BuildingId): BuildingDefinition {

@@ -89,6 +89,11 @@
   flex: 0 0 auto;
 }
 
+/* A readout the settlement has not reached yet takes no room at all. */
+.resource[hidden] {
+  display: none;
+}
+
 .resource {
   display: flex;
   align-items: center;
@@ -144,6 +149,14 @@
 
 .resource--tools .resource__icon {
   color: #9a8a6a;
+}
+
+.resource--hides .resource__icon {
+  color: #97795a;
+}
+
+.resource--clothing .resource__icon {
+  color: #8d7f96;
 }
 
 /*

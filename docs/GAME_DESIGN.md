@@ -216,6 +216,36 @@ so wherever one goes it stays.
 Both are slower per unit than picking a deposit up off the ground. If a quarry
 beat gathering, the deposits scattered over the map would be scenery.
 
+### Clothing — Implemented
+
+Warmth came from one place — a house with firewood in it — so a settlement short
+of either had nothing to fall back on, and the loss curve was identical whether
+they were a day short or a season short.
+
+A **Hunter's Cabin** brings in meat _and_ hides, and a **Tailor** sews the hides
+into clothing. Two goods from one hunt is what stops clothing being a chore
+bolted onto an economy with no room for it — the cabin is worth building for the
+food alone.
+
+A coat does not replace a hearth. Its share of warmth is well under the fire's,
+and the two add up rather than compete, capped so that being fully clothed _and_
+fully warmed is no better than being fully warmed. What it buys is time:
+measured, a settlement with an empty woodshed lasts **17 days** clothed against
+**13** bare, against a season of 15. With coats an empty woodshed is a winter you
+get through; without, it kills you before the thaw. Two winters without a fire
+is not survivable however well dressed, or houses would be optional.
+
+It is also the only thing that helps somebody with **no roof at all**, who gets
+just a quarter of a fire's warmth.
+
+Coats wear out only in the cold, and nothing is taken from a settlement that has
+none — an unclothed village is exactly as warm as it always was.
+
+**Hunting is the only work that still pays under snow.** Foraging, fields and
+orchards all yield nothing in winter; game is lean in spring, fat before the
+cold, and still there in January. That is what makes a settlement built on
+foraging alone find winter so much harder than one that hunts.
+
 ### Tools — Implemented
 
 Iron would otherwise be a number in the HUD that goes up, and a resource with

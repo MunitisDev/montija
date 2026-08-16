@@ -94,7 +94,7 @@
               <span class="resource__label" data-i18n="hud.stone">Stone</span>
               <span class="resource__value" data-hud="stone">--</span>
             </div>
-            <div class="resource resource--iron">
+            <div class="resource resource--iron" hidden>
               <svg class="resource__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <!-- An ingot, seen end-on: a trapezoid with a lit top face. -->
                 <path d="M5 20h14l-2.4-7H7.4z" />
@@ -104,7 +104,7 @@
               <span class="resource__label" data-i18n="hud.iron">Iron</span>
               <span class="resource__value" data-hud="iron">--</span>
             </div>
-            <div class="resource resource--tools">
+            <div class="resource resource--tools" hidden>
               <svg class="resource__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <!-- A hammer, crossed with nothing: one clear silhouette at 16px. -->
                 <path d="M9.8 6.2 3.4 18.4l2.6 1.5 6.4-12.2z" />
@@ -112,6 +112,25 @@
               </svg>
               <span class="resource__label" data-i18n="hud.tools">Tools</span>
               <span class="resource__value" data-hud="tools">--</span>
+            </div>
+            <div class="resource resource--hides" hidden>
+              <svg class="resource__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <!-- A stretched pelt: four legs and a rounded body. -->
+                <path
+                  d="M12 3.4c2 0 3 1.2 4.6 1.2 1.6 0 2.6-1 3.4-.2.8.8-.6 2.2-1 3.4-.4 1.2.4 2.6 0 3.8-.5 1.5-2 1.6-2.4 3-.4 1.4.8 3 0 3.8-.9.9-2.2-.6-3.4-.6h-2.4c-1.2 0-2.5 1.5-3.4.6-.8-.8.4-2.4 0-3.8-.4-1.4-1.9-1.5-2.4-3-.4-1.2.4-2.6 0-3.8-.4-1.2-1.8-2.6-1-3.4.8-.8 1.8.2 3.4.2C9 4.6 10 3.4 12 3.4z"
+                />
+              </svg>
+              <span class="resource__label" data-i18n="hud.hides">Hides</span>
+              <span class="resource__value" data-hud="hides">--</span>
+            </div>
+            <div class="resource resource--clothing" hidden>
+              <svg class="resource__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <!-- A coat: shoulders, sleeves and a hem. -->
+                <path d="M9 3h6l5 3.4-2.2 3.8L16 9v12H8V9l-1.8 1.2L4 6.4z" />
+                <path d="M12 3v18" opacity=".35" stroke="#12140f" stroke-width="1.2" />
+              </svg>
+              <span class="resource__label" data-i18n="hud.clothing">Clothing</span>
+              <span class="resource__value" data-hud="clothing">--</span>
             </div>
           </div>
 

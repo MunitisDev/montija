@@ -19,6 +19,8 @@ export const EN = {
   'hud.stone': 'Stone',
   'hud.iron': 'Iron',
   'hud.tools': 'Tools',
+  'hud.hides': 'Hides',
+  'hud.clothing': 'Clothing',
   'hud.looseHint': 'on the ground, waiting to be carried in',
 
   'season.spring': 'Spring',
@@ -85,6 +87,11 @@ export const EN = {
   'building.mine.description': 'Digs iron out of the hillside. Slow, and permanent.',
   'building.blacksmith': 'Blacksmith',
   'building.blacksmith.description': 'Forges iron into tools, which make every job quicker.',
+  'building.hunter': "Hunter's Cabin",
+  'building.hunter.description': 'Brings in meat and hides, and still pays in winter.',
+  'building.tailor': 'Tailor',
+  'building.tailor.description':
+    'Sews hides into clothing, which warms people when the fire cannot.',
   'building.crop-field': 'Field',
   'building.crop-field.description': 'Sown in spring, worth having in autumn, empty in winter.',
   'building.orchard': 'Orchard',
@@ -137,6 +144,8 @@ export const ES: Messages = {
   'hud.stone': 'Piedra',
   'hud.iron': 'Hierro',
   'hud.tools': 'Herramientas',
+  'hud.hides': 'Pieles',
+  'hud.clothing': 'Ropa',
   'hud.looseHint': 'en el suelo, esperando a que lo lleven al almacén',
 
   'season.spring': 'Primavera',
@@ -204,6 +213,10 @@ export const ES: Messages = {
   'building.blacksmith': 'Herrería',
   'building.blacksmith.description':
     'Forja hierro en herramientas, que aceleran todos los trabajos.',
+  'building.hunter': 'Cabaña de caza',
+  'building.hunter.description': 'Trae carne y pieles, y sigue dando en invierno.',
+  'building.tailor': 'Sastre',
+  'building.tailor.description': 'Cose pieles en ropa, que abriga cuando el fuego no llega.',
   'building.crop-field': 'Campo',
   'building.crop-field.description':
     'Se siembra en primavera, se cosecha en otoño, vacío en invierno.',

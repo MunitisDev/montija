@@ -55,7 +55,7 @@ export const SEASON_FORAGE_SCALE: Readonly<Record<Season, number>> = {
  * has to store what it brings in and make it last, which is the same lesson
  * winter teaches, arriving a season earlier.
  */
-export type SeasonalProfile = 'none' | 'forage' | 'crop' | 'orchard';
+export type SeasonalProfile = 'none' | 'forage' | 'crop' | 'orchard' | 'game';
 
 export const SEASONAL_YIELD: Readonly<Record<SeasonalProfile, Readonly<Record<Season, number>>>> = {
   // Workshops do not care what month it is.
@@ -67,6 +67,11 @@ export const SEASONAL_YIELD: Readonly<Record<SeasonalProfile, Readonly<Record<Se
   // the game. An orchard is a bet on next autumn, which is what makes planting
   // one a decision rather than a purchase.
   orchard: { spring: 0, summer: 0.7, autumn: 2.4, winter: 0 },
+  // The one thing that still works under snow. Animals are lean in spring and
+  // fat before the cold, and a hunter is the only worker who keeps bringing
+  // something in through January — which is exactly why a settlement built on
+  // foraging alone finds winter so much harder than one that hunts.
+  game: { spring: 0.6, summer: 1, autumn: 1.5, winter: 0.5 },
 };
 
 export interface YearState {
