@@ -7,15 +7,7 @@
  */
 
 export type ResourceId =
-  | 'logs'
-  | 'firewood'
-  | 'stone'
-  | 'food'
-  | 'iron'
-  | 'tools'
-  | 'hides'
-  | 'clothing'
-  | 'herbs';
+  'logs' | 'firewood' | 'stone' | 'food' | 'iron' | 'tools' | 'hides' | 'clothing' | 'herbs';
 
 export type ResourceCategory = 'material' | 'fuel' | 'food' | 'tool' | 'clothing';
 

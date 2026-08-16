@@ -95,9 +95,11 @@ export const EN = {
   'building.blacksmith': 'Blacksmith',
   'building.blacksmith.description': 'Forges iron into tools, which make every job quicker.',
   'building.herbalist': "Herbalist's Hut",
-  'building.herbalist.description': 'Gathers herbs while things grow. They keep, and winter needs them.',
+  'building.herbalist.description':
+    'Gathers herbs while things grow. They keep, and winter needs them.',
   'building.healer': "Healer's House",
-  'building.healer.description': 'Nurses the sick, using herbs. Its output is that people stop dying.',
+  'building.healer.description':
+    'Nurses the sick, using herbs. Its output is that people stop dying.',
   'building.trading-post': 'Trading Post',
   'building.trading-post.description':
     'A merchant calls in fair weather and swaps your surplus for what you lack.',
