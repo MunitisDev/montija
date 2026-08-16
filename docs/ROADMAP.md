@@ -40,6 +40,7 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 13    | Seasons on screen     | **Implemented** |
 | 14    | Roads                 | **Implemented** |
 | 15    | Art pass              | **Implemented** |
+| 16    | Land use              | **Implemented** |
 
 ---
 
@@ -406,3 +407,30 @@ thousand times respectively, that reads as coloured paper.
 comment claimed to avoid, because only its low bits survive a modulo and the low bits of a product
 depend only on the low bits of its factors. A test written for that property caught it before it was
 ever committed, and it now guards rows, columns and diagonals.
+
+---
+
+## Phase 16 — Land use — Implemented
+
+The map could only shrink, so the mid-game had a hard arithmetic floor. This is
+the answer, and it is an asymmetry: **timber you tend, minerals you pay for.**
+Set out in full in [GAME_DESIGN.md](./GAME_DESIGN.md).
+
+- **Woodland grows back**, needing two tree neighbours so it thickens and creeps
+  rather than colonising open meadow, and stopping at about a third of the map.
+- **A Forester's Lodge** plants below its target density and fells above it, and
+  plants past the natural ceiling.
+- **A Quarry and a Mine** must be dug into a rock face, produce without any
+  input, and are permanent. **Iron** is new.
+- **A Blacksmith** turns iron into **tools**, which make every job up to half
+  again quicker — a bonus, never a tax, so an unequipped settlement runs at
+  exactly its old speed.
+- **A Field and an Orchard**, with per-recipe seasonal curves rather than one
+  global one. The difference in shape between foraging and farming is the whole
+  reason to sow.
+
+**Not done, and deliberately:** this is not a reproduction of any existing
+game's building list. The brief forbids copying names, designs and balance, and
+the useful thing to take from the genre was the _structure_ — one resource
+managed, one paid for — not its contents. Professions, trade, clothing and
+health buildings remain unbuilt.

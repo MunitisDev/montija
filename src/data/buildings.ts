@@ -7,9 +7,20 @@
  */
 
 import type { ResourceId } from './resources';
+import type { TerrainType } from './terrain';
 
 export type BuildingId =
-  'house' | 'storage-yard' | 'food-storage' | 'gatherer-hut' | 'woodcutter' | 'forester';
+  | 'house'
+  | 'storage-yard'
+  | 'food-storage'
+  | 'gatherer-hut'
+  | 'woodcutter'
+  | 'forester'
+  | 'quarry'
+  | 'mine'
+  | 'blacksmith'
+  | 'crop-field'
+  | 'orchard';
 
 export interface ResourceAmount {
   readonly resource: ResourceId;
@@ -53,6 +64,16 @@ export interface BuildingDefinition {
     /** Trees the lodge tries to keep standing inside that range. */
     readonly targetTrees: number;
   };
+
+  /**
+   * Terrain this building must be dug into, if any.
+   *
+   * A quarry has to bite into a rock face; it cannot sit in a meadow. Checked
+   * as *adjacency* rather than as the footprint itself, because the footprint
+   * has to be buildable ground for anyone to work on it — what the rule really
+   * says is that the working face must be within reach.
+   */
+  readonly adjacentTo?: TerrainType;
 }
 
 /**
@@ -83,7 +104,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     constructionCost: [{ resource: 'logs', amount: 6 }],
     buildTicks: 80,
     workerSlots: 0,
-    storage: { capacity: 1000, accepts: ['logs', 'stone', 'firewood'] },
+    storage: { capacity: 1000, accepts: ['logs', 'stone', 'firewood', 'iron', 'tools'] },
   },
   'food-storage': {
     id: 'food-storage',
@@ -113,6 +134,81 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     buildTicks: 110,
     workerSlots: 2,
     recipeId: 'forage-food',
+  },
+  quarry: {
+    id: 'quarry',
+    name: 'Quarry',
+    description: 'Cuts stone out of a rock face for as long as it stands.',
+    // Deliberately the largest thing in the game. A quarry is a permanent
+    // decision about a piece of land: there is no demolition, so wherever it
+    // goes it stays, and the price of never running out of stone is a hole in
+    // the settlement you have to build around forever.
+    footprint: { width: 3, height: 3 },
+    constructionCost: [
+      { resource: 'logs', amount: 24 },
+      { resource: 'stone', amount: 12 },
+    ],
+    buildTicks: 220,
+    workerSlots: 3,
+    recipeId: 'cut-stone',
+    adjacentTo: 'stone',
+  },
+  mine: {
+    id: 'mine',
+    name: 'Mine',
+    description: 'Digs iron out of the hillside. Slow, and permanent.',
+    footprint: { width: 2, height: 2 },
+    constructionCost: [
+      { resource: 'logs', amount: 20 },
+      { resource: 'stone', amount: 16 },
+    ],
+    buildTicks: 240,
+    workerSlots: 2,
+    recipeId: 'dig-iron',
+    adjacentTo: 'stone',
+  },
+  'crop-field': {
+    id: 'crop-field',
+    name: 'Field',
+    description: 'Sown in spring, worth having in autumn. Nothing at all in winter.',
+    footprint: { width: 3, height: 3 },
+    // Cheap and quick: a field is broken ground and a fence, not a building.
+    // It has to be affordable in the first spring, because a settlement that
+    // cannot farm until year two lives its first year on foraging alone.
+    constructionCost: [{ resource: 'logs', amount: 6 }],
+    buildTicks: 70,
+    workerSlots: 2,
+    recipeId: 'grow-crops',
+  },
+  orchard: {
+    id: 'orchard',
+    name: 'Orchard',
+    description: 'Fruit trees. Years to establish, and the best harvest there is.',
+    footprint: { width: 3, height: 3 },
+    constructionCost: [
+      { resource: 'logs', amount: 10 },
+      { resource: 'stone', amount: 2 },
+    ],
+    // Far the longest build in the game, and that *is* the mechanic: an orchard
+    // is a bet on a later autumn. Planting one in a hungry spring is a mistake;
+    // planting one in a comfortable summer is how a settlement stops being
+    // hungry for good.
+    buildTicks: 400,
+    workerSlots: 2,
+    recipeId: 'tend-orchard',
+  },
+  blacksmith: {
+    id: 'blacksmith',
+    name: 'Blacksmith',
+    description: 'Forges iron into tools. Tools make every other job quicker.',
+    footprint: { width: 2, height: 2 },
+    constructionCost: [
+      { resource: 'logs', amount: 14 },
+      { resource: 'stone', amount: 10 },
+    ],
+    buildTicks: 150,
+    workerSlots: 2,
+    recipeId: 'forge-tools',
   },
   forester: {
     id: 'forester',
@@ -154,6 +250,11 @@ export const BUILDING_IDS: readonly BuildingId[] = [
   'gatherer-hut',
   'woodcutter',
   'forester',
+  'quarry',
+  'mine',
+  'blacksmith',
+  'crop-field',
+  'orchard',
 ];
 
 export function buildingDefinition(id: BuildingId): BuildingDefinition {

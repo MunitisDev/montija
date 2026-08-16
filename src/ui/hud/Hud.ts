@@ -569,6 +569,8 @@ function collectElements(root: HTMLElement): HudElements {
       logs: requireElement(root, '[data-hud="logs"]'),
       firewood: requireElement(root, '[data-hud="firewood"]'),
       stone: requireElement(root, '[data-hud="stone"]'),
+      iron: requireElement(root, '[data-hud="iron"]'),
+      tools: requireElement(root, '[data-hud="tools"]'),
     },
     selection: requireElement(root, '[data-hud="selection"]'),
     selectionTerrain: requireElement(root, '[data-hud="selection-terrain"]'),

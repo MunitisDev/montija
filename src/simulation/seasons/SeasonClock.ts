@@ -42,6 +42,33 @@ export const SEASON_FORAGE_SCALE: Readonly<Record<Season, number>> = {
   winter: 0,
 };
 
+/**
+ * How a kind of food-getting rides the year.
+ *
+ * One global curve was enough while foraging was the only way to eat. It is not
+ * enough now: the whole reason to sow a field rather than send people into the
+ * woods is that the two have *different shapes* — foraging is a steady trickle
+ * through the growing seasons, a field is nothing much until it is harvested,
+ * and an orchard is nothing at all until autumn and then a great deal.
+ *
+ * A settlement that lives on foraging survives hand to mouth. One that farms
+ * has to store what it brings in and make it last, which is the same lesson
+ * winter teaches, arriving a season earlier.
+ */
+export type SeasonalProfile = 'none' | 'forage' | 'crop' | 'orchard';
+
+export const SEASONAL_YIELD: Readonly<Record<SeasonalProfile, Readonly<Record<Season, number>>>> = {
+  // Workshops do not care what month it is.
+  none: { spring: 1, summer: 1, autumn: 1, winter: 1 },
+  forage: SEASON_FORAGE_SCALE,
+  // Sown in spring, tended through summer, and mostly worth having in autumn.
+  crop: { spring: 0.25, summer: 0.8, autumn: 1.9, winter: 0 },
+  // Nothing at all until the fruit is on the trees, and then the best yield in
+  // the game. An orchard is a bet on next autumn, which is what makes planting
+  // one a decision rather than a purchase.
+  orchard: { spring: 0, summer: 0.7, autumn: 2.4, winter: 0 },
+};
+
 export interface YearState {
   readonly season: Season;
   /** Day within the current season, from 1. */

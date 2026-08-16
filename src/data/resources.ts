@@ -6,9 +6,9 @@
  * here, not editing hauling or storage code.
  */
 
-export type ResourceId = 'logs' | 'firewood' | 'stone' | 'food';
+export type ResourceId = 'logs' | 'firewood' | 'stone' | 'food' | 'iron' | 'tools';
 
-export type ResourceCategory = 'material' | 'fuel' | 'food';
+export type ResourceCategory = 'material' | 'fuel' | 'food' | 'tool';
 
 export interface ResourceDefinition {
   readonly id: ResourceId;
@@ -57,6 +57,27 @@ export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
     carryLimit: 4,
     spoilsPerDay: 0,
   },
+  iron: {
+    id: 'iron',
+    name: 'Iron',
+    category: 'material',
+    // Dense and heavy: a villager carries less of it than of anything else,
+    // so a mine a long way from a yard is a real cost rather than a detail.
+    maxStack: 15,
+    carryLimit: 3,
+    spoilsPerDay: 0,
+  },
+  tools: {
+    id: 'tools',
+    name: 'Tools',
+    category: 'tool',
+    maxStack: 20,
+    carryLimit: 6,
+    // Tools wear out through use, not through sitting in a yard. The wear is
+    // charged daily against the people doing the work, which is a different
+    // thing from spoilage and lives in the survival system.
+    spoilsPerDay: 0,
+  },
   food: {
     id: 'food',
     name: 'Food',
@@ -71,7 +92,14 @@ export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
 };
 
 /** Every resource, in a stable order. Used by the HUD and by tests. */
-export const RESOURCE_IDS: readonly ResourceId[] = ['food', 'logs', 'firewood', 'stone'];
+export const RESOURCE_IDS: readonly ResourceId[] = [
+  'food',
+  'logs',
+  'firewood',
+  'stone',
+  'iron',
+  'tools',
+];
 
 export function resourceDefinition(id: ResourceId): ResourceDefinition {
   return RESOURCES[id];

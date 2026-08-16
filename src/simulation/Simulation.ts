@@ -23,7 +23,7 @@ import { JobManager } from './jobs/JobManager';
 import { StorageRegistry } from './logistics/Storage';
 import {
   DAYS_PER_SEASON,
-  SEASON_FORAGE_SCALE,
+  SEASONAL_YIELD,
   isDayBoundary,
   yearStateAt,
   type Season,
@@ -35,7 +35,7 @@ import {
   type PopulationReport,
 } from './population/PopulationSystem';
 import { NO_SPOILAGE, runSpoilage, type SpoilageReport } from './resources/SpoilageSystem';
-import { EMPTY_REPORT, runDay, type DailyReport } from './seasons/SurvivalSystem';
+import { EMPTY_REPORT, runDay, TOOL_WORK_BONUS, type DailyReport } from './seasons/SurvivalSystem';
 import { VillagerSystem } from './villagers/VillagerSystem';
 import { World } from './world/World';
 import { NO_FOREST_CHANGE, runForestRegrowth, type ForestReport } from './world/ForestSystem';
@@ -196,8 +196,12 @@ export class Simulation {
     this.foundStorageYard();
     this.villagers.spawnNear(this.world.centreCell, options.startingVillagers);
 
-    // Foraging follows the calendar; winter yields nothing at all.
-    this.villagers.productionScaleProvider = () => SEASON_FORAGE_SCALE[this.year.season];
+    // Everything that comes out of the ground follows the calendar, and the
+    // curves differ: foraging trickles through the growing seasons, a field is
+    // worth having in autumn, an orchard only then.
+    this.villagers.productionScaleProvider = (profile) => SEASONAL_YIELD[profile][this.year.season];
+    // Tools make every job quicker. With none, this is exactly 1.
+    this.villagers.workRateProvider = () => 1 + TOOL_WORK_BONUS * this.lastDayReport.toolFraction;
   }
 
   public get worldSeed(): number {

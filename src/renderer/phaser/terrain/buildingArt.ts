@@ -74,6 +74,8 @@ interface BuildingMass {
   readonly windows?: number;
   /** Set for a thatched roof rather than shingled: softer, straw-coloured. */
   readonly thatch?: boolean;
+  /** Set for worked land rather than a structure: furrows, or fruit trees. */
+  readonly field?: 'crop' | 'orchard';
 }
 
 /**
@@ -101,6 +103,18 @@ const MASS: Readonly<Record<BuildingId, BuildingMass>> = {
   woodcutter: { wallHeight: 22, roofHeight: 44, eaves: 6, plinth: 4, windows: 1 },
   // A lodge out among the trees: low, thatched, one window, no stone to spare.
   forester: { wallHeight: 18, roofHeight: 38, eaves: 7, thatch: true, windows: 1 },
+  // A quarry is a hole with a shed over it. Low walls and a deep stone footing,
+  // because most of what the player should read is *cut rock*.
+  quarry: { wallHeight: 14, roofHeight: 22, eaves: 5, plinth: 10 },
+  // A mine is a mouth in the hillside: a short stone head and a shallow roof.
+  mine: { wallHeight: 16, roofHeight: 26, eaves: 5, plinth: 8 },
+  // A forge: stone-footed against the fire, and the second building in the game
+  // with a chimney — because the second building in the game with a hearth.
+  blacksmith: { wallHeight: 20, roofHeight: 34, eaves: 6, plinth: 6, chimney: true, windows: 1 },
+  // Not buildings at all: broken ground inside a low fence. Drawn flat so the
+  // settlement's skyline stays buildings, and a field reads as worked land.
+  'crop-field': { wallHeight: 4, roofHeight: 0, eaves: 0, field: 'crop' },
+  orchard: { wallHeight: 4, roofHeight: 0, eaves: 0, field: 'orchard' },
 };
 
 /** Muted, earthy, and distinguishable at a glance without being colourful. */
@@ -111,6 +125,11 @@ export const BUILDING_COLOURS: Readonly<Record<BuildingId, BuildingPalette>> = {
   'gatherer-hut': { wall: 0x5f6248, roof: 0x4c5039, trim: 0x3d402d },
   woodcutter: { wall: 0x67543f, roof: 0x534431, trim: 0x423628 },
   forester: { wall: 0x5b5c41, roof: 0x4a4b34, trim: 0x3b3c29 },
+  quarry: { wall: 0x6c6960, roof: 0x565349, trim: 0x413f38 },
+  mine: { wall: 0x615d55, roof: 0x4b4840, trim: 0x38352f },
+  blacksmith: { wall: 0x5e5044, roof: 0x413a33, trim: 0x332e28 },
+  'crop-field': { wall: 0x6d6234, roof: 0x5b5230, trim: 0x4a4128 },
+  orchard: { wall: 0x4f5c37, roof: 0x44502f, trim: 0x3a4428 },
 };
 
 /** Breathing room above the roof, so nothing touches the texture edge. */
@@ -230,6 +249,11 @@ export function drawBuilding(
       const y = groundY + halfH * (t - 0.5) * 0.9 - plinthHeight * 0.55;
       graphics.fillRect(x, y, 7, 3);
     }
+  }
+
+  if (mass.field) {
+    drawField(graphics, { palette, cx, groundY, halfW, halfH, kind: mass.field });
+    return;
   }
 
   // Left wall, catching the light.
@@ -387,6 +411,98 @@ function drawChimney(graphics: Phaser.GameObjects.Graphics, x: number, y: number
   // The cap, brightest: it is the one face pointing at the sky.
   graphics.fillStyle(shade(STONE_FOOTING, 1.3), 1);
   graphics.fillRect(x - width / 2 - 1, y - height - 2.5, width + 2, 2.5);
+}
+
+/**
+ * Worked land: furrows inside a low fence, or a stand of fruit trees.
+ *
+ * Drawn flat on purpose. A field is not a building, and giving it walls and a
+ * roof would put a second row of structures across the settlement's skyline —
+ * the one thing the art bible is most insistent about is that buildings
+ * dominate and everything else stays subordinate to them.
+ */
+function drawField(
+  graphics: Phaser.GameObjects.Graphics,
+  options: {
+    palette: BuildingPalette;
+    cx: number;
+    groundY: number;
+    halfW: number;
+    halfH: number;
+    kind: 'crop' | 'orchard';
+  },
+): void {
+  const { palette, cx, groundY, halfW, halfH, kind } = options;
+
+  // Broken earth, in two facets like the ground it replaced.
+  graphics.fillStyle(shade(palette.trim, 1.04), 1);
+  polygon(graphics, [
+    { x: cx, y: groundY - halfH },
+    { x: cx + halfW, y: groundY },
+    { x: cx, y: groundY + halfH },
+  ]);
+  graphics.fillStyle(palette.trim, 1);
+  polygon(graphics, [
+    { x: cx, y: groundY - halfH },
+    { x: cx - halfW, y: groundY },
+    { x: cx, y: groundY + halfH },
+  ]);
+
+  if (kind === 'crop') {
+    // Furrows running along one axis, in the crop's own colour. Seven of them:
+    // enough to read as ploughed, few enough not to shimmer when the camera
+    // moves.
+    for (let index = 1; index <= 7; index += 1) {
+      const t = -1 + (index * 2) / 8;
+      const spanX = halfW * t;
+      const spanY = halfH * (1 - Math.abs(t));
+      graphics.fillStyle(shade(palette.wall, index % 2 === 0 ? 1.1 : 0.94), 1);
+      polygon(graphics, [
+        { x: cx + spanX, y: groundY - spanY },
+        { x: cx + spanX, y: groundY + spanY },
+        { x: cx + spanX + 3, y: groundY + spanY - 1.5 },
+        { x: cx + spanX + 3, y: groundY - spanY - 1.5 },
+      ]);
+    }
+  } else {
+    // Fruit trees in rows: small rounded crowns on short trunks, so an orchard
+    // reads as trees the settlement planted rather than as wild wood.
+    for (const [ox, oy] of [
+      [-0.5, -0.25],
+      [0, -0.5],
+      [0.5, -0.25],
+      [-0.5, 0.25],
+      [0, 0],
+      [0.5, 0.25],
+      [0, 0.5],
+    ] as const) {
+      const x = cx + halfW * ox * 0.72;
+      const y = groundY + halfH * oy * 0.72;
+      graphics.fillStyle(0x000000, 0.18);
+      graphics.fillEllipse(x, y + 1, 11, 4);
+      graphics.fillStyle(0x4a3d2c, 1);
+      graphics.fillRect(x - 1.2, y - 9, 2.4, 9);
+      graphics.fillStyle(shade(palette.wall, 1.18), 1);
+      graphics.fillEllipse(x - 1.5, y - 14, 13, 11);
+      graphics.fillStyle(shade(palette.wall, 0.82), 1);
+      graphics.fillEllipse(x + 3, y - 12, 8, 8);
+    }
+  }
+
+  // A low fence on the two back edges only. Across the front it would hide the
+  // crop, which is the one thing the player needs to see.
+  graphics.lineStyle(2, shade(palette.roof, 1.1), 0.9);
+  graphics.beginPath();
+  graphics.moveTo(cx - halfW, groundY - 4);
+  graphics.lineTo(cx, groundY - halfH - 4);
+  graphics.lineTo(cx + halfW, groundY - 4);
+  graphics.strokePath();
+  graphics.fillStyle(shade(palette.roof, 0.9), 1);
+  for (const t of [-0.66, -0.33, 0, 0.33, 0.66]) {
+    const x = cx + halfW * t;
+    const y = groundY - halfH * (1 - Math.abs(t));
+    graphics.fillRect(x - 1, y - 7, 2, 7);
+  }
 }
 
 /** A hipped roof: one silhouette, then the shaded half. */

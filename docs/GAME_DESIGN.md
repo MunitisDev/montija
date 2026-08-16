@@ -169,6 +169,83 @@ two villagers.
 
 ---
 
+## Land, and what it gives back — Implemented
+
+The map used to be a resource that could only shrink. A felled tree was gone for
+good and a worked-out deposit became grass, so a settlement of forty in its sixth
+year ran out of everything with no move left to make — a failure that is
+arithmetic rather than a decision.
+
+The answer is an **asymmetry**, and it is the spine of the mid-game:
+
+| Resource | How it lasts                                  | What it asks of the player                       |
+| -------- | --------------------------------------------- | ------------------------------------------------ |
+| Timber   | Renewable                                     | Manage it: leave stands standing, or run a lodge |
+| Stone    | Finite on the ground, permanent from a quarry | Pay for it: a large piece of land, forever       |
+| Iron     | Only from a mine                              | The same, and slower                             |
+| Food     | Renewable, but seasonal                       | Time it: sow in spring, eat in winter            |
+
+### Woodland — Implemented
+
+Woods seed into ground beside them, once a day, slowly. A sapling needs **at
+least two tree neighbours**, which is what makes it a wood rather than a weed:
+clearings fill back in from the trees around them, and open meadow far from any
+wood stays meadow. Nothing grows within two cells of a finished building —
+cleared land stays cleared, or the player is being handed a chore rather than a
+decision.
+
+Natural spread stops at roughly a third of the map. Without a ceiling a wood's
+edge advances one cell at a time forever and eventually there is nothing to build
+on; it was measured over twelve simulated years before the ceiling went in.
+
+A **Forester's Lodge** does the rest. Below its target density it plants; at or
+above it it fells. Its felling is posted as ordinary work, so its timber flows
+through the same fell → logs → haul → yard pipeline as anything the player marks
+themselves. Crucially it **plants past the natural ceiling**: the wilderness
+returns only so much, and anything beyond that is something you did on purpose.
+
+### Stone and iron — Implemented
+
+Surface deposits are consumed for good. The permanent supply is a **Quarry** or a
+**Mine**, and both must be **dug into a rock face** — the footprint has to be
+ordinary buildable ground, because people have to stand somewhere, but the
+working face must be next to it. That is what makes them a decision about
+_where_ rather than merely about _whether_. There is no demolition in this game,
+so wherever one goes it stays.
+
+Both are slower per unit than picking a deposit up off the ground. If a quarry
+beat gathering, the deposits scattered over the map would be scenery.
+
+### Tools — Implemented
+
+Iron would otherwise be a number in the HUD that goes up, and a resource with
+nothing to spend it on is clutter dressed as content. A **Blacksmith** forges
+iron and logs into **tools**, and tools make every job in the settlement up to
+half again quicker.
+
+Deliberately a bonus and never a tax: a settlement with no forge works at exactly
+the rate it always did. Wear is charged daily against working adults, and nothing
+is taken from a settlement that has none.
+
+### Fields and orchards — Implemented
+
+Foraging is a steady trickle through the growing seasons. A **Field** is nothing
+much until it is harvested. An **Orchard** is nothing at all until autumn, and
+then the best yield in the game — and it takes far the longest to establish, so
+planting one is a bet on a later autumn rather than a purchase.
+
+|          | Spring | Summer | Autumn | Winter |
+| -------- | ------ | ------ | ------ | ------ |
+| Foraging | 0.8    | 1.4    | 1.0    | 0      |
+| Field    | 0.25   | 0.8    | 1.9    | 0      |
+| Orchard  | 0      | 0.7    | 2.4    | 0      |
+
+A settlement that lives on foraging survives hand to mouth. One that farms has to
+store what it brings in and make it last — which is the lesson winter teaches,
+arriving a season early.
+
+---
+
 ## Roads — Implemented
 
 Every economic problem this settlement has had turned out to be a hauling problem. Priorities decide

@@ -46,6 +46,7 @@ import type { JobManager } from '@/simulation/jobs/JobManager';
 import type { StorageRegistry } from '@/simulation/logistics/Storage';
 import { findPath } from '@/simulation/pathfinding/AStar';
 import { ROAD_SPEED_MULTIPLIER } from '@/simulation/world/RoadGrid';
+import type { SeasonalProfile } from '@/simulation/seasons/SeasonClock';
 import type { World } from '@/simulation/world/World';
 import { Villager } from './Villager';
 
@@ -402,7 +403,10 @@ export class VillagerSystem {
         return;
       }
     } else {
-      job.workRemaining -= 1;
+      // Tools buy speed. A tick of labour counts for more than one tick's
+      // progress when the settlement is equipped, which is the single place in
+      // the game where iron actually pays for itself.
+      job.workRemaining -= this.workRate();
       this.recordBuildProgress(job);
       if (job.workRemaining > 0) {
         return;
@@ -468,13 +472,26 @@ export class VillagerSystem {
    * Overridden by the simulation once seasons exist; 1 means "no seasons yet",
    * which keeps Phase 7 independent of Phase 8.
    */
-  public productionScaleProvider: (() => number) | null = null;
+  public productionScaleProvider: ((profile: SeasonalProfile) => number) | null = null;
 
-  private productionScale(seasonal: boolean): number {
-    if (!seasonal || !this.productionScaleProvider) {
+  /**
+   * How much work a tick of labour is worth, set by the simulation.
+   *
+   * A provider rather than a field, for the same reason as the production
+   * scale: the villagers do not know what a tool is, and the survival system
+   * that does must not be imported here.
+   */
+  public workRateProvider: (() => number) | null = null;
+
+  private workRate(): number {
+    return this.workRateProvider ? this.workRateProvider() : 1;
+  }
+
+  private productionScale(profile: SeasonalProfile): number {
+    if (profile === 'none' || !this.productionScaleProvider) {
       return 1;
     }
-    return this.productionScaleProvider();
+    return this.productionScaleProvider(profile);
   }
 
   /** Ticks of build progress are recorded on the building as well as the job. */

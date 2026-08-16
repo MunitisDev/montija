@@ -8,12 +8,14 @@
  */
 
 import { buildingDefinition, type BuildingId } from '@/data/buildings';
+import type { TerrainType } from '@/data/terrain';
 import type { GridPoint } from '@/shared/types/geometry';
 import type { World } from '@/simulation/world/World';
 import { Building } from './Building';
 
 /** Why a placement was refused, so the UI can say something useful. */
-export type PlacementRefusal = 'off-map' | 'blocked-terrain' | 'occupied' | 'trees-in-the-way';
+export type PlacementRefusal =
+  'off-map' | 'blocked-terrain' | 'occupied' | 'trees-in-the-way' | 'needs-rock-face';
 
 export type PlacementCheck =
   { readonly ok: true } | { readonly ok: false; readonly reason: PlacementRefusal };
@@ -64,7 +66,8 @@ export class BuildingRegistry {
    * should fell them deliberately, and the resulting logs are worth having.
    */
   public canPlace(world: World, buildingId: BuildingId, origin: GridPoint): PlacementCheck {
-    const { footprint } = buildingDefinition(buildingId);
+    const definition = buildingDefinition(buildingId);
+    const { footprint } = definition;
 
     for (let dy = 0; dy < footprint.height; dy += 1) {
       for (let dx = 0; dx < footprint.width; dx += 1) {
@@ -85,7 +88,38 @@ export class BuildingRegistry {
       }
     }
 
+    // A quarry has to bite into a rock face, and a mine into a hillside. The
+    // footprint itself must still be ordinary buildable ground — people have to
+    // stand somewhere — so what is required is that the working face is next to
+    // it, which is also the rule that makes both buildings a decision about
+    // *where* rather than merely about *whether*.
+    if (definition.adjacentTo && !this.touches(world, origin, footprint, definition.adjacentTo)) {
+      return { ok: false, reason: 'needs-rock-face' };
+    }
+
     return { ok: true };
+  }
+
+  /** `true` when any cell bordering the footprint is of the given terrain. */
+  private touches(
+    world: World,
+    origin: GridPoint,
+    footprint: { width: number; height: number },
+    terrain: TerrainType,
+  ): boolean {
+    for (let dy = -1; dy <= footprint.height; dy += 1) {
+      for (let dx = -1; dx <= footprint.width; dx += 1) {
+        const inside = dx >= 0 && dy >= 0 && dx < footprint.width && dy < footprint.height;
+        if (inside) {
+          continue;
+        }
+        const cell = { gx: origin.gx + dx, gy: origin.gy + dy };
+        if (world.terrain.contains(cell.gx, cell.gy) && world.terrainAt(cell) === terrain) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /**

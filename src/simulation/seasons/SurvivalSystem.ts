@@ -32,6 +32,29 @@ export const FOOD_PER_VILLAGER_PER_DAY = 1;
 export const FIREWOOD_PER_VILLAGER_PER_COLD_DAY = 1;
 
 /**
+ * Tools worn out per working villager per day.
+ *
+ * A twentieth: a villager gets through one tool every twenty days. Slow enough
+ * that a settlement is never *forced* to forge, fast enough that keeping a
+ * hundred people equipped is a real demand on a mine.
+ */
+export const TOOLS_PER_WORKER_PER_DAY = 0.05;
+
+/**
+ * How much faster a fully equipped settlement works.
+ *
+ * **This is the whole reason iron exists.** Without a consumer, iron would be a
+ * number in the HUD that goes up — and a resource with nothing to spend it on
+ * is clutter dressed as content. Tools are the consumer, and speed is what they
+ * buy: half again as much work out of the same people.
+ *
+ * Deliberately a bonus rather than a penalty. A settlement with no blacksmith
+ * works at exactly the rate it always did, so tools are something to reach for
+ * rather than a tax that arrives with an update.
+ */
+export const TOOL_WORK_BONUS = 0.5;
+
+/**
  * How much of a fire's warmth reaches somebody with no house.
  *
  * Not zero: there is a communal fire, and standing beside it is better than
@@ -72,6 +95,14 @@ export interface DailyReport {
   readonly deaths: number;
   /** Villagers who spent a freezing night with no house. */
   readonly sleepingRough: number;
+  readonly toolsWorn: number;
+  /**
+   * How well equipped the settlement is today, in `0..1`.
+   *
+   * Multiplies into the work rate. Zero is not a penalty — it is the speed the
+   * game has always run at.
+   */
+  readonly toolFraction: number;
 }
 
 export const EMPTY_REPORT: DailyReport = {
@@ -81,6 +112,8 @@ export const EMPTY_REPORT: DailyReport = {
   firewoodShortfall: 0,
   deaths: 0,
   sleepingRough: 0,
+  toolsWorn: 0,
+  toolFraction: 0,
 };
 
 /**
@@ -116,6 +149,14 @@ export function runDay(
   // a full fire, and having a home with no firewood came out *worse* than
   // having no home — which is nonsense in both directions.
   const warmFraction = firewoodWanted === 0 ? 0 : firewoodTaken / firewoodWanted;
+
+  // Tools are worn out by the people doing the work, so children do not count.
+  // Nothing is taken when the settlement has none, and nothing is lost by that
+  // — an unequipped settlement simply works at the rate it always did.
+  const workers = villagers.filter((villager) => villager.isAdult).length;
+  const toolsWanted = workers * TOOLS_PER_WORKER_PER_DAY;
+  const toolsWorn = takeFromStorages(storages, 'tools', toolsWanted);
+  const toolFraction = toolsWanted === 0 ? 0 : Math.min(1, toolsWorn / toolsWanted);
 
   const dead: Villager[] = [];
   let sleepingRough = 0;
@@ -160,6 +201,8 @@ export function runDay(
       firewoodShortfall: firewoodWanted - firewoodTaken,
       deaths: dead.length,
       sleepingRough,
+      toolsWorn,
+      toolFraction,
     },
     dead,
   };
