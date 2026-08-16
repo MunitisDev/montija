@@ -136,7 +136,11 @@ export interface SaveGame {
    * different choices from the save it came from. Determinism is only worth
    * claiming if it survives a save.
    */
-  readonly random: { readonly villagers: { readonly seed: number; readonly cursor: number } };
+  readonly random: {
+    readonly villagers: { readonly seed: number; readonly cursor: number };
+    /** Absent in saves written before the woods could grow back. */
+    readonly forest?: { readonly seed: number; readonly cursor: number };
+  };
 }
 
 /** Why a save could not be loaded, so the UI can say something useful. */

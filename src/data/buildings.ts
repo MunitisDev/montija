@@ -8,7 +8,8 @@
 
 import type { ResourceId } from './resources';
 
-export type BuildingId = 'house' | 'storage-yard' | 'food-storage' | 'gatherer-hut' | 'woodcutter';
+export type BuildingId =
+  'house' | 'storage-yard' | 'food-storage' | 'gatherer-hut' | 'woodcutter' | 'forester';
 
 export interface ResourceAmount {
   readonly resource: ResourceId;
@@ -37,6 +38,21 @@ export interface BuildingDefinition {
   readonly housing?: number;
   /** The recipe produced here, from `data/recipes.ts`. Phase 7. */
   readonly recipeId?: string;
+
+  /**
+   * Set for a building that manages the woodland around it.
+   *
+   * Not a recipe, because forestry is not a transformation — it is work done on
+   * the map itself, at cells rather than at a workbench. Its workers plant when
+   * the wood is thin and fell when it is thick, which is what turns timber from
+   * a finite deposit into something the player tends.
+   */
+  readonly forestry?: {
+    /** How far from the lodge its workers range, in cells. */
+    readonly radius: number;
+    /** Trees the lodge tries to keep standing inside that range. */
+    readonly targetTrees: number;
+  };
 }
 
 /**
@@ -98,6 +114,23 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     workerSlots: 2,
     recipeId: 'forage-food',
   },
+  forester: {
+    id: 'forester',
+    name: "Forester's Lodge",
+    description: 'Workers plant and fell nearby, so the wood never runs out.',
+    footprint: { width: 2, height: 2 },
+    constructionCost: [
+      { resource: 'logs', amount: 12 },
+      { resource: 'stone', amount: 2 },
+    ],
+    buildTicks: 110,
+    workerSlots: 2,
+    // A wide range and a density well under a natural wood's. The lodge is
+    // meant to keep a working coppice, not to reforest the map: a player who
+    // wants dense woodland leaves it alone, and one who wants a steady supply
+    // builds this.
+    forestry: { radius: 10, targetTrees: 110 },
+  },
   woodcutter: {
     id: 'woodcutter',
     name: 'Woodcutter',
@@ -120,6 +153,7 @@ export const BUILDING_IDS: readonly BuildingId[] = [
   'food-storage',
   'gatherer-hut',
   'woodcutter',
+  'forester',
 ];
 
 export function buildingDefinition(id: BuildingId): BuildingDefinition {

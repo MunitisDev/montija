@@ -20,13 +20,44 @@ export class TreeRegistry {
   private readonly byCell = new Map<number, number>();
   private readonly width: number;
   private changeVersion = 0;
+  /**
+   * The next id to hand out.
+   *
+   * Trees stopped being a fixed set the day forests learned to grow back, so
+   * the registry now mints ids rather than only holding the ones generation
+   * handed it. Always above every id it has ever seen, including after a
+   * restore, or a new sapling would take the id of a tree somebody's job is
+   * still pointing at.
+   */
+  private nextId = 1;
 
   constructor(width: number, trees: readonly TreeInstance[]) {
     this.width = width;
     for (const tree of trees) {
       this.byId.set(tree.id, tree);
       this.byCell.set(this.cellIndex(tree.gx, tree.gy), tree.id);
+      this.nextId = Math.max(this.nextId, tree.id + 1);
     }
+  }
+
+  /**
+   * Puts a new tree on a cell.
+   *
+   * The caller decides whether the ground will take one — the registry only
+   * refuses to stack two trees on one cell, which is the invariant it owns.
+   */
+  public plant(gx: number, gy: number, variant: number, scale: number): TreeInstance | null {
+    const index = this.cellIndex(gx, gy);
+    if (this.byCell.has(index)) {
+      return null;
+    }
+
+    const tree: TreeInstance = { id: this.nextId, gx, gy, variant, scale };
+    this.nextId += 1;
+    this.byId.set(tree.id, tree);
+    this.byCell.set(index, tree.id);
+    this.changeVersion += 1;
+    return tree;
   }
 
   public get count(): number {
@@ -71,9 +102,11 @@ export class TreeRegistry {
   public restore(trees: readonly TreeInstance[]): void {
     this.byId.clear();
     this.byCell.clear();
+    this.nextId = 1;
     for (const tree of trees) {
       this.byId.set(tree.id, tree);
       this.byCell.set(this.cellIndex(tree.gx, tree.gy), tree.id);
+      this.nextId = Math.max(this.nextId, tree.id + 1);
     }
     this.changeVersion += 1;
   }

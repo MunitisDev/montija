@@ -18,7 +18,7 @@ import { recipe as findRecipe } from '@/data/recipes';
 import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
 import type { Building } from './buildings/Building';
 import type { PlacementCheck } from './buildings/BuildingRegistry';
-import { JobPriority } from './jobs/Job';
+import { isFinished, JobPriority } from './jobs/Job';
 import { JobManager } from './jobs/JobManager';
 import { StorageRegistry } from './logistics/Storage';
 import {
@@ -38,6 +38,20 @@ import { NO_SPOILAGE, runSpoilage, type SpoilageReport } from './resources/Spoil
 import { EMPTY_REPORT, runDay, type DailyReport } from './seasons/SurvivalSystem';
 import { VillagerSystem } from './villagers/VillagerSystem';
 import { World } from './world/World';
+import { NO_FOREST_CHANGE, runForestRegrowth, type ForestReport } from './world/ForestSystem';
+import type { TreeInstance } from './world/WorldGenerator';
+
+/**
+ * Ticks between forestry passes.
+ *
+ * Counting the trees in a lodge's range is the one genuinely superlinear thing
+ * in this file, and no forestry decision changes meaningfully inside two and a
+ * half seconds of play.
+ */
+const FORESTRY_INTERVAL_TICKS = 25;
+
+/** Felling jobs a single lodge may post in one pass. */
+const FELLING_PER_PASS = 3;
 
 /**
  * What the settlement most needs to hear about, or `null` when all is well.
@@ -93,6 +107,8 @@ export interface SimulationSnapshot {
   readonly spoiled: SpoilageReport;
   /** Births, old age, homelessness and the split between adults and children. */
   readonly population: PopulationReport;
+  /** Saplings that took root overnight, so a recovering wood is legible. */
+  readonly forest: ForestReport;
   readonly deaths: number;
   /** Lowest health among the living, so the HUD can warn before people die. */
   readonly lowestHealth: number;
@@ -144,7 +160,16 @@ export class Simulation {
   private lastDayReport: DailyReport = EMPTY_REPORT;
   private lastSpoilage: SpoilageReport = NO_SPOILAGE;
   private lastPopulation: PopulationReport = NO_POPULATION_CHANGE;
+  private lastForest: ForestReport = NO_FOREST_CHANGE;
   private totalDeaths = 0;
+  /**
+   * The woods' own random stream.
+   *
+   * Separate from every other, so that adding a roll to regrowth cannot shift
+   * where a villager wanders or which name a child is given. Determinism only
+   * survives contact with new features if the streams stay apart.
+   */
+  private readonly forestRandom: SeededRandom;
 
   constructor(options: SimulationOptions) {
     this.seed = options.seed >>> 0;
@@ -156,6 +181,7 @@ export class Simulation {
       seed: this.seed,
     });
 
+    this.forestRandom = new SeededRandom(deriveSeed(this.seed, 'forest'));
     this.jobs = new JobManager();
 
     // Villagers get their own RNG stream, so adding a call here cannot shift
@@ -195,6 +221,7 @@ export class Simulation {
     this.openFinishedStorages();
     this.createConstructionJobs();
     this.createProductionJobs();
+    this.createForestryJobs();
     this.createHaulJobs();
     this.villagers.update(tickSeconds);
     // Phase 7+ : production, seasons.
@@ -273,6 +300,7 @@ export class Simulation {
       lastDay: this.lastDayReport,
       spoiled: this.lastSpoilage,
       population: this.lastPopulation,
+      forest: this.lastForest,
       deaths: this.totalDeaths,
       advice: this.adviseOn(year),
       hasFailed: this.hasFailed,
@@ -401,6 +429,7 @@ export class Simulation {
     this.lastDayReport = EMPTY_REPORT;
     this.lastSpoilage = NO_SPOILAGE;
     this.lastPopulation = NO_POPULATION_CHANGE;
+    this.lastForest = NO_FOREST_CHANGE;
   }
 
   /**
@@ -508,6 +537,9 @@ export class Simulation {
     // People eat before anything turns. A settlement should never starve on a
     // day it had food, only to watch that same food rot the same night.
     this.lastSpoilage = runSpoilage(this.storages, this.world.piles);
+
+    // The woods creep back. Slowly, and never over the settlement itself.
+    this.lastForest = runForestRegrowth(this.world, this.forestRandom);
 
     this.runPopulationUpkeep();
   }
@@ -630,6 +662,157 @@ export class Simulation {
    * A workshop that needs logs gets them hauled in from storage first; only
    * then is a production job posted. Nothing is produced from an empty store.
    */
+  /**
+   * Keeps every forester's lodge managing the wood around it.
+   *
+   * The rule is one line long and does the whole job: **below its target the
+   * lodge plants, at or above it the lodge fells.** No hysteresis and no state —
+   * the count of trees in range is the state, and it moves slowly enough that
+   * the two behaviours cannot chatter.
+   *
+   * Felling is posted as ordinary `chop-tree` work rather than as something
+   * special, so a forester's timber flows through exactly the same
+   * fell → logs on the ground → haul → yard pipeline the player's own
+   * designations do. Nothing about the economy has to know a lodge exists.
+   *
+   * Run on a cadence rather than every tick: counting trees in a radius is the
+   * one genuinely superlinear thing in this file, and forestry decisions do not
+   * change meaningfully inside two and a half seconds.
+   */
+  private createForestryJobs(): void {
+    if (this.currentTick % FORESTRY_INTERVAL_TICKS !== 0) {
+      return;
+    }
+
+    for (const building of this.world.buildings.all) {
+      const forestry = building.definition.forestry;
+      if (!forestry || !building.isComplete) {
+        continue;
+      }
+
+      const standing = this.treesWithin(building.accessCell, forestry.radius);
+      if (standing.length >= forestry.targetTrees) {
+        this.fellSurplus(standing, standing.length - forestry.targetTrees);
+        continue;
+      }
+
+      const slot = this.jobs.firstFreeSlot(
+        'plant-tree',
+        building.id,
+        building.definition.workerSlots,
+      );
+      if (slot === null) {
+        continue;
+      }
+
+      const cell = this.findPlantingCell(building.accessCell, forestry.radius);
+      if (!cell) {
+        continue;
+      }
+
+      this.jobs.create({
+        type: 'plant-tree',
+        target: cell,
+        // Above ordinary felling, below food and hauling. Planting is the work
+        // that keeps the settlement alive in ten years' time, and it must never
+        // be the reason it starves this winter.
+        priority: JobPriority.normal,
+        targetEntityId: building.id,
+        reservationSlot: slot,
+      });
+    }
+  }
+
+  /** Every tree standing inside a lodge's range. */
+  private treesWithin(centre: GridPoint, radius: number): TreeInstance[] {
+    const found: TreeInstance[] = [];
+    for (let dy = -radius; dy <= radius; dy += 1) {
+      for (let dx = -radius; dx <= radius; dx += 1) {
+        const tree = this.world.trees.getAt({ gx: centre.gx + dx, gy: centre.gy + dy });
+        if (tree) {
+          found.push(tree);
+        }
+      }
+    }
+    return found;
+  }
+
+  /**
+   * Posts felling work for a lodge that has more wood than it wants.
+   *
+   * Capped per pass, because a lodge whose wood grew past its target overnight
+   * should not put forty simultaneous felling jobs on the board and pull every
+   * villager in the settlement into the trees.
+   */
+  private fellSurplus(standing: readonly TreeInstance[], surplus: number): void {
+    let posted = 0;
+    for (const tree of standing) {
+      if (posted >= Math.min(surplus, FELLING_PER_PASS)) {
+        return;
+      }
+      if (this.jobs.isTargetReserved('chop-tree', tree.id)) {
+        continue;
+      }
+      const job = this.jobs.create({
+        type: 'chop-tree',
+        target: { gx: tree.gx, gy: tree.gy },
+        priority: JobPriority.normal,
+        targetEntityId: tree.id,
+      });
+      if (job) {
+        posted += 1;
+      }
+    }
+  }
+
+  /**
+   * Somewhere inside a lodge's range for the next sapling.
+   *
+   * Spirals outward from the lodge so a new coppice fills in around it rather
+   * than appearing at the far edge of the range first — which reads as a wood
+   * growing, and also keeps the walk short while the lodge is young.
+   */
+  private findPlantingCell(centre: GridPoint, radius: number): GridPoint | null {
+    for (let ring = 1; ring <= radius; ring += 1) {
+      for (let dy = -ring; dy <= ring; dy += 1) {
+        for (let dx = -ring; dx <= ring; dx += 1) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) {
+            continue;
+          }
+          const cell = { gx: centre.gx + dx, gy: centre.gy + dy };
+          if (!this.world.canGrowTree(cell)) {
+            continue;
+          }
+          // A cell somebody is already walking to plant is not a free cell.
+          const cellId = cell.gy * this.world.width + cell.gx;
+          if (this.jobs.isTargetReserved('plant-tree', cellId)) {
+            continue;
+          }
+          if (this.plantingPending(cell)) {
+            continue;
+          }
+          return cell;
+        }
+      }
+    }
+    return null;
+  }
+
+  /** `true` when a sapling is already on its way to this cell. */
+  private plantingPending(cell: GridPoint): boolean {
+    for (const job of this.jobs.all) {
+      if (
+        job.type === 'plant-tree' &&
+        job.target.gx === cell.gx &&
+        job.target.gy === cell.gy &&
+        !isFinished(job)
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private createProductionJobs(): void {
     for (const building of this.world.buildings.all) {
       if (!building.isComplete || !building.definition.recipeId) {
@@ -801,6 +984,15 @@ export class Simulation {
   }
 
   /** Exposed for the systems added in later phases. */
+  /** The woods' RNG position, so a loaded settlement grows the same forest. */
+  public get forestRandomState(): { seed: number; cursor: number } {
+    return this.forestRandom.getState();
+  }
+
+  public restoreForestRandom(state: { seed: number; cursor: number }): void {
+    this.forestRandom.setState(state);
+  }
+
   public get random(): RandomSource {
     return this.tickRandom;
   }

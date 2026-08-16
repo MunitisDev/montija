@@ -24,7 +24,14 @@ import type { GridPoint } from '@/shared/types/geometry';
 export type HaulSource = 'pile' | 'storage';
 
 export type JobType =
-  'move-to' | 'chop-tree' | 'gather-stone' | 'haul' | 'build' | 'produce' | 'pave-road';
+  | 'move-to'
+  | 'chop-tree'
+  | 'gather-stone'
+  | 'haul'
+  | 'build'
+  | 'produce'
+  | 'pave-road'
+  | 'plant-tree';
 
 /**
  * Which leg of a multi-stage job is being done.
@@ -105,6 +112,8 @@ export const JOB_WORK_TICKS: Readonly<Record<JobType, number>> = {
   // Clearing and beating a track flat. Short, because a road is only worth
   // laying if a settlement can afford to lay a line of them.
   'pave-road': 20,
+  // Setting a sapling. Quick work; the waiting is done by the tree.
+  'plant-tree': 15,
 };
 
 export function isFinished(job: Job): boolean {

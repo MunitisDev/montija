@@ -99,6 +99,8 @@ const MASS: Readonly<Record<BuildingId, BuildingMass>> = {
   'gatherer-hut': { wallHeight: 20, roofHeight: 42, eaves: 6, thatch: true, windows: 1 },
   // A workshop. Taller than it needs to be, because the work happens indoors.
   woodcutter: { wallHeight: 22, roofHeight: 44, eaves: 6, plinth: 4, windows: 1 },
+  // A lodge out among the trees: low, thatched, one window, no stone to spare.
+  forester: { wallHeight: 18, roofHeight: 38, eaves: 7, thatch: true, windows: 1 },
 };
 
 /** Muted, earthy, and distinguishable at a glance without being colourful. */
@@ -108,6 +110,7 @@ export const BUILDING_COLOURS: Readonly<Record<BuildingId, BuildingPalette>> = {
   'food-storage': { wall: 0x6a6048, roof: 0x565039, trim: 0x45402d },
   'gatherer-hut': { wall: 0x5f6248, roof: 0x4c5039, trim: 0x3d402d },
   woodcutter: { wall: 0x67543f, roof: 0x534431, trim: 0x423628 },
+  forester: { wall: 0x5b5c41, roof: 0x4a4b34, trim: 0x3b3c29 },
 };
 
 /** Breathing room above the roof, so nothing touches the texture edge. */

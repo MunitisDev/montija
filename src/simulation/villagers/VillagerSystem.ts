@@ -49,6 +49,15 @@ import { ROAD_SPEED_MULTIPLIER } from '@/simulation/world/RoadGrid';
 import type { World } from '@/simulation/world/World';
 import { Villager } from './Villager';
 
+/**
+ * How many tree shapes exist to choose from.
+ *
+ * Duplicated from the generator rather than imported, because it is a
+ * presentation index the simulation merely stores — and the renderer takes it
+ * modulo its own count anyway, so the two need only agree roughly.
+ */
+const TREE_SHAPE_COUNT = 6;
+
 /** Maximum A* searches started per tick, across all villagers. */
 const PATH_REQUESTS_PER_TICK = 4;
 
@@ -493,6 +502,16 @@ export class VillagerSystem {
         break;
       case 'pave-road':
         this.world.paveRoad(job.target);
+        break;
+      case 'plant-tree':
+        // Shape and size come from the villagers' own stream rather than the
+        // forest's: this sapling was planted by a person, and its look should
+        // not shift where the wild woods spread next.
+        this.world.plantTree(
+          job.target,
+          this.randomSource.int(0, TREE_SHAPE_COUNT),
+          this.randomSource.float(0.55, 0.85),
+        );
         break;
       case 'build': {
         const building =

@@ -74,6 +74,8 @@ export const EN = {
   'building.gatherer-hut.description': 'Workers forage the woods for food. Your only food source.',
   'building.woodcutter': 'Woodcutter',
   'building.woodcutter.description': 'Splits logs into firewood, which keeps houses warm.',
+  'building.forester': "Forester's Lodge",
+  'building.forester.description': 'Plants and fells nearby, so the wood never runs out.',
 
   'placement.offMap': 'beyond the map',
   'placement.blockedTerrain': 'ground will not take it',
@@ -176,6 +178,8 @@ export const ES: Messages = {
     'Los trabajadores recolectan comida del bosque. Tu única fuente de comida.',
   'building.woodcutter': 'Leñador',
   'building.woodcutter.description': 'Parte troncos en leña, que da calor a las casas.',
+  'building.forester': 'Casa del guarda',
+  'building.forester.description': 'Planta y tala cerca, para que el bosque no se agote.',
 
   'placement.offMap': 'fuera del mapa',
   'placement.blockedTerrain': 'el terreno no lo admite',

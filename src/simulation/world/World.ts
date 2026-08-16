@@ -137,6 +137,51 @@ export class World {
     return true;
   }
 
+  /**
+   * `true` when a tree could take root here.
+   *
+   * Deliberately stricter than "is it empty": a sapling must not appear on a
+   * road somebody paved, on a building's plot, or on rock and water. Growth
+   * that undoes the player's work is not a living forest, it is vandalism.
+   */
+  public canGrowTree(cell: GridPoint): boolean {
+    if (!this.terrain.contains(cell.gx, cell.gy)) {
+      return false;
+    }
+    const type = this.terrain.getAt(cell);
+    if (type !== 'grass' && type !== 'meadow' && type !== 'forest') {
+      return false;
+    }
+    if (this.trees.has(cell) || this.roads.hasAt(cell)) {
+      return false;
+    }
+    return this.buildings.getAt(cell) === null && this.piles.anyAt(cell) === null;
+  }
+
+  /**
+   * Plants a tree, turning the ground back into woodland.
+   *
+   * The mirror of {@link fellTree}, and deliberately so: felling turns forest
+   * into grass, and the only honest way for a wood to recover is for the
+   * terrain to follow the trees back.
+   */
+  public plantTree(cell: GridPoint, variant: number, scale: number): boolean {
+    if (!this.canGrowTree(cell)) {
+      return false;
+    }
+
+    const tree = this.trees.plant(cell.gx, cell.gy, variant, scale);
+    if (!tree) {
+      return false;
+    }
+
+    if (this.terrain.getAt(cell) !== 'forest') {
+      this.terrain.set(cell.gx, cell.gy, 'forest');
+      this.navigation.refreshCell(this.terrain, cell.gx, cell.gy);
+    }
+    return true;
+  }
+
   /** `true` when this cell could take a road, and has none yet. */
   public canPave(cell: GridPoint): boolean {
     if (!this.terrain.contains(cell.gx, cell.gy)) {

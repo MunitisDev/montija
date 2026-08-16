@@ -405,13 +405,19 @@ describe('Simulation job integration', () => {
     for (const tree of trees) {
       simulation.designateTreeForFelling({ gx: tree.gx, gy: tree.gy });
     }
-    const before = simulation.world.trees.count;
+    const marked = trees.map((tree) => tree.id);
 
     for (let tick = 1; tick <= 6000; tick += 1) {
       simulation.update(tick, TICK);
     }
 
-    expect(simulation.world.trees.count).toBeLessThan(before);
+    // The *marked* trees, not the total. Counting the whole wood stopped being
+    // a measure of felling the day forests grew back: over a hundred simulated
+    // days regrowth can add more trees than a dozen designations remove, and
+    // the test would then be reporting on the weather rather than on the job
+    // board.
+    const stillStanding = marked.filter((id) => simulation.world.trees.getById(id) !== null);
+    expect(stillStanding).toEqual([]);
     expect(simulation.snapshot().jobsCompleted).toBeGreaterThan(0);
   });
 

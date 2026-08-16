@@ -93,7 +93,10 @@ export function serialise(simulation: Simulation, savedAt: string): SaveGame {
     // makes this a copy rather than a conversion.
     jobs: simulation.jobs.all.map((job) => ({ ...job })),
     deaths: simulation.snapshot().deaths,
-    random: { villagers: simulation.villagers.randomState },
+    random: {
+      villagers: simulation.villagers.randomState,
+      forest: simulation.forestRandomState,
+    },
   };
 }
 
@@ -197,6 +200,11 @@ export function restore(simulation: Simulation, save: SaveGame): void {
   simulation.jobs.restore(save.jobs);
   if (save.random?.villagers) {
     simulation.villagers.restoreRandomState(save.random.villagers);
+    // Absent in saves written before the woods grew back; leaving the stream at
+    // its seed is the right reading, since nothing had drawn from it yet.
+    if (save.random.forest) {
+      simulation.restoreForestRandom(save.random.forest);
+    }
   }
   simulation.restoreClock(save.simulationTime, save.deaths);
 }
