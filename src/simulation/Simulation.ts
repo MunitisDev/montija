@@ -34,6 +34,11 @@ import {
   runPopulationDay,
   type PopulationReport,
 } from './population/PopulationSystem';
+import {
+  NO_EMPLOYMENT_CHANGE,
+  runEmployment,
+  type EmploymentReport,
+} from './population/EmploymentSystem';
 import { NO_SPOILAGE, runSpoilage, type SpoilageReport } from './resources/SpoilageSystem';
 import { EMPTY_REPORT, runDay, TOOL_WORK_BONUS, type DailyReport } from './seasons/SurvivalSystem';
 import { VillagerSystem } from './villagers/VillagerSystem';
@@ -52,6 +57,9 @@ const FORESTRY_INTERVAL_TICKS = 25;
 
 /** Felling jobs a single lodge may post in one pass. */
 const FELLING_PER_PASS = 3;
+
+/** Ticks between employment passes. Nobody changes job inside two seconds. */
+const EMPLOYMENT_INTERVAL_TICKS = 25;
 
 /**
  * What the settlement most needs to hear about, or `null` when all is well.
@@ -109,6 +117,8 @@ export interface SimulationSnapshot {
   readonly population: PopulationReport;
   /** Saplings that took root overnight, so a recovering wood is legible. */
   readonly forest: ForestReport;
+  /** Who is employed where, so the HUD can show labourers and vacancies. */
+  readonly employment: EmploymentReport;
   readonly deaths: number;
   /** Lowest health among the living, so the HUD can warn before people die. */
   readonly lowestHealth: number;
@@ -161,6 +171,7 @@ export class Simulation {
   private lastSpoilage: SpoilageReport = NO_SPOILAGE;
   private lastPopulation: PopulationReport = NO_POPULATION_CHANGE;
   private lastForest: ForestReport = NO_FOREST_CHANGE;
+  private lastEmployment: EmploymentReport = NO_EMPLOYMENT_CHANGE;
   private totalDeaths = 0;
   /**
    * The woods' own random stream.
@@ -223,6 +234,7 @@ export class Simulation {
     }
 
     this.openFinishedStorages();
+    this.reconcileEmployment();
     this.createConstructionJobs();
     this.createProductionJobs();
     this.createForestryJobs();
@@ -305,6 +317,7 @@ export class Simulation {
       spoiled: this.lastSpoilage,
       population: this.lastPopulation,
       forest: this.lastForest,
+      employment: this.lastEmployment,
       deaths: this.totalDeaths,
       advice: this.adviseOn(year),
       hasFailed: this.hasFailed,
@@ -434,6 +447,7 @@ export class Simulation {
     this.lastSpoilage = NO_SPOILAGE;
     this.lastPopulation = NO_POPULATION_CHANGE;
     this.lastForest = NO_FOREST_CHANGE;
+    this.lastEmployment = NO_EMPLOYMENT_CHANGE;
   }
 
   /**
@@ -700,11 +714,7 @@ export class Simulation {
         continue;
       }
 
-      const slot = this.jobs.firstFreeSlot(
-        'plant-tree',
-        building.id,
-        building.definition.workerSlots,
-      );
+      const slot = this.jobs.firstFreeSlot('plant-tree', building.id, building.workers.length);
       if (slot === null) {
         continue;
       }
@@ -817,6 +827,47 @@ export class Simulation {
     return false;
   }
 
+  /**
+   * Keeps every post filled, and every villager in a post that still exists.
+   *
+   * On a cadence rather than every tick: employment changes when a building is
+   * finished, a quota moves or somebody dies, none of which needs answering
+   * inside two and a half seconds of play. It is a full reconciliation each
+   * time, because a villager can lose a post for four unrelated reasons and a
+   * system that hooks each one separately is a system that misses the fifth.
+   */
+  private reconcileEmployment(): void {
+    if (this.currentTick % EMPLOYMENT_INTERVAL_TICKS !== 0) {
+      return;
+    }
+    this.lastEmployment = runEmployment(this.villagers.all, this.world.buildings);
+  }
+
+  /**
+   * Sets how many people a building should employ.
+   *
+   * A command, like every other player intent: the UI states a wish and the
+   * simulation decides what happens to it, on its own schedule.
+   */
+  public setDesiredWorkers(buildingId: number, workers: number): boolean {
+    const building = this.world.buildings.getById(buildingId);
+    if (!building) {
+      return false;
+    }
+
+    const clamped = Math.max(0, Math.min(building.definition.workerSlots, Math.round(workers)));
+    if (clamped === building.desiredWorkers) {
+      return false;
+    }
+
+    building.desiredWorkers = clamped;
+    // Applied immediately rather than at the next pass: the player has just
+    // pulled a lever and expects the number under their thumb to move.
+    this.lastEmployment = runEmployment(this.villagers.all, this.world.buildings);
+    this.world.buildings.markChanged();
+    return true;
+  }
+
   private createProductionJobs(): void {
     for (const building of this.world.buildings.all) {
       if (!building.isComplete || !building.definition.recipeId) {
@@ -825,6 +876,20 @@ export class Simulation {
 
       const recipe = findRecipe(building.definition.recipeId);
       if (!recipe) {
+        continue;
+      }
+
+      // Nothing grows under snow, and a gatherer standing in a hut miming a
+      // harvest is worse than idle: production is the highest priority in the
+      // game, so those two people would refuse to haul or fell all winter while
+      // producing exactly nothing. Skipping the job hands them back to the
+      // settlement for the season that needs them most.
+      if (SEASONAL_YIELD[recipe.seasonal][this.year.season] === 0) {
+        // And cancel any left over from the season that just ended. Skipping
+        // new ones is not enough: a job posted on the last day of autumn stays
+        // on the board, and being the highest priority in the game it is the
+        // first thing an employee picks up in January.
+        this.cancelProductionAt(building.id);
         continue;
       }
 
@@ -840,10 +905,11 @@ export class Simulation {
         continue;
       }
 
-      // One batch per worker slot. Reserving the building as a whole meant a
-      // two-slot hut only ever worked one villager, so half of every workshop
-      // stood idle and `workerSlots` described nothing.
-      const slot = this.jobs.firstFreeSlot('produce', building.id, building.definition.workerSlots);
+      // One batch per *employee*, not per slot. A job only this building's
+      // staff may take is a job nobody can take when it has no staff, and
+      // posting it anyway leaves the board littered with work that will never
+      // be claimed.
+      const slot = this.jobs.firstFreeSlot('produce', building.id, building.workers.length);
       if (slot !== null) {
         this.jobs.create({
           type: 'produce',
@@ -860,6 +926,16 @@ export class Simulation {
           workTicks: recipe.workTicks,
           reservationSlot: slot,
         });
+      }
+    }
+  }
+
+  /** Withdraws any outstanding production job at a building. */
+  private cancelProductionAt(buildingId: number): void {
+    for (const job of this.jobs.all) {
+      if (job.type === 'produce' && job.targetEntityId === buildingId && !isFinished(job)) {
+        this.jobs.cancel(job.id);
+        this.releaseVillagersFrom(job.id);
       }
     }
   }

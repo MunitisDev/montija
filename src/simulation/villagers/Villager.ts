@@ -63,6 +63,17 @@ export class Villager {
   public currentJobId: number | null = null;
 
   /**
+   * The building this villager works at, or `null` for a labourer.
+   *
+   * A villager's profession *is* this: the building carries the trade, so
+   * adding a workshop adds a trade and nothing has to learn its name. A
+   * labourer is not unemployed — they do the felling, mining, paving, hauling
+   * and building, which is all the work that belongs to the settlement rather
+   * than to a workshop.
+   */
+  public employerId: number | null = null;
+
+  /**
    * The house this villager lives in, or `null` when there is no room.
    *
    * Homelessness is survivable in the mild seasons and dangerous in winter: a

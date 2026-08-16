@@ -175,12 +175,16 @@ export class JobManager {
    * @param from where the villager is standing, for the distance tiebreak
    * @returns the claimed job, or `null` when there is no work
    */
-  public claimBest(villagerId: number, from: GridPoint): Job | null {
+  public claimBest(
+    villagerId: number,
+    from: GridPoint,
+    canTake: (job: Job) => boolean = () => true,
+  ): Job | null {
     let best: Job | null = null;
     let bestDistance = 0;
 
     for (const job of this.jobs.values()) {
-      if (!isClaimable(job)) {
+      if (!isClaimable(job) || !canTake(job)) {
         continue;
       }
 

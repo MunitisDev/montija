@@ -40,6 +40,8 @@ export interface SavedVillager {
   readonly homeId?: number | null;
   readonly daysSinceBirthday?: number;
   readonly birthCooldownDays?: number;
+  /** The building they work at. Absent in saves from before anyone had a job. */
+  readonly employerId?: number | null;
   readonly carrying: SavedInventory;
   /**
    * The route being walked, and where it leads.
@@ -83,6 +85,13 @@ export interface SavedBuilding {
   readonly buildTicksRemaining: number;
   readonly materials: SavedInventory;
   readonly input: SavedInventory;
+  /**
+   * How many workers the player asked for here.
+   *
+   * Absent in saves written before quotas existed, which restore with every
+   * slot filled — what those settlements were already doing.
+   */
+  readonly desiredWorkers?: number;
 }
 
 export interface SavedTree {

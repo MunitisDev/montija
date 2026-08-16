@@ -41,6 +41,7 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 14    | Roads                 | **Implemented** |
 | 15    | Art pass              | **Implemented** |
 | 16    | Land use              | **Implemented** |
+| 17    | Professions           | **Implemented** |
 
 ---
 
@@ -434,3 +435,26 @@ game's building list. The brief forbids copying names, designs and balance, and
 the useful thing to take from the genre was the _structure_ — one resource
 managed, one paid for — not its contents. Professions, trade, clothing and
 health buildings remain unbuilt.
+
+---
+
+## Phase 17 — Professions — Implemented
+
+Villagers take posts at buildings rather than drifting to whichever job is
+nearest. Set out in [GAME_DESIGN.md](./GAME_DESIGN.md).
+
+- Employment rather than a profession list: the buildings carry the trades, so
+  adding a workshop adds a trade and nothing has to learn its name.
+- A worker quota per building, adjustable from its panel — the lever the
+  settlement was missing.
+- Employees are reserved _to_ their workshop, not _idled in_ it: they fell and
+  haul when their workshop has nothing for them.
+- A workshop whose season yields nothing posts no work at all, and cancels what
+  is left on the board. Two gatherers miming a harvest all winter, at the
+  highest priority in the game, would have refused to haul while producing
+  nothing.
+
+**Found while building it:** the difficulty curve moved, because committing four
+of ten people to workshops is a genuine cost. The balance tests were rewritten
+to describe the new curve rather than retuned to hide it — one hut now starves,
+two scrape through, three prosper.

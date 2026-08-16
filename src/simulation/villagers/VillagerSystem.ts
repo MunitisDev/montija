@@ -354,7 +354,9 @@ export class VillagerSystem {
    * @returns `true` when the villager now has work
    */
   private tryTakeJob(villager: Villager): boolean {
-    const job = this.jobs.claimBest(villager.id, villager.cell);
+    const job = this.jobs.claimBest(villager.id, villager.cell, (candidate) =>
+      this.mayWork(villager, candidate),
+    );
     if (!job) {
       return false;
     }
@@ -846,6 +848,36 @@ export class VillagerSystem {
 
     villager.activity = 'idle';
     villager.idleTicks = this.randomSource.int(IDLE_TICKS_MIN, IDLE_TICKS_MAX);
+  }
+
+  /**
+   * Whether this villager is allowed to take this job.
+   *
+   * The whole of professions, in one predicate. Work that belongs to a
+   * *building* — producing at it, tending the wood around it — is its
+   * employees' work and nobody else's. Everything else is the settlement's
+   * work, and labourers do it.
+   *
+   * Without this, "worker slots" described nothing a player could act on: a
+   * produce job went to whoever happened to be nearest, so somebody could walk
+   * half the map to forage for four seconds and walk back.
+   */
+  private mayWork(villager: Villager, job: Job): boolean {
+    if (job.type !== 'produce' && job.type !== 'plant-tree') {
+      // Employees are not idled by having a job: they help with felling,
+      // hauling and building like anyone else. Their own workshop's work is
+      // `urgent`, so it always wins when there is any — which means the
+      // priority system already keeps them at their post without a rule
+      // pinning them there.
+      //
+      // Keeping them *near* their workplace was tried and measured: capping how
+      // far an employee will go to help changed nothing at 14 cells and made a
+      // marginal settlement worse at 5. Their travel is not what a short-handed
+      // village is losing to; committing four of ten people to workshops is,
+      // and that is the cost the player is now able to decide about.
+      return true;
+    }
+    return job.targetEntityId !== null && villager.employerId === job.targetEntityId;
   }
 
   /** Picks a nearby reachable cell and routes to it. */

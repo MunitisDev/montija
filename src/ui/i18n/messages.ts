@@ -64,6 +64,7 @@ export const EN = {
   'villager.walking': 'walking',
   'villager.working': 'working',
   'villager.hauling': 'hauling',
+  'villager.labourer': 'Labourer',
 
   'building.house': 'House',
   'building.house.description':
@@ -181,6 +182,7 @@ export const ES: Messages = {
   'villager.walking': 'caminando',
   'villager.working': 'trabajando',
   'villager.hauling': 'acarreando',
+  'villager.labourer': 'Peón',
 
   'building.house': 'Casa',
   'building.house.description': 'Refugio para cuatro. La leña solo calienta a quien tiene casa.',

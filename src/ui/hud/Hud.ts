@@ -38,6 +38,11 @@ interface HudElements {
   readonly buildingName: HTMLElement;
   readonly buildingState: HTMLElement;
   readonly buildingDetail: HTMLElement;
+  readonly workerControl: HTMLElement;
+  readonly workerCount: HTMLElement;
+  readonly workerLabel: HTMLElement;
+  readonly workerFewer: HTMLButtonElement;
+  readonly workerMore: HTMLButtonElement;
   readonly failure: HTMLElement;
   readonly failureSurvived: HTMLElement;
   readonly failureRestart: HTMLButtonElement;
@@ -79,6 +84,7 @@ export class Hud {
     this.bindSpeedButtons();
     this.bindSelectionAction();
     this.bindRoadAction();
+    this.bindWorkerControl();
     this.bindSessionButtons();
     this.bindLanguageButton();
     this.elements.failureRestart.addEventListener('click', () => {
@@ -284,7 +290,11 @@ export class Hud {
     const building = this.context.selection?.building ?? null;
     this.elements.building.hidden = building === null;
     if (!building) {
+      this.elements.workerControl.hidden = true;
       return;
+    }
+    if (!building.complete) {
+      this.elements.workerControl.hidden = true;
     }
 
     this.elements.buildingName.textContent = this.i18n.t(
@@ -303,10 +313,21 @@ export class Hud {
       return;
     }
 
-    const state: string[] = [];
+    // The quota, not the slots: what the player asked for is what they should
+    // see next to the button that changes it. How many have actually turned up
+    // is the first number, and the gap between them is the interesting part —
+    // "2/3 wanted" says the settlement is short of hands.
+    this.elements.workerControl.hidden = building.workerSlots === 0;
     if (building.workerSlots > 0) {
-      state.push(`${this.i18n.t('building.workers')} ${building.workers}/${building.workerSlots}`);
+      this.elements.workerLabel.textContent = this.i18n.t('building.workers');
+      this.elements.workerCount.textContent = `${building.workers}/${building.desiredWorkers}`;
+      this.elements.workerFewer.disabled = building.desiredWorkers <= 0;
+      this.elements.workerMore.disabled = building.desiredWorkers >= building.workerSlots;
     }
+
+    // Staffing is not repeated in the state line: the control beside it already
+    // says "Workers 1/2", and printing it twice in one panel reads as a bug.
+    const state: string[] = [];
     if (building.housing > 0) {
       state.push(`${this.i18n.t('building.residents')} ${building.residents}/${building.housing}`);
     }
@@ -353,9 +374,14 @@ export class Hud {
       const villager = selection.villager;
       this.elements.selectionTerrain.textContent = villager.name;
       this.elements.selectionCell.textContent = `${this.i18n.t('villager.age')} ${villager.age}`;
-      this.elements.selectionFlags.textContent = this.i18n.t(
+      // Trade first, then what they are doing. "Gatherer, hauling" is a whole
+      // sentence about a person; "hauling" on its own is not.
+      const trade = villager.employer
+        ? this.i18n.t(`building.${villager.employer}` as MessageKey)
+        : this.i18n.t('villager.labourer');
+      this.elements.selectionFlags.textContent = `${trade} · ${this.i18n.t(
         `villager.${villager.activity}` as MessageKey,
-      );
+      )}`;
       return;
     }
 
@@ -409,6 +435,17 @@ export class Hud {
       } else {
         this.context.designateSelectedTree();
       }
+      this.update();
+    });
+  }
+
+  private bindWorkerControl(): void {
+    this.elements.workerFewer.addEventListener('click', () => {
+      this.context.adjustSelectedWorkers(-1);
+      this.update();
+    });
+    this.elements.workerMore.addEventListener('click', () => {
+      this.context.adjustSelectedWorkers(1);
       this.update();
     });
   }
@@ -590,6 +627,11 @@ function collectElements(root: HTMLElement): HudElements {
     buildingName: requireElement(root, '[data-hud="building-name"]'),
     buildingState: requireElement(root, '[data-hud="building-state"]'),
     buildingDetail: requireElement(root, '[data-hud="building-detail"]'),
+    workerControl: requireElement(root, '[data-hud="worker-control"]'),
+    workerCount: requireElement(root, '[data-hud="worker-count"]'),
+    workerLabel: requireElement(root, '[data-hud="worker-label"]'),
+    workerFewer: requireElement(root, '[data-hud="worker-fewer"]') as HTMLButtonElement,
+    workerMore: requireElement(root, '[data-hud="worker-more"]') as HTMLButtonElement,
     failure: requireElement(root, '[data-hud="failure"]'),
     failureSurvived: requireElement(root, '[data-hud="failure-survived"]'),
     failureRestart: requireElement(root, '[data-hud="failure-restart"]') as HTMLButtonElement,

@@ -29,8 +29,26 @@ export class Building {
   public readonly materials: Inventory;
   /** Ticks of labour still needed once materials are complete. */
   public buildTicksRemaining: number;
-  /** Villagers assigned to work here. */
+  /**
+   * Villagers assigned to work here.
+   *
+   * A cache of the villagers' own `employerId`, rebuilt by the employment
+   * system each pass. Two places holding the same truth is a bug waiting for a
+   * death or a save to expose it, so only one of them is authoritative and it
+   * is the villager.
+   */
   public readonly workers: number[] = [];
+
+  /**
+   * How many workers the player wants here, from 0 to `workerSlots`.
+   *
+   * The lever the settlement was missing. A village that is starving does not
+   * need three people splitting firewood, and until this existed there was no
+   * way to say so — every slot was filled by whoever happened to be nearest.
+   *
+   * Starts full, because the ordinary case is "I built it, staff it".
+   */
+  public desiredWorkers: number;
   /**
    * The storage this building opened, once finished, or `null`.
    *
@@ -52,6 +70,7 @@ export class Building {
     this.definition = buildingDefinition(buildingId);
     this.origin = origin;
     this.buildTicksRemaining = this.definition.buildTicks;
+    this.desiredWorkers = this.definition.workerSlots;
     this.accessCell = {
       gx: origin.gx + Math.floor(this.definition.footprint.width / 2),
       gy: origin.gy + Math.floor(this.definition.footprint.height / 2),
@@ -66,6 +85,11 @@ export class Building {
 
   public get isComplete(): boolean {
     return this.state === 'complete';
+  }
+
+  /** How many posts the building is actually offering, clamped to its slots. */
+  public get hiringTarget(): number {
+    return Math.max(0, Math.min(this.definition.workerSlots, this.desiredWorkers));
   }
 
   /**

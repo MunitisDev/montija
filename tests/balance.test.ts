@@ -74,6 +74,15 @@ const tooLate: PlayerScript = (sim, day) => {
   if (day % 10 === 0) designateNearbyTrees(sim, 20);
 };
 
+/** One more hut than the marginal settlement, and nothing else different. */
+const twoHuts: PlayerScript = (sim, day) => {
+  if (day === 12 && countOf(sim, 'gatherer-hut') < 2) {
+    buildNearby(sim, 'gatherer-hut');
+    return;
+  }
+  oneHut(sim, day);
+};
+
 /**
  * Plays it properly: enough huts for ten mouths, and a larder to keep what
  * they gather.
@@ -146,17 +155,33 @@ describe('the first winter', () => {
 
   it('is survived by a settlement that feeds itself properly', () => {
     const result = runYear(prepared);
-    expect(result.survivors).toBe(10);
     expect(result.deaths).toBe(0);
+    // At least the ten it started with. More is a success, not a failure: a
+    // settlement with food to spare and a bed going begging has a child, and
+    // asserting an exact count made growth look like a regression.
+    expect(result.survivors).toBeGreaterThanOrEqual(10);
   });
 
-  it('leaves a single hut for ten villagers with nothing spare', () => {
-    // One hut cannot feed ten. This settlement lives, but reaches the end of
-    // winter with empty stores and hungry people rather than a soft landing.
+  it('starves a settlement that builds one hut for ten mouths', () => {
+    // One hut cannot feed ten, and since villagers took posts rather than
+    // drifting to whatever was nearest, it cannot *nearly* feed ten either:
+    // two of the ten are committed to the hut and two more to the woodcutter,
+    // and the six left over cannot gather. This is the cost the player is now
+    // able to decide about, and it bites before winter even arrives.
     const result = runYear(oneHut);
-    const endOfWinter = result.log.filter((day) => day.season === 'winter').at(-1)!;
-    expect(endOfWinter.food).toBe(0);
-    expect(endOfWinter.lowestHunger).toBeLessThan(80);
+    expect(result.deaths).toBeGreaterThan(0);
+    expect(result.atWinter.food).toBe(0);
+  });
+
+  it('is scraped through by a second hut, and no more than scraped', () => {
+    // The graded middle of the curve, and the reason the one-hut run above is
+    // allowed to be fatal: the difference between dying and living is one
+    // building, which is exactly the decision the game is asking for.
+    const result = runYear(twoHuts);
+    expect(result.deaths).toBe(0);
+    // Alive, and with nothing to show for it — against 135 for the prepared
+    // settlement. A soft landing has to stay something the player earns.
+    expect(result.atWinter.food).toBeLessThan(60);
   });
 
   it('lets a prepared settlement bank food before the cold', () => {

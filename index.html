@@ -187,6 +187,13 @@
               <span class="building-panel__name" data-hud="building-name"></span>
               <span class="building-panel__state" data-hud="building-state"></span>
               <span class="building-panel__detail" data-hud="building-detail"></span>
+              <!-- The worker quota: the one lever employment gives the player. -->
+              <span class="worker-control" data-hud="worker-control" hidden>
+                <span class="worker-control__label" data-hud="worker-label"></span>
+                <button type="button" data-hud="worker-fewer" aria-label="Fewer workers">–</button>
+                <span class="worker-control__count" data-hud="worker-count"></span>
+                <button type="button" data-hud="worker-more" aria-label="More workers">+</button>
+              </span>
             </div>
 
             <!-- Build menu. Buttons are generated from data/buildings.ts. -->

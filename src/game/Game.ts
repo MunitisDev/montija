@@ -61,6 +61,14 @@ export interface VillagerSelection {
   readonly name: string;
   readonly age: number;
   readonly activity: string;
+  /**
+   * The building they work at, or `null` for a labourer.
+   *
+   * A villager's trade is the building they answer to, so the panel names the
+   * building rather than a profession from some parallel list that would have
+   * to be kept in step with it.
+   */
+  readonly employer: BuildingId | null;
 }
 
 /** What the player last tapped, resolved to the grid. */
@@ -106,6 +114,8 @@ export interface BuildingSelection {
   /** Villagers working here, against the posts available. */
   readonly workers: number;
   readonly workerSlots: number;
+  /** How many the player has asked for, which may exceed who has turned up. */
+  readonly desiredWorkers: number;
   /** What the building is holding: recipe inputs, or a yard's stock. */
   readonly contents: readonly ResourceAmount[];
   /** How many people it houses, for a completed house. */
@@ -150,6 +160,8 @@ export interface GameContext {
    * whichever the cell's current state calls for.
    */
   toggleSelectedRoad(): boolean;
+  /** Changes how many people the selected building should employ. */
+  adjustSelectedWorkers(delta: number): boolean;
 
   /** The building being placed, or `null` when not in placement mode. */
   readonly placement: PlacementState | null;
@@ -568,6 +580,7 @@ export class Game implements GameContext, InputIntentSink {
             name: villager.name,
             age: villager.age,
             activity: villager.activity,
+            employer: this.employerOf(villager.employerId),
           }
         : null,
     );
@@ -629,6 +642,7 @@ export class Game implements GameContext, InputIntentSink {
       missingMaterials,
       workers: building.workers.length,
       workerSlots: definition.workerSlots,
+      desiredWorkers: building.desiredWorkers,
       contents: store,
       housing: definition.housing ?? 0,
       residents: this.simulation.villagers.all.filter((villager) => villager.homeId === building.id)
@@ -664,10 +678,19 @@ export class Game implements GameContext, InputIntentSink {
       missingMaterials: [],
       workers: 0,
       workerSlots: 0,
+      desiredWorkers: 0,
       contents: inventoryAmounts(yard.inventory),
       housing: 0,
       residents: 0,
     };
+  }
+
+  /** What kind of building a villager works at, if any. */
+  private employerOf(buildingId: number | null): BuildingId | null {
+    if (buildingId === null) {
+      return null;
+    }
+    return this.simulation.world.buildings.getById(buildingId)?.definition.id ?? null;
   }
 
   /** A yard's stock, or `null` when this building opened no yard. */
@@ -743,6 +766,27 @@ export class Game implements GameContext, InputIntentSink {
       this.refreshSelection(selection.cell);
     }
     return acted;
+  }
+
+  /**
+   * Turns the selected building's worker quota up or down.
+   *
+   * The one lever employment gives the player, and the reason it is worth
+   * having: a settlement that is starving does not need three people splitting
+   * firewood, and until this existed there was no way to say so.
+   */
+  public adjustSelectedWorkers(delta: number): boolean {
+    const selection = this.currentSelection;
+    const building = selection?.building;
+    if (!selection || !building || building.workerSlots === 0) {
+      return false;
+    }
+
+    const changed = this.simulation.setDesiredWorkers(building.id, building.desiredWorkers + delta);
+    if (changed) {
+      this.refreshSelection(selection.cell);
+    }
+    return changed;
   }
 
   /** Re-reads the selected cell after the world changed underneath it. */

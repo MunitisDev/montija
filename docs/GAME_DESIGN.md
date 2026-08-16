@@ -246,6 +246,52 @@ arriving a season early.
 
 ---
 
+## Who works where — Implemented
+
+Every villager used to be a generalist. A produce job at a hut went to whoever
+happened to be nearest, so a "worker slot" described nothing the player could
+act on, and the settlement had no way to say _fewer people in the woods, more
+carrying things_.
+
+Villagers now take **posts**:
+
+- A villager assigned to a building is **employed** there, and only its
+  employees may work it.
+- Everybody else is a **labourer** — felling, mining, paving, hauling and
+  building, which is all the work that belongs to the settlement rather than to
+  a workshop.
+
+There is no separate profession list, because the buildings already carry the
+trades: adding a workshop adds a trade, and a villager's profession is simply
+the building they answer to. Tapping someone says "Gatherer · hauling".
+
+**Each building has a worker quota** the player can turn down to zero, from the
+building's own panel. That is the lever the settlement was missing.
+
+Employment does **not** idle its staff. A workshop's own work is the highest
+priority in the game, so employees are always at their post when there is work
+there — and free to fell and haul when there is not. Nothing grows under snow,
+so a gatherer hut posts no work at all in winter and hands its two people back
+to the settlement for the season that needs them most.
+
+### What it did to the difficulty
+
+Committing people to workshops is a real cost, and the curve moved because of
+it. Measured over a full year on the same seed:
+
+| Settlement              | Before                 | After                       |
+| ----------------------- | ---------------------- | --------------------------- |
+| One hut for ten         | scraped through winter | starves on day 45           |
+| Two huts                | —                      | survives with nothing spare |
+| Three huts and a larder | survives               | survives and grows to 11    |
+
+The difference between dying and living is one building, which is the decision
+the game is asking for. Capping how far an employee will walk to help with other
+work was tried and **measured**: no effect at 14 cells, and worse at 5. Their
+travel is not what a short-handed village is losing to.
+
+---
+
 ## Roads — Implemented
 
 Every economic problem this settlement has had turned out to be a hauling problem. Priorities decide

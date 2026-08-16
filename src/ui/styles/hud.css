@@ -1134,6 +1134,73 @@
 }
 
 /*
+ * The worker quota, beside the building's name.
+ *
+ * Two buttons and a number, sized for a fingertip like everything else the
+ * player taps. It sits in the building panel rather than in a menu because the
+ * question "how many people should work here" is only ever asked while looking
+ * at the building.
+ */
+.worker-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.worker-control[hidden] {
+  display: none;
+}
+
+.worker-control button {
+  min-width: 30px;
+  min-height: 30px;
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--colour-accent);
+  background: rgba(201, 162, 39, 0.12);
+  border: 1px solid rgba(201, 162, 39, 0.5);
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.worker-control button:disabled {
+  color: var(--colour-ink-dim);
+  background: transparent;
+  border-color: var(--colour-panel-edge);
+  cursor: default;
+}
+
+.worker-control button:focus-visible {
+  outline: 2px solid var(--colour-accent);
+  outline-offset: 2px;
+}
+
+.worker-control__label {
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--colour-ink-dim);
+}
+
+.worker-control__count {
+  min-width: 34px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--colour-ink);
+}
+
+@media (pointer: coarse) {
+  .worker-control button {
+    min-width: var(--touch-target);
+    min-height: var(--touch-target);
+  }
+}
+
+/*
  * Full screen: the HUD moves up into the room the browser chrome gave back.
  *
  * The safe-area inset is still honoured — a notch is a notch whether or not
