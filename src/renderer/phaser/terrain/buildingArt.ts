@@ -76,6 +76,16 @@ interface BuildingMass {
   readonly thatch?: boolean;
   /** Set for worked land rather than a structure: furrows, or fruit trees. */
   readonly field?: 'crop' | 'orchard';
+  /**
+   * A working prop standing on the plot beside the building.
+   *
+   * Mass and colour get a building most of the way to being recognisable, and
+   * then stop: a Woodcutter and a Tailor are both a brown box with a pitched
+   * roof. The prop is the bit that says which trade this is without a label —
+   * a stack of split logs, a forge mouth, a drying rack — and it is drawn on
+   * the ground in front rather than on the walls so it survives being small.
+   */
+  readonly prop?: 'logpile' | 'forge' | 'racks' | 'cart' | 'spoil';
 }
 
 /**
@@ -99,30 +109,48 @@ const MASS: Readonly<Record<BuildingId, BuildingMass>> = {
   'food-storage': { wallHeight: 20, roofHeight: 40, eaves: 7, plinth: 6 },
   // A forager's shelter: thatched, cheap, one opening.
   'gatherer-hut': { wallHeight: 20, roofHeight: 42, eaves: 6, thatch: true, windows: 1 },
+  // Herbs are dried over a slow fire, which is also why the hut smells.
   // A workshop. Taller than it needs to be, because the work happens indoors.
-  woodcutter: { wallHeight: 22, roofHeight: 44, eaves: 6, plinth: 4, windows: 1 },
+  woodcutter: { wallHeight: 22, roofHeight: 44, eaves: 6, plinth: 4, windows: 1, prop: 'logpile' },
   // A lodge out among the trees: low, thatched, one window, no stone to spare.
-  forester: { wallHeight: 18, roofHeight: 38, eaves: 7, thatch: true, windows: 1 },
+  forester: { wallHeight: 18, roofHeight: 38, eaves: 7, thatch: true, windows: 1, prop: 'logpile' },
   // A quarry is a hole with a shed over it. Low walls and a deep stone footing,
   // because most of what the player should read is *cut rock*.
-  quarry: { wallHeight: 14, roofHeight: 22, eaves: 5, plinth: 10 },
+  quarry: { wallHeight: 14, roofHeight: 22, eaves: 5, plinth: 10, prop: 'spoil' },
   // A mine is a mouth in the hillside: a short stone head and a shallow roof.
-  mine: { wallHeight: 16, roofHeight: 26, eaves: 5, plinth: 8 },
+  mine: { wallHeight: 16, roofHeight: 26, eaves: 5, plinth: 8, prop: 'spoil' },
   // A forge: stone-footed against the fire, and the second building in the game
   // with a chimney — because the second building in the game with a hearth.
-  blacksmith: { wallHeight: 20, roofHeight: 34, eaves: 6, plinth: 6, chimney: true, windows: 1 },
+  blacksmith: {
+    wallHeight: 20,
+    roofHeight: 34,
+    eaves: 6,
+    plinth: 6,
+    chimney: true,
+    windows: 1,
+    prop: 'forge',
+  },
   // Not buildings at all: broken ground inside a low fence. Drawn flat so the
   // settlement's skyline stays buildings, and a field reads as worked land.
   // A big open-fronted shed on a stone footing: goods come and go, so it reads
   // as a place things pass through rather than a place people live.
-  'trading-post': { wallHeight: 16, roofHeight: 30, eaves: 9, plinth: 5 },
+  'trading-post': { wallHeight: 16, roofHeight: 30, eaves: 9, plinth: 5, prop: 'cart' },
   // A small thatched hut with drying racks: the cheapest building in the game.
-  herbalist: { wallHeight: 15, roofHeight: 30, eaves: 7, thatch: true, windows: 1 },
+  herbalist: {
+    wallHeight: 15,
+    roofHeight: 30,
+    eaves: 7,
+    thatch: true,
+    chimney: true,
+    windows: 1,
+    prop: 'racks',
+  },
   // Stone-footed and shuttered: the one building meant to keep weather out for
   // the sake of the people inside rather than the goods.
-  healer: { wallHeight: 21, roofHeight: 36, eaves: 6, plinth: 7, windows: 2 },
+  // A hearth of its own: somebody nursing the sick keeps a fire in.
+  healer: { wallHeight: 21, roofHeight: 36, eaves: 6, plinth: 7, chimney: true, windows: 2 },
   // A cabin out at the treeline: thatched, low, no stone.
-  hunter: { wallHeight: 17, roofHeight: 34, eaves: 7, thatch: true, windows: 1 },
+  hunter: { wallHeight: 17, roofHeight: 34, eaves: 7, thatch: true, windows: 1, prop: 'racks' },
   // A workshop with good light: two windows, which nothing else has.
   tailor: { wallHeight: 20, roofHeight: 36, eaves: 6, plinth: 4, windows: 2 },
   'crop-field': { wallHeight: 4, roofHeight: 0, eaves: 0, field: 'crop' },
@@ -346,16 +374,167 @@ export function drawBuilding(
     ]);
   }
 
-  if (mass.chimney === true) {
-    // Placed *on* the roof plane, by interpolating along the left pitch from
-    // the apex to the eaves. Guessing a height instead put the stack below the
-    // roof surface, where it read as a post leaning against the gable.
-    const along = 0.34;
-    const apexY = groundY - mass.wallHeight - mass.roofHeight;
-    const eaveX = cx - halfW - mass.eaves;
-    const eaveY = groundY - mass.wallHeight + mass.eaves / 2;
-    drawChimney(graphics, cx + (eaveX - cx) * along, apexY + (eaveY - apexY) * along);
+  if (mass.prop) {
+    // On the ground at the front-right of the plot, where nothing else is
+    // drawn and where it stays legible when the building is small on screen.
+    drawProp(graphics, mass.prop, {
+      x: cx + halfW * 0.5,
+      y: groundY + halfH * 0.42,
+      scale: Math.max(0.75, Math.min(1.4, halfW / 32)),
+    });
   }
+
+  const stack = chimneyOffset(id);
+  if (stack) {
+    drawChimney(graphics, cx + stack.dx, groundY + stack.dy);
+  }
+}
+
+/**
+ * The one detail that says what trade a building is.
+ *
+ * Deliberately tiny and deliberately on the ground. Mass and colour get a
+ * building most of the way there and then stop — a Woodcutter and a Tailor are
+ * both a brown box with a pitched roof — and detail carved into the walls is
+ * the first thing to disappear when the player zooms out to look at the
+ * settlement. A silhouette on the plot survives that.
+ */
+function drawProp(
+  graphics: Phaser.GameObjects.Graphics,
+  prop: NonNullable<BuildingMass['prop']>,
+  at: { x: number; y: number; scale: number },
+): void {
+  const { x, y, scale: k } = at;
+
+  switch (prop) {
+    case 'logpile': {
+      // Split logs seen end-on: three below, two above. Pale rounds against
+      // dark bark is what makes a woodpile read at any size.
+      const r = 2.6 * k;
+      graphics.fillStyle(0x4a3a28, 1);
+      graphics.fillRect(x - r * 3.4, y - r * 2, r * 6.8, r * 2);
+      for (let row = 0; row < 2; row += 1) {
+        const count = 3 - row;
+        for (let i = 0; i < count; i += 1) {
+          const cx2 = x - r * (count - 1) + i * r * 2;
+          graphics.fillStyle(0x8a7250, 1);
+          graphics.fillCircle(cx2, y - r - row * r * 1.7, r);
+          graphics.fillStyle(0xa08a63, 1);
+          graphics.fillCircle(cx2, y - r - row * r * 1.7, r * 0.5);
+        }
+      }
+      break;
+    }
+
+    case 'forge': {
+      // A stone hearth with fire in it. The only warm colour in the settlement
+      // palette, and the reason a forge is findable at a glance.
+      const w = 7 * k;
+      graphics.fillStyle(0x4b4741, 1);
+      graphics.fillRect(x - w, y - w * 0.9, w * 2, w * 0.9);
+      graphics.fillStyle(0xc4622a, 0.95);
+      graphics.fillRect(x - w * 0.55, y - w * 0.7, w * 1.1, w * 0.5);
+      // A brighter core, so the fire has depth rather than being a flat patch.
+      graphics.fillStyle(0xe8a13c, 1);
+      graphics.fillRect(x - w * 0.28, y - w * 0.58, w * 0.56, w * 0.26);
+      break;
+    }
+
+    case 'racks': {
+      // Two uprights and a crossbar with bundles hung off it: herbs drying,
+      // or a hunter's game. Same silhouette, and both are correct.
+      const h = 8 * k;
+      const w = 6 * k;
+      graphics.fillStyle(0x5b4a33, 1);
+      graphics.fillRect(x - w, y - h, 1.4 * k, h);
+      graphics.fillRect(x + w, y - h, 1.4 * k, h);
+      graphics.fillRect(x - w, y - h, w * 2 + 1.4 * k, 1.4 * k);
+      graphics.fillStyle(0x6d7a4a, 1);
+      for (let i = 0; i < 3; i += 1) {
+        const bx = x - w * 0.6 + i * w * 0.6;
+        graphics.fillRect(bx, y - h + 1.4 * k, 1.8 * k, h * 0.45);
+      }
+      break;
+    }
+
+    case 'cart': {
+      // A two-wheeled cart: goods come and go from a trading post, and a cart
+      // is the only object in the settlement that means "leaving".
+      const w = 7 * k;
+      graphics.fillStyle(0x6d5c40, 1);
+      graphics.fillRect(x - w, y - w * 0.95, w * 2, w * 0.7);
+      graphics.fillStyle(0x3f3527, 1);
+      graphics.fillCircle(x - w * 0.6, y - w * 0.2, w * 0.42);
+      graphics.fillCircle(x + w * 0.6, y - w * 0.2, w * 0.42);
+      graphics.fillStyle(0x8a7250, 1);
+      graphics.fillRect(x - w * 0.2, y - w * 1.5, w * 0.9, w * 0.6);
+      break;
+    }
+
+    case 'spoil': {
+      // A heap of cut rock. What a quarry and a mine actually leave behind,
+      // and the thing that tells them apart from a shed.
+      const r = 3.2 * k;
+      for (const [dx, dy, size, tone] of [
+        [-1.5, 0, 1.1, 0x7a766c],
+        [0.2, -0.35, 1.35, 0x8b877c],
+        [1.6, 0.1, 0.95, 0x6b6760],
+      ] as const) {
+        graphics.fillStyle(tone, 1);
+        polygon(graphics, [
+          { x: x + dx * r, y: y + dy * r - r * size },
+          { x: x + dx * r + r * size, y: y + dy * r },
+          { x: x + dx * r, y: y + dy * r + r * size * 0.5 },
+          { x: x + dx * r - r * size, y: y + dy * r },
+        ]);
+      }
+      break;
+    }
+  }
+}
+
+/** How far up the roof pitch the stack sits, from apex to eaves. */
+const CHIMNEY_ALONG = 0.34;
+
+/** Height of the stack itself, including its cap. */
+const CHIMNEY_HEIGHT = 18.5;
+
+/**
+ * Where a building's chimney is, relative to its anchor.
+ *
+ * Exported because the smoke has to come out of the actual stack rather than
+ * out of the middle of the roof. The offsets are in texture pixels from the
+ * footprint's centre, which is exactly what a sprite's position is, so the
+ * renderer can add them without knowing anything about how a building is drawn.
+ *
+ * `null` for the buildings with no hearth, which is most of them.
+ */
+export function chimneyOffset(id: BuildingId): { dx: number; dy: number } | null {
+  const mass = MASS[id];
+  if (mass.chimney !== true) {
+    return null;
+  }
+
+  const base = baseSize(BUILDINGS[id].footprint);
+  const halfW = base.width / 2 - FOOTPRINT_INSET;
+
+  // Placed *on* the roof plane, by interpolating along the left pitch from the
+  // apex to the eaves. Guessing a height instead put the stack below the roof
+  // surface, where it read as a post leaning against the gable.
+  const apexY = -mass.wallHeight - mass.roofHeight;
+  const eaveX = -halfW - mass.eaves;
+  const eaveY = -mass.wallHeight + mass.eaves / 2;
+
+  return {
+    dx: eaveX * CHIMNEY_ALONG,
+    dy: apexY + (eaveY - apexY) * CHIMNEY_ALONG,
+  };
+}
+
+/** The lip of the stack, where smoke actually leaves the building. */
+export function chimneyMouth(id: BuildingId): { dx: number; dy: number } | null {
+  const stack = chimneyOffset(id);
+  return stack ? { dx: stack.dx, dy: stack.dy - CHIMNEY_HEIGHT } : null;
 }
 
 /** Four uprights, so a wall reads as a timber frame rather than as a slab. */

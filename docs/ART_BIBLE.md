@@ -287,3 +287,57 @@ standalone textures. That is not tidiness: the display list is depth-sorted, whi
 terrain types and tree shapes, and a GPU batch breaks whenever the texture changes between adjacent
 objects. Adding variants to an atlas costs nothing at draw time; adding textures would cost a batch
 break per variant on exactly the low-power tablet GPUs this project targets.
+
+---
+
+## Hearth smoke — Implemented
+
+The one thing on the mood list — _smoke, mist, rain, snowfall_ — that says
+somebody is **home** rather than that weather is happening. A village of static
+boxes reads as a diagram of a village; one thread of smoke bending off a roof
+does more for "people live here" than any amount of detail carved into walls.
+
+- Only buildings with a hearth: **House, Blacksmith, Healer's House,
+  Herbalist's Hut.** A settlement where every shed smokes reads as a settlement
+  on fire.
+- It leaves the **top of the actual stack**, not the middle of the roof. The
+  chimney's offset is exported from `buildingArt.ts` so there is one answer to
+  where a chimney is, rather than the art and the effect each having their own.
+- **Heaviest in winter, lightest in summer, never zero** — a hearth is also a
+  kitchen, and a village with no smoke at all in July looks abandoned.
+- One constant wind. A turning wind would swing every plume together like a
+  shoal, which reads as one system animating rather than fifty separate fires.
+- Each puff carries its own rise, drift and life, so a column frays into a plume
+  instead of rising as a string of beads. Rise decays, so it leans over.
+
+**Drawn in the `SKY_BAND`, above every roof.** Smoke blows sideways across
+whatever is downwind, so sorting it by the cell it came from would put a plume
+_behind_ the house in front of its own chimney. That is the second sanctioned
+exception to isometric sorting, and like the first it lives in `sorting.ts`
+rather than as a magic number at the call site.
+
+The maths is in `effects/smoke.ts` with no Phaser in it, so the behaviour that
+matters — rises, drifts, thins, dies, and never grows without bound — is tested
+headlessly. The ceiling on live particles is a real backstop, not decoration:
+a particle system with no bound is the classic way to turn a pleasant effect
+into a frame-rate bug six months later.
+
+---
+
+## Trade props — Implemented
+
+Mass and colour get a building most of the way to being recognisable and then
+stop: a Woodcutter and a Tailor are both a brown box with a pitched roof. One
+small object on the plot says which trade it is without a label.
+
+| Prop     | Where                           | What it reads as                 |
+| -------- | ------------------------------- | -------------------------------- |
+| Log pile | Woodcutter, Forester's Lodge    | Split rounds, pale on dark       |
+| Forge    | Blacksmith                      | The only warm colour on the map  |
+| Racks    | Herbalist's Hut, Hunter's Cabin | Bundles hung to dry              |
+| Cart     | Trading Post                    | The one object meaning "leaving" |
+| Spoil    | Quarry, Mine                    | A heap of cut rock               |
+
+Drawn **on the ground at the front of the plot**, not on the walls. Detail
+carved into a wall is the first thing to disappear when the player zooms out to
+look at the whole settlement; a silhouette on the plot survives it.

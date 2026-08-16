@@ -50,6 +50,7 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 23    | People, families and postings | **Implemented** |
 | 24    | Households                    | **Implemented** |
 | 25    | The shipwreck                 | **Implemented** |
+| 26    | Smoke and trade props         | **Implemented** |
 
 ---
 
@@ -694,6 +695,24 @@ Three existing tests changed, and none of them was retuned to hide anything:
 - The trade test named its trade. With no salvaged stone, _stone_ is what a new
   settlement has least of, so an automatic post quite correctly buys that
   instead of the iron the test is about.
+
+---
+
+## Phase 26 - Smoke and trade props - Implemented
+
+Two changes, both aimed at the same complaint: the settlement looked like a
+diagram of a settlement. Set out in [ART_BIBLE.md](./ART_BIBLE.md).
+
+- **Hearth smoke** from the four buildings with a fire in them, rising, drifting
+  downwind, thinning and dying. Heaviest in winter, never quite zero.
+- **A trade prop** on the plot of seven buildings - a log pile, a forge, drying
+  racks, a cart, a heap of spoil - because mass and colour alone leave a
+  Woodcutter and a Tailor looking identical.
+
+Both are procedural rather than painted assets, which is what makes them free
+to keep consistent: one lighting direction, one palette, one projection, and
+seasonal variants that cost nothing. Smoke could not have been a static image
+at all.
 
 ---
 

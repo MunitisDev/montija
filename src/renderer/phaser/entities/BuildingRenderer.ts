@@ -204,8 +204,14 @@ export class BuildingRenderer {
   }
 }
 
-/** The scene position of a footprint's centre, where its art belongs. */
-function footprintCentre(building: Building) {
+/**
+ * The scene position of a footprint's centre, where its art belongs.
+ *
+ * Exported because the smoke has to start at the same point the building is
+ * drawn from. Two independent versions of "where is this building" is exactly
+ * how a plume ends up hanging beside its own chimney.
+ */
+export function footprintCentre(building: Building) {
   const { footprint } = building.definition;
   return worldToScene({
     wx: building.origin.gx + footprint.width / 2,

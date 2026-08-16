@@ -21,6 +21,7 @@ import { RenderLayer, depthFor } from '@/renderer/phaser/sorting';
 import { gridToScene } from '@/shared/math/isometric';
 import { FrameTimer } from '@/renderer/FrameTimer';
 import { WeatherRenderer } from '@/renderer/phaser/effects/WeatherRenderer';
+import { HearthRenderer } from '@/renderer/phaser/effects/HearthRenderer';
 import { structureTint } from '@/renderer/phaser/terrain/seasonalPalette';
 
 export const WORLD_SCENE_KEY = 'world';
@@ -38,6 +39,7 @@ export class WorldScene extends Phaser.Scene {
   private resourceRenderer!: ResourceRenderer;
   private buildingRenderer!: BuildingRenderer;
   private weatherRenderer!: WeatherRenderer;
+  private hearthRenderer!: HearthRenderer;
   private selectionMarker!: Phaser.GameObjects.Image;
   /** Season the world is currently painted and tinted for. */
   private renderedSeason = '';
@@ -74,6 +76,7 @@ export class WorldScene extends Phaser.Scene {
     this.resourceRenderer = new ResourceRenderer(this);
     this.buildingRenderer = new BuildingRenderer(this);
     this.weatherRenderer = new WeatherRenderer(this);
+    this.hearthRenderer = new HearthRenderer(this);
 
     this.selectionMarker = this.add
       .image(0, 0, TextureKeys.selection)
@@ -129,6 +132,7 @@ export class WorldScene extends Phaser.Scene {
     // Cheap: returns immediately unless a tree was felled since last frame.
     this.terrainRenderer.syncTrees(this.context.simulation.world);
     this.buildingRenderer.sync(this.context.simulation.world.buildings);
+    this.hearthRenderer.sync(this.context.simulation.world.buildings);
     this.buildingRenderer.syncGhost(this.context.placement, this.context.placementVersion);
     this.syncSelectionMarker();
   }
@@ -160,6 +164,15 @@ export class WorldScene extends Phaser.Scene {
     this.weatherRenderer.update(season, deltaMilliseconds / 1000, () =>
       this.context.presentationRandom(),
     );
+
+    // Smoke is in the world rather than on the lens, so it needs no camera
+    // sync — but it does need the view, to leave off-screen fires alone.
+    this.hearthRenderer.update({
+      season,
+      deltaSeconds: deltaMilliseconds / 1000,
+      camera: this.cameras.main,
+      random: () => this.context.presentationRandom(),
+    });
   }
 
   /** Exposed so the debug overlay can report render object counts. */

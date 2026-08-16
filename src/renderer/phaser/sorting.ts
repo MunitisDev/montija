@@ -85,3 +85,18 @@ const OVERLAY_BAND = 1_000_000;
 export function overlayDepth(gx: number, gy: number): number {
   return OVERLAY_BAND + gx + gy;
 }
+
+/**
+ * Base depth for things in the air, above every roof and below the player's
+ * orders.
+ *
+ * The second sanctioned exception, and for a different reason from the first.
+ * Chimney smoke belongs to one building but does not stay over it — it rises
+ * and blows sideways across whatever is downwind. Sorted by the cell it came
+ * from, a plume would pass *behind* the house in front, which reads as smoke
+ * seeping out of the wrong roof.
+ *
+ * There is nothing to sort among up here: it is one draw call for the whole
+ * settlement's smoke, so this is a plain constant rather than a function.
+ */
+export const SKY_BAND = OVERLAY_BAND - 1000;
