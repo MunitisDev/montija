@@ -73,6 +73,25 @@ const FORESTRY_INTERVAL_TICKS = 25;
 /** Felling jobs a single lodge may post in one pass. */
 const FELLING_PER_PASS = 3;
 
+/**
+ * Unworked felling orders a lodge is allowed to have standing at once.
+ *
+ * **This is the fix to a bug a player found by looking at the screen.** The
+ * per-pass cap below limits the *rate* a lodge posts work at and says nothing
+ * about the backlog, so a lodge in a dense wood — where the standing count is
+ * three hundred against a target of a hundred and ten — added three more orders
+ * every two and a half seconds for as long as it stood. Villagers fell far
+ * slower than that, so the marks piled up without bound and the map filled with
+ * felling crosses nobody had asked for. From the outside it looked exactly like
+ * the trees were being cut down on their own.
+ *
+ * A standing order instead: top up to a handful, and post nothing more until
+ * somebody has worked them. The lodge still clears its surplus at exactly the
+ * rate the settlement can actually cut, which is the only rate that was ever
+ * real.
+ */
+const OUTSTANDING_FELLING_PER_LODGE = 4;
+
 /** Ticks between employment passes. Nobody changes job inside two seconds. */
 const EMPLOYMENT_INTERVAL_TICKS = 25;
 
@@ -812,14 +831,32 @@ export class Simulation {
   /**
    * Posts felling work for a lodge that has more wood than it wants.
    *
-   * Capped per pass, because a lodge whose wood grew past its target overnight
-   * should not put forty simultaneous felling jobs on the board and pull every
-   * villager in the settlement into the trees.
+   * Capped two ways, and the second one matters more than the first. The
+   * per-pass cap stops a lodge dumping forty jobs on the board at once; the
+   * standing-order cap stops it quietly adding three more every pass for ever.
+   * Without the second, a lodge in a dense wood marked trees far faster than
+   * anybody could cut them and buried the map in crosses — see
+   * {@link OUTSTANDING_FELLING_PER_LODGE}.
    */
   private fellSurplus(standing: readonly TreeInstance[], surplus: number): void {
+    // What this lodge already has out. Counted from the trees rather than from
+    // the job board, because a job does not record which lodge posted it — and
+    // trees in range with a live order against them is the same question.
+    let outstanding = 0;
+    for (const tree of standing) {
+      if (this.jobs.isTargetReserved('chop-tree', tree.id)) {
+        outstanding += 1;
+      }
+    }
+    if (outstanding >= OUTSTANDING_FELLING_PER_LODGE) {
+      return;
+    }
+
+    const room = Math.min(surplus, FELLING_PER_PASS, OUTSTANDING_FELLING_PER_LODGE - outstanding);
+
     let posted = 0;
     for (const tree of standing) {
-      if (posted >= Math.min(surplus, FELLING_PER_PASS)) {
+      if (posted >= room) {
         return;
       }
       if (this.jobs.isTargetReserved('chop-tree', tree.id)) {

@@ -237,6 +237,15 @@ The answer is an **asymmetry**, and it is the spine of the mid-game:
 
 ### Woodland — Implemented
 
+A lodge keeps a **standing order** of a handful of felling jobs and posts no
+more until somebody has worked them. Without that cap it added three orders
+every couple of seconds for as long as it stood, villagers cut far slower, and
+the marks piled up without bound — from the player's side it looked exactly as
+though the trees were being felled on their own. Measured before the fix: 158
+marks standing by day 30 with almost none of them being worked, and the wood
+still growing faster than it was cut, so the orders were doing nothing but
+covering the map.
+
 Woods seed into ground beside them, once a day, slowly. A sapling needs **at
 least two tree neighbours**, which is what makes it a wood rather than a weed:
 clearings fill back in from the trees around them, and open meadow far from any

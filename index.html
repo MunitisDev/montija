@@ -183,13 +183,6 @@
 
           <button
             type="button"
-            class="language-button"
-            data-hud="language"
-            aria-label="Language"
-          ></button>
-
-          <button
-            type="button"
             class="icon-button"
             data-hud="fullscreen"
             aria-label="Fullscreen"
@@ -361,6 +354,15 @@
         <div class="sheet__panel">
           <header class="sheet__head">
             <h2 class="sheet__title" data-ui="guide-title"></h2>
+            <!-- Language lives here now rather than on the HUD: the top bar had
+                 no room for it on a phone, and this is the screen a player is
+                 already on when they want the game in another language. -->
+            <button
+              type="button"
+              class="menu__language"
+              data-ui="guide-language"
+              aria-label="Language"
+            ></button>
             <button type="button" class="sheet__close" data-ui="guide-close"></button>
           </header>
           <div class="sheet__body guide" data-ui="guide-body"></div>

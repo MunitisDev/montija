@@ -37,7 +37,7 @@ import type { GameContext } from '@/game/Game';
 import type { SimulationSnapshot } from '@/simulation/Simulation';
 import { SIMULATION_SPEEDS, type SimulationSpeed } from '@/simulation/SimulationClock';
 import { TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
-import { LANGUAGES, type I18n, type Language } from '@/ui/i18n/I18n';
+import type { I18n } from '@/ui/i18n/I18n';
 import type { MessageKey } from '@/ui/i18n/messages';
 
 /** Elements the HUD binds to, looked up once. */
@@ -70,7 +70,6 @@ interface HudElements {
   readonly failure: HTMLElement;
   readonly failureSurvived: HTMLElement;
   readonly failureRestart: HTMLButtonElement;
-  readonly language: HTMLButtonElement;
   readonly fullscreen: HTMLButtonElement | null;
   readonly speedButtons: readonly HTMLButtonElement[];
   readonly saveButton: HTMLButtonElement;
@@ -122,7 +121,6 @@ export class Hud {
       this.update();
     });
     this.bindSessionButtons();
-    this.bindLanguageButton();
     this.elements.failureRestart.addEventListener('click', () => {
       this.context.startNewSettlement();
       // `undefined` means "not yet drawn". `null` is a real value here — it is
@@ -632,14 +630,6 @@ export class Hud {
     }
   }
 
-  private bindLanguageButton(): void {
-    this.elements.language.addEventListener('click', () => {
-      const next = LANGUAGES[(LANGUAGES.indexOf(this.i18n.language) + 1) % LANGUAGES.length];
-      this.i18n.setLanguage(next as Language);
-      this.update();
-    });
-  }
-
   /** Writes the labels that never change except with the language. */
   /**
    * Names the fullscreen button for what it will do next.
@@ -678,7 +668,6 @@ export class Hud {
     }
     this.elements.saveButton.textContent = this.i18n.t('action.save');
     this.elements.loadButton.textContent = this.i18n.t('action.load');
-    this.elements.language.textContent = this.i18n.language.toUpperCase();
   }
 
   /** Forces every cached readout to redraw. */
@@ -748,7 +737,6 @@ function collectElements(root: HTMLElement): HudElements {
     failure: requireElement(root, '[data-hud="failure"]'),
     failureSurvived: requireElement(root, '[data-hud="failure-survived"]'),
     failureRestart: requireElement(root, '[data-hud="failure-restart"]') as HTMLButtonElement,
-    language: requireElement(root, '[data-hud="language"]') as HTMLButtonElement,
     speedButtons: Array.from(root.querySelectorAll<HTMLButtonElement>('[data-speed]')),
     saveButton: requireElement(root, '[data-hud="save"]') as HTMLButtonElement,
     loadButton: requireElement(root, '[data-hud="load"]') as HTMLButtonElement,

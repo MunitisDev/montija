@@ -353,3 +353,73 @@ function findBuildable(
 function clearArea(simulation: Simulation): GridPoint | null {
   return findBuildable(simulation, (cell) => treesAround(simulation, cell, 10) < 40);
 }
+
+describe("a lodge's standing orders", () => {
+  /** Plants a finished lodge in the thickest wood it can find. */
+  function lodgeInTheWoods(): Simulation {
+    const simulation = new Simulation({ ...OPTIONS, startingVillagers: 10 });
+
+    let best = { gx: 0, gy: 0, trees: -1 };
+    for (let gy = 0; gy < simulation.world.height; gy += 2) {
+      for (let gx = 0; gx < simulation.world.width; gx += 2) {
+        if (!simulation.canPlaceBuilding('forester', { gx, gy }).ok) {
+          continue;
+        }
+        let trees = 0;
+        for (const tree of simulation.world.trees.all) {
+          if (Math.abs(tree.gx - gx) <= 10 && Math.abs(tree.gy - gy) <= 10) {
+            trees += 1;
+          }
+        }
+        if (trees > best.trees) {
+          best = { gx, gy, trees };
+        }
+      }
+    }
+
+    const lodge = simulation.placeBuilding('forester', { gx: best.gx, gy: best.gy });
+    if (lodge) {
+      simulation.world.buildings.complete(simulation.world, lodge);
+    }
+    return simulation;
+  }
+
+  function fellingMarks(simulation: Simulation): number {
+    return simulation.jobs.all.filter(
+      (job) => job.type === 'chop-tree' && job.state !== 'complete' && job.state !== 'cancelled',
+    ).length;
+  }
+
+  it('never buries the map in felling marks', () => {
+    // The regression, found by a player looking at their phone. A lodge in a
+    // dense wood used to add three felling orders every two and a half seconds
+    // for as long as it stood, and villagers cut far slower than that — so the
+    // marks piled up without bound and it looked exactly as though the trees
+    // were being felled on their own. Measured before the fix: 158 marks
+    // standing by day 30, essentially none of them being worked.
+    const simulation = lodgeInTheWoods();
+
+    for (let day = 1; day <= 30; day += 1) {
+      for (let tick = 1; tick <= TICKS_PER_DAY; tick += 1) {
+        simulation.update(simulation.tick + 1, TICK);
+      }
+      expect(fellingMarks(simulation), `day ${day}`).toBeLessThanOrEqual(6);
+    }
+  });
+
+  it('still clears its surplus rather than doing nothing', () => {
+    // The other half. A cap that stopped the lodge working at all would be a
+    // worse bug than the one it fixed.
+    const simulation = lodgeInTheWoods();
+    let everMarked = 0;
+
+    for (let day = 1; day <= 20; day += 1) {
+      for (let tick = 1; tick <= TICKS_PER_DAY; tick += 1) {
+        simulation.update(simulation.tick + 1, TICK);
+      }
+      everMarked = Math.max(everMarked, fellingMarks(simulation));
+    }
+
+    expect(everMarked).toBeGreaterThan(0);
+  });
+});
