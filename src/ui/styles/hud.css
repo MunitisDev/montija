@@ -52,10 +52,33 @@
      and scroll. Without it the strip pushes the climate readout onto a row of
      its own. */
   min-width: 0;
-  flex: 0 1 auto;
+  /*
+   * Takes the width it is given rather than hugging its contents.
+   *
+   * Sized to its content it sat as a small island in the top-left with the
+   * whole width beside it empty, which reads as an unfinished layout rather
+   * than a deliberate one. Spread across the row the numbers also stop
+   * crowding each other, which matters most on the phone where the labels are
+   * hidden and the icons are doing the naming.
+   */
+  flex: 1 1 auto;
+  justify-content: space-between;
   overflow-x: auto;
   scrollbar-width: none;
   touch-action: pan-x;
+}
+
+/*
+ * On a wide desktop, stop growing.
+ *
+ * Six readouts spread across 1900px are further apart than they are wide, and
+ * the eye stops reading them as one group. The phone and tablet — the primary
+ * targets — never reach this width.
+ */
+@media (min-width: 1100px) {
+  .resource-strip {
+    max-width: 760px;
+  }
 }
 
 .resource-strip::-webkit-scrollbar {
@@ -113,6 +136,14 @@
 
 .resource--stone .resource__icon {
   color: #8f9096;
+}
+
+.resource--iron .resource__icon {
+  color: #7e8794;
+}
+
+.resource--tools .resource__icon {
+  color: #9a8a6a;
 }
 
 /*
@@ -1100,4 +1131,15 @@
 .building-panel__detail:empty,
 .building-panel__state:empty {
   display: none;
+}
+
+/*
+ * Full screen: the HUD moves up into the room the browser chrome gave back.
+ *
+ * The safe-area inset is still honoured — a notch is a notch whether or not
+ * there is an address bar above it — but the extra breathing gap goes, because
+ * in full screen that gap is no longer separating the HUD from anything.
+ */
+#hud.is-fullscreen {
+  padding-top: max(var(--safe-top), 4px);
 }

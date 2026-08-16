@@ -507,6 +507,9 @@ export class Hud {
    */
   public setFullscreen(active: boolean): void {
     this.isFullscreen = active;
+    // The stylesheet decides what full screen means for the layout; this only
+    // reports the state, which is the same split the placement bar uses.
+    this.root.classList.toggle('is-fullscreen', active);
     this.labelFullscreenButton();
   }
 

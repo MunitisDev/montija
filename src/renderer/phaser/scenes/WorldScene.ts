@@ -153,6 +153,10 @@ export class WorldScene extends Phaser.Scene {
       this.resourceRenderer.applyTint(tint);
     }
 
+    // Re-anchored every frame: the camera's zoom changes under the player's
+    // fingers, and a screen-space overlay that does not follow it becomes a
+    // bright rectangle sitting in the middle of the world.
+    this.weatherRenderer.syncToCamera(this.cameras.main);
     this.weatherRenderer.update(season, deltaMilliseconds / 1000, () =>
       this.context.presentationRandom(),
     );

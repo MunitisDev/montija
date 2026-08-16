@@ -19,6 +19,12 @@
  * in world space would need thousands of objects to cover a zoomed-out map and
  * would thin out as the player zoomed in, which is backwards: weather is
  * between the viewer and the world, not scattered across the terrain.
+ *
+ * **`setScrollFactor(0)` is only half of "screen-space".** It pins an object
+ * against the camera's *scroll*; the camera's *zoom* still scales it. So a
+ * viewport-sized rectangle covered the screen at 1x and shrank to a lit
+ * rectangle floating in the middle of the map as the player zoomed out — which
+ * is exactly what it looked like, and what {@link syncToCamera} exists to undo.
  */
 
 import type Phaser from 'phaser';
@@ -52,6 +58,36 @@ interface Particle {
  */
 const WEATHER_DEPTH = 900_000;
 
+/**
+ * Where to put a screen-space overlay so the camera's zoom cannot move it.
+ *
+ * For an object with `scrollFactor` 0, the camera still renders it at
+ * `centre + (position - centre) * zoom`. Scaling by `1 / zoom` makes a local
+ * point `p` land at `centre + (position - centre) * zoom + p`, so putting the
+ * object at `centre * (1 - 1 / zoom)` cancels the first term exactly and `p`
+ * renders at `p` — at any zoom.
+ *
+ * Pulled out as a pure function because it is one line of algebra that is
+ * completely invisible when it is wrong: the failure it fixes was a lit
+ * rectangle sitting in the middle of a zoomed-out map, and nothing but a test
+ * would notice it coming back.
+ */
+export function screenSpaceTransform(camera: {
+  readonly zoom: number;
+  readonly centerX: number;
+  readonly centerY: number;
+}): { scale: number; x: number; y: number } {
+  // A camera with zero zoom draws nothing at all, but it must not produce a
+  // NaN position that survives into the next frame.
+  const zoom = camera.zoom === 0 ? 1 : camera.zoom;
+  const scale = 1 / zoom;
+  return {
+    scale,
+    x: camera.centerX * (1 - scale),
+    y: camera.centerY * (1 - scale),
+  };
+}
+
 export class WeatherRenderer {
   private readonly ambient: Phaser.GameObjects.Rectangle;
   private readonly precipitation: Phaser.GameObjects.Graphics;
@@ -76,6 +112,13 @@ export class WeatherRenderer {
       .graphics()
       .setScrollFactor(0)
       .setDepth(WEATHER_DEPTH + 1);
+  }
+
+  /** Cancels the camera's zoom, so the overlay always covers exactly the screen. */
+  public syncToCamera(camera: Phaser.Cameras.Scene2D.Camera): void {
+    const { scale, x, y } = screenSpaceTransform(camera);
+    this.ambient.setScale(scale).setPosition(x, y);
+    this.precipitation.setScale(scale).setPosition(x, y);
   }
 
   /** Resizes the overlay to a new viewport. */
