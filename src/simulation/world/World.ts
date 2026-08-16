@@ -31,7 +31,10 @@ import { ResourcePileRegistry } from '@/simulation/resources/ResourcePile';
 import { NavigationGrid } from './NavigationGrid';
 import type { TerrainGrid } from './TerrainGrid';
 import { TreeRegistry } from './TreeRegistry';
-import { generateWorld } from './WorldGenerator';
+import { generateWorld, type Shore } from './WorldGenerator';
+
+/** Cells inland from the waterline the camp is set back by. */
+const SHORE_SETBACK = 5;
 
 export class World {
   public readonly terrain: TerrainGrid;
@@ -41,8 +44,19 @@ export class World {
   public readonly piles = new ResourcePileRegistry();
   public readonly buildings = new BuildingRegistry();
 
+  /**
+   * Which edge the sea is on.
+   *
+   * The direction the settlers were wrecked from, and therefore where their
+   * salvage came ashore. Kept on the world rather than recomputed, because
+   * "which side has the most water" is not the same question — a map can have
+   * a big inland lake, and the story is about the coast.
+   */
+  public readonly shore: Shore;
+
   constructor(options: { width: number; height: number; seed: number }) {
     const generated = generateWorld(options);
+    this.shore = generated.shore;
     this.terrain = generated.terrain;
     this.trees = new TreeRegistry(generated.terrain.width, generated.trees);
     this.navigation = new NavigationGrid(this.terrain);
@@ -50,9 +64,60 @@ export class World {
     this.navigation.useRoads(this.roads, this.terrain);
   }
 
-  /** The middle of the map, used as the founding settlement's anchor. */
+  /** The middle of the map. */
   public get centreCell(): GridPoint {
     return { gx: Math.floor(this.width / 2), gy: Math.floor(this.height / 2) };
+  }
+
+  /**
+   * Where the settlers came ashore, and where their salvage sits.
+   *
+   * The first buildable ground inland of the sea, on the line running from the
+   * middle of the coast into the map. Walking inland from the water rather than
+   * outward from the centre matters: it puts the camp *on the beach*, which is
+   * the whole of the opening image, and it guarantees the sea is visible from
+   * the settlement on the first frame.
+   *
+   * Falls back to the middle of the map if the search finds nothing, which
+   * would mean a coast with no landfall at all — not a map this generator can
+   * produce, but a settlement with nowhere to stand is a worse failure than a
+   * settlement in the wrong place.
+   */
+  public get landfallCell(): GridPoint {
+    const horizontal = this.shore === 'east' || this.shore === 'west';
+    const along = horizontal ? Math.floor(this.height / 2) : Math.floor(this.width / 2);
+    const depth = horizontal ? this.width : this.height;
+    const inward = this.shore === 'east' || this.shore === 'south' ? -1 : 1;
+    const start =
+      this.shore === 'east' ? this.width - 1 : this.shore === 'south' ? this.height - 1 : 0;
+
+    let seenWater = false;
+    for (let step = 0; step < depth; step += 1) {
+      const at = start + inward * step;
+      const cell = horizontal ? { gx: at, gy: along } : { gx: along, gy: at };
+
+      if (this.terrain.get(cell.gx, cell.gy) === 'water') {
+        seenWater = true;
+        continue;
+      }
+      // Only once past the sea itself: an inland lake on the way out would
+      // otherwise beach the settlers on its far bank.
+      if (!seenWater) {
+        continue;
+      }
+
+      // A pace or two back from the waterline, so the camp has ground on every
+      // side of it rather than a wall of sea against its back.
+      const inland = horizontal
+        ? { gx: at + inward * SHORE_SETBACK, gy: along }
+        : { gx: along, gy: at + inward * SHORE_SETBACK };
+      const spot = this.navigation.nearestWalkable(inland) ?? this.navigation.nearestWalkable(cell);
+      if (spot) {
+        return spot;
+      }
+    }
+
+    return this.navigation.nearestWalkable(this.centreCell) ?? this.centreCell;
   }
 
   public get width(): number {

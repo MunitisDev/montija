@@ -18,6 +18,45 @@ The first objective is the MVP's: **survive the first winter**.
 
 ---
 
+## Where they came from — Implemented
+
+**They were shipwrecked.** Ten survivors drag what they can out of the surf and
+start again on an empty coast.
+
+That premise had to be true of every map or it would be a lie on half of them,
+so the sea is guaranteed rather than left to chance: one edge of every map is
+ocean, chosen from the seed. It is produced by subtracting a falloff from the
+same elevation noise as everything else, so the waterline still wanders into
+inlets and headlands instead of ruling a straight blue line down one side. Only
+one edge — a settlement ringed by water is a different game and a much smaller
+map.
+
+The settlers come ashore a few paces up the beach, and **the starting yard is
+the wreck's cargo** stacked above the tideline. The camera opens on it, so the
+first thing anybody sees is their own people on the shore they washed up on.
+
+What is in that cargo says the same thing again:
+
+| Salvage      | Why                                                                      |
+| ------------ | ------------------------------------------------------------------------ |
+| 45 logs      | A ship is made of timber, and a hull on a beach comes apart into it      |
+| 120 food     | Ship's stores. Unchanged: the grace it buys is measured and load-bearing |
+| 8 iron       | Fittings and nails. Useless until there is a Blacksmith to work them     |
+| **no stone** | Nobody salvages rock from a boat                                         |
+
+**No stone is the interesting one.** It makes the first morning of the game a
+search rather than a shopping trip. It also forced a change: the Gatherer Hut
+costs timber only now, because with stone in its price a settlement playing well
+starved on day 22 of three seeds out of four while hunting a deposit it could
+not eat. Wood gets you fed; stone is for everything that has to last.
+
+Measured across eight seeds, a well-played settlement survives its first year on
+2 of them — exactly the same as before the shipwreck — and most of the deaths
+moved from starving in spring to failing in winter, which is the failure this
+game is about.
+
+---
+
 ## The core loop — Implemented
 
 ```text

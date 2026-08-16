@@ -240,7 +240,9 @@ export class Simulation {
     );
 
     this.foundStorageYard();
-    this.villagers.spawnNear(this.world.centreCell, options.startingVillagers);
+    // Ashore beside their salvage, not in the middle of the map: they walked
+    // up this beach out of the water.
+    this.villagers.spawnNear(this.world.landfallCell, options.startingVillagers);
 
     // Everything that comes out of the ground follows the calendar, and the
     // curves differ: foraging trickles through the growing seasons, a field is
@@ -1331,20 +1333,19 @@ export class Simulation {
   }
 
   /**
-   * Places the settlement's founding storage yard.
+   * Piles the salvage above the tideline.
    *
-   * Phase 5 needs somewhere to haul to, and construction does not exist until
-   * Phase 6. Rather than pretending resources teleport into an abstract stock,
-   * the settlement simply starts with one yard already standing — which is also
-   * what "a founding settlement" means.
+   * The settlement starts with one yard already standing, because resources
+   * exist physically in this game and there has to be somewhere to haul to
+   * before anything can be built. What that yard *is*, though, is the wreck's
+   * cargo stacked on the beach — so it sits at the landfall rather than in the
+   * middle of the map, and the sea is in shot from the first frame.
    */
   private foundStorageYard(): void {
-    const centre =
-      this.world.navigation.nearestWalkable(this.world.centreCell) ?? this.world.centreCell;
-    const yard = this.storages.add({ cell: centre, capacity: 2000 });
+    const yard = this.storages.add({ cell: this.world.landfallCell, capacity: 2000 });
 
-    // The settlers bring supplies with them. Without them the settlement
-    // starves long before it could possibly build anything that makes food.
+    // Everything they could carry up the beach. Timber, no stone, and iron
+    // they cannot use yet — see STARTING_RESOURCES for why each of those.
     for (const [resource, amount] of Object.entries(STARTING_RESOURCES)) {
       yard.inventory.add(resource as ResourceId, amount);
     }

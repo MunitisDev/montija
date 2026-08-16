@@ -40,10 +40,32 @@ export const STARTING_VILLAGERS = 10;
  * 120 food is twelve days for ten people: one full season to get a hut
  * standing. The logs and stone are enough for that hut and a house.
  */
+/**
+ * What the settlers dragged out of the surf.
+ *
+ * Not a starting bonus but a **shipwreck's cargo**, and the difference shows in
+ * what is and is not in it.
+ *
+ * **Timber, because a wrecked ship is made of it.** The single most useful
+ * thing about a hull on a beach is that it comes apart into planks, and it is
+ * the reason the settlement can put up its first buildings at all.
+ *
+ * **No stone.** Nobody salvages rock from a boat. Every building past the very
+ * cheapest needs some, so the opening move of the game is now to go and find a
+ * deposit — which is a decision on the first morning rather than a resource
+ * that was simply in the box.
+ *
+ * **Iron nobody can use yet.** Fittings and nails, off the wreck. It sits in
+ * the yard doing nothing until there is a Blacksmith to work it, which is
+ * deliberate: it is a promise that the settlement has somewhere to grow into.
+ *
+ * Food is unchanged. The grace it buys — long enough to see the problem and
+ * raise a hut — is load-bearing and measured in the balance tests.
+ */
 export const STARTING_RESOURCES = {
   food: 120,
-  logs: 30,
-  stone: 12,
+  logs: 45,
+  iron: 8,
 } as const;
 
 export const ZOOM_LIMITS = {

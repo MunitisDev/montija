@@ -146,10 +146,12 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     name: 'Gatherer Hut',
     description: 'Workers forage the surrounding woods for food.',
     footprint: { width: 2, height: 2 },
-    constructionCost: [
-      { resource: 'logs', amount: 10 },
-      { resource: 'stone', amount: 2 },
-    ],
+    // Timber only, and that is the shipwreck talking. The settlers come ashore
+    // with planks off the hull and no stone at all, so if the one building that
+    // feeds them needed masonry they would starve while looking for a quarry —
+    // measured, they died on day 22 of three seeds out of four. Wood gets you
+    // fed; stone is for everything that has to last.
+    constructionCost: [{ resource: 'logs', amount: 12 }],
     buildTicks: 110,
     workerSlots: 2,
     recipeId: 'forage-food',

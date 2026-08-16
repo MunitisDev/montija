@@ -280,11 +280,10 @@ export class Game implements GameContext, InputIntentSink {
     this.currentPlacement = null;
     this.placementChanges += 1;
     this.ticksUntilAutosave = AUTOSAVE_INTERVAL_TICKS;
-    const bounds = this.simulation.world.sceneBounds;
-    this.camera.centreOn({
-      px: (bounds.minX + bounds.maxX) / 2,
-      py: (bounds.minY + bounds.maxY) / 2,
-    });
+    // On the wreck camp rather than the middle of the map. The first thing the
+    // player should see is their own people on the beach they washed up on,
+    // not an empty acre of the interior with the story happening off-screen.
+    this.camera.centreOn(gridToScene(this.simulation.world.landfallCell));
   }
 
   /** Increments whenever the world is replaced. */
@@ -327,10 +326,8 @@ export class Game implements GameContext, InputIntentSink {
       },
       feel: CAMERA_FEEL,
       initialZoom: INITIAL_ZOOM,
-      initialCentre: gridToScene({
-        gx: Math.floor(WORLD_WIDTH / 2),
-        gy: Math.floor(WORLD_HEIGHT / 2),
-      }),
+      // The beach they washed up on, not the middle of the map.
+      initialCentre: gridToScene(this.simulation.world.landfallCell),
     });
   }
 

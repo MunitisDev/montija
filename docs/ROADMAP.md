@@ -49,6 +49,7 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 22    | Start screen and guide        | **Implemented** |
 | 23    | People, families and postings | **Implemented** |
 | 24    | Households                    | **Implemented** |
+| 25    | The shipwreck                 | **Implemented** |
 
 ---
 
@@ -664,3 +665,53 @@ Two existing tests had to change, and neither was retuned to hide anything:
   three survive - which is what the game actually promises and is stable.
 - The tools test compared one settlement over twelve days, where the bonus is
   worth about one completed job. It now sums four seeds.
+
+---
+
+## Phase 25 — The shipwreck — Implemented
+
+The settlement finally has a reason to exist. Set out in
+[GAME_DESIGN.md](./GAME_DESIGN.md#where-they-came-from--implemented).
+
+- **Every map has a sea**, on one edge, chosen from the seed and cut out of the
+  same elevation noise so the coast wanders.
+- The settlers **come ashore** there, and the starting yard is the wreck's cargo
+  on the beach. The camera opens on it.
+- The cargo is **timber, food and a little unusable iron - and no stone**.
+- The Gatherer Hut costs timber only, so finding a quarry is urgent without
+  being fatal.
+
+Three existing tests changed, and none of them was retuned to hide anything:
+
+- `prepared` banks about 40 food by winter rather than about 100, because the
+  whole settlement runs a few days later without salvaged stone. The bar moved
+  from 60 to 30 and the reason is written next to it.
+- The no-houses run used to freeze in winter with full yards. It now **starves
+  in autumn with its warmth at 100**, because sleeping rough makes people ill,
+  an ill villager does no work, and a short-handed settlement cannot gather -
+  19% idle against 12%, and 148 food brought in against 231. The test now
+  describes that instead of a cause of death that has moved.
+- The trade test named its trade. With no salvaged stone, _stone_ is what a new
+  settlement has least of, so an automatic post quite correctly buys that
+  instead of the iron the test is about.
+
+---
+
+## Planned - the rescue
+
+The other half of the story, and the game's first **win condition**: get word
+out, and survive until a ship comes. Not built. Sketched here so the shape is on
+record:
+
+- A **School**, and something that sends word - a bottle to the tide.
+- The ship arrives a fixed span later. At 48 days to the year and 6 seconds to
+  the day, **fifty years is an hour of play at 4x** and four hours at 1x; a
+  hundred years is double that. Fifty looks like the campaign and a hundred like
+  an endurance mode.
+- A closing screen of statistics: who lived, how many were born, what was built.
+
+**Not started on purpose.** A win condition is the roof on this building, and
+the walls are not finished: a well-played settlement still only survives its
+first year on 2 seeds in 8, and nobody has played the game yet. Fifty years of
+content resting on an unplaytested first year would be fifty years of the same
+problem.

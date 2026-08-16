@@ -179,15 +179,24 @@ describe('a settlement with a post', () => {
 
     const yard = simulation.storages.all[0];
     yard?.inventory.add('logs', 600);
-    expect(simulation.storages.totalOf('iron')).toBe(0);
+    // Whatever came off the wreck, and no more: the settlers salvage a little
+    // iron and have no way at all to get another scrap of it without a mine.
+    const salvaged = simulation.storages.totalOf('iron');
+    // Named rather than left automatic. Since the settlers stopped arriving
+    // with salvaged stone, *stone* is the thing a new settlement has least of,
+    // so an automatic post quite correctly buys that instead — and this test is
+    // about iron, which is the good no amount of good play can produce without
+    // a mine.
+    simulation.setTradeOrder({ sell: 'logs', buy: 'iron' });
 
     for (let tick = 1; tick <= TICKS_PER_DAY * 30; tick += 1) {
       simulation.update(tick, TICK);
     }
 
-    // No mine, no rock worked, and iron in the yards all the same. That is the
-    // whole point: a map without iron is now hard rather than unwinnable.
-    expect(simulation.storages.totalOf('iron')).toBeGreaterThan(0);
+    // No mine, no rock worked, and more iron in the yards than the wreck gave
+    // them. That is the whole point: a map without iron is now hard rather than
+    // unwinnable.
+    expect(simulation.storages.totalOf('iron')).toBeGreaterThan(salvaged);
   });
 
   it('employs nobody, because the merchant does the trading', () => {
