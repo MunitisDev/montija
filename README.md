@@ -71,8 +71,10 @@ Landscape orientation is the target. Nothing requires a keyboard or a mouse.
 Tap a tree and press **Fell**, or a rock and press **Mine**, to order the work; **Cancel** calls it
 off. Felled logs and quarried stone lie where they fall until a villager hauls them in.
 
-To build: pick a building from the bottom bar, move the camera until the ghost sits where you want
-it, and press **Place**. Villagers carry the materials from storage and construct it.
+To build: pick a category from the bottom bar — Shelter, Food, Materials, Workshops, Settlement —
+then a building from the grid that opens above it. Each card shows what it costs, with anything the
+settlement has none of marked in red. Move the camera until the ghost sits where you want it and
+press **Place**; villagers carry the materials from storage and construct it.
 
 Tap the **resource strip** to drop down every good the settlement has, with what is stored, what is
 still lying in the field, and the net per day.

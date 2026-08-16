@@ -28,6 +28,28 @@ export type BuildingId =
   | 'healer'
   | 'school';
 
+/**
+ * What a building is *for*, which is how the build menu is organised.
+ *
+ * Seventeen buildings in one horizontal strip meant scrolling sideways to find
+ * a house, which is the single most-built thing in the game. Five groups of
+ * three or four fit on any screen the project targets without scrolling at all,
+ * and they keep fitting as the list grows — which a flat strip does not.
+ *
+ * Grouped by purpose rather than by cost or by unlock order, because "which
+ * building makes food" is the question a player actually has.
+ */
+export type BuildingCategory = 'shelter' | 'food' | 'materials' | 'workshops' | 'settlement';
+
+/** Menu order for the groups: what a settlement needs, roughly in that order. */
+export const BUILDING_CATEGORIES: readonly BuildingCategory[] = [
+  'shelter',
+  'food',
+  'materials',
+  'workshops',
+  'settlement',
+];
+
 export interface ResourceAmount {
   readonly resource: ResourceId;
   readonly amount: number;
@@ -43,6 +65,8 @@ export interface BuildingDefinition {
   /** Ticks of labour needed once every material is on site. */
   readonly buildTicks: number;
   readonly workerSlots: number;
+  /** Which group of the build menu this appears under. */
+  readonly category: BuildingCategory;
 
   /** Set when the building stores resources. */
   readonly storage?: {
@@ -102,6 +126,7 @@ export interface BuildingDefinition {
 export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
   house: {
     id: 'house',
+    category: 'shelter',
     name: 'House',
     description: 'Shelter for four. Firewood only warms people who have a house.',
     footprint: { width: 2, height: 2 },
@@ -115,6 +140,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
   },
   'storage-yard': {
     id: 'storage-yard',
+    category: 'shelter',
     name: 'Storage Yard',
     description: 'Holds logs, stone and firewood.',
     footprint: { width: 3, height: 3 },
@@ -128,6 +154,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
   },
   'food-storage': {
     id: 'food-storage',
+    category: 'shelter',
     name: 'Food Storage',
     description: 'Keeps food from spoiling. Food left in an open yard rots.',
     footprint: { width: 2, height: 2 },
@@ -144,6 +171,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
   },
   'gatherer-hut': {
     id: 'gatherer-hut',
+    category: 'food',
     name: 'Gatherer Hut',
     description: 'Workers forage the surrounding woods for food.',
     footprint: { width: 2, height: 2 },
@@ -159,6 +187,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
   },
   quarry: {
     id: 'quarry',
+    category: 'materials',
     name: 'Quarry',
     description: 'Cuts stone out of a rock face for as long as it stands.',
     // Deliberately the largest thing in the game. A quarry is a permanent
@@ -177,6 +206,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
   },
   mine: {
     id: 'mine',
+    category: 'materials',
     name: 'Mine',
     description: 'Digs iron out of the hillside. Slow, and permanent.',
     footprint: { width: 2, height: 2 },
@@ -191,6 +221,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
   },
   'crop-field': {
     id: 'crop-field',
+    category: 'food',
     name: 'Field',
     description: 'Sown in spring, worth having in autumn. Nothing at all in winter.',
     footprint: { width: 3, height: 3 },
@@ -204,6 +235,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
   },
   orchard: {
     id: 'orchard',
+    category: 'food',
     name: 'Orchard',
     description: 'Fruit trees. Years to establish, and the best harvest there is.',
     footprint: { width: 3, height: 3 },
@@ -221,6 +253,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
   },
   herbalist: {
     id: 'herbalist',
+    category: 'settlement',
     name: "Herbalist's Hut",
     description: 'Gathers herbs in the growing seasons. They keep, and winter needs them.',
     footprint: { width: 2, height: 2 },
@@ -231,6 +264,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
   },
   healer: {
     id: 'healer',
+    category: 'settlement',
     name: "Healer's House",
     description: 'Nurses the sick, using herbs. Its only output is that people stop dying.',
     footprint: { width: 2, height: 2 },
@@ -247,6 +281,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
   },
   'trading-post': {
     id: 'trading-post',
+    category: 'settlement',
     name: 'Trading Post',
     description: 'A merchant calls in fair weather and swaps your surplus for what you lack.',
     footprint: { width: 3, height: 3 },
@@ -262,6 +297,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
   },
   hunter: {
     id: 'hunter',
+    category: 'food',
     name: "Hunter's Cabin",
     description: 'Brings in meat and hides, and is the only work that pays in winter.',
     footprint: { width: 2, height: 2 },
@@ -272,6 +308,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
   },
   tailor: {
     id: 'tailor',
+    category: 'workshops',
     name: 'Tailor',
     description: 'Sews hides into clothing, which keeps people warm when the fire cannot.',
     footprint: { width: 2, height: 2 },
@@ -285,6 +322,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
   },
   blacksmith: {
     id: 'blacksmith',
+    category: 'workshops',
     name: 'Blacksmith',
     description: 'Forges iron into tools. Tools make every other job quicker.',
     footprint: { width: 2, height: 2 },
@@ -298,6 +336,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
   },
   forester: {
     id: 'forester',
+    category: 'materials',
     name: "Forester's Lodge",
     description: 'Workers plant and fell nearby, so the wood never runs out.',
     footprint: { width: 2, height: 2 },
@@ -315,6 +354,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
   },
   woodcutter: {
     id: 'woodcutter',
+    category: 'materials',
     name: 'Woodcutter',
     description: 'Splits logs into firewood.',
     footprint: { width: 2, height: 2 },
@@ -343,6 +383,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
    */
   school: {
     id: 'school',
+    category: 'settlement',
     name: 'School',
     description: 'Teaches the settlement its letters — and lets it write for help.',
     footprint: { width: 3, height: 3 },

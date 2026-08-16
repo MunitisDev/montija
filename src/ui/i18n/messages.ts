@@ -116,6 +116,14 @@ export const EN = {
   'building.school': 'School',
   'building.school.description': 'Teaches the settlement its letters — and lets it write for help.',
 
+  'build.open': 'Build',
+  'build.shelter': 'Shelter',
+  'build.food': 'Food',
+  'build.materials': 'Materials',
+  'build.workshops': 'Workshops',
+  'build.settlement': 'Settlement',
+  'build.none': 'Nothing here yet',
+
   'placement.offMap': 'beyond the map',
   'placement.blockedTerrain': 'ground will not take it',
   'placement.occupied': 'something is already here',
@@ -470,6 +478,14 @@ export const ES: Messages = {
   'building.school': 'Escuela',
   'building.school.description':
     'Enseña a leer y escribir al asentamiento, y le permite pedir ayuda.',
+
+  'build.open': 'Construir',
+  'build.shelter': 'Cobijo',
+  'build.food': 'Comida',
+  'build.materials': 'Materiales',
+  'build.workshops': 'Talleres',
+  'build.settlement': 'Villa',
+  'build.none': 'Todavía no hay nada aquí',
 
   'placement.offMap': 'fuera del mapa',
   'placement.blockedTerrain': 'el terreno no lo admite',

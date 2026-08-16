@@ -358,7 +358,17 @@
             </div>
 
             <!-- Build menu. Buttons are generated from data/buildings.ts. -->
-            <div class="build-bar" data-hud="build-bar" aria-label="Build menu"></div>
+            <!--
+              The build menu, in two parts.
+
+              The bar carries five category buttons, not seventeen buildings:
+              a horizontal scroller meant swiping sideways to find a House, and
+              the list only gets longer. The panel above it holds the buildings
+              of whichever category is open, as a wrapping grid that never
+              scrolls sideways.
+            -->
+            <div class="build-panel" data-hud="build-panel" hidden></div>
+            <div class="build-bar" data-hud="build-bar" role="group" aria-label="Build menu"></div>
 
             <!-- Placement controls, shown only while positioning a building. -->
             <div class="placement-bar" data-hud="placement" hidden>

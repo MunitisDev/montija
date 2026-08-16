@@ -54,6 +54,7 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 27    | The settings cog              | **Implemented** |
 | 28    | Stores, clock and ledger      | **Implemented** |
 | 29    | Getting home                  | **Implemented** |
+| 30    | The build menu                | **Implemented** |
 
 ---
 
@@ -808,3 +809,26 @@ past was.
 around three hours at 1x. It is tested to the tick and verified in a browser by
 winding the clock, and `RESCUE_YEARS` is one constant precisely so it can move
 once somebody has sat through it.
+
+---
+
+## Phase 30 - The build menu - Implemented
+
+Seventeen buttons in a horizontal scroller is not a menu. Finding a House meant
+swiping sideways past sixteen other things, and the strip only gets longer.
+
+The bar carries **five categories** now - Shelter, Food, Materials, Workshops,
+Settlement - and tapping one opens a grid of that category's buildings above it.
+Two to four buildings each: one row on a tablet, two on a phone, nothing
+scrolling at any size. The category is a field on the building definition, so
+adding a building is still a row in a data file.
+
+The cards carry the **price**, with a material the settlement has none of marked
+in red. Not "cannot afford" - materials are hauled to a site as they arrive, so
+a site can be started short. Having none usually means an economy that has not
+been built yet, which is why a School reads as out of reach until there is a
+quarry.
+
+Set out in [MOBILE_UX.md](./MOBILE_UX.md), including why the panel sits above
+the bar rather than over the world and why the bar wraps in portrait rather than
+truncating what it says.

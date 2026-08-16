@@ -298,7 +298,7 @@
   align-items: flex-start;
   gap: var(--hud-gap);
   /* Takes the leftover width and gives it back under pressure, so the build bar
-     scrolls instead of overrunning the save and speed controls. */
+     shrinks rather than overrunning the row. */
   flex: 1 1 0;
   min-width: 0;
 }
@@ -404,30 +404,112 @@
 }
 
 /*
- * The build bar scrolls sideways rather than wrapping.
+ * Five categories, and no scrolling.
  *
- * Wrapping cost a whole row of height on a landscape phone, where vertical
- * space is the scarce resource. Scrolling keeps the settlement visible and
- * still reaches every building.
+ * This bar used to carry every building and scroll sideways, which meant
+ * swiping past sixteen things to find a House. Five buttons share the width
+ * evenly and shrink together on a narrow screen, so the bar is the same shape
+ * at every size and stays that shape however many buildings the game grows.
  */
 .build-bar {
   gap: 6px;
   flex-wrap: nowrap;
-  overflow-x: auto;
   max-width: 100%;
   min-width: 0;
   align-self: stretch;
-  scrollbar-width: none;
-  /* The bar scrolls; the world still owns every other gesture. */
-  touch-action: pan-x;
 }
 
 .build-button {
-  flex: 0 0 auto;
+  /* Even shares of the row, all shrinking together rather than the last one
+     falling off the end. */
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.build-bar::-webkit-scrollbar {
+/*
+ * The buildings of whichever category is open.
+ *
+ * Sits above the bar rather than over the world: it is part of the same
+ * control, and a panel that covered the settlement would hide the ground the
+ * player is choosing a spot on. Wraps rather than scrolls — at most four cards
+ * to a category, which is two rows even on a phone held upright.
+ */
+.build-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 6px;
+  width: 100%;
+  padding: 8px;
+  background: var(--colour-panel);
+  border: 1px solid var(--colour-panel-edge);
+  border-radius: 6px;
+  backdrop-filter: blur(6px);
+  pointer-events: auto;
+}
+
+.build-panel[hidden] {
   display: none;
+}
+
+.build-panel__empty {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--colour-ink-dim);
+}
+
+.build-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--touch-target);
+  padding: 6px 10px;
+  font-family: var(--font-ui);
+  text-align: left;
+  color: var(--colour-ink);
+  background: rgba(40, 44, 34, 0.7);
+  border: 1px solid var(--colour-panel-edge);
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.build-card:hover {
+  border-color: rgba(201, 162, 39, 0.45);
+}
+
+.build-card__name {
+  font-size: 0.84rem;
+  line-height: 1.2;
+}
+
+/* The price, which is the question a player asks before every placement. */
+.build-card__cost {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 8px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--colour-ink-dim);
+}
+
+/*
+ * A material the settlement has none of at all.
+ *
+ * Not "cannot afford": materials are hauled to a site as they arrive, so a
+ * site can quite reasonably be started short. Having none usually means an
+ * economy the settlement has not built yet, which is worth saying.
+ */
+.build-card__part.is-missing {
+  color: var(--colour-alarm);
+}
+
+/* Nothing in the cost is in the stores. Still tappable — the player may be
+   about to go and get it — but visibly not for today. */
+.build-card.is-out-of-reach .build-card__name {
+  color: var(--colour-ink-dim);
 }
 
 .build-bar__hint {
@@ -443,8 +525,7 @@
  */
 .build-button {
   min-height: var(--touch-target);
-  flex: 0 0 auto;
-  padding: 0 12px;
+  padding: 0 10px;
   font-family: var(--font-ui);
   font-size: 0.82rem;
   color: var(--colour-ink);
@@ -782,6 +863,22 @@
   .build-bar,
   .placement-bar {
     width: 100%;
+  }
+
+  /*
+   * Held upright the five category names do not fit across 412px, and a
+   * truncated "Settle…" is a button the player has to guess at. Portrait has
+   * height to spare and width to spare none of, so the bar wraps to two rows
+   * rather than shortening what it says — the same trade every other row in
+   * portrait makes.
+   */
+  .build-bar {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  .build-button {
+    flex: 1 1 6.5rem;
   }
 
   /* In portrait there is room for it, so it does not have to give way. */

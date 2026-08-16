@@ -128,8 +128,8 @@ The world is the interface. Chrome stays at the edges.
   HUD region still pans the world.
 - The top bar carries the readouts and the four ways in: the stores, the people, the ledger and
   settings. Clock included — one button cycling pause, 1x, 2x, 4x.
-- The build bar has the whole **bottom** to itself, which is what a build menu of sixteen buildings
-  needs.
+- The build bar has the whole **bottom** to itself: five category buttons, with the buildings of
+  whichever one is open in a grid above them.
 - Readouts go **top**, where they are glanceable and out of the way.
 - No permanent large desktop-style windows. Panels are contextual and dismissible.
 
@@ -183,7 +183,8 @@ the middle and the player could not see what they were building.
 Three things caused it, and all three are structural rather than cosmetic:
 
 - **Rows wrapped.** Every wrapped row costs its full height. Both bars are now
-  `nowrap`; anything that will not fit scrolls sideways instead.
+  `nowrap`; anything that will not fit scrolls sideways instead. (The build bar has since stopped
+  needing this — see **The build menu** below — but the rule still holds for the rows that do.)
 - **Flex children would not shrink.** The build bar had `overflow-x: auto`
   already and still overran its neighbours, because a flex item will not shrink
   below its content without `min-width: 0`. Gatherer Hut and Woodcutter were
@@ -361,6 +362,42 @@ The split that matters is between the two kinds of figure on it:
 `tests/ledger.test.ts` holds it to that: the counts against the simulation, demand against the
 survival constants, production against the seasonal curve, nothing claimed for an unstaffed
 workshop, and no countdown printed over an empty shelf.
+
+Verified at 1180×820, 830×412 and 412×830, in both languages.
+
+## The build menu — Implemented
+
+**Seventeen buttons in a horizontal scroller is not a menu.** Finding a House — the single
+most-built thing in the game — meant swiping sideways past sixteen other things, and the strip only
+gets longer as the game grows. Scrolling was the right answer when there were five buildings; it
+stopped being one somewhere around ten.
+
+Two levels now. The bar carries **five categories** — Shelter, Food, Materials, Workshops,
+Settlement — and tapping one opens a grid of that category's buildings above it. Every group holds
+two to four buildings, which is one row on a tablet and two on a phone. Nothing scrolls, at any
+size, and nothing will as the list grows: a sixth category is cheaper than a longer strip.
+
+Grouped by **purpose** rather than by cost or unlock order, because "which building makes food" is
+the question a player actually has. The category is a field on the building definition, so adding a
+building is still a row in a data file — `tests/build-menu.test.ts` holds the menu to offering every
+building exactly once, under the heading its own data names.
+
+**The cards carry the price.** "Can I build this yet" is asked before every placement, and the only
+way to answer it used to be to start placing and read the bar. A material the settlement has _none_
+of is marked in red — not "cannot afford", because materials are hauled to a site as they arrive
+and a site can quite reasonably be started short. Having none is different: it usually means an
+economy the settlement has not built yet, which is why a School reads as out of reach until there is
+a quarry.
+
+Three behaviours worth recording:
+
+- **The panel sits above the bar, not over the world.** The player is choosing a spot on the ground
+  while they read it.
+- **Starting a placement closes it, and cancelling does not reopen it.** The player has said no to
+  that building; reopening the menu under their thumb is a second decision they did not make.
+- **In portrait the bar wraps to two rows** rather than truncating "Settlement" to "Settle…".
+  Portrait has height to spare and no width to spare, which is the trade every other row there
+  makes.
 
 Verified at 1180×820, 830×412 and 412×830, in both languages.
 
