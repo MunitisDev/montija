@@ -43,6 +43,7 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 16    | Land use              | **Implemented** |
 | 17    | Professions           | **Implemented** |
 | 18    | Clothing              | **Implemented** |
+| 19    | Trade                 | **Implemented** |
 
 ---
 
@@ -478,3 +479,20 @@ The resource strip only shows a readout once the settlement has ever had any of
 it. Eight resources plus a population count do not fit across a phone held
 upright, and a strip that scrolls sideways to reveal a row of zeroes is worse
 than one that shows what the settlement actually has.
+
+---
+
+## Phase 19 — Trade — Implemented
+
+The way out of a map that will not give you something. Set out in
+[GAME_DESIGN.md](./GAME_DESIGN.md).
+
+- A **Trading Post**, and a merchant who calls in fair weather and never in
+  winter.
+- Largest surplus swapped for scarcest good, at three to one — deliberately a
+  bad rate, because trade must never be the efficient way to get anything.
+- Food and firewood are never sold, and a surplus has to clear a floor before it
+  counts as one.
+
+**Planned, and not built:** a per-trade interface. The post currently decides for
+itself what to buy and sell.

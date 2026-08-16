@@ -22,7 +22,8 @@ export type BuildingId =
   | 'crop-field'
   | 'orchard'
   | 'hunter'
-  | 'tailor';
+  | 'tailor'
+  | 'trading-post';
 
 export interface ResourceAmount {
   readonly resource: ResourceId;
@@ -202,6 +203,21 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     workerSlots: 2,
     recipeId: 'tend-orchard',
   },
+  'trading-post': {
+    id: 'trading-post',
+    name: 'Trading Post',
+    description: 'A merchant calls in fair weather and swaps your surplus for what you lack.',
+    footprint: { width: 3, height: 3 },
+    constructionCost: [
+      { resource: 'logs', amount: 18 },
+      { resource: 'stone', amount: 8 },
+    ],
+    buildTicks: 160,
+    // Nobody is employed here. The merchant does the trading; the settlement's
+    // part is having hauled a surplus into its yards, which the ordinary
+    // logistics system already does.
+    workerSlots: 0,
+  },
   hunter: {
     id: 'hunter',
     name: "Hunter's Cabin",
@@ -285,6 +301,7 @@ export const BUILDING_IDS: readonly BuildingId[] = [
   'orchard',
   'hunter',
   'tailor',
+  'trading-post',
 ];
 
 export function buildingDefinition(id: BuildingId): BuildingDefinition {

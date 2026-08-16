@@ -87,6 +87,9 @@ export const EN = {
   'building.mine.description': 'Digs iron out of the hillside. Slow, and permanent.',
   'building.blacksmith': 'Blacksmith',
   'building.blacksmith.description': 'Forges iron into tools, which make every job quicker.',
+  'building.trading-post': 'Trading Post',
+  'building.trading-post.description':
+    'A merchant calls in fair weather and swaps your surplus for what you lack.',
   'building.hunter': "Hunter's Cabin",
   'building.hunter.description': 'Brings in meat and hides, and still pays in winter.',
   'building.tailor': 'Tailor',
@@ -114,6 +117,8 @@ export const EN = {
 
   'event.born': 'A child was born',
   'event.arrived': 'Newcomers have arrived',
+  'event.merchant': 'A merchant has arrived',
+  'event.traded': 'Traded at the post',
   'event.died': 'Someone has died',
   'event.diedOfOldAge': 'Someone died of old age',
   'failure.title': 'The settlement is gone',
@@ -213,6 +218,9 @@ export const ES: Messages = {
   'building.blacksmith': 'Herrería',
   'building.blacksmith.description':
     'Forja hierro en herramientas, que aceleran todos los trabajos.',
+  'building.trading-post': 'Puesto comercial',
+  'building.trading-post.description':
+    'Un mercader viene con buen tiempo y cambia tu excedente por lo que te falta.',
   'building.hunter': 'Cabaña de caza',
   'building.hunter.description': 'Trae carne y pieles, y sigue dando en invierno.',
   'building.tailor': 'Sastre',
@@ -240,6 +248,8 @@ export const ES: Messages = {
 
   'event.born': 'Ha nacido un niño',
   'event.arrived': 'Han llegado nuevos pobladores',
+  'event.merchant': 'Ha llegado un mercader',
+  'event.traded': 'Intercambio en el puesto',
   'event.died': 'Alguien ha muerto',
   'event.diedOfOldAge': 'Alguien ha muerto de viejo',
   'failure.title': 'El asentamiento ha desaparecido',

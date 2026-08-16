@@ -21,9 +21,11 @@ import type { PlacementCheck } from './buildings/BuildingRegistry';
 import { isFinished, JobPriority } from './jobs/Job';
 import { JobManager } from './jobs/JobManager';
 import { StorageRegistry } from './logistics/Storage';
+import { NO_TRADE, runTrade, type TradeReport } from './logistics/TradeSystem';
 import {
   DAYS_PER_SEASON,
   SEASONAL_YIELD,
+  TICKS_PER_DAY,
   isDayBoundary,
   yearStateAt,
   type Season,
@@ -119,6 +121,8 @@ export interface SimulationSnapshot {
   readonly forest: ForestReport;
   /** Who is employed where, so the HUD can show labourers and vacancies. */
   readonly employment: EmploymentReport;
+  /** What the merchant did today, and whether one is here at all. */
+  readonly trade: TradeReport;
   readonly deaths: number;
   /** Lowest health among the living, so the HUD can warn before people die. */
   readonly lowestHealth: number;
@@ -172,6 +176,7 @@ export class Simulation {
   private lastPopulation: PopulationReport = NO_POPULATION_CHANGE;
   private lastForest: ForestReport = NO_FOREST_CHANGE;
   private lastEmployment: EmploymentReport = NO_EMPLOYMENT_CHANGE;
+  private lastTrade: TradeReport = NO_TRADE;
   private totalDeaths = 0;
   /**
    * The woods' own random stream.
@@ -318,6 +323,7 @@ export class Simulation {
       population: this.lastPopulation,
       forest: this.lastForest,
       employment: this.lastEmployment,
+      trade: this.lastTrade,
       deaths: this.totalDeaths,
       advice: this.adviseOn(year),
       hasFailed: this.hasFailed,
@@ -448,6 +454,7 @@ export class Simulation {
     this.lastPopulation = NO_POPULATION_CHANGE;
     this.lastForest = NO_FOREST_CHANGE;
     this.lastEmployment = NO_EMPLOYMENT_CHANGE;
+    this.lastTrade = NO_TRADE;
   }
 
   /**
@@ -558,6 +565,16 @@ export class Simulation {
 
     // The woods creep back. Slowly, and never over the settlement itself.
     this.lastForest = runForestRegrowth(this.world, this.forestRandom);
+
+    // And a merchant may be at the post. Last, so a day's trade is done with
+    // what survived the day's eating and rotting rather than with a stock the
+    // settlement is about to lose anyway.
+    this.lastTrade = runTrade({
+      storages: this.storages,
+      day: Math.floor(this.currentTick / TICKS_PER_DAY),
+      season: this.year.season,
+      posts: this.world.buildings.countOf('trading-post'),
+    });
 
     this.runPopulationUpkeep();
   }

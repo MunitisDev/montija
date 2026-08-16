@@ -281,10 +281,33 @@ export class Hud {
     // mistake and they should not read the same.
     const fromHardship = Math.max(0, lastDay.deaths);
 
+    // A merchant arriving is the one event the player may want to act on
+    // before it passes, so it is announced on the day it happens.
+    if (snapshot.trade.merchantPresent && snapshot.trade.boughtAmount > 0) {
+      this.announceOnce(
+        `${this.i18n.t('event.traded')}: ${snapshot.trade.soldAmount} ${this.i18n.t(
+          `hud.${snapshot.trade.sold ?? 'logs'}` as MessageKey,
+        )} → ${snapshot.trade.boughtAmount} ${this.i18n.t(
+          `hud.${snapshot.trade.bought ?? 'logs'}` as MessageKey,
+        )}`,
+      );
+    } else if (snapshot.trade.merchantPresent) {
+      this.announceOnce(this.i18n.t('event.merchant'));
+    }
+
     this.announce('event.born', population.births);
     this.announce('event.arrived', population.arrivals);
     this.announce('event.diedOfOldAge', population.deathsOfOldAge);
     this.announce('event.died', fromHardship);
+  }
+
+  /** Puts one already-worded line on the notice stack. */
+  private announceOnce(text: string): void {
+    const notice = document.createElement('div');
+    notice.className = 'events__notice';
+    notice.textContent = text;
+    this.elements.events.append(notice);
+    notice.addEventListener('animationend', () => notice.remove());
   }
 
   private announce(key: MessageKey, count: number): void {

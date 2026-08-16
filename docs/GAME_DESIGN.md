@@ -276,6 +276,43 @@ arriving a season early.
 
 ---
 
+## Trade — Implemented
+
+Every other system in this game turns land into goods. This one turns goods into
+other goods, and it exists for one reason: **some maps do not have what a
+settlement needs.** A seed with no rock within reach cannot build a quarry, and
+no amount of good play makes iron appear. Without a way to swap, that is not a
+hard start but an unwinnable one — and the player cannot tell which they have
+been given.
+
+- A **Trading Post** is a building like any other, hauled to and hauled from. It
+  employs nobody: the merchant does the trading, and the settlement's part is
+  having hauled a surplus into its yards.
+- A **merchant calls** every twelve days for three, and never in winter. Trade is
+  a road and a cart, and neither works under snow.
+- While one is there, the post swaps the settlement's **largest surplus** for
+  whatever it is **shortest of**, at **three to one**.
+
+The rate is bad on purpose. Trade must never be the efficient way to get
+anything: a settlement that trades its way through the game has stopped playing
+it. This is the answer to "this map has no iron", not to "I would rather not
+build a quarry".
+
+Two safeguards, both of which exist because their absence would read as the game
+working against the player:
+
+- **Food and firewood are never sold**, however much of either is in the yards.
+  Selling the last of the firewood in November because it outnumbered the iron
+  would be indefensible. Both may be _bought_ — a merchant is exactly who you
+  want to see in a bad autumn.
+- **A surplus has to be a real one.** Below a floor, a settlement is not rich in
+  something, it merely happens to have some.
+
+**Planned, and not built:** the post decides for itself. Letting the player name
+what to buy and what to sell is the obvious next step.
+
+---
+
 ## Who works where — Implemented
 
 Every villager used to be a generalist. A produce job at a hut went to whoever
