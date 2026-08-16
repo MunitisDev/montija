@@ -35,6 +35,7 @@ describe('Villager', () => {
     const villager = new Villager({
       id: 1,
       name: 'Test',
+      sex: 'm',
       age: 20,
       position: { wx: 3.5, wy: 4.9 },
       lifespan: 70,
@@ -46,6 +47,7 @@ describe('Villager', () => {
     const villager = new Villager({
       id: 1,
       name: 'Test',
+      sex: 'm',
       age: 20,
       position: { wx: 0.5, wy: 0.5 },
       lifespan: 70,
@@ -59,6 +61,7 @@ describe('Villager', () => {
     const villager = new Villager({
       id: 1,
       name: 'Test',
+      sex: 'm',
       age: 20,
       position: { wx: 0.5, wy: 0.5 },
       lifespan: 70,
@@ -71,6 +74,7 @@ describe('Villager', () => {
     const villager = new Villager({
       id: 1,
       name: 'Test',
+      sex: 'm',
       age: 20,
       position: { wx: 0.5, wy: 0.5 },
       lifespan: 70,

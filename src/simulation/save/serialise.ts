@@ -56,6 +56,7 @@ export function serialise(simulation: Simulation, savedAt: string): SaveGame {
       employerId: villager.employerId,
       workPreference: villager.workPreference,
       partnerId: villager.partnerId,
+      sex: villager.sex,
       parentIds: villager.parentIds,
       illDaysRemaining: villager.illDaysRemaining,
       carrying: toRecord(villager.inventory),
@@ -179,6 +180,11 @@ export function restore(simulation: Simulation, save: SaveGame): void {
       const villager = new Villager({
         id: saved.id,
         name: saved.name,
+        // A save from before households had families says nothing about sex.
+        // Deriving it from the id keeps a reloaded settlement roughly even
+        // rather than turning it into one of anything, and it is stable: the
+        // same villager reads the same way on every load.
+        sex: saved.sex ?? (saved.id % 2 === 0 ? 'f' : 'm'),
         age: saved.age,
         position: { wx: saved.wx, wy: saved.wy },
         // A save from before villagers aged has no lifespan. Giving them the

@@ -24,10 +24,20 @@ import { Villager } from '@/simulation/villagers/Villager';
 
 const DAYS_PER_YEAR = DAYS_PER_SEASON * 4;
 
-function person(options: { id: number; age: number; lifespan?: number }): Villager {
+function person(options: {
+  id: number;
+  age: number;
+  lifespan?: number;
+  sex?: 'f' | 'm';
+}): Villager {
   return new Villager({
     id: options.id,
     name: `V${options.id}`,
+    // Alternating by id unless a test says otherwise, so a pair of test
+    // villagers is a pair that can actually become a couple. A settlement of
+    // one sex is sterile, which is true of the game and would otherwise show
+    // up here as an unrelated test mysteriously failing.
+    sex: options.sex ?? (options.id % 2 === 0 ? 'f' : 'm'),
     age: options.age,
     position: { wx: 0.5, wy: 0.5 },
     lifespan: options.lifespan ?? LIFESPAN_MAX,

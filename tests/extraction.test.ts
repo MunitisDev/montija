@@ -168,8 +168,8 @@ describe('iron and tools', () => {
   it('makes work measurably quicker', () => {
     // The bonus is the whole payoff, so it is worth proving it moves something
     // rather than trusting that a multiplier is wired up.
-    const runFor = (withTools: boolean): number => {
-      const simulation = new Simulation(OPTIONS);
+    const runFor = (withTools: boolean, seed: number): number => {
+      const simulation = new Simulation({ ...OPTIONS, seed });
       if (withTools) {
         simulation.storages.all[0]?.inventory.add('tools', 400);
       }
@@ -184,8 +184,19 @@ describe('iron and tools', () => {
       return simulation.snapshot().jobsCompleted;
     };
 
-    const bare = runFor(false);
-    const equipped = runFor(true);
+    // Summed across seeds, because one settlement is too coarse to measure
+    // this with. The bonus applies to *work* ticks and most of a villager's
+    // day is travel, so twelve days of one settlement separates the two runs
+    // by about one completed job — well inside the noise, and on one seed they
+    // came out exactly equal while three others showed the gain. Four
+    // settlements make the difference clear without making the claim weaker.
+    let bare = 0;
+    let equipped = 0;
+    for (const seed of [20260815, 2024, 991, 7]) {
+      bare += runFor(false, seed);
+      equipped += runFor(true, seed);
+    }
+
     expect(equipped).toBeGreaterThan(bare);
     expect(TOOL_WORK_BONUS).toBeGreaterThan(0);
   });

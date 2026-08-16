@@ -36,6 +36,7 @@ function person(options: { id?: number; homeId?: number | null } = {}): Villager
   const villager = new Villager({
     id: options.id ?? 1,
     name: 'Test',
+    sex: 'f',
     age: 30,
     position: { wx: 0, wy: 0 },
     lifespan: 70,

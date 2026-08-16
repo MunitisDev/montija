@@ -48,6 +48,7 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 21    | Health                        | **Implemented** |
 | 22    | Start screen and guide        | **Implemented** |
 | 23    | People, families and postings | **Implemented** |
+| 24    | Households                    | **Implemented** |
 
 ---
 
@@ -631,3 +632,35 @@ should queue. A priority slider would be a third lever overlapping two that
 already exist. See
 [GAME_DESIGN.md](./GAME_DESIGN.md#should-the-player-set-priorities--measured-and-no)
 for the figures and for what would change the decision.
+
+---
+
+## Phase 24 — Households — Implemented
+
+Families that read like families. Set out in
+[GAME_DESIGN.md](./GAME_DESIGN.md#families--implemented).
+
+- Villagers have a **sex**, used for nothing but who pairs with whom and which
+  given-name list they are drawn from.
+- A child takes **its father's family name**, so a household shares one.
+- **Couples move in together** — his house, then an empty one, then hers.
+- **A house is a household, not a dormitory:** a couple only settles somewhere
+  with no other adults in it.
+
+That last rule fixed something real. The daily housing pass packed four
+unrelated adults into every four-bed cottage, so a child born to either couple
+had nowhere to sleep but a different house — measured, _none_ of a settlement's
+children lived with a parent. They do now.
+
+Both changes were measured against the same six-year run before them and cost
+the growth curve nothing: population 28 on six seeds out of six, 8-12 births,
+unchanged even on the seeds that founded 6f/4m and 4f/6m.
+
+Two existing tests had to change, and neither was retuned to hide anything:
+
+- The balance suite claimed two gatherer huts survive the first winter. That was
+  true by a couple of days' margin, and adding one random draw per villager
+  tipped it. It now asserts the **ordering** - one hut dies, two huts die later,
+  three survive - which is what the game actually promises and is stable.
+- The tools test compared one settlement over twelve days, where the bonus is
+  worth about one completed job. It now sums four seeds.

@@ -74,7 +74,12 @@ export interface PopulationDay {
   /** Villagers who died of old age, for the caller to remove. */
   readonly died: Villager[];
   /** Newborns, for the caller to place and name. */
-  readonly born: { readonly home: Building; readonly parents: readonly [number, number] }[];
+  readonly born: {
+    readonly home: Building;
+    readonly parents: readonly [number, number];
+    /** The family name the child is given, from its father. */
+    readonly familyName: string;
+  }[];
   /** How many strangers walked in today. */
   readonly arrivals: number;
 }
@@ -103,6 +108,7 @@ export function runPopulationDay(options: {
   );
   assignHomes(survivors, houses);
   const paired = formPairs(survivors);
+  settleCouples(survivors, houses);
 
   const born = considerBirths({ villagers: survivors, houses, random, foodDaysPerPerson });
   const arrivals = considerImmigration({ villagers: survivors, houses, random, foodDaysPerPerson });
@@ -176,6 +182,19 @@ function considerImmigration(options: {
   return Math.min(IMMIGRANTS_PER_ARRIVAL, spare);
 }
 
+/**
+ * Everything after the given name.
+ *
+ * Names are generated as "Given Family", so the family name is whatever
+ * follows the first space. Crude, and correct for every name this game makes;
+ * a name with no space at all falls back to itself rather than to an empty
+ * string, so a child is never born surnameless.
+ */
+function familyNameOf(villager: Villager): string {
+  const space = villager.name.indexOf(' ');
+  return space === -1 ? villager.name : villager.name.slice(space + 1);
+}
+
 /** A lifespan for a newborn, or for a founding settler. */
 export function rollLifespan(random: SeededRandom): number {
   return random.int(LIFESPAN_MIN, LIFESPAN_MAX + 1);
@@ -216,25 +235,140 @@ function formPairs(villagers: readonly Villager[]): number {
     }
   }
 
-  const single = villagers
-    .filter(
-      (villager) =>
-        villager.partnerId === null &&
-        villager.age >= CHILDBEARING_AGE_MIN &&
-        villager.age <= CHILDBEARING_AGE_MAX,
-    )
-    .sort((a, b) => a.id - b.id);
+  const eligible = (villager: Villager): boolean =>
+    villager.partnerId === null &&
+    villager.age >= CHILDBEARING_AGE_MIN &&
+    villager.age <= CHILDBEARING_AGE_MAX;
+
+  // Two queues rather than one list paired off in order: a couple is one of
+  // each. A settlement founded lopsided therefore makes fewer couples and grows
+  // more slowly, which is a real consequence of its seed rather than a bug.
+  const women = villagers.filter((v) => eligible(v) && v.sex === 'f').sort((a, b) => a.id - b.id);
+  const men = villagers.filter((v) => eligible(v) && v.sex === 'm').sort((a, b) => a.id - b.id);
 
   let pairs = 0;
-  for (let i = 0; i + 1 < single.length; i += 2) {
-    const one = single[i]!;
-    const other = single[i + 1]!;
-    one.partnerId = other.id;
-    other.partnerId = one.id;
+  for (let i = 0; i < Math.min(women.length, men.length); i += 1) {
+    const woman = women[i]!;
+    const man = men[i]!;
+    woman.partnerId = man.id;
+    man.partnerId = woman.id;
     pairs += 1;
   }
 
   return pairs;
+}
+
+/**
+ * Moves new couples in together.
+ *
+ * A couple sleeping in separate houses is the household model saying one thing
+ * and the roster showing another, and it is the reason a family could not be
+ * read off the settlement at a glance.
+ *
+ * The order of preference is deliberate and is the one a player asked for: **his
+ * house**, then **a house standing empty**, then hers, then anywhere with room
+ * for the two of them. An empty house ranks above hers because a new household
+ * taking an empty cottage is both what happens and what spreads a growing
+ * settlement across the houses it has built.
+ *
+ * Nobody is ever moved into a house that cannot hold them: capacity is counted
+ * without the couple themselves, so a pair already living apart in two full
+ * houses simply stays put until something frees up. Getting that wrong would
+ * push a third person onto the street to make room, which is a far worse
+ * outcome than a couple who have not moved in yet.
+ */
+function settleCouples(villagers: readonly Villager[], houses: readonly Building[]): void {
+  if (houses.length === 0) {
+    return;
+  }
+
+  const byId = new Map(villagers.map((villager) => [villager.id, villager]));
+  const occupancy = new Map<number, number>();
+  for (const villager of villagers) {
+    if (villager.homeId !== null) {
+      occupancy.set(villager.homeId, (occupancy.get(villager.homeId) ?? 0) + 1);
+    }
+  }
+
+  const capacityOf = (house: Building): number => house.definition.housing ?? 0;
+
+  // Who else is under each roof, so a couple can tell a household from a
+  // dormitory. Children do not count: a couple sharing with their own children
+  // is a family, and moving out to escape them would be absurd.
+  const otherAdultsIn = (houseId: number, couple: readonly Villager[]): number =>
+    villagers.filter(
+      (resident) => resident.homeId === houseId && resident.isAdult && !couple.includes(resident),
+    ).length;
+
+  for (const woman of villagers) {
+    // Each couple considered once, from the woman, so a pair is not moved
+    // twice in opposite directions on the same day.
+    if (woman.sex !== 'f' || woman.partnerId === null) {
+      continue;
+    }
+    const man = byId.get(woman.partnerId);
+    if (!man) {
+      continue;
+    }
+    const pair = [woman, man];
+
+    // Already a household of their own: nothing to do.
+    if (
+      woman.homeId !== null &&
+      man.homeId === woman.homeId &&
+      otherAdultsIn(woman.homeId, pair) === 0
+    ) {
+      continue;
+    }
+
+    const roomFor = (house: Building): boolean => {
+      const taken =
+        (occupancy.get(house.id) ?? 0) -
+        (woman.homeId === house.id ? 1 : 0) -
+        (man.homeId === house.id ? 1 : 0);
+      return taken + 2 <= capacityOf(house);
+    };
+
+    // **A house should be a household, not a dormitory.** Two unrelated couples
+    // filling a four-bed cottage was the state this arrived in, and it meant a
+    // child born to either of them had nowhere to sleep but a different house —
+    // so families were split across the settlement from the day they started.
+    // A couple therefore only settles somewhere without other adults in it.
+    const ownable = (house: Building | undefined | null): boolean =>
+      house !== undefined &&
+      house !== null &&
+      roomFor(house) &&
+      otherAdultsIn(house.id, pair) === 0;
+
+    const hisHouse = man.homeId === null ? null : houses.find((h) => h.id === man.homeId);
+    const herHouse = woman.homeId === null ? null : houses.find((h) => h.id === woman.homeId);
+    const empty = houses.filter((house) => (occupancy.get(house.id) ?? 0) === 0);
+
+    const destination =
+      // His house first, then one standing empty, then hers — the order a
+      // player asked for, with an empty cottage ahead of hers because a new
+      // household taking one is both what happens and what spreads a growing
+      // settlement across the houses it has built.
+      [hisHouse, ...empty, herHouse].find((house) => ownable(house)) ??
+      houses.find((house) => ownable(house)) ??
+      // Nowhere of their own to be had. Sharing beats sleeping apart, and
+      // beats sleeping outside by a great deal more.
+      (woman.homeId === man.homeId ? null : houses.find((house) => roomFor(house)));
+    if (!destination) {
+      continue;
+    }
+
+    for (const person of [woman, man]) {
+      if (person.homeId === destination.id) {
+        continue;
+      }
+      if (person.homeId !== null) {
+        occupancy.set(person.homeId, (occupancy.get(person.homeId) ?? 1) - 1);
+      }
+      person.homeId = destination.id;
+      occupancy.set(destination.id, (occupancy.get(destination.id) ?? 0) + 1);
+    }
+  }
 }
 
 /**
@@ -327,7 +461,7 @@ function considerBirths(options: {
   houses: readonly Building[];
   random: SeededRandom;
   foodDaysPerPerson: number;
-}): { home: Building; parents: readonly [number, number] }[] {
+}): { home: Building; parents: readonly [number, number]; familyName: string }[] {
   const { villagers, houses, random, foodDaysPerPerson } = options;
 
   if (foodDaysPerPerson < BIRTH_REQUIREMENTS.foodDaysPerPerson) {
@@ -393,10 +527,16 @@ function considerBirths(options: {
       (occupancy.get(house.id) ?? 0) < (house.definition.housing ?? 0),
   );
 
+  // The child carries the father's family name. A convention rather than a
+  // rule of the world, chosen so a household reads as one family — and the
+  // same convention as the couple moving into his house, so the two agree.
+  const father = couple.sex === 'm' ? couple : partner;
+
   return [
     {
       home: family ?? spare,
       parents: [Math.min(couple.id, partner.id), Math.max(couple.id, partner.id)] as const,
+      familyName: familyNameOf(father),
     },
   ];
 }

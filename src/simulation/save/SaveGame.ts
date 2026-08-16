@@ -50,6 +50,8 @@ export interface SavedVillager {
   readonly workPreference?: number | 'labourer' | null;
   /** The villager this one is paired with. Optional for older saves. */
   readonly partnerId?: number | null;
+  /** Which of two. Absent in saves written before households had families. */
+  readonly sex?: 'f' | 'm';
   /** Who they were born to, oldest id first. Absent for founders. */
   readonly parentIds?: readonly [number, number] | null;
   /** Days of sickness left. Absent in saves from before anyone could fall ill. */

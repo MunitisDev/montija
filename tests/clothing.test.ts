@@ -40,6 +40,7 @@ function people(count: number, housed: boolean): Villager[] {
     const villager = new Villager({
       id: index + 1,
       name: `Test ${index}`,
+      sex: 'f',
       age: 30,
       position: { wx: 0, wy: 0 },
       lifespan: 70,

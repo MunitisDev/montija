@@ -29,6 +29,21 @@ export type VillagerActivity = 'idle' | 'walking' | 'working' | 'hauling' | 'ill
  */
 export type WorkPreference = number | 'labourer' | null;
 
+/**
+ * Which of two a villager is.
+ *
+ * Added for one reason: a household should read the way a player expects, with
+ * a couple and children who carry a family name. Nothing else in the game
+ * consults it — there is no difference in what anybody can do, eat, carry or
+ * survive, and there is not going to be one.
+ *
+ * It does decide who may pair with whom, which is the one place it could have
+ * done damage: a settlement that happened to be founded eight to two would
+ * make fewer couples and grow more slowly. That was measured rather than
+ * assumed before it shipped. See `docs/GAME_DESIGN.md`.
+ */
+export type Sex = 'f' | 'm';
+
 export interface VillagerNeeds {
   /** 0 = starving, 100 = full. */
   hunger: number;
@@ -41,6 +56,7 @@ export interface VillagerNeeds {
 export class Villager {
   public readonly id: number;
   public readonly name: string;
+  public readonly sex: Sex;
   public age: number;
 
   /** Continuous position, in world units (one unit = one cell). */
@@ -143,14 +159,15 @@ export class Villager {
    * a newcomer who walked in from outside.
    *
    * Recorded because a settlement whose people are interchangeable is a
-   * settlement nobody minds losing. It is information and nothing else: no
-   * system reads it, inheritance does not exist, and nobody is stopped from
-   * pairing with a relative — that last one is a real omission rather than an
-   * oversight, and the note is here so the next person knows it was a choice.
+   * settlement nobody minds losing. Almost information and nothing else: the
+   * only thing that reads it is the family name a child is given. There is no
+   * inheritance of anything else, and nobody is stopped from pairing with a
+   * relative — that last one is a real omission rather than an oversight, and
+   * the note is here so the next person knows it was a choice.
    *
-   * Deliberately not "mother and father": the simulation has no notion of sex,
-   * and inventing one to fill in a label would be a whole model added for a
-   * caption.
+   * Stored oldest id first rather than as mother and father. The pair is
+   * always one of each, so the roles could be recovered from `sex` if anything
+   * ever needed them, and nothing does.
    */
   public parentIds: readonly [number, number] | null = null;
 
@@ -171,12 +188,14 @@ export class Villager {
   constructor(options: {
     id: number;
     name: string;
+    sex: Sex;
     age: number;
     position: WorldPoint;
     lifespan: number;
   }) {
     this.id = options.id;
     this.name = options.name;
+    this.sex = options.sex;
     this.age = options.age;
     this.position = options.position;
     this.previousPosition = options.position;

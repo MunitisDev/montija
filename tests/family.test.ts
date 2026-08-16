@@ -20,6 +20,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Simulation } from '@/simulation/Simulation';
 import { CHILDBEARING_AGE_MAX, CHILDBEARING_AGE_MIN } from '@/data/population';
+import { FEMININE_NAMES, MASCULINE_NAMES } from '@/data/villagers';
 import { restore, serialise } from '@/simulation/save/serialise';
 import { TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
 import type { Villager } from '@/simulation/villagers/Villager';
@@ -205,6 +206,103 @@ describe('children', () => {
   });
 });
 
+describe('names', () => {
+  it('passes the family name down to the children', () => {
+    // What makes a roster read as households rather than as a list of
+    // strangers who happen to share a roof.
+    const simulation = raiseAFamily(240);
+    const byId = new Map(simulation.villagers.all.map((v) => [v.id, v]));
+    const children = simulation.villagers.all.filter((v) => v.parentIds !== null);
+    expect(children.length).toBeGreaterThan(0);
+
+    for (const child of children) {
+      const parents = child.parentIds!.map((id) => byId.get(id)).filter(Boolean);
+      if (parents.length < 2) {
+        // A parent has died since; nothing left to compare against.
+        continue;
+      }
+      const father = parents.find((p) => p!.sex === 'm')!;
+      expect(surname(child.name), `${child.name}`).toBe(surname(father.name));
+    }
+  });
+
+  it('gives a child a given name of their own', () => {
+    const simulation = raiseAFamily(240);
+    for (const child of simulation.villagers.all.filter((v) => v.parentIds !== null)) {
+      expect(child.name.split(' ').length).toBeGreaterThanOrEqual(2);
+      expect(child.name.split(' ')[0]!.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('matches a given name to who somebody is', () => {
+    const simulation = raiseAFamily(60);
+    for (const villager of simulation.villagers.all) {
+      const given = villager.name.split(' ')[0]!;
+      const pool = villager.sex === 'f' ? FEMININE_NAMES : MASCULINE_NAMES;
+      expect(pool, `${villager.name} (${villager.sex})`).toContain(given);
+    }
+  });
+});
+
+describe('households', () => {
+  it('moves a couple in together', () => {
+    // A couple sleeping in separate houses is the household model saying one
+    // thing and the roster showing another.
+    const simulation = raiseAFamily(30);
+    const byId = new Map(simulation.villagers.all.map((v) => [v.id, v]));
+
+    let couples = 0;
+    for (const villager of simulation.villagers.all) {
+      if (villager.partnerId === null || villager.partnerId < villager.id) {
+        continue;
+      }
+      const partner = byId.get(villager.partnerId);
+      if (!partner || villager.homeId === null) {
+        continue;
+      }
+      couples += 1;
+      expect(partner.homeId, `${villager.name} and ${partner.name}`).toBe(villager.homeId);
+    }
+    expect(couples).toBeGreaterThan(0);
+  });
+
+  it('never overfills a house to do it', () => {
+    // Pushing a third person onto the street to seat a couple would be a far
+    // worse outcome than a couple who have not moved in yet.
+    const simulation = raiseAFamily(240);
+    const occupancy = new Map<number, number>();
+    for (const villager of simulation.villagers.all) {
+      if (villager.homeId !== null) {
+        occupancy.set(villager.homeId, (occupancy.get(villager.homeId) ?? 0) + 1);
+      }
+    }
+    for (const [homeId, count] of occupancy) {
+      const house = simulation.world.buildings.getById(homeId);
+      expect(count, `house ${homeId}`).toBeLessThanOrEqual(house?.definition.housing ?? 0);
+    }
+  });
+
+  it('keeps a child under the same roof as its parents', () => {
+    const simulation = raiseAFamily(240);
+    const byId = new Map(simulation.villagers.all.map((v) => [v.id, v]));
+    const children = simulation.villagers.all.filter(
+      (v) => v.parentIds !== null && !v.isAdult && v.homeId !== null,
+    );
+    expect(children.length).toBeGreaterThan(0);
+
+    let together = 0;
+    for (const child of children) {
+      const parents = child.parentIds!.map((id) => byId.get(id)).filter(Boolean);
+      if (parents.some((p) => p!.homeId === child.homeId)) {
+        together += 1;
+      }
+    }
+    // Not every child, every time — a house can fill up and somebody has to
+    // sleep elsewhere — but a family that is usually split is not a family.
+    expect(together).toBeGreaterThan(children.length / 2);
+  });
+});
+
 describe('a family over a save', () => {
   it('keeps its couples and its parents', () => {
     const simulation = raiseAFamily(240);
@@ -241,3 +339,9 @@ describe('the settlement report', () => {
     }
   });
 });
+
+/** Everything after the given name. */
+function surname(name: string): string {
+  const space = name.indexOf(' ');
+  return space === -1 ? name : name.slice(space + 1);
+}

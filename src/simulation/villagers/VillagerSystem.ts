@@ -25,7 +25,8 @@
 
 import {
   FAMILY_NAMES,
-  GIVEN_NAMES,
+  FEMININE_NAMES,
+  MASCULINE_NAMES,
   VILLAGER_WALK_SPEED,
   WAYPOINT_TOLERANCE,
 } from '@/data/villagers';
@@ -48,7 +49,7 @@ import { findPath } from '@/simulation/pathfinding/AStar';
 import { ROAD_SPEED_MULTIPLIER } from '@/simulation/world/RoadGrid';
 import type { SeasonalProfile } from '@/simulation/seasons/SeasonClock';
 import type { World } from '@/simulation/world/World';
-import { Villager } from './Villager';
+import { Villager, type Sex } from './Villager';
 
 /**
  * How many tree shapes exist to choose from.
@@ -158,10 +159,12 @@ export class VillagerSystem {
         break;
       }
 
+      const sex = this.rollSex();
       this.villagers.push(
         new Villager({
           id: this.nextId,
-          name: this.makeName(),
+          name: this.makeName(sex),
+          sex,
           // A founding settlement is adults, not children.
           age: this.randomSource.int(FOUNDER_AGE_MIN, FOUNDER_AGE_MAX + 1),
           position: gridToWorld(cell),
@@ -182,10 +185,20 @@ export class VillagerSystem {
    * own drawn from the same seeded stream, so a generation does not die
    * together.
    */
-  public bear(cell: GridPoint, homeId: number, parents?: readonly [number, number]): Villager {
+  public bear(
+    cell: GridPoint,
+    homeId: number,
+    parents?: readonly [number, number],
+    familyName?: string,
+  ): Villager {
+    const sex = this.rollSex();
     const villager = new Villager({
       id: this.nextId,
-      name: this.makeName(),
+      // Born into a family, not named from scratch: a child carries the house's
+      // name, which is what makes a roster read as households rather than as a
+      // list of strangers who happen to share a roof.
+      name: familyName ? `${this.givenName(sex)} ${familyName}` : this.makeName(sex),
+      sex,
       age: 0,
       position: gridToWorld(this.world.navigation.nearestWalkable(cell) ?? cell),
       lifespan: rollLifespan(this.random),
@@ -212,9 +225,11 @@ export class VillagerSystem {
       return null;
     }
 
+    const sex = this.rollSex();
     const villager = new Villager({
       id: this.nextId,
-      name: this.makeName(),
+      name: this.makeName(sex),
+      sex,
       age: this.randomSource.int(IMMIGRANT_AGE_MIN, IMMIGRANT_AGE_MAX + 1),
       position: gridToWorld(cell),
       lifespan: rollLifespan(this.randomSource),
@@ -1037,9 +1052,26 @@ export class VillagerSystem {
     return this.world.navigation.nearestWalkable(origin);
   }
 
-  private makeName(): string {
-    const given = this.randomSource.pick(GIVEN_NAMES) ?? 'Villager';
+  private makeName(sex: Sex): string {
     const family = this.randomSource.pick(FAMILY_NAMES) ?? 'Of the Vale';
-    return `${given} ${family}`;
+    return `${this.givenName(sex)} ${family}`;
+  }
+
+  private givenName(sex: Sex): string {
+    const pool = sex === 'f' ? FEMININE_NAMES : MASCULINE_NAMES;
+    return this.randomSource.pick(pool) ?? 'Villager';
+  }
+
+  /**
+   * An even coin, from the seeded stream.
+   *
+   * Even rather than weighted, and drawn per person rather than balanced across
+   * the settlement: a founding ten can come out seven to three, which is a
+   * settlement that will grow more slowly. That is a real outcome of the seed
+   * rather than a bug, and it was measured before shipping — see the note on
+   * `Sex` and `docs/GAME_DESIGN.md`.
+   */
+  private rollSex(): Sex {
+    return this.randomSource.next() < 0.5 ? 'f' : 'm';
   }
 }

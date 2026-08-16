@@ -73,6 +73,7 @@ describe('daily survival', () => {
       const villager = new Villager({
         id: i + 1,
         name: `V${i}`,
+        sex: 'f',
         age: 30,
         position: { wx: 0.5, wy: 0.5 },
         lifespan: 70,
@@ -191,6 +192,7 @@ describe('shelter', () => {
       const villager = new Villager({
         id: i + 1,
         name: `V${i}`,
+        sex: 'f',
         age: 30,
         position: { wx: 0.5, wy: 0.5 },
         lifespan: 70,
