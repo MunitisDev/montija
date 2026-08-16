@@ -28,6 +28,7 @@
 import { recipe as findRecipe } from '@/data/recipes';
 import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
 import type { Simulation } from '@/simulation/Simulation';
+import { DAYS_PER_YEAR } from '@/simulation/rescue/RescueSystem';
 import { SEASONAL_YIELD, TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
 import {
   CLOTHING_PER_VILLAGER_PER_COLD_DAY,
@@ -40,9 +41,17 @@ import type { MessageKey } from '@/ui/i18n/messages';
 
 export type Translate = (key: MessageKey) => string;
 
-export type LedgerTabId = 'people' | 'buildings' | 'production' | 'consumption';
+export type LedgerTabId = 'rescue' | 'people' | 'buildings' | 'production' | 'consumption';
 
+/**
+ * Tab order, and the default is the first.
+ *
+ * The rescue leads because it is the only page with something to *do* on it,
+ * and because it is the question the whole game is an answer to. The other four
+ * describe the settlement; this one describes leaving it.
+ */
 export const LEDGER_TABS: readonly LedgerTabId[] = [
+  'rescue',
   'people',
   'buildings',
   'production',
@@ -60,10 +69,30 @@ export interface LedgerRow {
 
 export interface LedgerSection {
   readonly id: string;
+  /**
+   * The heading, or empty to have none.
+   *
+   * A one-section tab whose heading repeats the tab's own name says the same
+   * word twice in three lines. Empty is how such a tab says "no heading" rather
+   * than the renderer guessing.
+   */
   readonly title: string;
   /** Shown when the section has nothing to report. */
   readonly empty?: string;
   readonly rows: readonly LedgerRow[];
+}
+
+/**
+ * The one button the ledger has.
+ *
+ * Only the rescue tab carries one, and only ever one: a page of figures with
+ * controls scattered through it stops being a page of figures. The model says
+ * what it is called and whether it can be pressed; the renderer decides how it
+ * looks and what pressing it calls.
+ */
+export interface LedgerAction {
+  readonly label: string;
+  readonly enabled: boolean;
 }
 
 export interface LedgerTab {
@@ -71,6 +100,7 @@ export interface LedgerTab {
   readonly title: string;
   /** A sentence above the sections, where one is needed. Usually a caveat. */
   readonly note?: string;
+  readonly action?: LedgerAction;
   readonly sections: readonly LedgerSection[];
 }
 
@@ -152,11 +182,63 @@ export function totalDemand(flows: Flows, resource: ResourceId): number {
 export function buildLedger(simulation: Simulation, t: Translate): readonly LedgerTab[] {
   const flows = estimateFlows(simulation);
   return [
+    rescueTab(simulation, t),
     peopleTab(simulation, t),
     buildingsTab(simulation, t),
     productionTab(flows, t),
     consumptionTab(simulation, flows, t),
   ];
+}
+
+/**
+ * How far the settlement has got towards getting off this coast.
+ *
+ * The only page in the ledger about the future rather than the present, and the
+ * only one with a button. What it shows is deliberately the same five facts at
+ * every stage — where the message is, whether the school stands, how long is
+ * left — so the player learns one page rather than five.
+ */
+function rescueTab(simulation: Simulation, t: Translate): LedgerTab {
+  const rescue = simulation.rescue;
+  const schools = simulation.world.buildings.countOf('school');
+  const sentTick = simulation.rescueTicks.messageSentTick;
+
+  const rows: LedgerRow[] = [
+    {
+      label: t('rescue.school'),
+      value: schools > 0 ? t('rescue.schoolStanding') : t('rescue.schoolNone'),
+      ...(schools > 0 ? { tone: 'good' as const } : {}),
+    },
+  ];
+
+  if (sentTick !== null) {
+    rows.push({
+      label: t('ending.messageYear'),
+      value: String(yearOfTick(sentTick)),
+    });
+  }
+
+  if (rescue.yearsRemaining !== null) {
+    rows.push({
+      label: t('rescue.remaining'),
+      // Shown in years rather than days: a four-figure day count is a number
+      // nobody can hold, and the answer to "are we close" is a year.
+      value: String(rescue.yearsRemaining),
+      ...(rescue.stage === 'sighted' ? { tone: 'good' as const } : {}),
+    });
+  }
+
+  return {
+    id: 'rescue',
+    title: t('rescue.title'),
+    note: t(`rescue.${rescue.stage}` as MessageKey),
+    ...(rescue.stage === 'ready' || rescue.stage === 'carrying'
+      ? { action: { label: t('rescue.send'), enabled: rescue.canSendMessage } }
+      : {}),
+    // No heading: this tab has one section, and repeating "Getting home"
+    // directly under the tab called "Getting home" is noise.
+    sections: [{ id: 'progress', title: '', rows }],
+  };
 }
 
 function peopleTab(simulation: Simulation, t: Translate): LedgerTab {
@@ -403,6 +485,11 @@ function consumptionTab(simulation: Simulation, flows: Flows, t: Translate): Led
       { id: 'yesterday', title: t('ledger.section.yesterday'), rows: yesterday },
     ],
   };
+}
+
+/** Which year of the settlement a tick falls in, counting from 1. */
+export function yearOfTick(tick: number): number {
+  return Math.floor(tick / (TICKS_PER_DAY * DAYS_PER_YEAR)) + 1;
 }
 
 function add(into: Map<ResourceId, number>, resource: ResourceId, amount: number): void {

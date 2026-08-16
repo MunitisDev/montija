@@ -24,8 +24,27 @@ SaveGame
 ├── storages         cells, capacities, contents, and how well each keeps food
 ├── jobs             the whole board, verbatim
 ├── deaths           the settlement's toll
+├── rescue           when the bottle went out, and when the ship landed
+├── chronicle        lifetime tallies, for the closing page
 └── random           each seeded stream's position
 ```
+
+### Why the rescue is two ticks rather than a stage
+
+`rescue` stores `messageSentTick` and `arrivedTick` and nothing else. Every stage the player sees —
+ready, carrying, awaited, sighted, arrived — is derived from those two numbers against the current
+tick, so a loaded settlement cannot restore into a stage that disagrees with its own clock. Storing
+`stage: 'awaited'` would have allowed exactly that.
+
+### Why the chronicle is stored rather than recomputed
+
+Every figure in it is about the **past**: who was born, who was buried, how many walls went up, the
+coldest night anybody stood through. A snapshot of the present cannot be asked what the past was —
+by the time the ship comes, most of the people the chronicle counts are dead. Recording it as it
+happens is the only way to have it at all.
+
+Both are optional fields. A save written before there was a way off this coast restores as a
+settlement that never sent for anyone, with an empty history — which is the honest reading of it.
 
 ### Why terrain is stored rather than regenerated
 

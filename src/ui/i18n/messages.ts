@@ -113,6 +113,9 @@ export const EN = {
   'building.orchard': 'Orchard',
   'building.orchard.description': 'Years to establish, and then the best harvest there is.',
 
+  'building.school': 'School',
+  'building.school.description': 'Teaches the settlement its letters — and lets it write for help.',
+
   'placement.offMap': 'beyond the map',
   'placement.blockedTerrain': 'ground will not take it',
   'placement.occupied': 'something is already here',
@@ -226,10 +229,42 @@ export const EN = {
   'ledger.spent.tools': 'Tools worn out',
   'ledger.spent.clothing': 'Coats worn out',
 
+  'rescue.title': 'Getting home',
+  'rescue.unaware': 'Nobody knows you are here. A School would let you write.',
+  'rescue.ready': 'The school can write for help. Somebody must carry it to the sea.',
+  'rescue.carrying': 'Somebody is walking the bottle down to the water.',
+  'rescue.awaited': 'The bottle is away. Now it is only a matter of years.',
+  'rescue.sighted': 'A sail on the horizon.',
+  'rescue.arrived': 'The ship has come.',
+  'rescue.send': 'Send word to the sea',
+  'rescue.remaining': 'Years until a ship could come',
+  'rescue.school': 'School',
+  'rescue.schoolStanding': 'standing',
+  'rescue.schoolNone': 'not built',
+  'event.messageSent': 'The bottle is on the tide',
+  'event.sailSighted': 'A sail on the horizon',
+
+  'ending.title': 'The ship has come',
+  'ending.body':
+    'A sail out of the same water that wrecked you, and this time it is here for you. What the settlement did with the years between is below.',
+  'ending.close': 'Stay a while longer',
+  'ending.founded': 'Years ashore',
+  'ending.leaving': 'Sailing home',
+  'ending.born': 'Born here',
+  'ending.arrived': 'Newcomers taken in',
+  'ending.died': 'Buried here',
+  'ending.peak': 'Most people at once',
+  'ending.raised': 'Buildings raised',
+  'ending.foodEaten': 'Meals eaten',
+  'ending.firewoodBurned': 'Firewood burned',
+  'ending.coldest': 'Coldest night',
+  'ending.roughNights': 'Nights slept in the open',
+  'ending.messageYear': 'Word sent in year',
+
   'guide.title': 'How to play',
   'guide.objective': 'What you are trying to do',
   'guide.objective.body':
-    'Ten settlers arrive in spring with what they could carry. Nothing grows under snow, so everything eaten in winter has to be gathered and stored before it arrives. Survive the first winter and the settlement is yours to grow.',
+    'Ten settlers wash ashore in spring with what they could drag off the wreck. Nothing grows under snow, so everything eaten in winter has to be gathered and stored before it arrives. Survive the first winter and the settlement is yours to grow — and the way home is a School, a bottle carried down to the water, and about forty years of waiting.',
   'guide.loop': 'How work happens',
   'guide.loop.body':
     'You never order a villager about directly. You mark what needs doing and raise the buildings; they find the work themselves. Resources are real things in real places — a felled tree becomes logs on the ground, and those logs are worth nothing until somebody has carried them to a store.',
@@ -432,6 +467,10 @@ export const ES: Messages = {
   'building.orchard': 'Huerto',
   'building.orchard.description': 'Tarda años en dar fruto, y luego da la mejor cosecha.',
 
+  'building.school': 'Escuela',
+  'building.school.description':
+    'Enseña a leer y escribir al asentamiento, y le permite pedir ayuda.',
+
   'placement.offMap': 'fuera del mapa',
   'placement.blockedTerrain': 'el terreno no lo admite',
   'placement.occupied': 'ya hay algo aquí',
@@ -545,10 +584,42 @@ export const ES: Messages = {
   'ledger.spent.tools': 'Herramientas gastadas',
   'ledger.spent.clothing': 'Abrigos gastados',
 
+  'rescue.title': 'La vuelta a casa',
+  'rescue.unaware': 'Nadie sabe que estáis aquí. Una escuela os permitiría escribir.',
+  'rescue.ready': 'La escuela puede pedir ayuda. Alguien tiene que llevarlo al mar.',
+  'rescue.carrying': 'Alguien baja con la botella hasta el agua.',
+  'rescue.awaited': 'La botella está en el mar. Ahora solo es cuestión de años.',
+  'rescue.sighted': 'Una vela en el horizonte.',
+  'rescue.arrived': 'El barco ha llegado.',
+  'rescue.send': 'Mandar aviso al mar',
+  'rescue.remaining': 'Años hasta que pueda llegar un barco',
+  'rescue.school': 'Escuela',
+  'rescue.schoolStanding': 'en pie',
+  'rescue.schoolNone': 'sin construir',
+  'event.messageSent': 'La botella va en la marea',
+  'event.sailSighted': 'Una vela en el horizonte',
+
+  'ending.title': 'El barco ha llegado',
+  'ending.body':
+    'Una vela saliendo del mismo agua que os hundió, y esta vez viene a por vosotros. Lo que hizo el asentamiento con los años de en medio está aquí abajo.',
+  'ending.close': 'Quedarse un poco más',
+  'ending.founded': 'Años en la costa',
+  'ending.leaving': 'Vuelven a casa',
+  'ending.born': 'Nacidos aquí',
+  'ending.arrived': 'Recién llegados acogidos',
+  'ending.died': 'Enterrados aquí',
+  'ending.peak': 'Máximo de habitantes a la vez',
+  'ending.raised': 'Edificios levantados',
+  'ending.foodEaten': 'Raciones consumidas',
+  'ending.firewoodBurned': 'Leña quemada',
+  'ending.coldest': 'La noche más fría',
+  'ending.roughNights': 'Noches dormidas a la intemperie',
+  'ending.messageYear': 'Aviso enviado el año',
+
   'guide.title': 'Cómo se juega',
   'guide.objective': 'Qué hay que conseguir',
   'guide.objective.body':
-    'Diez colonos llegan en primavera con lo que pudieron cargar. Bajo la nieve no crece nada, así que todo lo que se coma en invierno hay que recolectarlo y guardarlo antes de que llegue. Sobrevive al primer invierno y el asentamiento será tuyo para hacerlo crecer.',
+    'Diez náufragos llegan a la costa en primavera con lo que pudieron sacar del barco. Bajo la nieve no crece nada, así que todo lo que se coma en invierno hay que recolectarlo y guardarlo antes de que llegue. Sobrevive al primer invierno y el asentamiento será tuyo para hacerlo crecer; y la vuelta a casa es una escuela, una botella llevada hasta el agua y unos cuarenta años de espera.',
   'guide.loop': 'Cómo se trabaja',
   'guide.loop.body':
     'Nunca das órdenes a un aldeano concreto. Tú marcas lo que hay que hacer y levantas los edificios; ellos buscan el trabajo solos. Los recursos son cosas reales en lugares reales: un árbol talado deja troncos en el suelo, y esos troncos no valen nada hasta que alguien los lleva a un almacén.',

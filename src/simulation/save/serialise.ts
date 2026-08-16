@@ -12,6 +12,7 @@ import type { Inventory } from '@/simulation/resources/Inventory';
 import { LIFESPAN_MAX } from '@/data/population';
 import { Building } from '@/simulation/buildings/Building';
 import { findAccessCell } from '@/simulation/buildings/BuildingRegistry';
+import { newChronicle } from '@/simulation/rescue/Chronicle';
 import { Villager } from '@/simulation/villagers/Villager';
 import type { SavedInventory, SaveGame } from './SaveGame';
 import { SAVE_VERSION } from './SaveGame';
@@ -100,6 +101,8 @@ export function serialise(simulation: Simulation, savedAt: string): SaveGame {
     // makes this a copy rather than a conversion.
     jobs: simulation.jobs.all.map((job) => ({ ...job })),
     deaths: simulation.snapshot().deaths,
+    rescue: { ...simulation.rescueTicks },
+    chronicle: { ...simulation.snapshot().chronicle },
     random: {
       villagers: simulation.villagers.randomState,
       forest: simulation.forestRandomState,
@@ -228,6 +231,12 @@ export function restore(simulation: Simulation, save: SaveGame): void {
       simulation.restoreIllnessRandom(save.random.illness);
     }
   }
+  // Before the clock, so a settlement restored mid-wait reads its remaining
+  // years against the tick it was actually saved at.
+  simulation.restoreRescue(
+    save.rescue ?? { messageSentTick: null, arrivedTick: null },
+    save.chronicle ?? newChronicle(),
+  );
   simulation.restoreClock(save.simulationTime, save.deaths);
 }
 

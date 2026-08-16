@@ -17,6 +17,7 @@ import type { I18n } from '@/ui/i18n/I18n';
 import {
   LEDGER_TABS,
   buildLedger,
+  type LedgerAction,
   type LedgerRow,
   type LedgerSection,
   type LedgerTab,
@@ -34,8 +35,22 @@ export class Ledger {
   private readonly closeButton: HTMLButtonElement;
 
   private readonly tabButtons = new Map<LedgerTabId, HTMLButtonElement>();
-  private active: LedgerTabId = 'people';
+  /**
+   * The tab shown on first open, and remembered after that.
+   *
+   * Read from the order rather than named, so "the first tab is the default"
+   * cannot quietly stop being true when the order changes.
+   */
+  private active: LedgerTabId = LEDGER_TABS[0] ?? 'people';
   private onClose: (() => void) | null = null;
+
+  /**
+   * Called when the tab's one button is pressed, with that tab's id.
+   *
+   * A callback rather than the sheet reaching into the simulation itself: the
+   * ledger reports, and reporting and commanding are different jobs.
+   */
+  public onAction: ((tab: LedgerTabId) => void) | null = null;
 
   constructor(root: HTMLElement, context: GameContext, i18n: I18n) {
     this.context = context;
@@ -114,24 +129,44 @@ export class Ledger {
     }
 
     const current = tabs.find((tab) => tab.id === this.active) ?? tabs[0];
-    this.body.replaceChildren(...(current ? renderTab(current) : []));
-  }
-}
-
-function renderTab(tab: LedgerTab): HTMLElement[] {
-  const nodes: HTMLElement[] = [];
-
-  if (tab.note) {
-    const note = document.createElement('p');
-    note.className = 'ledger__note';
-    note.textContent = tab.note;
-    nodes.push(note);
+    this.body.replaceChildren(...(current ? this.renderTab(current) : []));
   }
 
-  for (const section of tab.sections) {
-    nodes.push(renderSection(section));
+  private renderTab(tab: LedgerTab): HTMLElement[] {
+    const nodes: HTMLElement[] = [];
+
+    if (tab.note) {
+      const note = document.createElement('p');
+      note.className = 'ledger__note';
+      note.textContent = tab.note;
+      nodes.push(note);
+    }
+
+    if (tab.action) {
+      nodes.push(this.renderAction(tab.id, tab.action));
+    }
+
+    for (const section of tab.sections) {
+      nodes.push(renderSection(section));
+    }
+    return nodes;
   }
-  return nodes;
+
+  private renderAction(id: LedgerTabId, action: LedgerAction): HTMLElement {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'ledger__action';
+    button.textContent = action.label;
+    button.disabled = !action.enabled;
+    button.addEventListener('click', () => {
+      this.onAction?.(id);
+      // Redrawn immediately: pressing this changes what the page says about
+      // itself, and a button that stays pressable reads as though nothing
+      // happened.
+      this.render();
+    });
+    return button;
+  }
 }
 
 function renderSection(section: LedgerSection): HTMLElement {
@@ -139,10 +174,12 @@ function renderSection(section: LedgerSection): HTMLElement {
   element.className = 'ledger__section';
   element.dataset['section'] = section.id;
 
-  const heading = document.createElement('h3');
-  heading.className = 'ledger__heading';
-  heading.textContent = section.title;
-  element.append(heading);
+  if (section.title) {
+    const heading = document.createElement('h3');
+    heading.className = 'ledger__heading';
+    heading.textContent = section.title;
+    element.append(heading);
+  }
 
   if (section.rows.length === 0) {
     const empty = document.createElement('p');

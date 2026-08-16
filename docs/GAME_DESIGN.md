@@ -682,6 +682,62 @@ settlement simply carried on being drawn as an empty valley.
 
 ---
 
+## Getting home — Implemented
+
+The game's only **win condition**, and the other half of the shipwreck. The settlers came ashore with
+what they could drag up the beach; this is how they leave.
+
+```text
+raise a School  →  a message can be written
+      ↓
+carry it to the tideline  →  the bottle goes out
+      ↓
+forty years pass  →  a sail on the horizon
+      ↓
+the ship lands  →  the chronicle
+```
+
+**Why a school.** Somebody has to be able to write. More to the point, a settlement that can spare
+the stone, the iron and the years to teach its children has stopped merely surviving — and that is a
+milestone the economy already knows how to express. The school is simply the most expensive thing in
+the game: **30 logs, 20 stone, 12 iron**, which means a quarry, a mine and the logistics to keep both
+fed. It has no worker slots, like the trading post. A teacher who taught nothing the simulation
+models would be a villager the settlement cannot afford, doing a job the game only pretends exists.
+
+**Why the bottle is carried rather than clicked.** The project refuses to fake logistics anywhere
+else — a felled tree does not become `wood += 1` — and a message must not become `sent = true`.
+Somebody walks it to the water. It also makes the sea a real constraint: the coast has to be
+reachable from the settlement.
+
+**Why forty years.** Counted from the message rather than from the founding, so getting word out
+early is worth something — a settlement that reaches a school by its tenth year sails a decade before
+one that takes twenty. Forty is chosen against the two facts that bound it: a school realistically
+lands somewhere in the first ten or fifteen years, and forty more puts the ship at roughly **year
+fifty**, which is the span the game is about. In real time that is a little under an hour at 4x and
+around three at 1x. A campaign, deliberately, not a session.
+
+**No ship comes for an empty settlement.** A settlement with nobody left in it is not rescued, it is
+found; the failure overlay is the right ending for that, and it already exists.
+
+**The ending does not end the game.** Closing the closing page leaves the settlement standing and the
+clock running, which is why its button says "stay a while longer" rather than "close". A player who
+wants to keep the place going after the ship has been is welcome to.
+
+### The chronicle
+
+What the closing page reports: years ashore, who is sailing home, who was born, taken in and buried,
+the peak population, walls raised, meals eaten, firewood burned, the coldest night and the nights
+anybody slept in the open. Recorded as it happens rather than reconstructed, because all of it is
+about the past. A settlement of twelve tells you nothing about the forty who lived there.
+
+The one figure that is about the present — who is on the ship — is labelled as such.
+
+**Not measured yet.** Nobody has played the arc end to end at real speed. The forty-year span is a
+considered number, not a tested one, and it is a single constant (`RESCUE_YEARS`) precisely so it can
+move once somebody has sat through it.
+
+---
+
 ## Open questions
 
 - **A do-nothing settlement dies in autumn, not winter.** Defensible — doing nothing for
@@ -691,3 +747,6 @@ settlement simply carried on being drawn as an empty valley.
   designated enough work. Whether that reads as calm or as broken is a question for a real playtest.
 - **No professions.** Villagers take whatever the job board offers rather than holding a trade, so a
   "worker slot" is a post rather than a career.
+- **The rescue has never been played at real speed.** Forty years is around three hours at 1x. The
+  arc is tested to the tick and verified in a browser by winding the clock, but whether the _wait_
+  is interesting — whether a settlement at year thirty still has anything to decide — is unknown.

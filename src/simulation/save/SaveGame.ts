@@ -153,6 +153,37 @@ export interface SaveGame {
   readonly jobs: readonly Job[];
   readonly deaths: number;
   /**
+   * When the bottle went out and when the ship landed.
+   *
+   * Two ticks rather than a stage, so a loaded settlement cannot restore into a
+   * rescue that disagrees with its own clock. Absent in saves written before
+   * there was a way off this coast, which restore as a settlement that has not
+   * sent for anyone — the correct reading of a save that predates the rescue.
+   */
+  readonly rescue?: {
+    readonly messageSentTick: number | null;
+    readonly arrivedTick: number | null;
+  };
+  /**
+   * Lifetime totals.
+   *
+   * Saved rather than recomputed because they are about the past, and a
+   * snapshot of the present cannot be asked what the past was. Absent in older
+   * saves, which restore at zero — a settlement whose history was never
+   * written down, honestly reported as such.
+   */
+  readonly chronicle?: {
+    readonly born: number;
+    readonly died: number;
+    readonly arrived: number;
+    readonly peakPopulation: number;
+    readonly buildingsRaised: number;
+    readonly foodEaten: number;
+    readonly firewoodBurned: number;
+    readonly coldest: number;
+    readonly roughNights: number;
+  };
+  /**
    * Where each random stream had got to.
    *
    * Without this a loaded settlement restarts its RNG from the seed and makes

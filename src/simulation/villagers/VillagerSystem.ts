@@ -528,6 +528,15 @@ export class VillagerSystem {
    */
   public onDemolished: ((buildingId: number) => void) | null = null;
 
+  /**
+   * Called when somebody reaches the tideline with the bottle.
+   *
+   * A callback for the same reason demolition is one: the villagers do not
+   * know there is a rescue, and should not have to. They were asked to walk
+   * something to the sea and they did.
+   */
+  public onMessageDelivered: (() => void) | null = null;
+
   private workRate(): number {
     return this.workRateProvider ? this.workRateProvider() : 1;
   }
@@ -590,6 +599,11 @@ export class VillagerSystem {
       }
       case 'produce':
         this.runRecipe(job);
+        break;
+      case 'carry-message':
+        // The villager's part ends at the water. What a bottle on the tide
+        // means is the simulation's business, not theirs.
+        this.onMessageDelivered?.();
         break;
       case 'haul':
       case 'move-to':

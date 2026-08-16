@@ -53,6 +53,7 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 26    | Smoke and trade props         | **Implemented** |
 | 27    | The settings cog              | **Implemented** |
 | 28    | Stores, clock and ledger      | **Implemented** |
+| 29    | Getting home                  | **Implemented** |
 
 ---
 
@@ -768,21 +769,42 @@ overlay in the game that leaves the clock running.
 
 ---
 
-## Planned - the rescue
+## Phase 29 - Getting home - Implemented
 
-The other half of the story, and the game's first **win condition**: get word
-out, and survive until a ship comes. Not built. Sketched here so the shape is on
-record:
+The game's only **win condition**, and the other half of the shipwreck. Set out
+in [GAME_DESIGN.md](./GAME_DESIGN.md), including why forty years and why a
+school.
 
-- A **School**, and something that sends word - a bottle to the tide.
-- The ship arrives a fixed span later. At 48 days to the year and 6 seconds to
-  the day, **fifty years is an hour of play at 4x** and four hours at 1x; a
-  hundred years is double that. Fifty looks like the campaign and a hundred like
-  an endurance mode.
-- A closing screen of statistics: who lived, how many were born, what was built.
+```text
+raise a School  ->  a message can be written
+      |
+carry it to the tideline  ->  the bottle goes out
+      |
+forty years pass  ->  a sail on the horizon
+      |
+the ship lands  ->  the chronicle
+```
 
-**Not started on purpose.** A win condition is the roof on this building, and
-the walls are not finished: a well-played settlement still only survives its
-first year on 2 seeds in 8, and nobody has played the game yet. Fifty years of
-content resting on an unplaytested first year would be fifty years of the same
-problem.
+- **A School**, the most expensive building in the game at 30 logs, 20 stone and
+  12 iron - which means a quarry, a mine and the logistics to keep both fed. No
+  worker slots: it is a monument, not a workshop.
+- **The bottle is carried, not clicked.** Asking for it posts a job and a
+  villager physically walks it to the waterline. Nothing is sent until somebody
+  arrives, because the project refuses to fake logistics anywhere else either.
+- **A rescue tab** leading the ledger, with the one button the ledger has. It is
+  the same five facts at every stage, so the player learns one page rather than
+  five.
+- **A closing page** that opens itself when the ship lands, pauses like every
+  other sheet, and leaves the settlement standing when it is closed.
+
+Two things worth recording about how it is built. The rescue is stored as **two
+ticks** - bottle away, ship landed - and every stage is derived from them, so a
+save cannot restore into a stage that disagrees with its own clock. And the
+chronicle is **recorded as it happens**, because every figure on the closing
+page is about the past and a snapshot of the present cannot be asked what the
+past was.
+
+**Not measured.** Nobody has played the arc at real speed - forty years is
+around three hours at 1x. It is tested to the tick and verified in a browser by
+winding the clock, and `RESCUE_YEARS` is one constant precisely so it can move
+once somebody has sat through it.

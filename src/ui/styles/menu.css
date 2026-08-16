@@ -709,3 +709,47 @@ body.is-menu-open #hud {
   font-size: 0.88rem;
   color: var(--colour-ink-dim);
 }
+
+/*
+ * The ledger's one button, on the rescue tab.
+ *
+ * Deliberately the only control on a page of figures, and styled as the
+ * accented action it is: pressing it is the single most consequential thing a
+ * player ever does, and it is available for about two seconds of their
+ * attention before the tab goes back to being a status page.
+ */
+.ledger__action {
+  display: block;
+  width: 100%;
+  min-height: var(--touch-target);
+  margin: 0 0 20px;
+  padding: 0 18px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--colour-ink);
+  background: rgba(201, 162, 39, 0.16);
+  border: 1px solid rgba(201, 162, 39, 0.55);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.ledger__action:hover:not(:disabled) {
+  background: rgba(201, 162, 39, 0.26);
+}
+
+.ledger__action:disabled {
+  color: var(--colour-ink-dim);
+  background: transparent;
+  border-color: var(--colour-panel-edge);
+  cursor: default;
+}
+
+/* --- The ending ---------------------------------------------------------- */
+
+.ending__body {
+  margin: 0 0 22px;
+  max-width: 52ch;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--colour-ink);
+}

@@ -25,7 +25,8 @@ export type BuildingId =
   | 'tailor'
   | 'trading-post'
   | 'herbalist'
-  | 'healer';
+  | 'healer'
+  | 'school';
 
 export interface ResourceAmount {
   readonly resource: ResourceId;
@@ -325,6 +326,34 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     workerSlots: 2,
     recipeId: 'split-firewood',
   },
+
+  /*
+   * The most expensive thing in the game, and the only building whose point is
+   * not the settlement.
+   *
+   * A school is what lets somebody write, which is what makes the rescue
+   * possible — see `simulation/rescue/RescueSystem.ts`. Its cost is the gate:
+   * stone means a quarry, iron means a mine, and both mean the logistics to
+   * keep them fed. A settlement that can spare all that has stopped merely
+   * surviving, which is exactly the milestone worth marking.
+   *
+   * No worker slots, like the trading post. A teacher who taught nothing the
+   * simulation models would be a villager the settlement cannot afford, doing
+   * a job the game only pretends exists.
+   */
+  school: {
+    id: 'school',
+    name: 'School',
+    description: 'Teaches the settlement its letters — and lets it write for help.',
+    footprint: { width: 3, height: 3 },
+    constructionCost: [
+      { resource: 'logs', amount: 30 },
+      { resource: 'stone', amount: 20 },
+      { resource: 'iron', amount: 12 },
+    ],
+    buildTicks: 260,
+    workerSlots: 0,
+  },
 };
 
 /** Menu order. Storage first, because nothing else works without somewhere to put things. */
@@ -345,6 +374,8 @@ export const BUILDING_IDS: readonly BuildingId[] = [
   'trading-post',
   'herbalist',
   'healer',
+  // Last, because it is the last thing a settlement builds: the way home.
+  'school',
 ];
 
 export function buildingDefinition(id: BuildingId): BuildingDefinition {

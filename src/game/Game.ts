@@ -179,6 +179,13 @@ export interface GameContext {
    * Quotas say how many people a workshop should have; this says who.
    */
   setWorkPreference(villagerId: number, preference: WorkPreference): boolean;
+  /**
+   * Sends somebody to the water with the settlement's message.
+   *
+   * Returns `false` when there is no school, the bottle is already away, or
+   * somebody is already carrying it — see `rescue/RescueSystem.ts`.
+   */
+  sendMessage(): boolean;
 
   /** The building being placed, or `null` when not in placement mode. */
   readonly placement: PlacementState | null;
@@ -195,6 +202,16 @@ export interface GameContext {
   /** Human-readable result of the last save or load, for the HUD. */
   readonly saveStatus: string;
   readonly saveVersion: number;
+  /**
+   * Increments on every successful load, and on nothing else.
+   *
+   * Distinct from `worldVersion`, which means "a new settlement was founded"
+   * and restarts the whole scene. A load replaces the contents of the world in
+   * place; the one thing that needs to know is the ending sheet, which must not
+   * replay the arrival of a settlement that was already rescued when it was
+   * saved.
+   */
+  readonly loadVersion: number;
 }
 
 /** Where the placement ghost is and whether it may be committed. */
@@ -260,6 +277,7 @@ export class Game implements GameContext, InputIntentSink {
   private readonly startingVillagers: number;
   /** Bumped when the world is replaced, so the renderer knows to rebuild. */
   private worldGeneration = 0;
+  private loadsCompleted = 0;
 
   /**
    * Founds a new settlement, discarding the current one.
@@ -456,6 +474,10 @@ export class Game implements GameContext, InputIntentSink {
     return this.lastSaveStatus;
   }
 
+  public get loadVersion(): number {
+    return this.loadsCompleted;
+  }
+
   public get saveVersion(): number {
     return this.saveStatusChanges;
   }
@@ -494,6 +516,7 @@ export class Game implements GameContext, InputIntentSink {
       this.clock.restore(result.save.simulationTime, this.clock.speed);
       this.currentSelection = null;
       this.selectionChanges += 1;
+      this.loadsCompleted += 1;
       this.setSaveStatus('Loaded');
       return true;
     } catch (error) {
@@ -815,6 +838,10 @@ export class Game implements GameContext, InputIntentSink {
    * a misplaced tap on a quarry is a mistake the player can simply reverse
    * rather than one they have to live with.
    */
+  public sendMessage(): boolean {
+    return this.simulation.sendMessage();
+  }
+
   public toggleSelectedDemolition(): boolean {
     const selection = this.currentSelection;
     const building = selection?.building;

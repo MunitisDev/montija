@@ -155,6 +155,19 @@ const MASS: Readonly<Record<BuildingId, BuildingMass>> = {
   tailor: { wallHeight: 20, roofHeight: 36, eaves: 6, plinth: 4, windows: 2 },
   'crop-field': { wallHeight: 4, roofHeight: 0, eaves: 0, field: 'crop' },
   orchard: { wallHeight: 4, roofHeight: 0, eaves: 0, field: 'orchard' },
+  // The tallest and squarest thing the settlement ever raises: a deep stone
+  // plinth, high walls and more windows than anything else has, because a room
+  // people read in needs light. It should be legible as the monument it is
+  // from across the map, and it is the only building whose silhouette says
+  // "this settlement has time to spare".
+  school: {
+    wallHeight: 30,
+    roofHeight: 50,
+    eaves: 7,
+    plinth: 9,
+    chimney: true,
+    windows: 3,
+  },
 };
 
 /** Muted, earthy, and distinguishable at a glance without being colourful. */
@@ -175,6 +188,9 @@ export const BUILDING_COLOURS: Readonly<Record<BuildingId, BuildingPalette>> = {
   tailor: { wall: 0x6a5a55, roof: 0x4e4340, trim: 0x3d3532 },
   'crop-field': { wall: 0x6d6234, roof: 0x5b5230, trim: 0x4a4128 },
   orchard: { wall: 0x4f5c37, roof: 0x44502f, trim: 0x3a4428 },
+  // Paler and greyer than anything around it: dressed stone rather than the
+  // rough timber the rest of the settlement is thrown together from.
+  school: { wall: 0x7d786a, roof: 0x625a4a, trim: 0x474135 },
 };
 
 /** Breathing room above the roof, so nothing touches the texture edge. */

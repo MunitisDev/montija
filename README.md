@@ -7,16 +7,19 @@ A mobile-first 2D medieval survival settlement builder that runs in the browser.
 **▶ Play the current build: https://munitisdev.github.io/montija/** — works on desktop, tablet and
 phone, no install required. Deployed automatically from `main` on every green build.
 
-Build a small settlement in an unforgiving wilderness, and help its people survive the winter.
+Ten survivors of a wreck come ashore on an unforgiving coast. Keep them alive through the winters,
+and get them home.
 Inspired by deep settlement simulation games, but entirely original — no assets, code, text, UI or
 balance taken from any existing commercial game.
 
-**Status: Phases 0-10 complete — the MVP loop is playable.** Fell trees and quarry stone, haul them
-in, place buildings and watch villagers carry the materials and construct them, produce food and
-firewood, and try to survive the winter. Saves survive a browser refresh.
+**Status: the loop is playable end to end, and it now has an ending.** Fell trees and quarry stone,
+haul them in, place buildings and watch villagers carry the materials and construct them, produce
+food and firewood, and try to survive the winter. Raise a School, send a bottle out on the tide, and
+a ship comes about forty years later. Saves survive a browser refresh.
 
 **What is not done: balance.** Winter can kill an unprepared settlement and a stocked one survives,
-both proven in tests — but nobody has played it yet, so whether it is _enjoyable_ is unknown. See
+both proven in tests — but nobody has played it yet, so whether it is _enjoyable_ is unknown. The
+rescue arc has never been played at real speed either: forty years is around three hours at 1x. See
 [`docs/ROADMAP.md`](docs/ROADMAP.md) for what is built and what is not.
 
 On a phone or tablet, install it to the home screen to play without browser chrome — the manifest
@@ -53,9 +56,9 @@ npm run dev      # http://localhost:5173
 ## Controls
 
 The game opens on a start screen with **How to play** on it, which explains all of this in the game
-itself, in English or Spanish. The same page is reachable while playing from the **?** button in the
-top bar. Its building and resource lists are generated from the game's own data tables, so they
-cannot drift out of step with what the game actually does.
+itself, in English or Spanish. The same page is reachable while playing from the **cog** in the top
+bar. Its building and resource lists are generated from the game's own data tables, so they cannot
+drift out of step with what the game actually does.
 
 Landscape orientation is the target. Nothing requires a keyboard or a mouse.
 
@@ -71,11 +74,20 @@ off. Felled logs and quarried stone lie where they fall until a villager hauls t
 To build: pick a building from the bottom bar, move the camera until the ghost sits where you want
 it, and press **Place**. Villagers carry the materials from storage and construct it.
 
-Tap the **people** button in the top bar for everyone in the settlement, grouped by household —
-ages, families, how each of them is doing, and a picker to post somebody to a particular workshop or
-keep them on hauling. Opening it pauses the game, as does the **?** guide.
+Tap the **resource strip** to drop down every good the settlement has, with what is stored, what is
+still lying in the field, and the net per day.
 
-Simulation speed (pause / 1x / 2x / 4x) is set from the buttons at the bottom right.
+The top bar carries four more ways in. The **people** button lists everyone grouped by household —
+ages, families, how each of them is doing, and a picker to post somebody to a particular workshop or
+keep them on hauling. The **ledger** counts the settlement in five tabs, including how far it has got
+towards getting off this coast. The **cog** holds the rules, saving, loading, full screen and
+language. All of them pause the game while they are open.
+
+The remaining button is the clock: one tap cycles pause, 1x, 2x and 4x.
+
+**Getting home.** Raise a **School** — the most expensive building in the game — then open the
+ledger's first tab and send word to the sea. Somebody carries the bottle down to the water, and a
+ship comes about forty years later.
 
 ## Architecture in one paragraph
 

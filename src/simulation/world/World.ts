@@ -120,6 +120,47 @@ export class World {
     return this.navigation.nearestWalkable(this.centreCell) ?? this.centreCell;
   }
 
+  /**
+   * The water's edge on the landfall line, where a messenger can reach the sea.
+   *
+   * Not the same as {@link landfallCell}: that is deliberately set back from
+   * the waterline so the camp has ground behind it. Somebody throwing a bottle
+   * has to get their feet wet, so this walks out from the settlement until the
+   * last standable cell before the sea rather than stopping short of it.
+   *
+   * Falls back to the landfall itself when the search finds nothing — a coast
+   * with no reachable water is not a map this generator makes, and a messenger
+   * standing in the camp is a better failure than a messenger with nowhere to
+   * go at all.
+   */
+  public get tidelineCell(): GridPoint {
+    const horizontal = this.shore === 'east' || this.shore === 'west';
+    const along = horizontal ? Math.floor(this.height / 2) : Math.floor(this.width / 2);
+    const depth = horizontal ? this.width : this.height;
+    const inward = this.shore === 'east' || this.shore === 'south' ? -1 : 1;
+    const start =
+      this.shore === 'east' ? this.width - 1 : this.shore === 'south' ? this.height - 1 : 0;
+
+    let seenWater = false;
+    for (let step = 0; step < depth; step += 1) {
+      const at = start + inward * step;
+      const cell = horizontal ? { gx: at, gy: along } : { gx: along, gy: at };
+
+      if (this.terrain.get(cell.gx, cell.gy) === 'water') {
+        seenWater = true;
+        continue;
+      }
+      // Only past the sea, for the same reason landfall is: an inland lake on
+      // the way out is not the ocean, and a bottle thrown into one goes
+      // nowhere.
+      if (seenWater && this.isWalkable(cell)) {
+        return cell;
+      }
+    }
+
+    return this.landfallCell;
+  }
+
   public get width(): number {
     return this.terrain.width;
   }

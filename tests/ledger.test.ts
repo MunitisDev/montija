@@ -69,6 +69,16 @@ describe('the shape of the sheet', () => {
     }
   });
 
+  it('never repeats a tab title as its own section heading', () => {
+    // "Getting home" directly under the tab called "Getting home" is the same
+    // word twice in three lines.
+    for (const tab of buildLedger(new Simulation(OPTIONS), t)) {
+      for (const section of tab.sections) {
+        expect(section.title).not.toBe(tab.title);
+      }
+    }
+  });
+
   it('never leaves a section empty without saying so', () => {
     const tabs = buildLedger(new Simulation(OPTIONS), t);
     for (const tab of tabs) {

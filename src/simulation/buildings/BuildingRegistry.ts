@@ -150,8 +150,19 @@ export class BuildingRegistry {
    * Navigation is updated here rather than at placement, so villagers can reach
    * the site while it is being built.
    */
+  /**
+   * Called the moment a building is finished.
+   *
+   * The registry is the only place that knows a wall went up, and the
+   * chronicle is the only thing that cares afterwards. A callback rather than
+   * a counter here, because "how many were ever raised" is not this class's
+   * question — it stops caring the moment the building exists.
+   */
+  public onCompleted: ((building: Building) => void) | null = null;
+
   public complete(world: World, building: Building): void {
     building.complete();
+    this.onCompleted?.(building);
     for (const cell of building.cells()) {
       world.navigation.block(cell.gx, cell.gy);
     }
