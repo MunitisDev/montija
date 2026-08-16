@@ -20,8 +20,8 @@ both proven in tests — but nobody has played it yet, so whether it is _enjoyab
 [`docs/ROADMAP.md`](docs/ROADMAP.md) for what is built and what is not.
 
 On a phone or tablet, install it to the home screen to play without browser chrome — the manifest
-asks for fullscreen, so it launches like an app. In a tab, use the fullscreen button in the top bar:
-a page is not allowed to enter fullscreen on its own without a gesture.
+asks for fullscreen, so it launches like an app. In a tab, use the fullscreen button under the cog in
+the top bar: a page is not allowed to enter fullscreen on its own without a gesture.
 
 ## Requirements
 

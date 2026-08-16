@@ -567,8 +567,8 @@ in the corner of a HUD they had not yet learned to read.
 
 - A **start screen** over the founded world: Continue, New settlement, How to play, and the language
   toggle. The clock is paused while it is open.
-- **How to play**, reachable from the menu and from a **?** button while playing. Opening it mid-game
-  pauses; closing it puts the clock back where it was.
+- **How to play**, reachable from the menu and from the settings cog while playing. Opening it
+  mid-game pauses; closing it puts the clock back where it was.
 - Seven sections: the objective, how work happens, the controls, the year, what kills a settlement,
   every resource, and every building.
 
@@ -583,7 +583,7 @@ data with no DOM, so it can be tested headlessly; `Guide.ts` only decides how it
 
 Two notes on what this deliberately is not. **"New settlement" does not found a new one** — the world
 behind the menu is already new, and re-founding would discard it to generate an identical
-replacement. And there is no in-game pause menu; the **?** button covers the case that matters, and
+replacement. And there is no in-game pause menu; the settings sheet covers the case that matters, and
 beginning again after a settlement dies is the failure overlay's job, which it already does.
 
 ---
@@ -713,6 +713,30 @@ Both are procedural rather than painted assets, which is what makes them free
 to keep consistent: one lighting direction, one palette, one projection, and
 seasonal variants that cost nothing. Smoke could not have been a static image
 at all.
+
+---
+
+## Phase 27 - The settings cog - Implemented
+
+**If it is not about the settlement, it is not on the screen.** The rules, full
+screen, language, save and load had accumulated into a row of buttons in the top
+bar and a pair in the corner of the bottom one. On a phone held upright that was
+enough to push the top strip onto a third line, costing a band of the world on
+both edges to show controls a player touches once a session.
+
+They are behind one cog now, in a sheet built like the guide and the people
+panel: it pauses on open through the same helper, and puts the clock back
+exactly as it was on close. What is left on the main screen is the settlement -
+resources, the calendar, the people icon, the cog, the build bar, the speed
+buttons.
+
+Two details in [MOBILE_UX.md](./MOBILE_UX.md): **How to play** opens from the
+sheet and returns to it rather than dropping the player back in the settlement,
+and there is **no audio control**, because there is no audio and a slider that
+adjusts nothing is worse than no slider.
+
+The language chip stays on the start screen too. Somebody who cannot read the
+interface has to be able to change it before founding anything.
 
 ---
 

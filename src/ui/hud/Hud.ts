@@ -70,11 +70,7 @@ interface HudElements {
   readonly failure: HTMLElement;
   readonly failureSurvived: HTMLElement;
   readonly failureRestart: HTMLButtonElement;
-  readonly fullscreen: HTMLButtonElement | null;
   readonly speedButtons: readonly HTMLButtonElement[];
-  readonly saveButton: HTMLButtonElement;
-  readonly loadButton: HTMLButtonElement;
-  readonly saveStatus: HTMLElement;
 }
 
 export class Hud {
@@ -90,13 +86,11 @@ export class Hud {
   private readonly lastRenderedTotals = new Map<ResourceId, number>();
   /** Loose totals last written, tracked apart from stored ones. */
   private readonly lastRenderedLoose = new Map<ResourceId, number>();
-  private lastRenderedSaveVersion = -1;
   private lastRenderedAdvice: string | null | undefined;
   private lastRenderedFailure: string | null | undefined;
   /** The last day whose events were announced, so each is announced once. */
   private lastAnnouncedDay = -1;
   private lastRenderedSeason = '';
-  private isFullscreen = false;
   private lastRenderedTemperature = Number.NaN;
 
   constructor(root: HTMLElement, context: GameContext, i18n: I18n) {
@@ -120,7 +114,6 @@ export class Hud {
       this.context.cycleTradeChoice('buy');
       this.update();
     });
-    this.bindSessionButtons();
     this.elements.failureRestart.addEventListener('click', () => {
       this.context.startNewSettlement();
       // `undefined` means "not yet drawn". `null` is a real value here — it is
@@ -253,11 +246,6 @@ export class Hud {
         this.elements.failureSurvived.textContent = survived;
       }
       this.lastRenderedFailure = failureKey;
-    }
-
-    if (this.context.saveVersion !== this.lastRenderedSaveVersion) {
-      this.elements.saveStatus.textContent = this.context.saveStatus;
-      this.lastRenderedSaveVersion = this.context.saveVersion;
     }
 
     if (this.context.selectionVersion !== this.lastRenderedSelection) {
@@ -609,65 +597,25 @@ export class Hud {
     }
   }
 
-  private bindSessionButtons(): void {
-    // Both are async and both disable themselves while running, so an
-    // impatient double-tap cannot start two writes at once.
-    this.elements.saveButton.addEventListener('click', () => {
-      void this.runSession(this.elements.saveButton, () => this.context.save());
-    });
-    this.elements.loadButton.addEventListener('click', () => {
-      void this.runSession(this.elements.loadButton, () => this.context.load());
-    });
-  }
-
-  private async runSession(button: HTMLButtonElement, action: () => Promise<boolean>) {
-    button.disabled = true;
-    try {
-      await action();
-    } finally {
-      button.disabled = false;
-      this.update();
-    }
+  /**
+   * Reports that the game went full screen, so the layout can respond.
+   *
+   * The button itself lives in the settings sheet now; the HUD only needs to
+   * know, because the stylesheet gives full screen a little more room.
+   */
+  public setFullscreen(active: boolean): void {
+    this.root.classList.toggle('is-fullscreen', active);
   }
 
   /** Writes the labels that never change except with the language. */
-  /**
-   * Names the fullscreen button for what it will do next.
-   *
-   * Driven by the browser's own event rather than by the click, because the
-   * player can leave fullscreen with Escape or a system gesture and a button
-   * still offering to enter it would be lying.
-   */
-  public setFullscreen(active: boolean): void {
-    this.isFullscreen = active;
-    // The stylesheet decides what full screen means for the layout; this only
-    // reports the state, which is the same split the placement bar uses.
-    this.root.classList.toggle('is-fullscreen', active);
-    this.labelFullscreenButton();
-  }
-
-  private labelFullscreenButton(): void {
-    const button = this.elements.fullscreen;
-    if (!button) {
-      return;
-    }
-    const label = this.i18n.t(this.isFullscreen ? 'action.exitFullscreen' : 'action.fullscreen');
-    button.setAttribute('aria-label', label);
-    button.title = label;
-    button.classList.toggle('is-active', this.isFullscreen);
-  }
-
   private applyStaticText(): void {
     this.elements.failureRestart.textContent = this.i18n.t('failure.restart');
-    this.labelFullscreenButton();
     for (const element of this.root.querySelectorAll<HTMLElement>('[data-i18n]')) {
       const key = element.dataset['i18n'] as MessageKey | undefined;
       if (key) {
         element.textContent = this.i18n.t(key);
       }
     }
-    this.elements.saveButton.textContent = this.i18n.t('action.save');
-    this.elements.loadButton.textContent = this.i18n.t('action.load');
   }
 
   /** Forces every cached readout to redraw. */
@@ -719,7 +667,6 @@ function collectElements(root: HTMLElement): HudElements {
     season: requireElement(root, '[data-hud="season"]'),
     temperature: requireElement(root, '[data-hud="temperature"]'),
     advice: requireElement(root, '[data-hud="advice"]'),
-    fullscreen: root.querySelector<HTMLButtonElement>('[data-hud="fullscreen"]'),
     events: requireElement(root, '[data-hud="events"]'),
     building: requireElement(root, '[data-hud="building"]'),
     buildingName: requireElement(root, '[data-hud="building-name"]'),
@@ -738,9 +685,6 @@ function collectElements(root: HTMLElement): HudElements {
     failureSurvived: requireElement(root, '[data-hud="failure-survived"]'),
     failureRestart: requireElement(root, '[data-hud="failure-restart"]') as HTMLButtonElement,
     speedButtons: Array.from(root.querySelectorAll<HTMLButtonElement>('[data-speed]')),
-    saveButton: requireElement(root, '[data-hud="save"]') as HTMLButtonElement,
-    loadButton: requireElement(root, '[data-hud="load"]') as HTMLButtonElement,
-    saveStatus: requireElement(root, '[data-hud="save-status"]'),
   };
 }
 

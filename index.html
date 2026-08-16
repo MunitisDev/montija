@@ -162,41 +162,32 @@
             </svg>
           </button>
 
-          <!-- The rules, reachable while playing: needing them is exactly when
-               leaving the settlement to find them is most annoying. -->
-          <button type="button" class="icon-button" data-ui="help" aria-label="How to play">
+          <!-- Everything that is not the settlement itself lives behind this:
+               the rules, saving, full screen, language. The top bar of a phone
+               held upright has room for the numbers and very little else. -->
+          <button type="button" class="icon-button" data-ui="settings-open" aria-label="Settings">
             <svg
               class="icon-button__glyph"
               viewBox="0 0 24 24"
               aria-hidden="true"
               focusable="false"
             >
+              <!-- A ring with a hole punched by the even-odd rule, and eight
+                   teeth laid out as one quartet rotated twice. -->
               <path
-                d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2.2a7.8 7.8 0 1 1 0 15.6 7.8 7.8 0 0 1 0-15.6z"
+                fill-rule="evenodd"
+                d="M12 5.4a6.6 6.6 0 1 0 0 13.2 6.6 6.6 0 0 0 0-13.2zm0 2.4a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 0 1 0-8.4z"
               />
-              <path
-                d="M12 6.2c-2 0-3.4 1.1-3.8 3l2 .4c.2-1 .8-1.5 1.7-1.5.9 0 1.5.5 1.5 1.3 0 .6-.3 1-1.1 1.6-1 .8-1.4 1.5-1.4 2.6v.5h2v-.4c0-.7.2-1 1-1.6 1.1-.8 1.6-1.6 1.6-2.8 0-1.8-1.4-3.1-3.5-3.1z"
-              />
-              <circle cx="12" cy="17" r="1.2" />
-            </svg>
-          </button>
-
-          <button
-            type="button"
-            class="icon-button"
-            data-hud="fullscreen"
-            aria-label="Fullscreen"
-            hidden
-          >
-            <svg
-              class="icon-button__glyph"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <path
-                d="M3 9V3h6v2.4H5.4V9zm12-6h6v6h-2.4V5.4H15zM3 15h2.4v3.6H9V21H3zm18 0v6h-6v-2.4h3.6V15z"
-              />
+              <rect x="10.6" y="1.6" width="2.8" height="4.2" rx="0.7" />
+              <rect x="10.6" y="18.2" width="2.8" height="4.2" rx="0.7" />
+              <rect x="1.6" y="10.6" width="4.2" height="2.8" rx="0.7" />
+              <rect x="18.2" y="10.6" width="4.2" height="2.8" rx="0.7" />
+              <g transform="rotate(45 12 12)">
+                <rect x="10.6" y="1.6" width="2.8" height="4.2" rx="0.7" />
+                <rect x="10.6" y="18.2" width="2.8" height="4.2" rx="0.7" />
+                <rect x="1.6" y="10.6" width="4.2" height="2.8" rx="0.7" />
+                <rect x="18.2" y="10.6" width="4.2" height="2.8" rx="0.7" />
+              </g>
             </svg>
           </button>
 
@@ -287,12 +278,6 @@
             </div>
           </div>
 
-          <div class="session-controls" role="group" aria-label="Saved game">
-            <button type="button" class="session-button" data-hud="save"></button>
-            <button type="button" class="session-button" data-hud="load"></button>
-            <span class="session-status" data-hud="save-status" role="status"></span>
-          </div>
-
           <div class="speed-controls" role="group" aria-label="Simulation speed">
             <button type="button" class="speed-button" data-speed="0" aria-pressed="false">
               II
@@ -340,6 +325,41 @@
         </div>
       </div>
 
+      <div class="sheet" data-ui="settings" role="dialog" aria-modal="true" hidden>
+        <div class="sheet__panel sheet__panel--narrow">
+          <header class="sheet__head">
+            <h2 class="sheet__title" data-ui="settings-title"></h2>
+            <button type="button" class="sheet__close" data-ui="settings-close"></button>
+          </header>
+          <div class="sheet__body settings">
+            <section class="settings__group">
+              <h3 class="settings__heading" data-ui="settings-game"></h3>
+              <div class="settings__row">
+                <button type="button" class="settings__button" data-ui="settings-guide"></button>
+              </div>
+              <div class="settings__row">
+                <button type="button" class="settings__button" data-hud="save"></button>
+                <button type="button" class="settings__button" data-hud="load"></button>
+              </div>
+              <p class="settings__status" data-hud="save-status" role="status"></p>
+            </section>
+
+            <section class="settings__group">
+              <h3 class="settings__heading" data-ui="settings-display"></h3>
+              <div class="settings__row">
+                <button
+                  type="button"
+                  class="settings__button"
+                  data-hud="fullscreen"
+                  hidden
+                ></button>
+                <button type="button" class="settings__button" data-ui="settings-language"></button>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+
       <div class="sheet" data-ui="roster" role="dialog" aria-modal="true" hidden>
         <div class="sheet__panel">
           <header class="sheet__head">
@@ -354,15 +374,6 @@
         <div class="sheet__panel">
           <header class="sheet__head">
             <h2 class="sheet__title" data-ui="guide-title"></h2>
-            <!-- Language lives here now rather than on the HUD: the top bar had
-                 no room for it on a phone, and this is the screen a player is
-                 already on when they want the game in another language. -->
-            <button
-              type="button"
-              class="menu__language"
-              data-ui="guide-language"
-              aria-label="Language"
-            ></button>
             <button type="button" class="sheet__close" data-ui="guide-close"></button>
           </header>
           <div class="sheet__body guide" data-ui="guide-body"></div>

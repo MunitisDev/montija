@@ -527,3 +527,71 @@ body.is-menu-open #hud {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* --- Settings ------------------------------------------------------------ */
+
+/*
+ * Housekeeping, not the settlement: the rules, saving, full screen, language.
+ * Narrower than the guide because every row here is a single button, and a
+ * button stretched across a tablet reads as a banner rather than a control.
+ */
+.sheet__panel--narrow {
+  width: min(34rem, 100%);
+}
+
+.settings__group {
+  margin: 0 0 22px;
+}
+
+.settings__heading {
+  margin: 0 0 10px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--colour-ink-dim);
+}
+
+/* Buttons share a row where they are a pair, and wrap rather than shrink. */
+.settings__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.settings__button {
+  /* A small basis on purpose: a pair should still share a row on a phone held
+     upright, and only wrap when it genuinely cannot. */
+  flex: 1 1 8rem;
+  min-height: var(--touch-target);
+  padding: 0 16px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--colour-ink);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--colour-panel-edge);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.settings__button:hover:not(:disabled) {
+  background: rgba(201, 162, 39, 0.16);
+  border-color: rgba(201, 162, 39, 0.5);
+}
+
+.settings__button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.settings__button[hidden] {
+  display: none;
+}
+
+.settings__status {
+  margin: 0;
+  min-height: 1.2em;
+  font-size: 0.85rem;
+  color: var(--colour-ink-dim);
+}

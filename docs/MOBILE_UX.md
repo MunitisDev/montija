@@ -257,9 +257,9 @@ colour from the stylesheet. The colours are the muted earthy ones the rest of th
 browser, by design, so "open the URL and it is already full screen" is not something any web game can
 do. There are two honest answers and the project ships both.
 
-**A button**, beside the language chip, hidden where the API is unavailable — notably an iPhone,
-where Safari supports fullscreen for video and not for elements. Offering a button that does nothing
-is worse than offering none.
+**A button**, in the settings sheet under Display, hidden where the API is unavailable — notably an
+iPhone, where Safari supports fullscreen for video and not for elements. Offering a button that does
+nothing is worse than offering none.
 
 It fullscreens the whole `#game` element rather than the canvas. Phaser offers to fullscreen the
 canvas itself, and taking that offer would leave the HUD behind in the page: the player would gain a
@@ -280,8 +280,9 @@ decided how to hold their phone.
 
 ## Full-screen overlays — Implemented
 
-The start screen and the **How to play** sheet are the only two things in the game that take the
-whole screen. Both sit outside `#hud` and set `pointer-events: auto`, because that layer is
+The start screen, the **How to play** sheet, the **people panel** and the **settings** sheet are the
+only things in the game that take the whole screen. All sit outside `#hud` and set
+`pointer-events: auto`, because that layer is
 transparent to pointers so world gestures reach the canvas — an overlay inheriting that would let a
 drag pan the settlement behind it.
 
@@ -304,3 +305,30 @@ sit in a 15rem column. Under `460px` tall the start screen drops its tagline and
 buttons, the same threshold the HUD uses.
 
 Verified at 1024×768 (tablet landscape) and 844×390 (landscape phone), in both languages.
+
+## Settings — Implemented
+
+**If it is not about the settlement, it is not on the screen.** Resources, the calendar, the build
+bar, the speed controls and the contextual panels are the game. The rules, saving, loading, full
+screen and language are housekeeping a player touches once a session, and they had accumulated into
+a row of buttons in the top bar plus a save/load pair in the corner of the bottom one. On a phone
+held upright that was enough to push the top strip onto a third line and take a band off both edges
+of the world.
+
+They live behind one cog now, in a sheet built like the other two. What survived on the main screen:
+the resource strip, the people icon, the cog, the calendar, the build bar, the speed buttons.
+
+Three decisions worth recording:
+
+- **Opening the cog pauses**, through the same `openPaused` helper the rules and the people panel
+  use, and puts the clock back exactly as it was on close. A player already paused stays paused.
+- **How to play opens _from_ settings and returns to it**, with the close button relabelled "Back".
+  Landing back in the settlement after reading the rules loses the player their place.
+- **No audio control.** There is no audio. A volume slider that adjusts nothing is worse than no
+  slider, so the group will appear with the sound.
+
+The language chip stays on the start screen as well: a player who cannot read the interface must be
+able to change it before founding anything.
+
+Verified at 1180×820, 830×412 and 412×830, in both languages, checking that the rules round-trip,
+the language cycles, save and load report their status, and the clock resumes on close.

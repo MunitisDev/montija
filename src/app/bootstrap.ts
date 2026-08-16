@@ -20,10 +20,10 @@ import { Hud } from '@/ui/hud/Hud';
 import { BuildMenu } from '@/ui/build-menu/BuildMenu';
 import { Guide } from '@/ui/guide/Guide';
 import { Roster } from '@/ui/roster/Roster';
+import { SettingsMenu } from '@/ui/settings/SettingsMenu';
 import { MainMenu } from '@/ui/menu/MainMenu';
 import { I18n } from '@/ui/i18n/I18n';
 import { StatsOverlay, requestedVillagers, statsRequested } from '@/ui/StatsOverlay';
-import { bindFullscreenButton } from '@/ui/Fullscreen';
 import { DebugControls } from '@/debug/DebugControls';
 import { DebugOverlay } from '@/debug/DebugOverlay';
 
@@ -64,20 +64,20 @@ export function start(): void {
   // The whole game element, not the canvas: fullscreening the canvas alone
   // would leave the HUD behind in the page.
   const gameRoot = requireElement<HTMLDivElement>('#game');
-  const fullscreenButton = hudRoot.querySelector<HTMLButtonElement>('[data-hud="fullscreen"]');
-  if (fullscreenButton) {
-    bindFullscreenButton({
-      button: fullscreenButton,
-      target: gameRoot,
-      onChange: (active) => hud.setFullscreen(active),
-    });
-  }
   const buildMenu = new BuildMenu(hudRoot, game, i18n);
 
-  // Both live outside #hud — see index.html for why — so they are looked up
+  // These live outside #hud — see index.html for why — so they are looked up
   // from the game root rather than the HUD layer.
   const guide = new Guide(gameRoot, i18n);
   const roster = new Roster(gameRoot, game, i18n);
+  const settings = new SettingsMenu({
+    root: gameRoot,
+    context: game,
+    i18n,
+    guide,
+    fullscreenTarget: gameRoot,
+    onFullscreenChange: (active) => hud.setFullscreen(active),
+  });
   const mainMenu = new MainMenu(gameRoot, game, i18n, guide);
 
   /**
@@ -105,27 +105,30 @@ export function start(): void {
   const rosterButton = hudRoot.querySelector<HTMLButtonElement>('[data-ui="roster-open"]');
   rosterButton?.addEventListener('click', () => openPaused(roster));
 
-  // Opening the rules mid-game pauses, and closing them puts the clock back
-  // where it was: nobody wants to read about winter while winter happens.
-  const helpButton = hudRoot.querySelector<HTMLButtonElement>('[data-ui="help"]');
-  helpButton?.addEventListener('click', () => openPaused(guide));
+  // Everything that is not the settlement — rules, save, load, full screen,
+  // language — sits behind the cog. Opening it pauses like the other sheets:
+  // nobody wants winter happening behind a page they stopped to read.
+  const settingsButton = hudRoot.querySelector<HTMLButtonElement>('[data-ui="settings-open"]');
+  settingsButton?.addEventListener('click', () => openPaused(settings));
 
-  // The button is a glyph, so its only name is the one assistive technology
+  // Both buttons are glyphs, so their only name is the one assistive technology
   // reads — and that name has to change with the language like every other.
   let labelledLanguageVersion = -1;
-  const relabelHelp = (): void => {
-    if (!helpButton || labelledLanguageVersion === i18n.changeVersion) {
+  const relabelGlyphs = (): void => {
+    if (labelledLanguageVersion === i18n.changeVersion) {
       return;
     }
     labelledLanguageVersion = i18n.changeVersion;
-    helpButton.setAttribute('aria-label', i18n.t('menu.help'));
-    helpButton.title = i18n.t('menu.help');
-    rosterButton?.setAttribute('aria-label', i18n.t('roster.open'));
+    if (settingsButton) {
+      settingsButton.setAttribute('aria-label', i18n.t('settings.title'));
+      settingsButton.title = i18n.t('settings.title');
+    }
     if (rosterButton) {
+      rosterButton.setAttribute('aria-label', i18n.t('roster.open'));
       rosterButton.title = i18n.t('roster.open');
     }
   };
-  relabelHelp();
+  relabelGlyphs();
 
   // Mouse and touch are separate controllers feeding one intent sink, so a
   // hybrid device never processes the same gesture through both paths.
@@ -168,7 +171,8 @@ export function start(): void {
   const renderHud = (): void => {
     hud.update();
     buildMenu.update();
-    relabelHelp();
+    settings.update();
+    relabelGlyphs();
     debugOverlay?.update();
     statsOverlay?.update();
     window.requestAnimationFrame(renderHud);

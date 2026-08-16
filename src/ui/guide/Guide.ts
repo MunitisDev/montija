@@ -12,7 +12,7 @@
  * the screen.
  */
 
-import { LANGUAGES, type I18n } from '@/ui/i18n/I18n';
+import { type I18n } from '@/ui/i18n/I18n';
 import { buildGuide, type GuideSection } from './guideContent';
 
 export class Guide {
@@ -21,7 +21,6 @@ export class Guide {
   private readonly title: HTMLElement;
   private readonly body: HTMLElement;
   private readonly closeButton: HTMLButtonElement;
-  private readonly languageButton: HTMLButtonElement;
   private renderedLanguageVersion = -1;
   private onClose: (() => void) | null = null;
 
@@ -31,16 +30,8 @@ export class Guide {
     this.title = requireElement(root, '[data-ui="guide-title"]');
     this.body = requireElement(root, '[data-ui="guide-body"]');
     this.closeButton = requireElement(root, '[data-ui="guide-close"]') as HTMLButtonElement;
-    this.languageButton = requireElement(root, '[data-ui="guide-language"]') as HTMLButtonElement;
 
     this.closeButton.addEventListener('click', () => this.close());
-    this.languageButton.addEventListener('click', () => {
-      const next = LANGUAGES[(LANGUAGES.indexOf(this.i18n.language) + 1) % LANGUAGES.length];
-      if (next) {
-        this.i18n.setLanguage(next);
-      }
-      this.render();
-    });
   }
 
   public get isOpen(): boolean {
@@ -82,7 +73,6 @@ export class Guide {
     this.renderedLanguageVersion = this.i18n.changeVersion;
 
     this.title.textContent = this.i18n.t('guide.title');
-    this.languageButton.textContent = this.i18n.language.toUpperCase();
     this.body.replaceChildren(
       ...buildGuide((key) => this.i18n.t(key)).map((section) => renderSection(section)),
     );

@@ -161,6 +161,11 @@ export const EN = {
   'menu.back': 'Back',
   'menu.help': 'How to play',
 
+  'settings.title': 'Settings',
+  'settings.game': 'Game',
+  'settings.display': 'Display',
+  'settings.language': 'Language',
+
   'guide.title': 'How to play',
   'guide.objective': 'What you are trying to do',
   'guide.objective.body':
@@ -414,6 +419,11 @@ export const ES: Messages = {
   'menu.close': 'Cerrar',
   'menu.back': 'Volver',
   'menu.help': 'Cómo se juega',
+
+  'settings.title': 'Ajustes',
+  'settings.game': 'Partida',
+  'settings.display': 'Pantalla',
+  'settings.language': 'Idioma',
 
   'guide.title': 'Cómo se juega',
   'guide.objective': 'Qué hay que conseguir',
