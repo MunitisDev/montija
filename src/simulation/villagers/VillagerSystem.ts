@@ -228,6 +228,12 @@ export class VillagerSystem {
     for (const villager of this.villagers) {
       villager.previousPosition = villager.position;
 
+      // Anybody *stuck* where the ground has closed over them steps clear.
+      // Somebody merely walking past a wall is left alone — see `stepClear`.
+      if (!villager.isMoving && !this.world.isWalkable(villager.cell)) {
+        this.stepClear(villager);
+      }
+
       // Somebody unwell keeps to their bed. This is the whole cost of illness:
       // not health, but hands — and in a marginal settlement that is still
       // fatal, by starvation, in winter, which is the failure this game is
@@ -919,6 +925,61 @@ export class VillagerSystem {
     villager.path.length = 0;
     villager.destination = null;
     villager.activity = 'ill';
+  }
+
+  /**
+   * Moves a villager off a cell that is no longer walkable.
+   *
+   * **This fixes the worst bug the project has had.** A building blocks its
+   * footprint the moment it is finished, and nothing checked who was standing
+   * inside it — so a villager who happened to be on the plot was walled in
+   * permanently. Every path request starts from the villager's own cell, and
+   * from inside a wall every single one fails, so they never worked again: they
+   * could not fell, haul, build or take a post, and they still ate.
+   *
+   * It was invisible on the one seed the balance tests use and fatal on most
+   * others. Measured across eight seeds, six lost their settlement, and up to
+   * seven of ten villagers were entombed at the settlement centre by day six —
+   * which reads, from outside, exactly like a game that is simply too hard.
+   *
+   * The rescue lives here rather than in the building code on purpose. Being
+   * finished on top of somebody is only the cause found first; a save written
+   * by an older version, a future terrain change, anything at all that closes a
+   * cell would strand somebody the same way. Checking that you are standing
+   * somewhere you can stand is the villager's own business, it costs one array
+   * lookup a tick, and it makes the whole class of bug survivable instead of
+   * fatal.
+   *
+   * **Only for villagers who are not walking.** A cell is derived by flooring a
+   * continuous position, so somebody following a perfectly legal path along a
+   * wall reads as being inside it for a tick or two. Rescuing them would
+   * teleport a villager who was only passing and throw away the job they were
+   * on the way to — a regression test caught exactly that. Anybody mid-path
+   * already has a route out and needs no help; being stuck is the condition
+   * worth acting on, and being stuck means standing still.
+   */
+  private stepClear(villager: Villager): void {
+    const escape = this.world.navigation.nearestWalkable(villager.cell);
+    if (!escape) {
+      // Sealed in past the search radius. Nothing sensible to do, and leaving
+      // them put is better than teleporting them across the map.
+      return;
+    }
+
+    villager.position = gridToWorld(escape);
+    // Moved rather than travelled: without this the renderer interpolates a
+    // slide out of the wall, which looks like a bug of its own.
+    villager.previousPosition = villager.position;
+    villager.path.length = 0;
+    villager.destination = null;
+
+    // Whatever they were doing was planned from a cell they were never really
+    // standing on, so it goes back on the board for somebody who can reach it.
+    if (villager.currentJobId !== null) {
+      this.jobs.release(villager.currentJobId);
+      villager.currentJobId = null;
+    }
+    villager.activity = 'idle';
   }
 
   /** Picks a nearby reachable cell and routes to it. */
