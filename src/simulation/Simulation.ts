@@ -56,6 +56,7 @@ import {
 import { NO_SPOILAGE, runSpoilage, type SpoilageReport } from './resources/SpoilageSystem';
 import { EMPTY_REPORT, runDay, TOOL_WORK_BONUS, type DailyReport } from './seasons/SurvivalSystem';
 import { VillagerSystem } from './villagers/VillagerSystem';
+import type { WorkPreference } from './villagers/Villager';
 import { World } from './world/World';
 import { NO_FOREST_CHANGE, runForestRegrowth, type ForestReport } from './world/ForestSystem';
 import type { TreeInstance } from './world/WorldGenerator';
@@ -915,6 +916,42 @@ export class Simulation {
   }
 
   /**
+   * Posts a villager to a building, keeps them a labourer, or hands them back
+   * to automatic employment.
+   *
+   * Quotas already said *how many* people a workshop should have; this says
+   * *who*. They are different questions, and a player who wanted one particular
+   * villager at the new forge previously had to turn quotas down across the
+   * settlement and hope the nearest-first rule picked the right body.
+   *
+   * The instruction is stored and acted on by the next employment pass rather
+   * than applied here, so there is one place that decides who works where and
+   * one set of rules — a command that reached in and set `employerId` itself
+   * would be undone by the next reconciliation.
+   *
+   * @returns `false` when there is no such villager, or the named building
+   *   cannot employ anyone.
+   */
+  public setWorkPreference(villagerId: number, preference: WorkPreference): boolean {
+    const villager = this.villagers.all.find((candidate) => candidate.id === villagerId);
+    if (!villager) {
+      return false;
+    }
+
+    if (typeof preference === 'number') {
+      const building = this.world.buildings.getById(preference);
+      // An unfinished building is a legitimate posting — "when it opens" is a
+      // reasonable thing to mean. One that could never employ anybody is not.
+      if (!building || building.definition.workerSlots === 0) {
+        return false;
+      }
+    }
+
+    villager.workPreference = preference;
+    return true;
+  }
+
+  /**
    * Orders a building pulled down, or takes the order back.
    *
    * Nothing in this game could be un-built until now, which mattered more the
@@ -1011,6 +1048,11 @@ export class Simulation {
     for (const villager of this.villagers.all) {
       if (villager.employerId === building.id) {
         villager.employerId = null;
+      }
+      // A posting to a building that no longer exists would keep somebody out
+      // of every workshop for ever, waiting for a door that is not coming back.
+      if (villager.workPreference === building.id) {
+        villager.workPreference = null;
       }
       if (villager.homeId === building.id) {
         villager.homeId = null;

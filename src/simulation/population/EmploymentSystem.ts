@@ -20,10 +20,20 @@
  * learn its name. A villager's profession is simply the building they answer
  * to, and the display name comes from the building definition.
  *
- * **The lever this gives the player is the important part.** Each building has
+ * **The levers this gives the player are the important part.** Each building has
  * a desired number of workers, which they can turn down to zero. A settlement
  * that is starving does not need three people splitting firewood, and until now
  * there was no way to say so.
+ *
+ * On top of that, a villager may be **posted** to a particular building, or
+ * kept off the workshops as a labourer. Quotas say how many; a posting says
+ * *who*. They are different questions, and only the first had an answer before:
+ * a player who wanted their strongest hauler to stay a hauler, or wanted this
+ * specific person at the new forge, had to turn quotas down all over the
+ * settlement and hope the nearest-first rule picked the right body.
+ *
+ * Postings are honoured before automatic hiring and never override a quota. A
+ * building wanting two people gets two, whoever asked for them.
  */
 
 import type { Building } from '@/simulation/buildings/Building';
@@ -78,6 +88,19 @@ export function runEmployment(
   // stops the two disagreeing after a death, a save or a demolished quota.
   const staff = new Map<number, Villager[]>();
   for (const villager of villagers) {
+    // Somebody the player has posted elsewhere, or deliberately kept as a
+    // labourer, gives up the post they are holding — otherwise the instruction
+    // would only take effect the next time they happened to be released.
+    if (
+      villager.employerId !== null &&
+      villager.workPreference !== null &&
+      villager.workPreference !== villager.employerId
+    ) {
+      villager.employerId = null;
+      released += 1;
+      continue;
+    }
+
     if (villager.employerId === null) {
       continue;
     }
@@ -97,8 +120,44 @@ export function runEmployment(
     }
   }
 
-  // Trim anyone over quota, newest first — the longest-serving villager keeps
-  // the post, which is both the least disruptive choice and a stable one.
+  // Make room for the people the player named.
+  //
+  // Without this a posting silently did nothing whenever the workshop was
+  // already full — which is most of the time, because automatic employment
+  // fills everything it can. The control would have looked broken: you name
+  // somebody for the forge, and nothing happens, for reasons the game never
+  // explains. A posting displaces somebody the settlement merely *placed*
+  // there, never somebody else the player posted.
+  for (const building of posts.values()) {
+    const list = staff.get(building.id);
+    if (!list || list.length === 0) {
+      continue;
+    }
+
+    const waiting = villagers.filter(
+      (villager) =>
+        villager.isAdult && villager.employerId === null && villager.workPreference === building.id,
+    ).length;
+    if (waiting === 0) {
+      continue;
+    }
+
+    // Newest first, so the longest-serving of the automatic staff is the last
+    // to be moved on — the same stability rule the quota trim below follows.
+    const automatic = list
+      .filter((villager) => villager.workPreference !== building.id)
+      .sort((a, b) => b.id - a.id);
+
+    for (const villager of automatic.slice(0, waiting)) {
+      villager.employerId = null;
+      list.splice(list.indexOf(villager), 1);
+      released += 1;
+    }
+  }
+
+  // Trim anyone over quota. Villagers posted here by the player keep their
+  // place ahead of anyone the settlement merely put here, and among equals the
+  // longest-serving stays — the least disruptive choice, and a stable one.
   for (const [buildingId, list] of staff) {
     const building = posts.get(buildingId);
     if (!building) {
@@ -108,7 +167,11 @@ export function runEmployment(
     if (list.length <= wanted) {
       continue;
     }
-    list.sort((a, b) => a.id - b.id);
+    list.sort((a, b) => {
+      const byPosting =
+        Number(b.workPreference === buildingId) - Number(a.workPreference === buildingId);
+      return byPosting !== 0 ? byPosting : a.id - b.id;
+    });
     for (const villager of list.splice(wanted)) {
       villager.employerId = null;
       released += 1;
@@ -122,6 +185,13 @@ export function runEmployment(
   let hired = 0;
   let vacancies = 0;
 
+  const take = (villager: Villager, building: Building, list: Villager[]): void => {
+    villager.employerId = building.id;
+    list.push(villager);
+    unemployed.splice(unemployed.indexOf(villager), 1);
+    hired += 1;
+  };
+
   // Buildings in id order, so an older workshop is staffed before a newer one
   // when there are not enough people for both. A settlement short of hands
   // should keep running what it already had.
@@ -129,16 +199,30 @@ export function runEmployment(
     const list = staff.get(building.id) ?? [];
     let short = building.hiringTarget - list.length;
 
+    // Anyone posted here comes first, however far away they are. The player
+    // asked for this person by name; walking is their problem.
     while (short > 0) {
-      const nearest = nearestFree(unemployed, building);
+      const posted = unemployed.find((villager) => villager.workPreference === building.id);
+      if (!posted) {
+        break;
+      }
+      take(posted, building, list);
+      short -= 1;
+    }
+
+    // Then whoever is nearest — but only from those who have not been spoken
+    // for. Somebody posted to another workshop is waiting for it, and somebody
+    // kept as a labourer is kept as a labourer.
+    while (short > 0) {
+      const nearest = nearestFree(
+        unemployed.filter((villager) => villager.workPreference === null),
+        building,
+      );
       if (!nearest) {
         vacancies += short;
         break;
       }
-      nearest.employerId = building.id;
-      list.push(nearest);
-      unemployed.splice(unemployed.indexOf(nearest), 1);
-      hired += 1;
+      take(nearest, building, list);
       short -= 1;
     }
 

@@ -21,6 +21,14 @@ const CARRY_CAPACITY = 10;
 /** What a villager is doing, as far as the renderer needs to know. */
 export type VillagerActivity = 'idle' | 'walking' | 'working' | 'hauling' | 'ill';
 
+/**
+ * A standing instruction about where somebody should work.
+ *
+ * A plain union rather than an object so it writes to a save as-is. See
+ * {@link Villager.workPreference} for what the three states mean.
+ */
+export type WorkPreference = number | 'labourer' | null;
+
 export interface VillagerNeeds {
   /** 0 = starving, 100 = full. */
   hunger: number;
@@ -72,6 +80,28 @@ export class Villager {
    * than to a workshop.
    */
   public employerId: number | null = null;
+
+  /**
+   * What the player has decided this villager should do, if anything.
+   *
+   * Three states rather than two, and the third is the one that matters:
+   *
+   * - `null` — **automatic.** Employment places them wherever it needs hands.
+   *   This is what everybody starts as and what most people stay as.
+   * - a building id — **posted there.** They hold that job ahead of anyone the
+   *   settlement would have picked, and they get it back when it frees up.
+   * - `'labourer'` — **kept off the workshops on purpose.** Not the same as
+   *   automatic: an unemployed villager is exactly who automatic employment
+   *   grabs for the next vacancy, so without this there was no way to say
+   *   "leave this one carrying things". Hauling is most of the work in the
+   *   game and the settlement will happily starve itself of it.
+   *
+   * A preference is a standing instruction, not an assignment. Naming a
+   * building that is full, unfinished or gone leaves them a labourer for now
+   * and still pointed at it, because a player who posts somebody to a
+   * half-built workshop means "when it opens" rather than "never mind".
+   */
+  public workPreference: WorkPreference = null;
 
   /**
    * The house this villager lives in, or `null` when there is no room.

@@ -42,6 +42,12 @@ export interface SavedVillager {
   readonly birthCooldownDays?: number;
   /** The building they work at. Absent in saves from before anyone had a job. */
   readonly employerId?: number | null;
+  /**
+   * A posting the player made: a building id, `'labourer'`, or absent for
+   * automatic. Optional, so saves written before postings existed load as
+   * automatic rather than being rejected.
+   */
+  readonly workPreference?: number | 'labourer' | null;
   /** Days of sickness left. Absent in saves from before anyone could fall ill. */
   readonly illDaysRemaining?: number;
   readonly carrying: SavedInventory;
