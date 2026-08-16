@@ -115,6 +115,16 @@ export const RECIPES: Readonly<Record<string, Recipe>> = {
     workTicks: 55,
     seasonal: 'none',
   },
+  'gather-herbs': {
+    id: 'gather-herbs',
+    name: 'Gather herbs',
+    inputs: [],
+    outputs: [{ resource: 'herbs', amount: 4 }],
+    workTicks: 45,
+    // The same curve as foraging: what grows, grows when it grows. Herbs keep,
+    // so a settlement gathers them against a winter it cannot gather in.
+    seasonal: 'forage',
+  },
   'split-firewood': {
     id: 'split-firewood',
     name: 'Split firewood',

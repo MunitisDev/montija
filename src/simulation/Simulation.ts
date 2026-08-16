@@ -47,6 +47,12 @@ import {
   runEmployment,
   type EmploymentReport,
 } from './population/EmploymentSystem';
+import {
+  HERBS_PER_PATIENT_PER_DAY,
+  NO_ILLNESS,
+  runIllness,
+  type IllnessReport,
+} from './population/IllnessSystem';
 import { NO_SPOILAGE, runSpoilage, type SpoilageReport } from './resources/SpoilageSystem';
 import { EMPTY_REPORT, runDay, TOOL_WORK_BONUS, type DailyReport } from './seasons/SurvivalSystem';
 import { VillagerSystem } from './villagers/VillagerSystem';
@@ -132,6 +138,8 @@ export interface SimulationSnapshot {
   readonly employment: EmploymentReport;
   /** What the merchant did today, and whether one is here at all. */
   readonly trade: TradeReport;
+  /** Who is unwell, and how much of it the settlement is able to treat. */
+  readonly illness: IllnessReport;
   readonly deaths: number;
   /** Lowest health among the living, so the HUD can warn before people die. */
   readonly lowestHealth: number;
@@ -186,6 +194,7 @@ export class Simulation {
   private lastForest: ForestReport = NO_FOREST_CHANGE;
   private lastEmployment: EmploymentReport = NO_EMPLOYMENT_CHANGE;
   private lastTrade: TradeReport = NO_TRADE;
+  private lastIllness: IllnessReport = NO_ILLNESS;
   /**
    * What the player has told the post to trade, if anything.
    *
@@ -203,6 +212,8 @@ export class Simulation {
    * survives contact with new features if the streams stay apart.
    */
   private readonly forestRandom: SeededRandom;
+  /** Sickness gets its own stream, for the same reason the woods do. */
+  private readonly illnessRandom: SeededRandom;
 
   constructor(options: SimulationOptions) {
     this.seed = options.seed >>> 0;
@@ -215,6 +226,7 @@ export class Simulation {
     });
 
     this.forestRandom = new SeededRandom(deriveSeed(this.seed, 'forest'));
+    this.illnessRandom = new SeededRandom(deriveSeed(this.seed, 'illness'));
     this.jobs = new JobManager();
 
     // Villagers get their own RNG stream, so adding a call here cannot shift
@@ -342,6 +354,7 @@ export class Simulation {
       forest: this.lastForest,
       employment: this.lastEmployment,
       trade: this.lastTrade,
+      illness: this.lastIllness,
       deaths: this.totalDeaths,
       advice: this.adviseOn(year),
       hasFailed: this.hasFailed,
@@ -474,6 +487,7 @@ export class Simulation {
     this.lastEmployment = NO_EMPLOYMENT_CHANGE;
     this.lastTrade = NO_TRADE;
     this.tradeOrder = AUTOMATIC_TRADE;
+    this.lastIllness = NO_ILLNESS;
   }
 
   /**
@@ -581,6 +595,10 @@ export class Simulation {
     // People eat before anything turns. A settlement should never starve on a
     // day it had food, only to watch that same food rot the same night.
     this.lastSpoilage = runSpoilage(this.storages, this.world.piles);
+
+    // Sickness, after people have eaten and burned: whether somebody is hungry
+    // or cold today is what decides whether they fall ill today.
+    this.lastIllness = this.runSickness();
 
     // The woods creep back. Slowly, and never over the settlement itself.
     this.lastForest = runForestRegrowth(this.world, this.forestRandom);
@@ -1125,6 +1143,48 @@ export class Simulation {
     }
   }
 
+  /**
+   * Runs a day of illness, and pays for whatever care the settlement can give.
+   *
+   * Capacity is staff times patients-per-worker; herbs are the second half, and
+   * a healer with no herbs treats nobody. Both are worked out here rather than
+   * inside the illness system, because how a building is staffed and supplied
+   * is not that system's business.
+   */
+  private runSickness(): IllnessReport {
+    let capacity = 0;
+    for (const building of this.world.buildings.all) {
+      const care = building.definition.care;
+      if (care && building.isComplete) {
+        capacity += building.workers.length * care.patientsPerWorker;
+      }
+    }
+
+    const sick = this.villagers.all.filter((villager) => villager.isIll).length;
+    const staffed = sick === 0 ? 0 : Math.min(1, capacity / sick);
+
+    // Herbs are taken for the patients actually being looked after, so a
+    // half-staffed healer costs half the herbs rather than all of them.
+    const herbsWanted = sick * staffed * HERBS_PER_PATIENT_PER_DAY;
+    const herbsTaken = herbsWanted === 0 ? 0 : this.takeStored('herbs', herbsWanted);
+    const supplied = herbsWanted === 0 ? 0 : herbsTaken / herbsWanted;
+
+    const report = runIllness(this.villagers.all, this.illnessRandom, staffed * supplied);
+    return { ...report, herbsUsed: herbsTaken };
+  }
+
+  /** Draws a resource out of the yards, returning how much was there. */
+  private takeStored(resource: ResourceId, amount: number): number {
+    let remaining = amount;
+    for (const storage of this.storages.all) {
+      if (remaining <= 0) {
+        break;
+      }
+      remaining -= storage.inventory.remove(resource, remaining);
+    }
+    return amount - remaining;
+  }
+
   /** Withdraws any outstanding production job at a building. */
   private cancelProductionAt(buildingId: number): void {
     for (const job of this.jobs.all) {
@@ -1266,6 +1326,15 @@ export class Simulation {
 
   public restoreForestRandom(state: { seed: number; cursor: number }): void {
     this.forestRandom.setState(state);
+  }
+
+  /** Sickness's RNG position, so a loaded settlement falls ill the same way. */
+  public get illnessRandomState(): { seed: number; cursor: number } {
+    return this.illnessRandom.getState();
+  }
+
+  public restoreIllnessRandom(state: { seed: number; cursor: number }): void {
+    this.illnessRandom.setState(state);
   }
 
   public get random(): RandomSource {

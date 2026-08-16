@@ -67,6 +67,17 @@ Definitions live in `src/data/buildings.ts`; the build menu is generated from th
 | Gatherer Hut | 10 logs, 2 stone | 2     | forages food, scaled by the season |
 | Woodcutter   | 8 logs, 4 stone  | 2     | 1 log → 4 firewood                 |
 
+Later buildings are listed under the systems they belong to. Two of them serve
+[Illness](#illness--implemented):
+
+| Building        | Cost             | Slots | Effect                                     |
+| --------------- | ---------------- | ----- | ------------------------------------------ |
+| Herbalist's Hut | 8 logs           | 1     | gathers herbs while things grow; they keep |
+| Healer's House  | 14 logs, 8 stone | 2     | shortens illness, spending herbs           |
+
+A Healer's House needs both halves. Unstaffed, or with an empty shelf, it treats nobody — which is
+what keeps the Herbalist's Hut from being decoration beside it.
+
 The settlement is founded with one storage yard already standing, holding the settlers' supplies.
 It accepts every resource, which is what a settlers' communal store would — but it is an open yard,
 and food does not keep in one. See [Spoilage](#spoilage--implemented).
@@ -414,6 +425,48 @@ live on half rations forever, and winter killed nobody. Poor planning has to cos
 
 At the current rates an unfed settlement empties its hunger in four days and buries its first
 villager about ten days later: roughly one winter, which is the span the player is asked to plan for.
+
+---
+
+## Illness — Implemented
+
+Health above has exactly one cause: it falls when somebody is starving or freezing. On its own that
+makes it a second readout of hunger and warmth rather than a thing in itself, and it means a
+settlement with full stores can never be in any trouble at all, however large or badly housed.
+
+Illness is the thing in itself. It arrives on its own schedule and does not care how full the
+granary is.
+
+| Rule                  | Value                            |
+| --------------------- | -------------------------------- |
+| Chance of falling ill | 0.2% per villager per day        |
+| With no roof          | five times that                  |
+| Length of a case      | 8 days                           |
+| Cost of a case        | the villager does no work at all |
+| Full care removes     | 75% of the remaining days        |
+| Herbs used            | 0.5 per patient per day of care  |
+
+**Illness costs work, not health**, and that took three measurements to arrive at. Every version
+that drained health did the same damage to the shape of the game: a settlement that would have
+reached winter lost somebody in _autumn_ instead, because a villager who had been ill during the
+good days met the bad ones with less to spare. Softening the numbers did not help, and neither did
+a floor, and neither did suppressing the drain while somebody was already starving — the
+front-loading was the problem, not its size.
+
+An ill villager simply stops. In a marginal settlement that is still fatal, but it kills by
+starvation in winter, which is the failure this whole game is about rather than a second one racing
+it. It also scales the right way: a big settlement has more cases, loses more hands, and needs a
+healer for reasons a small one does not.
+
+The rate is small on purpose, and measured rather than picked. A case costs eight days of somebody's
+work, and a ten-person settlement has only two or three pairs of hands not already committed to a
+workshop — so the labour bill is far steeper than the case count suggests. At twice this rate, a
+settlement playing well lost most of the food it had banked for winter, which made sickness the
+game's dominant mechanic rather than its third one.
+
+**Nothing is contagious.** Each villager is rolled independently. Modelling spread would make an
+outbreak a curve to be studied rather than a problem to be answered, and the answer would still be
+"build a healer".
 
 ---
 

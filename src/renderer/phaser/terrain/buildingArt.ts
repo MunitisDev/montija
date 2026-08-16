@@ -116,6 +116,11 @@ const MASS: Readonly<Record<BuildingId, BuildingMass>> = {
   // A big open-fronted shed on a stone footing: goods come and go, so it reads
   // as a place things pass through rather than a place people live.
   'trading-post': { wallHeight: 16, roofHeight: 30, eaves: 9, plinth: 5 },
+  // A small thatched hut with drying racks: the cheapest building in the game.
+  herbalist: { wallHeight: 15, roofHeight: 30, eaves: 7, thatch: true, windows: 1 },
+  // Stone-footed and shuttered: the one building meant to keep weather out for
+  // the sake of the people inside rather than the goods.
+  healer: { wallHeight: 21, roofHeight: 36, eaves: 6, plinth: 7, windows: 2 },
   // A cabin out at the treeline: thatched, low, no stone.
   hunter: { wallHeight: 17, roofHeight: 34, eaves: 7, thatch: true, windows: 1 },
   // A workshop with good light: two windows, which nothing else has.
@@ -136,6 +141,8 @@ export const BUILDING_COLOURS: Readonly<Record<BuildingId, BuildingPalette>> = {
   mine: { wall: 0x615d55, roof: 0x4b4840, trim: 0x38352f },
   blacksmith: { wall: 0x5e5044, roof: 0x413a33, trim: 0x332e28 },
   'trading-post': { wall: 0x6e5c46, roof: 0x59493a, trim: 0x453a2d },
+  herbalist: { wall: 0x5d6a4c, roof: 0x7a6942, trim: 0x3c452f },
+  healer: { wall: 0x6f6c60, roof: 0x4f4c44, trim: 0x3c3a34 },
   hunter: { wall: 0x63533f, roof: 0x7a6942, trim: 0x40362a },
   tailor: { wall: 0x6a5a55, roof: 0x4e4340, trim: 0x3d3532 },
   'crop-field': { wall: 0x6d6234, roof: 0x5b5230, trim: 0x4a4128 },

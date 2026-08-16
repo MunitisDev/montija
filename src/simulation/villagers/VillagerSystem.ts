@@ -228,6 +228,15 @@ export class VillagerSystem {
     for (const villager of this.villagers) {
       villager.previousPosition = villager.position;
 
+      // Somebody unwell keeps to their bed. This is the whole cost of illness:
+      // not health, but hands — and in a marginal settlement that is still
+      // fatal, by starvation, in winter, which is the failure this game is
+      // about rather than a second one racing it.
+      if (villager.isIll) {
+        this.restUntilWell(villager);
+        continue;
+      }
+
       if (villager.isMoving) {
         this.advanceAlongPath(villager, tickSeconds);
         continue;
@@ -893,6 +902,23 @@ export class VillagerSystem {
       return true;
     }
     return job.targetEntityId !== null && villager.employerId === job.targetEntityId;
+  }
+
+  /**
+   * Puts an ill villager to bed, handing back whatever they were doing.
+   *
+   * Releasing the job matters more than the resting does: a reserved job held
+   * by somebody who will not move for eight days is a job nobody else can take,
+   * and a settlement could lose its only hauler and its only haul at once.
+   */
+  private restUntilWell(villager: Villager): void {
+    if (villager.currentJobId !== null) {
+      this.jobs.release(villager.currentJobId);
+      villager.currentJobId = null;
+    }
+    villager.path.length = 0;
+    villager.destination = null;
+    villager.activity = 'ill';
   }
 
   /** Picks a nearby reachable cell and routes to it. */

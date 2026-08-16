@@ -23,7 +23,9 @@ export type BuildingId =
   | 'orchard'
   | 'hunter'
   | 'tailor'
-  | 'trading-post';
+  | 'trading-post'
+  | 'herbalist'
+  | 'healer';
 
 export interface ResourceAmount {
   readonly resource: ResourceId;
@@ -77,6 +79,17 @@ export interface BuildingDefinition {
    * says is that the working face must be within reach.
    */
   readonly adjacentTo?: TerrainType;
+
+  /**
+   * Set for a building that nurses the sick.
+   *
+   * Not a recipe: what a healer produces is treatment, measured in people
+   * rather than in units, and the production system has no way to say that.
+   */
+  readonly care?: {
+    /** How many patients one worker can look after at once. */
+    readonly patientsPerWorker: number;
+  };
 }
 
 /**
@@ -109,7 +122,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     workerSlots: 0,
     storage: {
       capacity: 1000,
-      accepts: ['logs', 'stone', 'firewood', 'iron', 'tools', 'hides', 'clothing'],
+      accepts: ['logs', 'stone', 'firewood', 'iron', 'tools', 'hides', 'clothing', 'herbs'],
     },
   },
   'food-storage': {
@@ -202,6 +215,32 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     buildTicks: 400,
     workerSlots: 2,
     recipeId: 'tend-orchard',
+  },
+  herbalist: {
+    id: 'herbalist',
+    name: "Herbalist's Hut",
+    description: 'Gathers herbs in the growing seasons. They keep, and winter needs them.',
+    footprint: { width: 2, height: 2 },
+    constructionCost: [{ resource: 'logs', amount: 8 }],
+    buildTicks: 80,
+    workerSlots: 1,
+    recipeId: 'gather-herbs',
+  },
+  healer: {
+    id: 'healer',
+    name: "Healer's House",
+    description: 'Nurses the sick, using herbs. Its only output is that people stop dying.',
+    footprint: { width: 2, height: 2 },
+    constructionCost: [
+      { resource: 'logs', amount: 14 },
+      { resource: 'stone', amount: 8 },
+    ],
+    buildTicks: 150,
+    // Staffed like a workshop, but it has no recipe: what it produces is
+    // treatment, which is measured in people rather than in units and so is
+    // not something the production system can express.
+    workerSlots: 2,
+    care: { patientsPerWorker: 4 },
   },
   'trading-post': {
     id: 'trading-post',
@@ -302,6 +341,8 @@ export const BUILDING_IDS: readonly BuildingId[] = [
   'hunter',
   'tailor',
   'trading-post',
+  'herbalist',
+  'healer',
 ];
 
 export function buildingDefinition(id: BuildingId): BuildingDefinition {

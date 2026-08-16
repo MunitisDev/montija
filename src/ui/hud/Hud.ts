@@ -313,6 +313,11 @@ export class Hud {
 
     this.announce('event.born', population.births);
     this.announce('event.arrived', population.arrivals);
+    // Sickness costs the settlement a pair of hands for over a week, and there
+    // is nothing on the map to see it by: the villager simply stops. Saying so
+    // is the only way the player can connect the empty granary to the cause.
+    this.announce('event.fellIll', snapshot.illness.fellIll);
+    this.announce('event.recovered', snapshot.illness.recovered);
     this.announce('event.diedOfOldAge', population.deathsOfOldAge);
     this.announce('event.died', fromHardship);
   }
@@ -714,6 +719,7 @@ function collectElements(root: HTMLElement): HudElements {
       tools: requireElement(root, '[data-hud="tools"]'),
       hides: requireElement(root, '[data-hud="hides"]'),
       clothing: requireElement(root, '[data-hud="clothing"]'),
+      herbs: requireElement(root, '[data-hud="herbs"]'),
     },
     selection: requireElement(root, '[data-hud="selection"]'),
     selectionTerrain: requireElement(root, '[data-hud="selection-terrain"]'),

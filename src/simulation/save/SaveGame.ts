@@ -42,6 +42,8 @@ export interface SavedVillager {
   readonly birthCooldownDays?: number;
   /** The building they work at. Absent in saves from before anyone had a job. */
   readonly employerId?: number | null;
+  /** Days of sickness left. Absent in saves from before anyone could fall ill. */
+  readonly illDaysRemaining?: number;
   readonly carrying: SavedInventory;
   /**
    * The route being walked, and where it leads.
@@ -149,6 +151,8 @@ export interface SaveGame {
     readonly villagers: { readonly seed: number; readonly cursor: number };
     /** Absent in saves written before the woods could grow back. */
     readonly forest?: { readonly seed: number; readonly cursor: number };
+    /** Absent in saves written before anyone could fall ill. */
+    readonly illness?: { readonly seed: number; readonly cursor: number };
   };
 }
 

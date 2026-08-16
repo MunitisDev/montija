@@ -7,7 +7,15 @@
  */
 
 export type ResourceId =
-  'logs' | 'firewood' | 'stone' | 'food' | 'iron' | 'tools' | 'hides' | 'clothing';
+  | 'logs'
+  | 'firewood'
+  | 'stone'
+  | 'food'
+  | 'iron'
+  | 'tools'
+  | 'hides'
+  | 'clothing'
+  | 'herbs';
 
 export type ResourceCategory = 'material' | 'fuel' | 'food' | 'tool' | 'clothing';
 
@@ -97,6 +105,16 @@ export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
     // tools, that wear is charged daily and lives in the survival system.
     spoilsPerDay: 0,
   },
+  herbs: {
+    id: 'herbs',
+    name: 'Herbs',
+    category: 'food',
+    maxStack: 30,
+    carryLimit: 10,
+    // Dried and hung, not eaten fresh. They keep, which is the only reason a
+    // settlement can gather them in summer against a winter of illness.
+    spoilsPerDay: 0,
+  },
   food: {
     id: 'food',
     name: 'Food',
@@ -120,6 +138,7 @@ export const RESOURCE_IDS: readonly ResourceId[] = [
   'tools',
   'hides',
   'clothing',
+  'herbs',
 ];
 
 export function resourceDefinition(id: ResourceId): ResourceDefinition {

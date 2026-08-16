@@ -19,7 +19,7 @@ import { Inventory } from '@/simulation/resources/Inventory';
 const CARRY_CAPACITY = 10;
 
 /** What a villager is doing, as far as the renderer needs to know. */
-export type VillagerActivity = 'idle' | 'walking' | 'working' | 'hauling';
+export type VillagerActivity = 'idle' | 'walking' | 'working' | 'hauling' | 'ill';
 
 export interface VillagerNeeds {
   /** 0 = starving, 100 = full. */
@@ -90,6 +90,20 @@ export class Villager {
 
   /** Days until this villager's household will consider another child. */
   public birthCooldownDays = 0;
+
+  /**
+   * Days of sickness left to run, or 0 for somebody well.
+   *
+   * A countdown rather than a flag, so care can shorten a case rather than
+   * only ending it — a healer is somebody who gets you through an illness, not
+   * a switch that turns it off.
+   */
+  public illDaysRemaining = 0;
+
+  /** `true` while this villager is unwell. */
+  public get isIll(): boolean {
+    return this.illDaysRemaining > 0;
+  }
 
   constructor(options: {
     id: number;

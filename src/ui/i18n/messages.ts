@@ -21,6 +21,7 @@ export const EN = {
   'hud.tools': 'Tools',
   'hud.hides': 'Hides',
   'hud.clothing': 'Clothing',
+  'hud.herbs': 'Herbs',
   'hud.looseHint': 'on the ground, waiting to be carried in',
   'trade.sellAuto': 'Any surplus',
   'trade.buyAuto': 'Whatever is scarce',
@@ -71,6 +72,7 @@ export const EN = {
   'villager.walking': 'walking',
   'villager.working': 'working',
   'villager.hauling': 'hauling',
+  'villager.ill': 'ill',
   'villager.labourer': 'Labourer',
 
   'building.house': 'House',
@@ -92,6 +94,10 @@ export const EN = {
   'building.mine.description': 'Digs iron out of the hillside. Slow, and permanent.',
   'building.blacksmith': 'Blacksmith',
   'building.blacksmith.description': 'Forges iron into tools, which make every job quicker.',
+  'building.herbalist': "Herbalist's Hut",
+  'building.herbalist.description': 'Gathers herbs while things grow. They keep, and winter needs them.',
+  'building.healer': "Healer's House",
+  'building.healer.description': 'Nurses the sick, using herbs. Its output is that people stop dying.',
   'building.trading-post': 'Trading Post',
   'building.trading-post.description':
     'A merchant calls in fair weather and swaps your surplus for what you lack.',
@@ -123,6 +129,8 @@ export const EN = {
   'event.born': 'A child was born',
   'event.arrived': 'Newcomers have arrived',
   'event.merchant': 'A merchant has arrived',
+  'event.fellIll': 'Someone has fallen ill',
+  'event.recovered': 'Someone has recovered',
   'event.traded': 'Traded at the post',
   'event.died': 'Someone has died',
   'event.diedOfOldAge': 'Someone died of old age',
@@ -156,6 +164,7 @@ export const ES: Messages = {
   'hud.tools': 'Herramientas',
   'hud.hides': 'Pieles',
   'hud.clothing': 'Ropa',
+  'hud.herbs': 'Hierbas',
   'hud.looseHint': 'en el suelo, esperando a que lo lleven al almacén',
   'trade.sellAuto': 'Cualquier excedente',
   'trade.buyAuto': 'Lo que escasee',
@@ -206,6 +215,7 @@ export const ES: Messages = {
   'villager.walking': 'caminando',
   'villager.working': 'trabajando',
   'villager.hauling': 'acarreando',
+  'villager.ill': 'enfermo',
   'villager.labourer': 'Peón',
 
   'building.house': 'Casa',
@@ -228,6 +238,12 @@ export const ES: Messages = {
   'building.blacksmith': 'Herrería',
   'building.blacksmith.description':
     'Forja hierro en herramientas, que aceleran todos los trabajos.',
+  'building.herbalist': 'Cabaña del herbolario',
+  'building.herbalist.description':
+    'Recoge hierbas mientras crecen. Se conservan, y el invierno las necesita.',
+  'building.healer': 'Casa del sanador',
+  'building.healer.description':
+    'Cuida a los enfermos con hierbas. Lo que produce es que la gente deje de morir.',
   'building.trading-post': 'Puesto comercial',
   'building.trading-post.description':
     'Un mercader viene con buen tiempo y cambia tu excedente por lo que te falta.',
@@ -259,6 +275,8 @@ export const ES: Messages = {
   'event.born': 'Ha nacido un niño',
   'event.arrived': 'Han llegado nuevos pobladores',
   'event.merchant': 'Ha llegado un mercader',
+  'event.fellIll': 'Alguien ha enfermado',
+  'event.recovered': 'Alguien se ha recuperado',
   'event.traded': 'Intercambio en el puesto',
   'event.died': 'Alguien ha muerto',
   'event.diedOfOldAge': 'Alguien ha muerto de viejo',

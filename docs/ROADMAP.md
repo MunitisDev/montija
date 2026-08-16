@@ -45,6 +45,7 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 18    | Clothing              | **Implemented** |
 | 19    | Trade                 | **Implemented** |
 | 20    | Demolition            | **Implemented** |
+| 21    | Health                | **Implemented** |
 
 ---
 
@@ -516,3 +517,37 @@ Five things hold a reference to a building — its plot in the navigation grid,
 its staff, its yard, the jobs aimed at it and anyone walking to one — and each
 has its own test, because a demolition that misses one leaves a ghost the player
 cannot see and cannot fix.
+
+---
+
+## Phase 21 — Health — Implemented
+
+Health already existed and had exactly one cause: it fell when somebody was
+starving or freezing. That made it a second readout of hunger and warmth rather
+than a thing of its own, and it meant a settlement with full stores could never
+be in any trouble at all, however large or badly housed.
+
+- **Illness** arrives on its own schedule, five times as often for somebody with
+  no roof over them, and does not care how full the granary is.
+- An ill villager **stops working** for eight days. That is the whole cost:
+  illness takes hands, not health.
+- A **Herbalist's Hut** gathers herbs while things grow. They keep.
+- A **Healer's House** shortens a case, using both staff and herbs. Either one
+  missing and it treats nobody.
+- Nothing is contagious. Each villager is rolled independently.
+
+Illness costing work rather than health took three measurements to arrive at.
+Every version that drained health did the same damage: a settlement that would
+have reached winter lost somebody in _autumn_ instead, because a villager who
+had been ill during the good days met the bad ones with less to spare. Softening
+the numbers did not help, and neither did a floor, and neither did suppressing
+the drain while somebody was already starving — the front-loading was the
+problem, not its size. Costing work still kills a marginal settlement, but it
+kills by starvation in winter, which is the failure this game is about.
+
+The base rate is measured rather than picked. A case costs eight days of
+somebody's work, and a ten-person settlement has only two or three pairs of
+hands not already committed to a workshop — so the labour bill is far steeper
+than the case count suggests. At twice the shipped rate, a settlement playing
+well lost most of the food it had banked for winter, which made sickness the
+game's dominant mechanic rather than its third one.

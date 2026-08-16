@@ -54,6 +54,7 @@ export function serialise(simulation: Simulation, savedAt: string): SaveGame {
       daysSinceBirthday: villager.daysSinceBirthday,
       birthCooldownDays: villager.birthCooldownDays,
       employerId: villager.employerId,
+      illDaysRemaining: villager.illDaysRemaining,
       carrying: toRecord(villager.inventory),
       path: villager.path.map((step) => ({ gx: step.gx, gy: step.gy })),
       destination: villager.destination ? { ...villager.destination } : null,
@@ -98,6 +99,7 @@ export function serialise(simulation: Simulation, savedAt: string): SaveGame {
     random: {
       villagers: simulation.villagers.randomState,
       forest: simulation.forestRandomState,
+      illness: simulation.illnessRandomState,
     },
   };
 }
@@ -185,6 +187,7 @@ export function restore(simulation: Simulation, save: SaveGame): void {
       villager.daysSinceBirthday = saved.daysSinceBirthday ?? 0;
       villager.birthCooldownDays = saved.birthCooldownDays ?? 0;
       villager.employerId = saved.employerId ?? null;
+      villager.illDaysRemaining = saved.illDaysRemaining ?? 0;
       villager.needs.hunger = saved.hunger;
       villager.needs.warmth = saved.warmth;
       villager.needs.health = saved.health;
@@ -208,6 +211,9 @@ export function restore(simulation: Simulation, save: SaveGame): void {
     // its seed is the right reading, since nothing had drawn from it yet.
     if (save.random.forest) {
       simulation.restoreForestRandom(save.random.forest);
+    }
+    if (save.random.illness) {
+      simulation.restoreIllnessRandom(save.random.illness);
     }
   }
   simulation.restoreClock(save.simulationTime, save.deaths);

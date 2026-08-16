@@ -294,12 +294,25 @@ function place(simulation: Simulation, id: BuildingId): Building | null {
  * winter behaviour a test about an empty map. Supplies are the shortest way to
  * keep ten people breathing long enough to observe them.
  */
+/**
+ * Stocks the yards and roofs everyone, so a test can watch a whole winter.
+ *
+ * The houses are real ones, and that is not incidental. Setting `homeId` by
+ * hand looked equivalent and was not: the population system reassigns homes
+ * every day and drops any that name a house which does not exist, so the
+ * settlement was homeless again by the following morning and froze to death two
+ * days into winter. Tests downstream of that were reading a two-day sliver of
+ * winter and calling it a season.
+ */
 function provision(simulation: Simulation): void {
   const yard = simulation.storages.all[0];
   yard?.inventory.add('food', 900);
   yard?.inventory.add('firewood', 900);
-  for (const villager of simulation.villagers.all) {
-    villager.homeId = 1;
+
+  while (simulation.snapshot().housingCapacity < simulation.villagers.all.length) {
+    if (!raise(simulation, 'house')) {
+      return;
+    }
   }
 }
 

@@ -159,6 +159,10 @@
   color: #8d7f96;
 }
 
+.resource--herbs .resource__icon {
+  color: #7f9469;
+}
+
 /*
  * Hidden by default, and still read aloud.
  *
