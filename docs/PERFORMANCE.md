@@ -6,6 +6,10 @@ Status labels: **Implemented**, **Prototype**, **Planned**.
 simulation is measured precisely, and the frame rate has now been measured on real hardware. What
 that does and does not license is set out below.
 
+**Re-measured at Phase 21.** The simulation figures below are current as of the illness work. The
+rendering and real-hardware sections are not — they are still the Phase 11 measurements, and are
+labelled as such.
+
 Run the simulation benchmarks with:
 
 ```bash
@@ -29,26 +33,54 @@ measurement did not support it. See [What was tried and rejected](#what-was-trie
 every villager kept busy — trees designated, jobs flowing, goods being hauled. An idle village
 benchmarks nothing.
 
+Re-measured at Phase 21, after ten phases of new simulation systems had been added on top of the
+original Phase 11 figures. Median of three runs.
+
 | Villagers | Cost per tick | Share of 1x budget | Share of 4x budget |
 | --------- | ------------- | ------------------ | ------------------ |
-| 10        | 0.03ms        | 0.0%               | 0.1%               |
-| 25        | 0.09ms        | 0.1%               | 0.4%               |
-| 50        | 0.16ms        | 0.2%               | 0.7%               |
-| 100       | 0.22ms        | 0.2%               | 0.9%               |
+| 10        | 0.027ms       | 0.0%               | 0.1%               |
+| 25        | 0.054ms       | 0.1%               | 0.2%               |
+| 50        | 0.071ms       | 0.1%               | 0.3%               |
+| 100       | 0.125ms       | 0.1%               | 0.5%               |
 
 The clock runs 10 ticks a second at 1x, so a tick has 100ms before the simulation is what limits the
-game — and 25ms at 4x, which is the case that matters. At 100 villagers the simulation uses under
-**1%** of it.
+game — and 25ms at 4x, which is the case that matters. At 100 villagers the simulation uses about
+**half a percent** of it.
 
-Growth is comfortably sub-linear: ten times the villagers costs about seven times the tick, because a
-fair share of each tick is fixed work that does not care how many people there are.
+Growth is comfortably sub-linear: ten times the villagers costs between four and five times the tick,
+because a fair share of each tick is fixed work that does not care how many people there are.
+
+### What ten phases of new systems cost — measured
+
+The Phase 11 table recorded 0.03 / 0.09 / 0.16 / 0.22ms. Those are **not comparable** with the
+figures above: they were taken on different hardware, and comparing absolute milliseconds across
+machines measures the machine. To get an answer worth having, Phase 11's commit was checked out into
+a worktree and benchmarked on the same machine, in the same session, as the table above.
+
+| Villagers | Phase 11 | Phase 21 | Change |
+| --------- | -------- | -------- | ------ |
+| 10        | 0.026ms  | 0.027ms  | +4%    |
+| 25        | 0.042ms  | 0.054ms  | +29%   |
+| 50        | 0.064ms  | 0.071ms  | +11%   |
+| 100       | 0.109ms  | 0.125ms  | +15%   |
+
+Employment, forest regrowth, quarries and mines, fields and orchards, clothing, trade, roads,
+demolition and illness together cost **roughly 10–15% of a tick**. Nearly all of them run once a day
+or on a throttled interval rather than every tick, which is why ten systems add up to less than one
+system's worth of per-tick work.
+
+The two runs are close but not identical workloads — Phase 21 issues 886 path searches against Phase
+11's 897, and creates 575 jobs against 594 — because the same seed now grows a slightly different
+settlement. The difference is under 3% and does not change the reading.
 
 ### Where the time is not going
 
 Worth stating, because all three were plausible suspects before measurement:
 
-- **Day boundaries are not a spike.** Survival, spoilage and the daily accounting average 0.63ms
-  against 0.30ms for an ordinary tick — twice the cost of a normal tick, once every sixty.
+- **Day boundaries are not a spike.** Survival, spoilage and the daily accounting cost roughly twice
+  an ordinary tick, once every sixty. Measured at Phase 11; the day boundary has since gained
+  employment, forest regrowth, trade and illness, and the worst tick in the Phase 21 runs is around
+  1ms against a 25ms budget, so the conclusion holds even if the ratio has moved.
 - **Pathfinding for actual work never fails.** Sampling 400 searches from villagers to live jobs at
   100 villagers gave 400 successes, no failures and no exhausted node budgets.
 - **The worst ticks are early ticks.** The largest samples cluster in the first hundred ticks of a
@@ -91,7 +123,7 @@ big settlement rather than a hung tab.
 
 ## On real hardware — measured
 
-An Android phone with an adaptive-refresh display, at the default ten villagers:
+**Phase 11 figures, not re-measured.** An Android phone with an adaptive-refresh display, at the default ten villagers:
 
 | Condition                | Frame rate |
 | ------------------------ | ---------- |
@@ -112,7 +144,9 @@ it was the first thing this document nominated to try, and the measurement says 
 
 ## Rendering — measured only on a software renderer
 
-Measured in a headless browser whose WebGL is SwiftShader: a CPU rasteriser with no GPU behind it.
+**Phase 11 figures, not re-measured.** Measured in a headless browser whose WebGL is SwiftShader: a
+CPU rasteriser with no GPU behind it. The low-poly art pass and nine new building types have landed
+since, so the display-object count is certainly higher than the table says; nobody has counted it.
 
 | Villagers | Display objects | Game step per frame | Frame rate here |
 | --------- | --------------- | ------------------- | --------------- |
@@ -187,3 +221,6 @@ In order, based on what the measurements above rule out:
   the measurement says it is unnecessary; it is written down here so nobody re-nominates it without
   new evidence.
 - A benchmark for load and save at scale, which is currently unmeasured.
+- Re-measuring the renderer and a real device after the art pass. Both sections above are Phase 11
+  figures against a scene that has since been redrawn as low-poly volumes and gained nine building
+  types.
