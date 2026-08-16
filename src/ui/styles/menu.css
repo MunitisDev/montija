@@ -327,3 +327,203 @@ body.is-menu-open #hud {
     min-height: 40px;
   }
 }
+
+/* --- The people panel ---------------------------------------------------- */
+
+/*
+ * Shares the sheet's chrome with the guide, because it is the same kind of
+ * thing: open, read, act, close. Only the contents differ.
+ */
+
+.roster__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 0 0 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--colour-panel-edge);
+}
+
+.roster__stat {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.roster__stat-label {
+  font-size: 0.78rem;
+  color: var(--colour-ink-dim);
+}
+
+.roster__stat-value {
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--colour-ink);
+}
+
+.roster__note {
+  flex: 1 0 100%;
+  margin: 4px 0 0;
+  max-width: 70ch;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--colour-ink-dim);
+}
+
+.roster__household {
+  margin: 0 0 20px;
+}
+
+.roster__heading {
+  margin: 0 0 6px;
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--colour-accent);
+}
+
+/*
+ * The people with nowhere to sleep are called out rather than listed like any
+ * other group. They are the ones the player most needs to notice, and winter
+ * is what happens to them first.
+ */
+.roster__household.is-roofless .roster__heading {
+  color: #c98a3a;
+}
+
+.roster__person {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 4px 16px;
+  align-items: start;
+  padding: 8px 0;
+  border-top: 1px solid rgba(216, 203, 168, 0.07);
+}
+
+.roster__person.is-ill {
+  /* A tint rather than an icon: it reads at a glance down a list of thirty. */
+  background: rgba(201, 138, 58, 0.09);
+}
+
+.roster__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.roster__name {
+  font-size: 0.94rem;
+  color: var(--colour-ink);
+}
+
+.roster__age,
+.roster__doing {
+  font-size: 0.74rem;
+  color: var(--colour-ink-dim);
+}
+
+.roster__needs {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.roster__meter-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.roster__meter-label {
+  flex: 0 0 4.2rem;
+  font-size: 0.7rem;
+  color: var(--colour-ink-dim);
+}
+
+.roster__meter {
+  flex: 1 1 auto;
+  height: 5px;
+  min-width: 0;
+  background: rgba(216, 203, 168, 0.12);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.roster__meter-fill {
+  display: block;
+  height: 100%;
+  background: #7c8f5a;
+}
+
+.roster__meter.is-low .roster__meter-fill {
+  background: #c9a227;
+}
+
+.roster__meter.is-critical .roster__meter-fill {
+  background: #b4553a;
+}
+
+.roster__family {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  font-size: 0.76rem;
+  color: var(--colour-ink);
+}
+
+.roster__fact-label {
+  color: var(--colour-ink-dim);
+}
+
+.roster__work {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.roster__work-label {
+  font-size: 0.7rem;
+  color: var(--colour-ink-dim);
+}
+
+/*
+ * A native select, on purpose.
+ *
+ * On a phone it opens as a full-screen wheel with proper touch targets, which
+ * is better than anything a custom listbox would give for sixteen workplaces —
+ * and it is reachable by keyboard and screen reader without any work.
+ */
+.roster__select {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 6px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  color: var(--colour-ink);
+  background: var(--colour-panel);
+  border: 1px solid var(--colour-panel-edge);
+  border-radius: 5px;
+}
+
+.roster__select:hover {
+  border-color: rgba(201, 162, 39, 0.45);
+}
+
+/* Narrow screens: four columns become two, then the row simply stacks. */
+@media (max-width: 46rem) {
+  .roster__person {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 6px 14px;
+  }
+}
+
+@media (max-width: 30rem) {
+  .roster__person {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

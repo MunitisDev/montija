@@ -146,6 +146,22 @@
             </div>
           </div>
 
+          <!-- The settlement's people. Next to the rules because both are
+               "open, read, act, close" rather than part of the world. -->
+          <button type="button" class="icon-button" data-ui="roster-open" aria-label="People">
+            <svg
+              class="icon-button__glyph"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <circle cx="9" cy="7" r="3.4" />
+              <path d="M2 21c0-3.6 3.1-6.4 7-6.4s7 2.8 7 6.4z" />
+              <circle cx="17.5" cy="8.5" r="2.6" />
+              <path d="M14.6 14.4c.9-.4 1.9-.6 2.9-.6 3 0 4.5 2 4.5 4.6h-5.2c0-1.6-.8-3-2.2-4z" />
+            </svg>
+          </button>
+
           <!-- The rules, reachable while playing: needing them is exactly when
                leaving the settlement to find them is most annoying. -->
           <button type="button" class="icon-button" data-ui="help" aria-label="How to play">
@@ -328,6 +344,16 @@
             data-ui="menu-language"
             aria-label="Language"
           ></button>
+        </div>
+      </div>
+
+      <div class="sheet" data-ui="roster" role="dialog" aria-modal="true" hidden>
+        <div class="sheet__panel">
+          <header class="sheet__head">
+            <h2 class="sheet__title" data-ui="roster-title"></h2>
+            <button type="button" class="sheet__close" data-ui="roster-close"></button>
+          </header>
+          <div class="sheet__body roster" data-ui="roster-body"></div>
         </div>
       </div>
 

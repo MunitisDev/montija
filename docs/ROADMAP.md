@@ -22,31 +22,32 @@ count is claimed**: nothing has yet pushed the renderer hard enough to find one.
 
 Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 
-| Phase | Name                   | Status          |
-| ----- | ---------------------- | --------------- |
-| 0     | Repository inspection  | **Implemented** |
-| 1     | Browser foundation     | **Implemented** |
-| 2     | Isometric world        | **Implemented** |
-| 3     | Villagers              | **Implemented** |
-| 4     | Job system             | **Implemented** |
-| 5     | Resource logistics     | **Implemented** |
-| 6     | Construction           | **Implemented** |
-| 7     | Economy                | **Implemented** |
-| 8     | Seasons and survival   | **Implemented** |
-| 9     | Save / load            | **Implemented** |
-| 10    | Mobile UX              | **Implemented** |
-| 11    | Performance            | **Implemented** |
-| 12    | Homes and population   | **Implemented** |
-| 13    | Seasons on screen      | **Implemented** |
-| 14    | Roads                  | **Implemented** |
-| 15    | Art pass               | **Implemented** |
-| 16    | Land use               | **Implemented** |
-| 17    | Professions            | **Implemented** |
-| 18    | Clothing               | **Implemented** |
-| 19    | Trade                  | **Implemented** |
-| 20    | Demolition             | **Implemented** |
-| 21    | Health                 | **Implemented** |
-| 22    | Start screen and guide | **Implemented** |
+| Phase | Name                          | Status          |
+| ----- | ----------------------------- | --------------- |
+| 0     | Repository inspection         | **Implemented** |
+| 1     | Browser foundation            | **Implemented** |
+| 2     | Isometric world               | **Implemented** |
+| 3     | Villagers                     | **Implemented** |
+| 4     | Job system                    | **Implemented** |
+| 5     | Resource logistics            | **Implemented** |
+| 6     | Construction                  | **Implemented** |
+| 7     | Economy                       | **Implemented** |
+| 8     | Seasons and survival          | **Implemented** |
+| 9     | Save / load                   | **Implemented** |
+| 10    | Mobile UX                     | **Implemented** |
+| 11    | Performance                   | **Implemented** |
+| 12    | Homes and population          | **Implemented** |
+| 13    | Seasons on screen             | **Implemented** |
+| 14    | Roads                         | **Implemented** |
+| 15    | Art pass                      | **Implemented** |
+| 16    | Land use                      | **Implemented** |
+| 17    | Professions                   | **Implemented** |
+| 18    | Clothing                      | **Implemented** |
+| 19    | Trade                         | **Implemented** |
+| 20    | Demolition                    | **Implemented** |
+| 21    | Health                        | **Implemented** |
+| 22    | Start screen and guide        | **Implemented** |
+| 23    | People, families and postings | **Implemented** |
 
 ---
 
@@ -581,3 +582,52 @@ Two notes on what this deliberately is not. **"New settlement" does not found a 
 behind the menu is already new, and re-founding would discard it to generate an identical
 replacement. And there is no in-game pause menu; the **?** button covers the case that matters, and
 beginning again after a settlement dies is the failure overlay's job, which it already does.
+
+---
+
+## Phase 23 — People, families and postings — Implemented
+
+Three things the settlement could not do: show you its people, tell you who they
+are to each other, or let you say who does what.
+
+### Postings
+
+Quotas already answered "how many people at this workshop". They could not
+answer "this person, at that workshop". A villager now carries one of three
+states — automatic, posted to a building, or kept a labourer on purpose.
+
+The third is the one that could not be expressed before: an unemployed villager
+is exactly who automatic hiring grabs for the next vacancy, so there was no way
+to say "leave this one carrying things".
+
+A posting displaces somebody the settlement merely placed at a building, never
+somebody else the player posted. Without that it silently did nothing whenever
+the workshop was full, which is most of the time, and the control would have
+looked broken for reasons the game never explains.
+
+### Families
+
+Couples form on their own and have the children; a child records its parents and
+joins their household. Set out in [GAME_DESIGN.md](./GAME_DESIGN.md), including
+why pairing is not conditional on sharing a house and the measurement showing
+families cost the growth curve nothing.
+
+### The people panel
+
+Everyone, grouped by household, with a work picker per adult. Content and
+rendering are separate, as with the guide: `rosterModel.ts` produces the panel
+as data with no DOM so it can be tested headlessly, and `Roster.ts` only decides
+how it looks.
+
+**Tools and clothing are shown as settlement-wide coverage, not per person,**
+because that is what they are. Anything else would have been an invention.
+
+### Job priorities — investigated, deliberately unchanged
+
+Whether the player should set per-building work priorities was measured rather
+than guessed. Construction is not starved by hauling, four concurrent sites all
+complete, and the backlog that forms under load is felling — which is what
+should queue. A priority slider would be a third lever overlapping two that
+already exist. See
+[GAME_DESIGN.md](./GAME_DESIGN.md#should-the-player-set-priorities--measured-and-no)
+for the figures and for what would change the decision.

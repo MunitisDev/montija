@@ -33,6 +33,7 @@ import { SeededRandom, deriveSeed } from '@/shared/math/random';
 import type { BuildingId, ResourceAmount } from '@/data/buildings';
 import type { PlacementCheck } from '@/simulation/buildings/BuildingRegistry';
 import type { Inventory } from '@/simulation/resources/Inventory';
+import type { WorkPreference } from '@/simulation/villagers/Villager';
 import { restore, serialise } from '@/simulation/save/serialise';
 import {
   AUTOSAVE_SLOT,
@@ -171,6 +172,13 @@ export interface GameContext {
   readonly tradeOrder: { sell: ResourceId | null; buy: ResourceId | null };
   /** Steps the sell or buy choice on to the next good, or back to automatic. */
   cycleTradeChoice(side: 'sell' | 'buy'): void;
+  /**
+   * Posts a villager to a building, keeps them a labourer, or hands them back
+   * to automatic employment.
+   *
+   * Quotas say how many people a workshop should have; this says who.
+   */
+  setWorkPreference(villagerId: number, preference: WorkPreference): boolean;
 
   /** The building being placed, or `null` when not in placement mode. */
   readonly placement: PlacementState | null;
@@ -839,6 +847,18 @@ export class Game implements GameContext, InputIntentSink {
    * rather than a separate control, so the way back is the same gesture as the
    * way forward.
    */
+  /**
+   * Posts a villager to a building, keeps them a labourer, or hands them back
+   * to automatic employment.
+   *
+   * A pass-through, deliberately: employment is the simulation's business and
+   * the panel's job is to say what the player asked for, not to decide whether
+   * it happens.
+   */
+  public setWorkPreference(villagerId: number, preference: WorkPreference): boolean {
+    return this.simulation.setWorkPreference(villagerId, preference);
+  }
+
   public cycleTradeChoice(side: 'sell' | 'buy'): void {
     const options: (ResourceId | null)[] = [null, ...TRADEABLE[side]];
     const current = side === 'sell' ? this.simulation.trading.sell : this.simulation.trading.buy;

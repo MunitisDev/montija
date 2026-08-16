@@ -332,6 +332,60 @@ offering it.
 
 ---
 
+## How work is chosen — Implemented
+
+Every job carries a priority, and a villager takes the highest-priority job they
+are allowed to do, breaking ties on distance and then on job id so a settlement
+replayed from its seed behaves identically.
+
+| Priority   | Work                                                           |
+| ---------- | -------------------------------------------------------------- |
+| **urgent** | producing at a workshop — employees only                       |
+| **high**   | building; hauling goods **in** from the field                  |
+| **normal** | felling, mining, planting; hauling materials **out** to a site |
+| **low**    | laying roads; demolition                                       |
+
+Two asymmetries in that table are deliberate and were each put there to fix
+something measured.
+
+**Hauling in outranks cutting more down.** At equal priority the nearest job
+won, so a marked stand of trees buried the hauling and a settlement starved with
+fifty food lying in piles beside the hut, because nobody would stop chopping
+long enough to carry it in.
+
+**Roads and demolition sit below everything.** A settlement must never pave a
+path while its food sits in the field, and tearing something down is never more
+urgent than feeding the people who live there.
+
+### Should the player set priorities? — measured, and no
+
+The obvious next lever is a priority control on each building. It was measured
+before being built, and the measurement says it is not needed.
+
+- **Construction is not starved by hauling.** A house placed into a settlement
+  running three gatherer huts at full tilt got its materials in 94–136 ticks
+  against 82–119 in a quiet one, and was finished in about four days either way.
+  Only ~1.4× slower under full load.
+- **Concurrent sites do not deadlock.** Four houses ordered in the same breath
+  all completed, staggered across 206–332 ticks. Materials are not spread one
+  log per site until nothing finishes, which was the failure worth fearing.
+- **The queue that builds up is the right one.** Under load the board held ~300
+  available jobs, almost all felling and mining, with the high-priority hauls
+  consumed as fast as they appeared. A player who marks three hundred trees
+  should see them cut as hands free up; that backlog is the plan working.
+
+So a per-building priority slider would be a third lever overlapping two that
+already exist — worker quotas and postings — plus the biggest lever of all,
+which is deciding what to designate. The brief says not to over-engineer the UI,
+and knobs without decisions behind them are how a settlement game turns into a
+spreadsheet.
+
+**What would change this:** a measured case where the ladder produces an outcome
+a player can see is wrong and cannot fix by staffing or designating. None has
+been found yet.
+
+---
+
 ## Who works where — Implemented
 
 Every villager used to be a generalist. A produce job at a hut went to whoever
@@ -375,6 +429,56 @@ The difference between dying and living is one building, which is the decision
 the game is asking for. Capping how far an employee will walk to help with other
 work was tried and **measured**: no effect at 14 cells, and worse at 5. Their
 travel is not what a short-handed village is losing to.
+
+---
+
+## Families — Implemented
+
+Adults of childbearing age pair up on their own, and a pairing is always mutual.
+A **couple** has the children, both partners go on cooldown together so one
+household cannot produce two in a day, and a child records who it was born to
+and joins its parents' household where there is room.
+
+Pairing is deliberately **not** conditional on sharing a house. That was tried
+when births were first written and produced no children at all across six
+simulated years: whether the two people given the house with the spare bed
+happened to both be of an age was a lottery, so a settlement could be sterile
+because of the order beds were handed out. A pairing is a fact about two people;
+the spare bed is checked when a child actually arrives.
+
+Measured against the same six-year run without pairing, on two seeds: the same
+final population and the same number of births. Families cost the player
+nothing — they are there to make a settlement a set of households rather than a
+headcount.
+
+Parentage is **information and nothing else**. No system reads it, inheritance
+does not exist, and nobody is stopped from pairing with a relative — that last
+one is a real omission rather than an oversight. It is also not "mother and
+father": the simulation has no notion of sex, and inventing one to fill in a
+label would be a whole model added for a caption.
+
+Couples formed young stay together as they age; only death separates them, and a
+survivor may pair again.
+
+---
+
+## The people panel — Implemented
+
+Everyone in the settlement, grouped by the roof they sleep under. A flat list of
+thirty names sorted by id is a spreadsheet; the same thirty grouped by household
+is a village. The people with **no roof** get their own group at the end, called
+out in a different colour, because they are the ones the player most needs to
+notice and winter reaches them first.
+
+Per person: age, whether they are a child, what they do and where, how fed, warm
+and healthy they are, whether they are ill, who they are with, who they were
+born to, their children, and what is on their back right now.
+
+**Tools and clothing are not there, and that is deliberate.** They are not
+modelled per person: the survival system works out what fraction of the day's
+demand the stores covered and applies that same fraction to everybody. A tick
+beside one villager saying "has tools" would be an invention. The coverage is
+reported once for the settlement, with a line saying so in as many words.
 
 ---
 

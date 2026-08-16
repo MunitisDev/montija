@@ -19,6 +19,7 @@ import { createPhaserGame } from '@/renderer/phaser/createPhaserGame';
 import { Hud } from '@/ui/hud/Hud';
 import { BuildMenu } from '@/ui/build-menu/BuildMenu';
 import { Guide } from '@/ui/guide/Guide';
+import { Roster } from '@/ui/roster/Roster';
 import { MainMenu } from '@/ui/menu/MainMenu';
 import { I18n } from '@/ui/i18n/I18n';
 import { StatsOverlay, requestedVillagers, statsRequested } from '@/ui/StatsOverlay';
@@ -76,15 +77,22 @@ export function start(): void {
   // Both live outside #hud — see index.html for why — so they are looked up
   // from the game root rather than the HUD layer.
   const guide = new Guide(gameRoot, i18n);
+  const roster = new Roster(gameRoot, game, i18n);
   const mainMenu = new MainMenu(gameRoot, game, i18n, guide);
 
-  // Opening the rules mid-game pauses, and closing them puts the clock back
-  // where it was: nobody wants to read about winter while winter happens.
-  const helpButton = hudRoot.querySelector<HTMLButtonElement>('[data-ui="help"]');
-  helpButton?.addEventListener('click', () => {
+  /**
+   * Opens a sheet with the clock stopped, and puts it back as it was after.
+   *
+   * Shared by the rules and the people panel because both are things you stop
+   * to read: nobody wants winter happening behind a page they are studying,
+   * and a player who was already paused should still be paused afterwards.
+   */
+  const openPaused = (sheet: {
+    open: (o: { closeLabel: string; onClose: () => void }) => void;
+  }) => {
     const wasPaused = game.clock.isPaused;
     game.clock.pause();
-    guide.open({
+    sheet.open({
       closeLabel: i18n.t('menu.close'),
       onClose: () => {
         if (!wasPaused) {
@@ -92,7 +100,15 @@ export function start(): void {
         }
       },
     });
-  });
+  };
+
+  const rosterButton = hudRoot.querySelector<HTMLButtonElement>('[data-ui="roster-open"]');
+  rosterButton?.addEventListener('click', () => openPaused(roster));
+
+  // Opening the rules mid-game pauses, and closing them puts the clock back
+  // where it was: nobody wants to read about winter while winter happens.
+  const helpButton = hudRoot.querySelector<HTMLButtonElement>('[data-ui="help"]');
+  helpButton?.addEventListener('click', () => openPaused(guide));
 
   // The button is a glyph, so its only name is the one assistive technology
   // reads — and that name has to change with the language like every other.
@@ -104,6 +120,10 @@ export function start(): void {
     labelledLanguageVersion = i18n.changeVersion;
     helpButton.setAttribute('aria-label', i18n.t('menu.help'));
     helpButton.title = i18n.t('menu.help');
+    rosterButton?.setAttribute('aria-label', i18n.t('roster.open'));
+    if (rosterButton) {
+      rosterButton.title = i18n.t('roster.open');
+    }
   };
   relabelHelp();
 

@@ -71,6 +71,10 @@ off. Felled logs and quarried stone lie where they fall until a villager hauls t
 To build: pick a building from the bottom bar, move the camera until the ghost sits where you want
 it, and press **Place**. Villagers carry the materials from storage and construct it.
 
+Tap the **people** button in the top bar for everyone in the settlement, grouped by household —
+ages, families, how each of them is doing, and a picker to post somebody to a particular workshop or
+keep them on hauling. Opening it pauses the game, as does the **?** guide.
+
 Simulation speed (pause / 1x / 2x / 4x) is set from the buttons at the bottom right.
 
 ## Architecture in one paragraph
