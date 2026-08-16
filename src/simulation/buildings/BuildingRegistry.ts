@@ -161,6 +161,29 @@ export class BuildingRegistry {
     this.changeVersion += 1;
   }
 
+  /**
+   * Takes a building off the map and gives the ground back.
+   *
+   * Unblocking the navigation grid is the part that matters and the part that
+   * is easy to forget: a demolished building whose cells stay blocked leaves a
+   * hole in the map that nothing can walk through and nothing can explain.
+   * Rebuilt from the terrain rather than simply cleared, so a cell that was
+   * *also* forest or road goes back to being forest or road.
+   */
+  public demolish(world: World, buildingId: number): Building | null {
+    const building = this.byId.get(buildingId);
+    if (!building) {
+      return null;
+    }
+
+    this.byId.delete(buildingId);
+    for (const cell of building.cells()) {
+      world.navigation.refreshCell(world.terrain, cell.gx, cell.gy);
+    }
+    this.changeVersion += 1;
+    return building;
+  }
+
   /** Removes every building. Used before restoring a save. */
   public clear(): void {
     this.byId.clear();

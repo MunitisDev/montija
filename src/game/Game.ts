@@ -122,6 +122,8 @@ export interface BuildingSelection {
   readonly housing: number;
   /** Residents living here, for a completed house. */
   readonly residents: number;
+  /** `true` when this building is already waiting to be pulled down. */
+  readonly demolitionOrdered: boolean;
 }
 
 /** What the presentation layer is allowed to see. */
@@ -162,6 +164,8 @@ export interface GameContext {
   toggleSelectedRoad(): boolean;
   /** Changes how many people the selected building should employ. */
   adjustSelectedWorkers(delta: number): boolean;
+  /** Orders the selected building pulled down, or takes the order back. */
+  toggleSelectedDemolition(): boolean;
 
   /** The building being placed, or `null` when not in placement mode. */
   readonly placement: PlacementState | null;
@@ -647,6 +651,7 @@ export class Game implements GameContext, InputIntentSink {
       housing: definition.housing ?? 0,
       residents: this.simulation.villagers.all.filter((villager) => villager.homeId === building.id)
         .length,
+      demolitionOrdered: this.simulation.isDemolitionOrdered(building.id),
     };
   }
 
@@ -682,6 +687,10 @@ export class Game implements GameContext, InputIntentSink {
       contents: inventoryAmounts(yard.inventory),
       housing: 0,
       residents: 0,
+      // The founding yard has no Building behind it, so there is nothing to
+      // pull down — and it is the settlement's only store on day one, which
+      // makes offering to demolish it a trap rather than a choice.
+      demolitionOrdered: false,
     };
   }
 
@@ -787,6 +796,29 @@ export class Game implements GameContext, InputIntentSink {
       this.refreshSelection(selection.cell);
     }
     return changed;
+  }
+
+  /**
+   * Orders the selected building pulled down, or cancels that order.
+   *
+   * Its own undo, like the road button: a second tap takes the order back, so
+   * a misplaced tap on a quarry is a mistake the player can simply reverse
+   * rather than one they have to live with.
+   */
+  public toggleSelectedDemolition(): boolean {
+    const selection = this.currentSelection;
+    const building = selection?.building;
+    // The founding yard is described as a building but is not one, and it is
+    // the settlement's only store on day one.
+    if (!selection || !building || !this.simulation.world.buildings.getById(building.id)) {
+      return false;
+    }
+
+    const acted = this.simulation.toggleDemolition(building.id);
+    if (acted) {
+      this.refreshSelection(selection.cell);
+    }
+    return acted;
   }
 
   /** Re-reads the selected cell after the world changed underneath it. */

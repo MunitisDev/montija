@@ -1214,6 +1214,46 @@
 }
 
 /*
+ * Demolition, at the bottom of the building panel.
+ *
+ * Muted rather than red: pulling a building down is an ordinary decision in a
+ * settlement builder, not a warning, and it is reversible right up until
+ * somebody arrives with a crowbar.
+ */
+.building-panel__demolish {
+  align-self: flex-start;
+  min-height: var(--touch-target);
+  margin-top: 4px;
+  padding: 0 14px;
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  color: var(--colour-ink-dim);
+  background: transparent;
+  border: 1px solid var(--colour-panel-edge);
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.building-panel__demolish[hidden] {
+  display: none;
+}
+
+.building-panel__demolish:hover {
+  color: var(--colour-ink);
+}
+
+/* Once ordered, the button is the way back. */
+.building-panel__demolish.is-cancel {
+  color: var(--colour-accent);
+  border-color: rgba(201, 162, 39, 0.5);
+}
+
+.building-panel__demolish:focus-visible {
+  outline: 2px solid var(--colour-accent);
+  outline-offset: 2px;
+}
+
+/*
  * Full screen: the HUD moves up into the room the browser chrome gave back.
  *
  * The safe-area inset is still honoured — a notch is a notch whether or not

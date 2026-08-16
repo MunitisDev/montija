@@ -110,6 +110,17 @@ export class StorageRegistry {
     this.changeVersion += 1;
   }
 
+  /** Closes one yard. Its contents are the caller's problem, not this one's. */
+  public remove(id: number): boolean {
+    const index = this.storages.findIndex((storage) => storage.id === id);
+    if (index < 0) {
+      return false;
+    }
+    this.storages.splice(index, 1);
+    this.changeVersion += 1;
+    return true;
+  }
+
   public getById(id: number): Storage | null {
     return this.storages.find((storage) => storage.id === id) ?? null;
   }

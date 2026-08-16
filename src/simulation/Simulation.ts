@@ -63,6 +63,9 @@ const FELLING_PER_PASS = 3;
 /** Ticks between employment passes. Nobody changes job inside two seconds. */
 const EMPLOYMENT_INTERVAL_TICKS = 25;
 
+/** The share of a building's cost that comes back when it is pulled down. */
+const SALVAGE_SHARE = 0.5;
+
 /**
  * What the settlement most needs to hear about, or `null` when all is well.
  *
@@ -218,6 +221,7 @@ export class Simulation {
     this.villagers.productionScaleProvider = (profile) => SEASONAL_YIELD[profile][this.year.season];
     // Tools make every job quicker. With none, this is exactly 1.
     this.villagers.workRateProvider = () => 1 + TOOL_WORK_BONUS * this.lastDayReport.toolFraction;
+    this.villagers.onDemolished = (buildingId) => this.completeDemolition(buildingId);
   }
 
   public get worldSeed(): number {
@@ -858,6 +862,148 @@ export class Simulation {
       return;
     }
     this.lastEmployment = runEmployment(this.villagers.all, this.world.buildings);
+  }
+
+  /**
+   * Orders a building pulled down, or takes the order back.
+   *
+   * Nothing in this game could be un-built until now, which mattered more the
+   * moment quarries and mines arrived: a permanent building in the wrong place
+   * was a permanent mistake, and a settlement's first hour is exactly when a
+   * player makes those.
+   *
+   * A **construction site is cancelled at once** and hands back whatever was
+   * delivered to it. There is nothing standing to pull down, and a player who
+   * misplaced a ghost wants it gone, not scheduled.
+   *
+   * A **finished building is a job**, like everything else that changes the
+   * world: somebody walks over and tears it down, and half the materials come
+   * back as salvage on the plot. Ordering it again cancels the order, which
+   * makes the button its own undo.
+   */
+  public toggleDemolition(buildingId: number): boolean {
+    const building = this.world.buildings.getById(buildingId);
+    if (!building) {
+      return false;
+    }
+
+    if (!building.isComplete) {
+      this.cancelSite(building);
+      return true;
+    }
+
+    const pending = this.jobs.findByTarget('demolish', buildingId);
+    if (pending) {
+      this.jobs.cancel(pending.id);
+      this.releaseVillagersFrom(pending.id);
+      return true;
+    }
+
+    return (
+      this.jobs.create({
+        type: 'demolish',
+        target: building.accessCell,
+        // The lowest priority in the game, alongside roads. Tearing something
+        // down is never more urgent than feeding the people who live there.
+        priority: JobPriority.low,
+        targetEntityId: buildingId,
+      }) !== null
+    );
+  }
+
+  /** `true` when this building is waiting to be pulled down. */
+  public isDemolitionOrdered(buildingId: number): boolean {
+    return this.jobs.isTargetReserved('demolish', buildingId);
+  }
+
+  /**
+   * Takes an unfinished building off the map and returns its materials.
+   *
+   * The materials are dropped on the plot rather than credited to a yard: they
+   * physically arrived there on somebody's back, and the rule that resources
+   * exist in the world does not get suspended because the player changed their
+   * mind.
+   */
+  private cancelSite(building: Building): void {
+    for (const { resource, amount } of building.materials.contents) {
+      this.world.piles.drop(building.accessCell, resource, amount);
+    }
+    this.retireBuilding(building);
+  }
+
+  /**
+   * Removes a building and unpicks everything pointing at it.
+   *
+   * Five things hold a reference — its plot in the navigation grid, its staff,
+   * its yard, the jobs aimed at it and anyone walking to one — and a demolition
+   * that misses any of them leaves a ghost the player cannot see and cannot
+   * fix.
+   */
+  private retireBuilding(building: Building): void {
+    for (const job of this.jobs.all) {
+      const aimedHere =
+        job.targetEntityId === building.id &&
+        (job.type === 'produce' ||
+          job.type === 'build' ||
+          job.type === 'plant-tree' ||
+          job.type === 'demolish');
+      const deliveringHere =
+        job.deliverTo !== null &&
+        job.deliverTo.gx === building.accessCell.gx &&
+        job.deliverTo.gy === building.accessCell.gy;
+
+      if ((aimedHere || deliveringHere) && !isFinished(job)) {
+        this.jobs.cancel(job.id);
+        this.releaseVillagersFrom(job.id);
+      }
+    }
+
+    for (const villager of this.villagers.all) {
+      if (villager.employerId === building.id) {
+        villager.employerId = null;
+      }
+      if (villager.homeId === building.id) {
+        villager.homeId = null;
+      }
+    }
+
+    // A yard being torn down tips its contents onto the plot rather than
+    // deleting them. Somebody carried every one of those in.
+    if (building.storageId !== null) {
+      const storage = this.storages.getById(building.storageId);
+      if (storage) {
+        for (const { resource, amount } of storage.inventory.contents) {
+          this.world.piles.drop(building.accessCell, resource, amount);
+        }
+        this.storages.remove(storage.id);
+      }
+    }
+
+    for (const { resource, amount } of building.input.contents) {
+      this.world.piles.drop(building.accessCell, resource, amount);
+    }
+
+    this.world.buildings.demolish(this.world, building.id);
+  }
+
+  /** Pulls a finished building down and leaves salvage on the plot. */
+  private completeDemolition(buildingId: number): void {
+    const building = this.world.buildings.getById(buildingId);
+    if (!building) {
+      return;
+    }
+
+    // Half of what it cost, rounded down. Generous enough that moving a
+    // misplaced building is a real option, mean enough that shuffling the
+    // settlement around is never free.
+    for (const cost of building.definition.constructionCost) {
+      const salvage = Math.floor(cost.amount * SALVAGE_SHARE);
+      if (salvage > 0) {
+        this.world.piles.drop(building.accessCell, cost.resource, salvage);
+      }
+    }
+
+    this.retireBuilding(building);
   }
 
   /**

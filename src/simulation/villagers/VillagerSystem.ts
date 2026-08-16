@@ -485,6 +485,16 @@ export class VillagerSystem {
    */
   public workRateProvider: (() => number) | null = null;
 
+  /**
+   * Called when a demolition job finishes.
+   *
+   * A callback rather than direct work, for the same reason as the production
+   * scale: pulling a building down touches storages, employment and the job
+   * board, none of which the villagers know about. They do the labour; the
+   * simulation deals with the consequences.
+   */
+  public onDemolished: ((buildingId: number) => void) | null = null;
+
   private workRate(): number {
     return this.workRateProvider ? this.workRateProvider() : 1;
   }
@@ -521,6 +531,11 @@ export class VillagerSystem {
         break;
       case 'pave-road':
         this.world.paveRoad(job.target);
+        break;
+      case 'demolish':
+        if (job.targetEntityId !== null) {
+          this.onDemolished?.(job.targetEntityId);
+        }
         break;
       case 'plant-tree':
         // Shape and size come from the villagers' own stream rather than the

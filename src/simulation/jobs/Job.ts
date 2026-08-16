@@ -31,7 +31,8 @@ export type JobType =
   | 'build'
   | 'produce'
   | 'pave-road'
-  | 'plant-tree';
+  | 'plant-tree'
+  | 'demolish';
 
 /**
  * Which leg of a multi-stage job is being done.
@@ -114,6 +115,10 @@ export const JOB_WORK_TICKS: Readonly<Record<JobType, number>> = {
   'pave-road': 20,
   // Setting a sapling. Quick work; the waiting is done by the tree.
   'plant-tree': 15,
+  // Pulling a building down and stacking what is worth keeping. Slower than
+  // raising a wall is fast, but far quicker than building it — tearing down is
+  // always easier than putting up.
+  demolish: 45,
 };
 
 export function isFinished(job: Job): boolean {

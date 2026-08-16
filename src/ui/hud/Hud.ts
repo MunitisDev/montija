@@ -61,6 +61,7 @@ interface HudElements {
   readonly workerControl: HTMLElement;
   readonly workerCount: HTMLElement;
   readonly workerLabel: HTMLElement;
+  readonly demolish: HTMLButtonElement;
   readonly workerFewer: HTMLButtonElement;
   readonly workerMore: HTMLButtonElement;
   readonly failure: HTMLElement;
@@ -105,6 +106,10 @@ export class Hud {
     this.bindSelectionAction();
     this.bindRoadAction();
     this.bindWorkerControl();
+    this.elements.demolish.addEventListener('click', () => {
+      this.context.toggleSelectedDemolition();
+      this.update();
+    });
     this.bindSessionButtons();
     this.bindLanguageButton();
     this.elements.failureRestart.addEventListener('click', () => {
@@ -342,7 +347,23 @@ export class Hud {
     this.elements.building.hidden = building === null;
     if (!building) {
       this.elements.workerControl.hidden = true;
+      this.elements.demolish.hidden = true;
       return;
+    }
+
+    // Hidden on the founding yard, which has no Building behind it and is the
+    // settlement's only store on day one — offering to demolish it is a trap.
+    const demolishable = this.context.simulation.world.buildings.getById(building.id) !== null;
+    this.elements.demolish.hidden = !demolishable;
+    if (demolishable) {
+      this.elements.demolish.textContent = this.i18n.t(
+        building.demolitionOrdered
+          ? 'action.cancelDemolition'
+          : building.complete
+            ? 'action.demolish'
+            : 'action.cancelBuilding',
+      );
+      this.elements.demolish.classList.toggle('is-cancel', building.demolitionOrdered);
     }
     if (!building.complete) {
       this.elements.workerControl.hidden = true;
@@ -683,6 +704,7 @@ function collectElements(root: HTMLElement): HudElements {
     workerControl: requireElement(root, '[data-hud="worker-control"]'),
     workerCount: requireElement(root, '[data-hud="worker-count"]'),
     workerLabel: requireElement(root, '[data-hud="worker-label"]'),
+    demolish: requireElement(root, '[data-hud="demolish"]') as HTMLButtonElement,
     workerFewer: requireElement(root, '[data-hud="worker-fewer"]') as HTMLButtonElement,
     workerMore: requireElement(root, '[data-hud="worker-more"]') as HTMLButtonElement,
     failure: requireElement(root, '[data-hud="failure"]'),
