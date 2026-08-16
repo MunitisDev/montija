@@ -114,20 +114,22 @@ The world is the interface. Chrome stays at the edges.
 
 ```text
 ┌────────────────────────────────────────────────┐
-│ [pop food logs firewood stone]   [season temp] │  top: readouts
+│ [food logs firewood stone ▾] [👥 1x 📖 ⚙] [season temp] │  top
 │                                                │
 │                                                │
 │                 the settlement                 │  the actual game
 │                                                │
 │                                                │
-│ [ build bar ]              [ ‖  1x  2x  4x ]  │  bottom: actions
+│ [ build bar ]                                  │  bottom: actions
 └────────────────────────────────────────────────┘
 ```
 
 - The HUD layer is `pointer-events: none`; only real controls opt back in. Dragging across an empty
   HUD region still pans the world.
-- Speed controls sit **bottom right**, near the thumb in a two-handed landscape grip.
-- The build bar goes **bottom left** for the other thumb.
+- The top bar carries the readouts and the four ways in: the stores, the people, the ledger and
+  settings. Clock included — one button cycling pause, 1x, 2x, 4x.
+- The build bar has the whole **bottom** to itself, which is what a build menu of sixteen buildings
+  needs.
 - Readouts go **top**, where they are glanceable and out of the way.
 - No permanent large desktop-style windows. Panels are contextual and dismissible.
 
@@ -224,8 +226,11 @@ controls took the whole width and pushed the build menu off the screen. A player
 not build anything at all.
 
 Portrait is the opposite problem from landscape and gets the opposite answer. Height is plentiful and
-width is scarce, so rows **stack** rather than compete: the build menu takes a row, the save and
-speed controls share the next, and the resource strip wraps to two lines instead of scrolling.
+width is scarce, so rows **stack** rather than compete.
+
+Since then most of the competition has been removed rather than arranged. Saving moved behind the
+cog, the four speed buttons became one in the top bar, and the resource strip carries four numbers
+instead of nine — the rest are a tap below it. The bottom bar is the build menu and nothing else.
 
 | Viewport | HUD share |
 | -------- | --------- |
@@ -305,6 +310,59 @@ sit in a 15rem column. Under `460px` tall the start screen drops its tagline and
 buttons, the same threshold the HUD uses.
 
 Verified at 1024×768 (tablet landscape) and 844×390 (landscape phone), in both languages.
+
+## The stores drawer — Implemented
+
+The strip used to grow a readout every time the settlement met a new good, and there are nine. On a
+phone held upright that was two lines of world given up to numbers, and the list only grows.
+
+The strip is a **button** now. It carries the four a settlement lives or dies by — food, logs,
+firewood, stone — and a tap opens a drawer under the bar with every good the settlement has met,
+each with what is stored, what is still lying in the field, and the **net per day** at the current
+staffing. That last figure is the answer to "have we got enough coats", which a raw total cannot
+give.
+
+Unlike every sheet in the game, **the drawer does not pause and does not take the screen**. Glancing
+at the stores is not stopping to read: the settlement carries on behind it, and a tap anywhere else
+puts it away. Closing is handled by a `pointerdown` listener on the document rather than an
+invisible backdrop, because a backdrop over the settlement would swallow the pan gesture the player
+is most likely to make next.
+
+The icons are defined once as SVG `<symbol>`s and referenced from both the strip and the drawer.
+Nine glyphs written out twice is two places to change a hammer and one of them to forget.
+
+## The clock — Implemented
+
+One button in the top bar, cycling **pause → 1x → 2x → 4x → pause**. Four buttons for four speeds
+took a corner of the bottom bar to say what two characters say.
+
+The cost is real and worth writing down: from 1x it is now three taps back to pause, where before it
+was one. Pause sits _after_ 4x in the cycle rather than before 1x, so the speed a player most often
+wants to stop — the fast one they left running — is one tap from stopped. A stopped clock colours
+itself, because it is easy to leave the game paused and wonder why nothing is happening.
+
+## The ledger — Implemented
+
+Four tabs: **People**, **Buildings**, **Production**, **Consumption**. It pauses like the other
+sheets, because unlike the drawer it is somewhere a player stops to think.
+
+Deliberately not the people panel. That one lists individuals under the roof they sleep under; this
+one counts. "Will we get through winter" is a question for this sheet.
+
+The split that matters is between the two kinds of figure on it:
+
+- **Counts** — people, buildings, beds — are the settlement restated, and must be exactly right.
+- **Production and consumption are estimates, and say so.** The production figure is what the
+  staffed workshops would make in a day if nobody ever walked anywhere or waited for an input.
+  Real output is lower. It is still worth showing, because the _ordering_ is honest and the
+  comparison against demand is exact — demand comes out of `SurvivalSystem`'s own constants rather
+  than a second set copied into the UI, so a balance change cannot leave the sheet lying.
+
+`tests/ledger.test.ts` holds it to that: the counts against the simulation, demand against the
+survival constants, production against the seasonal curve, nothing claimed for an unstaffed
+workshop, and no countdown printed over an empty shelf.
+
+Verified at 1180×820, 830×412 and 412×830, in both languages.
 
 ## Settings — Implemented
 

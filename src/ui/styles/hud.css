@@ -1220,3 +1220,147 @@
 #hud.is-fullscreen {
   padding-top: max(var(--safe-top), 4px);
 }
+
+/* --- Icon sprite --------------------------------------------------------- */
+
+/*
+ * The <symbol> definitions never render themselves — only the <use> elements
+ * that reference them do. Hidden with `display: none` rather than `hidden`
+ * because Safari has historically dropped referenced symbols in a hidden tree.
+ */
+.icon-sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* --- Speed button -------------------------------------------------------- */
+
+.icon-button--text {
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+}
+
+/* A stopped clock is the one state worth colouring: it is easy to leave the
+   game paused and wonder why nothing is happening. */
+.icon-button.is-paused {
+  color: var(--colour-accent);
+  border-color: rgba(201, 162, 39, 0.5);
+}
+
+/* --- Stock drawer -------------------------------------------------------- */
+
+/* The strip is a button now, so it has to stop looking like one. */
+.resource-strip {
+  font: inherit;
+  color: var(--colour-ink-dim);
+  text-align: left;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.resource-strip__chevron {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  margin-left: auto;
+  fill: currentColor;
+  opacity: 0.55;
+  transition: transform 120ms ease-out;
+}
+
+.resource-strip.is-open .resource-strip__chevron {
+  transform: rotate(180deg);
+}
+
+/*
+ * Hangs under the bar rather than taking the screen.
+ *
+ * A glance at the stores is not stopping to read, so unlike every sheet in the
+ * game this one leaves the settlement visible and running behind it.
+ */
+.stock-drawer {
+  align-self: flex-start;
+  width: min(24rem, 100%);
+  max-height: min(60vh, 26rem);
+  margin-top: calc(var(--hud-gap) * -0.5);
+  padding: 10px 12px;
+  overflow-y: auto;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  pointer-events: auto;
+  background: var(--colour-panel);
+  border: 1px solid var(--colour-panel-edge);
+  border-radius: 6px;
+  backdrop-filter: blur(6px);
+}
+
+.stock-drawer[hidden] {
+  display: none;
+}
+
+.stock-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Icon, name, number — and the note wrapping under all three. */
+.stock {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stock[hidden] {
+  display: none;
+}
+
+.stock:last-child {
+  border-bottom: none;
+}
+
+.stock__icon {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  color: var(--colour-ink-dim);
+}
+
+.stock__name {
+  font-size: 0.85rem;
+  color: var(--colour-ink);
+}
+
+.stock__value {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--colour-ink);
+}
+
+.stock__note {
+  grid-column: 2 / -1;
+  font-size: 0.72rem;
+  color: var(--colour-ink-dim);
+}
+
+.stock__note:empty {
+  display: none;
+}
+
+/* Spending more than is made is the one thing worth marking in red here. */
+.stock__note.is-bad {
+  color: var(--colour-alarm);
+}
+
+.stock-drawer__foot {
+  margin: 10px 0 0;
+  font-size: 0.68rem;
+  font-style: italic;
+  color: var(--colour-ink-dim);
+}

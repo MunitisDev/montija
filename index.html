@@ -38,113 +38,122 @@
       <!-- The Phaser canvas is injected here. World objects live only inside it. -->
       <div id="game-canvas" aria-label="Settlement view" role="img"></div>
 
+      <!--
+        Resource icons, defined once and referenced twice.
+
+        The strip shows a handful; the drawer shows all nine. Without a sprite
+        that is every glyph written out twice in this file, which is two places
+        to change a hammer and one of them to forget.
+      -->
+      <svg class="icon-sprite" aria-hidden="true" focusable="false">
+        <symbol id="icon-population" viewBox="0 0 24 24">
+          <circle cx="12" cy="7" r="4" />
+          <path d="M4 22c0-4.4 3.6-8 8-8s8 3.6 8 8z" />
+        </symbol>
+        <symbol id="icon-food" viewBox="0 0 24 24">
+          <path d="M6 10a6 6 0 0 1 12 0z" />
+          <path d="M2.5 11h19l-2 8a2 2 0 0 1-2 1.6H6.5a2 2 0 0 1-2-1.6z" />
+        </symbol>
+        <symbol id="icon-logs" viewBox="0 0 24 24">
+          <rect x="6" y="3.4" width="14" height="7.2" rx="3.6" opacity=".62" />
+          <ellipse cx="9.5" cy="7" rx="2.2" ry="3.6" fill="#12140f" opacity=".45" />
+          <rect x="3" y="12.4" width="18" height="8.2" rx="4.1" />
+          <ellipse cx="7.1" cy="16.5" rx="2.7" ry="4.1" fill="#12140f" opacity=".55" />
+          <ellipse cx="7.1" cy="16.5" rx="1" ry="1.6" fill="currentColor" />
+        </symbol>
+        <symbol id="icon-firewood" viewBox="0 0 24 24">
+          <path d="M5.1 3.6 8 2.2l11 16.6-2.9 1.4z" />
+          <path d="M18.9 3.6 16 2.2 5 18.8l2.9 1.4z" />
+          <rect x="9.6" y="9.6" width="4.8" height="4.8" rx="1.2" fill="#12140f" opacity=".5" />
+        </symbol>
+        <symbol id="icon-stone" viewBox="0 0 24 24">
+          <path d="M12 2.6 21.4 9l-3.6 11.4H6.2L2.6 9z" />
+          <path d="M12 2.6 21.4 9l-9.4 3z" fill="#12140f" opacity=".35" />
+        </symbol>
+        <!-- An ingot, seen end-on: a trapezoid with a lit top face. -->
+        <symbol id="icon-iron" viewBox="0 0 24 24">
+          <path d="M5 20h14l-2.4-7H7.4z" />
+          <path d="M7.4 13h9.2l-1.1-3H8.5z" opacity=".7" />
+          <path d="M8.5 10h7l-.8-2.4H9.3z" opacity=".45" />
+        </symbol>
+        <!-- A hammer, crossed with nothing: one clear silhouette at 16px. -->
+        <symbol id="icon-tools" viewBox="0 0 24 24">
+          <path d="M9.8 6.2 3.4 18.4l2.6 1.5 6.4-12.2z" />
+          <path d="M11.2 2.6 20 6.6l-1.8 4.2-8.8-4z" />
+        </symbol>
+        <!-- A stretched pelt: four legs and a rounded body. -->
+        <symbol id="icon-hides" viewBox="0 0 24 24">
+          <path
+            d="M12 3.4c2 0 3 1.2 4.6 1.2 1.6 0 2.6-1 3.4-.2.8.8-.6 2.2-1 3.4-.4 1.2.4 2.6 0 3.8-.5 1.5-2 1.6-2.4 3-.4 1.4.8 3 0 3.8-.9.9-2.2-.6-3.4-.6h-2.4c-1.2 0-2.5 1.5-3.4.6-.8-.8.4-2.4 0-3.8-.4-1.4-1.9-1.5-2.4-3-.4-1.2.4-2.6 0-3.8-.4-1.2-1.8-2.6-1-3.4.8-.8 1.8.2 3.4.2C9 4.6 10 3.4 12 3.4z"
+          />
+        </symbol>
+        <!-- A coat: shoulders, sleeves and a hem. -->
+        <symbol id="icon-clothing" viewBox="0 0 24 24">
+          <path d="M9 3h6l5 3.4-2.2 3.8L16 9v12H8V9l-1.8 1.2L4 6.4z" />
+          <path d="M12 3v18" opacity=".35" stroke="#12140f" stroke-width="1.2" />
+        </symbol>
+        <!-- A sprig: a stem with three pairs of leaves. -->
+        <symbol id="icon-herbs" viewBox="0 0 24 24">
+          <path d="M11.4 21V8h1.2v13z" />
+          <path d="M12 12.6c-3 0-5-1.4-5.6-4 2.8-.6 4.8.6 5.6 4z" />
+          <path d="M12 12.6c3 0 5-1.4 5.6-4-2.8-.6-4.8.6-5.6 4z" />
+          <path d="M12 7.6c-2.2 0-3.8-1.2-4.2-3.4 2.2-.4 3.6.6 4.2 3.4z" />
+          <path d="M12 7.6c2.2 0 3.8-1.2 4.2-3.4-2.2-.4-3.6.6-4.2 3.4z" />
+        </symbol>
+      </svg>
+
       <!-- HUD overlay: HTML/CSS, deliberately outside the canvas. -->
       <div id="hud">
         <div class="hud-bar hud-bar--top">
-          <div class="resource-strip" role="group" aria-label="Settlement resources">
-            <div class="resource resource--population">
-              <svg class="resource__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <circle cx="12" cy="7" r="4" />
-                <path d="M4 22c0-4.4 3.6-8 8-8s8 3.6 8 8z" />
-              </svg>
-              <span class="resource__label" data-i18n="hud.population">Pop</span>
-              <span class="resource__value" data-hud="population">0</span>
-            </div>
-            <div class="resource resource--food">
-              <svg class="resource__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <path d="M6 10a6 6 0 0 1 12 0z" />
-                <path d="M2.5 11h19l-2 8a2 2 0 0 1-2 1.6H6.5a2 2 0 0 1-2-1.6z" />
-              </svg>
-              <span class="resource__label" data-i18n="hud.food">Food</span>
+          <!--
+            The strip is a button, and the whole list is behind it.
+
+            Nine resources across a phone held upright is two lines of world
+            given up to numbers a player checks occasionally. Four essentials
+            and a tap for the rest keeps the bar one line however many goods
+            the settlement learns to make.
+          -->
+          <button
+            type="button"
+            class="resource-strip"
+            data-ui="stock-toggle"
+            aria-expanded="false"
+            aria-controls="stock-drawer"
+          >
+            <span class="resource resource--population">
+              <svg class="resource__icon"><use href="#icon-population" /></svg>
+              <span class="resource__label" data-i18n="hud.population">population</span>
+              <span class="resource__value" data-hud="population">--</span>
+            </span>
+            <span class="resource resource--food">
+              <svg class="resource__icon"><use href="#icon-food" /></svg>
+              <span class="resource__label" data-i18n="hud.food">food</span>
               <span class="resource__value" data-hud="food">--</span>
-            </div>
-            <div class="resource resource--logs">
-              <svg class="resource__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <rect x="6" y="3.4" width="14" height="7.2" rx="3.6" opacity=".62" />
-                <ellipse cx="9.5" cy="7" rx="2.2" ry="3.6" fill="#12140f" opacity=".45" />
-                <rect x="3" y="12.4" width="18" height="8.2" rx="4.1" />
-                <ellipse cx="7.1" cy="16.5" rx="2.7" ry="4.1" fill="#12140f" opacity=".55" />
-                <ellipse cx="7.1" cy="16.5" rx="1" ry="1.6" fill="currentColor" />
-              </svg>
-              <span class="resource__label" data-i18n="hud.logs">Logs</span>
+            </span>
+            <span class="resource resource--logs">
+              <svg class="resource__icon"><use href="#icon-logs" /></svg>
+              <span class="resource__label" data-i18n="hud.logs">logs</span>
               <span class="resource__value" data-hud="logs">--</span>
-            </div>
-            <div class="resource resource--firewood">
-              <svg class="resource__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <path d="M5.1 3.6 8 2.2l11 16.6-2.9 1.4z" />
-                <path d="M18.9 3.6 16 2.2 5 18.8l2.9 1.4z" />
-                <rect
-                  x="9.6"
-                  y="9.6"
-                  width="4.8"
-                  height="4.8"
-                  rx="1.2"
-                  fill="#12140f"
-                  opacity=".5"
-                />
-              </svg>
-              <span class="resource__label" data-i18n="hud.firewood">Firewood</span>
+            </span>
+            <span class="resource resource--firewood">
+              <svg class="resource__icon"><use href="#icon-firewood" /></svg>
+              <span class="resource__label" data-i18n="hud.firewood">firewood</span>
               <span class="resource__value" data-hud="firewood">--</span>
-            </div>
-            <div class="resource resource--stone">
-              <svg class="resource__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <path d="M12 2.6 21.4 9l-3.6 11.4H6.2L2.6 9z" />
-                <path d="M12 2.6 21.4 9l-9.4 3z" fill="#12140f" opacity=".35" />
-              </svg>
-              <span class="resource__label" data-i18n="hud.stone">Stone</span>
+            </span>
+            <span class="resource resource--stone">
+              <svg class="resource__icon"><use href="#icon-stone" /></svg>
+              <span class="resource__label" data-i18n="hud.stone">stone</span>
               <span class="resource__value" data-hud="stone">--</span>
-            </div>
-            <div class="resource resource--iron" hidden>
-              <svg class="resource__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <!-- An ingot, seen end-on: a trapezoid with a lit top face. -->
-                <path d="M5 20h14l-2.4-7H7.4z" />
-                <path d="M7.4 13h9.2l-1.1-3H8.5z" opacity=".7" />
-                <path d="M8.5 10h7l-.8-2.4H9.3z" opacity=".45" />
-              </svg>
-              <span class="resource__label" data-i18n="hud.iron">Iron</span>
-              <span class="resource__value" data-hud="iron">--</span>
-            </div>
-            <div class="resource resource--tools" hidden>
-              <svg class="resource__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <!-- A hammer, crossed with nothing: one clear silhouette at 16px. -->
-                <path d="M9.8 6.2 3.4 18.4l2.6 1.5 6.4-12.2z" />
-                <path d="M11.2 2.6 20 6.6l-1.8 4.2-8.8-4z" />
-              </svg>
-              <span class="resource__label" data-i18n="hud.tools">Tools</span>
-              <span class="resource__value" data-hud="tools">--</span>
-            </div>
-            <div class="resource resource--hides" hidden>
-              <svg class="resource__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <!-- A stretched pelt: four legs and a rounded body. -->
-                <path
-                  d="M12 3.4c2 0 3 1.2 4.6 1.2 1.6 0 2.6-1 3.4-.2.8.8-.6 2.2-1 3.4-.4 1.2.4 2.6 0 3.8-.5 1.5-2 1.6-2.4 3-.4 1.4.8 3 0 3.8-.9.9-2.2-.6-3.4-.6h-2.4c-1.2 0-2.5 1.5-3.4.6-.8-.8.4-2.4 0-3.8-.4-1.4-1.9-1.5-2.4-3-.4-1.2.4-2.6 0-3.8-.4-1.2-1.8-2.6-1-3.4.8-.8 1.8.2 3.4.2C9 4.6 10 3.4 12 3.4z"
-                />
-              </svg>
-              <span class="resource__label" data-i18n="hud.hides">Hides</span>
-              <span class="resource__value" data-hud="hides">--</span>
-            </div>
-            <div class="resource resource--clothing" hidden>
-              <svg class="resource__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <!-- A coat: shoulders, sleeves and a hem. -->
-                <path d="M9 3h6l5 3.4-2.2 3.8L16 9v12H8V9l-1.8 1.2L4 6.4z" />
-                <path d="M12 3v18" opacity=".35" stroke="#12140f" stroke-width="1.2" />
-              </svg>
-              <span class="resource__label" data-i18n="hud.clothing">Clothing</span>
-              <span class="resource__value" data-hud="clothing">--</span>
-            </div>
-            <div class="resource resource--herbs" hidden>
-              <svg class="resource__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <!-- A sprig: a stem with three pairs of leaves. -->
-                <path d="M11.4 21V8h1.2v13z" />
-                <path d="M12 12.6c-3 0-5-1.4-5.6-4 2.8-.6 4.8.6 5.6 4z" />
-                <path d="M12 12.6c3 0 5-1.4 5.6-4-2.8-.6-4.8.6-5.6 4z" />
-                <path d="M12 7.6c-2.2 0-3.8-1.2-4.2-3.4 2.2-.4 3.6.6 4.2 3.4z" />
-                <path d="M12 7.6c2.2 0 3.8-1.2 4.2-3.4-2.2-.4-3.6.6-4.2 3.4z" />
-              </svg>
-              <span class="resource__label" data-i18n="hud.herbs">Herbs</span>
-              <span class="resource__value" data-hud="herbs">--</span>
-            </div>
-          </div>
+            </span>
+            <svg
+              class="resource-strip__chevron"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d="M5.6 9.2 12 15.4l6.4-6.2z" />
+            </svg>
+          </button>
 
           <!-- The settlement's people. Next to the rules because both are
                "open, read, act, close" rather than part of the world. -->
@@ -159,6 +168,34 @@
               <path d="M2 21c0-3.6 3.1-6.4 7-6.4s7 2.8 7 6.4z" />
               <circle cx="17.5" cy="8.5" r="2.6" />
               <path d="M14.6 14.4c.9-.4 1.9-.6 2.9-.6 3 0 4.5 2 4.5 4.6h-5.2c0-1.6-.8-3-2.2-4z" />
+            </svg>
+          </button>
+
+          <!-- One button for the clock, cycling pause, 1x, 2x, 4x. Four
+               buttons for four speeds cost a corner of the bottom bar to say
+               something one button says in two characters. -->
+          <button
+            type="button"
+            class="icon-button icon-button--text"
+            data-ui="speed-cycle"
+            aria-label="Speed"
+          >
+            <span class="icon-button__text" data-hud="speed-label">1x</span>
+          </button>
+
+          <!-- The ledger: what the settlement has, makes, spends and is. -->
+          <button type="button" class="icon-button" data-ui="ledger-open" aria-label="Ledger">
+            <svg
+              class="icon-button__glyph"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d="M4.4 3.2h13.2a2 2 0 0 1 2 2v15.6H6.4a2 2 0 0 1-2-2z" opacity=".55" />
+              <path d="M4.4 3.2h2.6v17.6H6.4a2 2 0 0 1-2-2z" />
+              <rect x="9.2" y="7" width="7.6" height="1.5" rx=".7" />
+              <rect x="9.2" y="11" width="7.6" height="1.5" rx=".7" />
+              <rect x="9.2" y="15" width="4.8" height="1.5" rx=".7" />
             </svg>
           </button>
 
@@ -195,6 +232,68 @@
             <span class="climate__season" data-hud="season"></span>
             <span class="climate__temperature" data-hud="temperature">--</span>
           </div>
+        </div>
+
+        <!-- Opens under the strip rather than over the world: a glance at the
+             stores is not something the player stops the game for. -->
+        <div class="stock-drawer" id="stock-drawer" data-ui="stock-drawer" hidden>
+          <ul class="stock-list">
+            <li class="stock" data-stock="food">
+              <svg class="stock__icon"><use href="#icon-food" /></svg>
+              <span class="stock__name" data-i18n="hud.food">food</span>
+              <span class="stock__value" data-drawer="food">0</span>
+              <span class="stock__note" data-drawer-note="food"></span>
+            </li>
+            <li class="stock" data-stock="logs">
+              <svg class="stock__icon"><use href="#icon-logs" /></svg>
+              <span class="stock__name" data-i18n="hud.logs">logs</span>
+              <span class="stock__value" data-drawer="logs">0</span>
+              <span class="stock__note" data-drawer-note="logs"></span>
+            </li>
+            <li class="stock" data-stock="firewood">
+              <svg class="stock__icon"><use href="#icon-firewood" /></svg>
+              <span class="stock__name" data-i18n="hud.firewood">firewood</span>
+              <span class="stock__value" data-drawer="firewood">0</span>
+              <span class="stock__note" data-drawer-note="firewood"></span>
+            </li>
+            <li class="stock" data-stock="stone">
+              <svg class="stock__icon"><use href="#icon-stone" /></svg>
+              <span class="stock__name" data-i18n="hud.stone">stone</span>
+              <span class="stock__value" data-drawer="stone">0</span>
+              <span class="stock__note" data-drawer-note="stone"></span>
+            </li>
+            <li class="stock" data-stock="iron">
+              <svg class="stock__icon"><use href="#icon-iron" /></svg>
+              <span class="stock__name" data-i18n="hud.iron">iron</span>
+              <span class="stock__value" data-drawer="iron">0</span>
+              <span class="stock__note" data-drawer-note="iron"></span>
+            </li>
+            <li class="stock" data-stock="tools">
+              <svg class="stock__icon"><use href="#icon-tools" /></svg>
+              <span class="stock__name" data-i18n="hud.tools">tools</span>
+              <span class="stock__value" data-drawer="tools">0</span>
+              <span class="stock__note" data-drawer-note="tools"></span>
+            </li>
+            <li class="stock" data-stock="hides">
+              <svg class="stock__icon"><use href="#icon-hides" /></svg>
+              <span class="stock__name" data-i18n="hud.hides">hides</span>
+              <span class="stock__value" data-drawer="hides">0</span>
+              <span class="stock__note" data-drawer-note="hides"></span>
+            </li>
+            <li class="stock" data-stock="clothing">
+              <svg class="stock__icon"><use href="#icon-clothing" /></svg>
+              <span class="stock__name" data-i18n="hud.clothing">clothing</span>
+              <span class="stock__value" data-drawer="clothing">0</span>
+              <span class="stock__note" data-drawer-note="clothing"></span>
+            </li>
+            <li class="stock" data-stock="herbs">
+              <svg class="stock__icon"><use href="#icon-herbs" /></svg>
+              <span class="stock__name" data-i18n="hud.herbs">herbs</span>
+              <span class="stock__value" data-drawer="herbs">0</span>
+              <span class="stock__note" data-drawer-note="herbs"></span>
+            </li>
+          </ul>
+          <p class="stock-drawer__foot" data-ui="stock-foot"></p>
         </div>
 
         <!-- Shown when the last villager is gone. -->
@@ -277,21 +376,6 @@
               ></button>
             </div>
           </div>
-
-          <div class="speed-controls" role="group" aria-label="Simulation speed">
-            <button type="button" class="speed-button" data-speed="0" aria-pressed="false">
-              II
-            </button>
-            <button type="button" class="speed-button is-active" data-speed="1" aria-pressed="true">
-              1x
-            </button>
-            <button type="button" class="speed-button" data-speed="2" aria-pressed="false">
-              2x
-            </button>
-            <button type="button" class="speed-button" data-speed="4" aria-pressed="false">
-              4x
-            </button>
-          </div>
         </div>
       </div>
 
@@ -322,6 +406,25 @@
             data-ui="menu-language"
             aria-label="Language"
           ></button>
+        </div>
+      </div>
+
+      <!--
+        The ledger: aggregate figures, in four tabs.
+
+        Deliberately not the people panel. That one is a list of individuals;
+        this is the settlement counted — how many, of what, making what,
+        spending what. A player asking "are we going to make it through winter"
+        is asking this sheet, not that one.
+      -->
+      <div class="sheet" data-ui="ledger" role="dialog" aria-modal="true" hidden>
+        <div class="sheet__panel">
+          <header class="sheet__head">
+            <h2 class="sheet__title" data-ui="ledger-title"></h2>
+            <button type="button" class="sheet__close" data-ui="ledger-close"></button>
+          </header>
+          <div class="ledger__tabs" role="tablist" data-ui="ledger-tabs"></div>
+          <div class="sheet__body" data-ui="ledger-body" role="tabpanel"></div>
         </div>
       </div>
 

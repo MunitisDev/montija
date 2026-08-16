@@ -20,6 +20,8 @@ import { Hud } from '@/ui/hud/Hud';
 import { BuildMenu } from '@/ui/build-menu/BuildMenu';
 import { Guide } from '@/ui/guide/Guide';
 import { Roster } from '@/ui/roster/Roster';
+import { Ledger } from '@/ui/ledger/Ledger';
+import { StockDrawer } from '@/ui/hud/StockDrawer';
 import { SettingsMenu } from '@/ui/settings/SettingsMenu';
 import { MainMenu } from '@/ui/menu/MainMenu';
 import { I18n } from '@/ui/i18n/I18n';
@@ -70,6 +72,9 @@ export function start(): void {
   // from the game root rather than the HUD layer.
   const guide = new Guide(gameRoot, i18n);
   const roster = new Roster(gameRoot, game, i18n);
+  const ledger = new Ledger(gameRoot, game, i18n);
+  // The drawer hangs off the top bar, so it is looked up inside #hud.
+  const stockDrawer = new StockDrawer(hudRoot, game, i18n);
   const settings = new SettingsMenu({
     root: gameRoot,
     context: game,
@@ -105,6 +110,14 @@ export function start(): void {
   const rosterButton = hudRoot.querySelector<HTMLButtonElement>('[data-ui="roster-open"]');
   rosterButton?.addEventListener('click', () => openPaused(roster));
 
+  // The ledger stops the clock like the other sheets: its whole point is
+  // arithmetic the player wants to sit with.
+  const ledgerButton = hudRoot.querySelector<HTMLButtonElement>('[data-ui="ledger-open"]');
+  ledgerButton?.addEventListener('click', () => {
+    stockDrawer.setOpen(false);
+    openPaused(ledger);
+  });
+
   // Everything that is not the settlement — rules, save, load, full screen,
   // language — sits behind the cog. Opening it pauses like the other sheets:
   // nobody wants winter happening behind a page they stopped to read.
@@ -122,6 +135,10 @@ export function start(): void {
     if (settingsButton) {
       settingsButton.setAttribute('aria-label', i18n.t('settings.title'));
       settingsButton.title = i18n.t('settings.title');
+    }
+    if (ledgerButton) {
+      ledgerButton.setAttribute('aria-label', i18n.t('ledger.title'));
+      ledgerButton.title = i18n.t('ledger.title');
     }
     if (rosterButton) {
       rosterButton.setAttribute('aria-label', i18n.t('roster.open'));
@@ -171,6 +188,7 @@ export function start(): void {
   const renderHud = (): void => {
     hud.update();
     buildMenu.update();
+    stockDrawer.update();
     settings.update();
     relabelGlyphs();
     debugOverlay?.update();

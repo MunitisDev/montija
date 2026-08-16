@@ -51,6 +51,8 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 24    | Households                    | **Implemented** |
 | 25    | The shipwreck                 | **Implemented** |
 | 26    | Smoke and trade props         | **Implemented** |
+| 27    | The settings cog              | **Implemented** |
+| 28    | Stores, clock and ledger      | **Implemented** |
 
 ---
 
@@ -737,6 +739,32 @@ adjusts nothing is worse than no slider.
 
 The language chip stays on the start screen too. Somebody who cannot read the
 interface has to be able to change it before founding anything.
+
+---
+
+## Phase 28 - The stores, the clock and the ledger - Implemented
+
+Three changes to the top bar, all answering the same question: where do the
+settlement's numbers live as the game learns to make more things.
+
+- **The resource strip is a button.** It carries the four a settlement lives or
+  dies by; a tap opens a drawer with every good it has met, each with what is
+  stored, what is lying in the field, and the net per day. The drawer does not
+  pause and does not take the screen — a glance at the stores is not stopping to
+  read.
+- **One button for the clock**, cycling pause, 1x, 2x, 4x. The four speed
+  buttons in the bottom bar are gone, and the build menu has that row to itself.
+- **A ledger**, in four tabs: people, buildings, production, consumption. It
+  pauses like the other sheets.
+
+The ledger is where the honesty question lives. Its counts are the settlement
+restated and must be exact; its production and consumption figures are estimates
+and say so in as many words. Demand is read from `SurvivalSystem`'s own
+constants rather than a second set copied into the UI, so a balance change
+cannot leave the sheet lying, and `tests/ledger.test.ts` checks all of that.
+
+Set out in [MOBILE_UX.md](./MOBILE_UX.md), including why the drawer is the one
+overlay in the game that leaves the clock running.
 
 ---
 

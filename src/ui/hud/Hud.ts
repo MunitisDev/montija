@@ -12,27 +12,21 @@
  * never the authority. A small `+n` marks units still lying in the field.
  */
 
-import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
+import type { ResourceId } from '@/data/resources';
 
 /**
- * The readouts that are always on the strip, even at zero.
+ * The readouts that stay on the strip.
  *
- * Everything else appears the first time the settlement has any, and stays.
- * Eight resources plus a population count do not fit across a phone held
- * upright, and a strip that scrolls sideways to reveal a row of zeroes is worse
- * than one that shows what the settlement actually has — a village in its first
- * spring has no iron, no tools, no hides and no coats, and does not need to be
- * told so four times.
+ * Everything else lives in the drawer a tap below — see `StockDrawer`. Nine
+ * numbers across a phone held upright is two lines of world given up to figures
+ * a player checks occasionally, and the list only grows as the settlement
+ * learns to make more.
  *
- * The four here are the ones a settlement lives or dies by from day one, and a
- * zero against any of them is information rather than clutter.
+ * These four are the ones a settlement lives or dies by from day one, so they
+ * are always there and a zero against any of them is information rather than
+ * clutter.
  */
-const ALWAYS_SHOWN: ReadonlySet<ResourceId> = new Set<ResourceId>([
-  'food',
-  'logs',
-  'firewood',
-  'stone',
-]);
+const STRIP_RESOURCES: readonly ResourceId[] = ['food', 'logs', 'firewood', 'stone'];
 import type { GameContext } from '@/game/Game';
 import type { SimulationSnapshot } from '@/simulation/Simulation';
 import { SIMULATION_SPEEDS, type SimulationSpeed } from '@/simulation/SimulationClock';
@@ -43,7 +37,8 @@ import type { MessageKey } from '@/ui/i18n/messages';
 /** Elements the HUD binds to, looked up once. */
 interface HudElements {
   readonly population: HTMLElement;
-  readonly resources: Readonly<Record<ResourceId, HTMLElement>>;
+  /** Only the strip's few — the rest of the stores belong to the drawer. */
+  readonly resources: ReadonlyMap<ResourceId, HTMLElement>;
   readonly selection: HTMLElement;
   readonly selectionTerrain: HTMLElement;
   readonly selectionCell: HTMLElement;
@@ -70,7 +65,8 @@ interface HudElements {
   readonly failure: HTMLElement;
   readonly failureSurvived: HTMLElement;
   readonly failureRestart: HTMLButtonElement;
-  readonly speedButtons: readonly HTMLButtonElement[];
+  readonly speedButton: HTMLButtonElement;
+  readonly speedLabel: HTMLElement;
 }
 
 export class Hud {
@@ -159,18 +155,9 @@ export class Hud {
     // The HUD shows what the yards physically hold. Resources still lying on
     // the ground are excluded on purpose: felling a tree must not move the
     // counter until somebody has actually carried the logs in.
-    for (const resource of RESOURCE_IDS) {
+    for (const [resource, element] of this.elements.resources) {
       const stored = snapshot.stored[resource];
       const loose = snapshot.loose[resource];
-      const element = this.elements.resources[resource];
-
-      // Shown once the settlement has ever had any, and not hidden again when
-      // the last one is spent: a coat count that vanishes the moment it hits
-      // zero hides exactly the number the player most needs to see.
-      const row = element.parentElement;
-      if (row && row.hidden && (ALWAYS_SHOWN.has(resource) || stored > 0 || loose > 0)) {
-        row.hidden = false;
-      }
 
       if (this.lastRenderedTotals.get(resource) !== stored) {
         element.textContent = String(stored);
@@ -589,12 +576,11 @@ export class Hud {
   }
 
   private renderSpeed(speed: SimulationSpeed): void {
-    for (const button of this.elements.speedButtons) {
-      const buttonSpeed = Number(button.dataset['speed']);
-      const active = buttonSpeed === speed;
-      button.classList.toggle('is-active', active);
-      button.setAttribute('aria-pressed', String(active));
-    }
+    // "II" for a stopped clock, because a pause glyph is the one control symbol
+    // that needs no word in any language.
+    this.elements.speedLabel.textContent = speed === 0 ? 'II' : `${speed}x`;
+    this.elements.speedButton.classList.toggle('is-paused', speed === 0);
+    this.elements.speedButton.setAttribute('aria-pressed', String(speed === 0));
   }
 
   /**
@@ -631,33 +617,36 @@ export class Hud {
     this.lastRenderedLoose.clear();
   }
 
+  /**
+   * One button for the clock, cycling pause, 1x, 2x, 4x and round again.
+   *
+   * Four buttons for four speeds took a corner of the bottom bar to say what
+   * two characters say. The cost is real and worth naming: from 1x it is three
+   * taps back to pause, where before it was one. Pause sits *after* 4x in the
+   * cycle rather than before 1x, so the speed a player is most likely to want
+   * stopping — the fast one they left running — is one tap from stopped.
+   */
   private bindSpeedButtons(): void {
-    for (const button of this.elements.speedButtons) {
-      button.addEventListener('click', () => {
-        const speed = Number(button.dataset['speed']);
-        if (isSimulationSpeed(speed)) {
-          this.context.clock.setSpeed(speed);
-          this.update();
-        }
-      });
-    }
+    this.elements.speedButton.addEventListener('click', () => {
+      const current = SIMULATION_SPEEDS.indexOf(this.context.clock.speed);
+      const next = SIMULATION_SPEEDS[(current + 1) % SIMULATION_SPEEDS.length];
+      if (next !== undefined) {
+        this.context.clock.setSpeed(next);
+        this.update();
+      }
+    });
   }
 }
 
 function collectElements(root: HTMLElement): HudElements {
   return {
     population: requireElement(root, '[data-hud="population"]'),
-    resources: {
-      food: requireElement(root, '[data-hud="food"]'),
-      logs: requireElement(root, '[data-hud="logs"]'),
-      firewood: requireElement(root, '[data-hud="firewood"]'),
-      stone: requireElement(root, '[data-hud="stone"]'),
-      iron: requireElement(root, '[data-hud="iron"]'),
-      tools: requireElement(root, '[data-hud="tools"]'),
-      hides: requireElement(root, '[data-hud="hides"]'),
-      clothing: requireElement(root, '[data-hud="clothing"]'),
-      herbs: requireElement(root, '[data-hud="herbs"]'),
-    },
+    resources: new Map(
+      STRIP_RESOURCES.map((resource) => [
+        resource,
+        requireElement(root, `[data-hud="${resource}"]`),
+      ]),
+    ),
     selection: requireElement(root, '[data-hud="selection"]'),
     selectionTerrain: requireElement(root, '[data-hud="selection-terrain"]'),
     selectionCell: requireElement(root, '[data-hud="selection-cell"]'),
@@ -684,7 +673,8 @@ function collectElements(root: HTMLElement): HudElements {
     failure: requireElement(root, '[data-hud="failure"]'),
     failureSurvived: requireElement(root, '[data-hud="failure-survived"]'),
     failureRestart: requireElement(root, '[data-hud="failure-restart"]') as HTMLButtonElement,
-    speedButtons: Array.from(root.querySelectorAll<HTMLButtonElement>('[data-speed]')),
+    speedButton: requireElement(root, '[data-ui="speed-cycle"]') as HTMLButtonElement,
+    speedLabel: requireElement(root, '[data-hud="speed-label"]'),
   };
 }
 
@@ -694,8 +684,4 @@ function requireElement(root: HTMLElement, selector: string): HTMLElement {
     throw new Error(`HUD is missing a required element: ${selector}`);
   }
   return element;
-}
-
-function isSimulationSpeed(value: number): value is SimulationSpeed {
-  return (SIMULATION_SPEEDS as readonly number[]).includes(value);
 }

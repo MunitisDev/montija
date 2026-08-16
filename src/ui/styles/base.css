@@ -15,6 +15,9 @@
   --colour-ink: #ddd6c2;
   --colour-ink-dim: #8e8a78;
   --colour-accent: #c9a227;
+  /* The two verdicts: something is going well, something is going wrong. */
+  --colour-thrive: #7c8f5a;
+  --colour-alarm: #b4553a;
 
   /* Touch targets stay comfortably above the 44px accessibility floor. */
   --touch-target: 48px;

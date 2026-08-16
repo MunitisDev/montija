@@ -455,7 +455,7 @@ body.is-menu-open #hud {
 .roster__meter-fill {
   display: block;
   height: 100%;
-  background: #7c8f5a;
+  background: var(--colour-thrive);
 }
 
 .roster__meter.is-low .roster__meter-fill {
@@ -463,7 +463,7 @@ body.is-menu-open #hud {
 }
 
 .roster__meter.is-critical .roster__meter-fill {
-  background: #b4553a;
+  background: var(--colour-alarm);
 }
 
 .roster__family {
@@ -593,5 +593,119 @@ body.is-menu-open #hud {
   margin: 0;
   min-height: 1.2em;
   font-size: 0.85rem;
+  color: var(--colour-ink-dim);
+}
+
+/* --- Ledger -------------------------------------------------------------- */
+
+/*
+ * Tabs sit under the head, scrolling sideways where four do not fit.
+ *
+ * Scrolling rather than wrapping: a second row of tabs on a landscape phone
+ * costs more of the sheet than the tabs are worth, and four short words scroll
+ * comfortably at any width the game supports.
+ */
+.ledger__tabs {
+  display: flex;
+  /* Never squashed: the body takes the leftover height, and without this the
+     tabs are the thing that gives way on a landscape phone. */
+  flex: 0 0 auto;
+  gap: 6px;
+  padding: 10px 0 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.ledger__tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.ledger__tab {
+  flex: 0 0 auto;
+  min-height: var(--touch-target);
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  color: var(--colour-ink-dim);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.ledger__tab:hover {
+  color: var(--colour-ink);
+}
+
+.ledger__tab.is-active {
+  color: var(--colour-ink);
+  background: rgba(201, 162, 39, 0.14);
+  border-color: rgba(201, 162, 39, 0.45);
+}
+
+.ledger__note {
+  margin: 0 0 18px;
+  max-width: 62ch;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  font-style: italic;
+  color: var(--colour-ink-dim);
+}
+
+.ledger__section {
+  margin: 0 0 22px;
+}
+
+.ledger__heading {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--colour-accent);
+}
+
+/* Label and figure on one line, with the explanation wrapping under both. */
+.ledger__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1px 14px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ledger__row:last-child {
+  border-bottom: none;
+}
+
+.ledger__label {
+  font-size: 0.92rem;
+  color: var(--colour-ink);
+}
+
+.ledger__value {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  color: var(--colour-ink);
+}
+
+.ledger__value.is-good {
+  color: var(--colour-thrive);
+}
+
+.ledger__value.is-bad {
+  color: var(--colour-alarm);
+}
+
+.ledger__detail {
+  grid-column: 1 / -1;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--colour-ink-dim);
+}
+
+.ledger__empty {
+  margin: 0;
+  font-size: 0.88rem;
   color: var(--colour-ink-dim);
 }
