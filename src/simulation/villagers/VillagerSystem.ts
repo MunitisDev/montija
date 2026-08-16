@@ -182,7 +182,7 @@ export class VillagerSystem {
    * own drawn from the same seeded stream, so a generation does not die
    * together.
    */
-  public bear(cell: GridPoint, homeId: number): Villager {
+  public bear(cell: GridPoint, homeId: number, parents?: readonly [number, number]): Villager {
     const villager = new Villager({
       id: this.nextId,
       name: this.makeName(),
@@ -191,6 +191,9 @@ export class VillagerSystem {
       lifespan: rollLifespan(this.random),
     });
     villager.homeId = homeId;
+    if (parents) {
+      villager.parentIds = parents;
+    }
     this.nextId += 1;
     this.villagers.push(villager);
     return villager;

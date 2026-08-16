@@ -122,6 +122,39 @@ export class Villager {
   public birthCooldownDays = 0;
 
   /**
+   * The villager this one is paired with, or `null` for somebody unattached.
+   *
+   * Pairs are what have children. Before this, a birth drew two eligible adults
+   * out of the settlement at random each time, so "the parents" were a
+   * different two people every day and there was nothing to show the player.
+   *
+   * A pairing is a fact about two people, not about a house. Requiring a shared
+   * roof was tried when births were first written and produced *no children at
+   * all* over six simulated years — the two people who happened to be given the
+   * house with a spare bed were never both of an age — so a settlement stayed
+   * sterile because of the order beds were handed out. Pairs form across the
+   * whole settlement for that reason, and the spare bed is checked when the
+   * child arrives rather than when the couple forms.
+   */
+  public partnerId: number | null = null;
+
+  /**
+   * Who this villager was born to, oldest id first, or `null` for a founder or
+   * a newcomer who walked in from outside.
+   *
+   * Recorded because a settlement whose people are interchangeable is a
+   * settlement nobody minds losing. It is information and nothing else: no
+   * system reads it, inheritance does not exist, and nobody is stopped from
+   * pairing with a relative — that last one is a real omission rather than an
+   * oversight, and the note is here so the next person knows it was a choice.
+   *
+   * Deliberately not "mother and father": the simulation has no notion of sex,
+   * and inventing one to fill in a label would be a whole model added for a
+   * caption.
+   */
+  public parentIds: readonly [number, number] | null = null;
+
+  /**
    * Days of sickness left to run, or 0 for somebody well.
    *
    * A countdown rather than a flag, so care can shorten a case rather than

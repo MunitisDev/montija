@@ -638,8 +638,8 @@ export class Simulation {
       this.totalDeaths += 1;
     }
 
-    for (const { home } of day.born) {
-      this.villagers.bear(home.accessCell, home.id);
+    for (const { home, parents } of day.born) {
+      this.villagers.bear(home.accessCell, home.id, parents);
     }
 
     // Newcomers arrive at the edge of the settlement rather than in a bed:

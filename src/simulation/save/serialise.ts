@@ -55,6 +55,8 @@ export function serialise(simulation: Simulation, savedAt: string): SaveGame {
       birthCooldownDays: villager.birthCooldownDays,
       employerId: villager.employerId,
       workPreference: villager.workPreference,
+      partnerId: villager.partnerId,
+      parentIds: villager.parentIds,
       illDaysRemaining: villager.illDaysRemaining,
       carrying: toRecord(villager.inventory),
       path: villager.path.map((step) => ({ gx: step.gx, gy: step.gy })),
@@ -189,6 +191,8 @@ export function restore(simulation: Simulation, save: SaveGame): void {
       villager.birthCooldownDays = saved.birthCooldownDays ?? 0;
       villager.employerId = saved.employerId ?? null;
       villager.workPreference = saved.workPreference ?? null;
+      villager.partnerId = saved.partnerId ?? null;
+      villager.parentIds = saved.parentIds ?? null;
       villager.illDaysRemaining = saved.illDaysRemaining ?? 0;
       villager.needs.hunger = saved.hunger;
       villager.needs.warmth = saved.warmth;

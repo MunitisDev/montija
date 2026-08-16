@@ -55,6 +55,8 @@ export interface PopulationReport {
   readonly homeless: number;
   readonly children: number;
   readonly adults: number;
+  /** Couples who paired up today. */
+  readonly paired: number;
 }
 
 export const NO_POPULATION_CHANGE: PopulationReport = {
@@ -64,6 +66,7 @@ export const NO_POPULATION_CHANGE: PopulationReport = {
   homeless: 0,
   children: 0,
   adults: 0,
+  paired: 0,
 };
 
 export interface PopulationDay {
@@ -71,7 +74,7 @@ export interface PopulationDay {
   /** Villagers who died of old age, for the caller to remove. */
   readonly died: Villager[];
   /** Newborns, for the caller to place and name. */
-  readonly born: { readonly home: Building }[];
+  readonly born: { readonly home: Building; readonly parents: readonly [number, number] }[];
   /** How many strangers walked in today. */
   readonly arrivals: number;
 }
@@ -99,6 +102,7 @@ export function runPopulationDay(options: {
     (building) => building.isComplete && (building.definition.housing ?? 0) > 0,
   );
   assignHomes(survivors, houses);
+  const paired = formPairs(survivors);
 
   const born = considerBirths({ villagers: survivors, houses, random, foodDaysPerPerson });
   const arrivals = considerImmigration({ villagers: survivors, houses, random, foodDaysPerPerson });
@@ -125,6 +129,7 @@ export function runPopulationDay(options: {
       homeless,
       children,
       adults,
+      paired,
     },
     died,
     born,
@@ -174,6 +179,62 @@ function considerImmigration(options: {
 /** A lifespan for a newborn, or for a founding settler. */
 export function rollLifespan(random: SeededRandom): number {
   return random.int(LIFESPAN_MIN, LIFESPAN_MAX + 1);
+}
+
+/**
+ * Pairs up unattached adults, and breaks the pairs death has ended.
+ *
+ * A birth used to draw two eligible adults out of the settlement afresh every
+ * time, so "the parents" were a different two people each day and there was
+ * nothing about anybody worth showing. Pairs make a settlement a set of
+ * households rather than a headcount, which is most of why watching one is
+ * interesting at all.
+ *
+ * Deliberately **not** conditional on sharing a house. That was tried when
+ * births were first written and produced no children at all across six
+ * simulated years: whether the two people given the house with a spare bed
+ * happened to both be of an age was a lottery, so a settlement could be sterile
+ * because of the order beds were handed out. A pairing is a fact about two
+ * people; the spare bed is checked when a child actually arrives.
+ *
+ * Deterministic: candidates are taken in id order and paired off in turn, so a
+ * settlement replayed from its seed forms the same households.
+ *
+ * @returns how many pairs formed today
+ */
+function formPairs(villagers: readonly Villager[]): number {
+  const byId = new Map<number, Villager>();
+  for (const villager of villagers) {
+    byId.set(villager.id, villager);
+  }
+
+  // Widowhood, first. A partner who died is still named on the survivor, and
+  // leaving it there would keep them out of every future pairing for ever.
+  for (const villager of villagers) {
+    if (villager.partnerId !== null && !byId.has(villager.partnerId)) {
+      villager.partnerId = null;
+    }
+  }
+
+  const single = villagers
+    .filter(
+      (villager) =>
+        villager.partnerId === null &&
+        villager.age >= CHILDBEARING_AGE_MIN &&
+        villager.age <= CHILDBEARING_AGE_MAX,
+    )
+    .sort((a, b) => a.id - b.id);
+
+  let pairs = 0;
+  for (let i = 0; i + 1 < single.length; i += 2) {
+    const one = single[i]!;
+    const other = single[i + 1]!;
+    one.partnerId = other.id;
+    other.partnerId = one.id;
+    pairs += 1;
+  }
+
+  return pairs;
 }
 
 /**
@@ -266,7 +327,7 @@ function considerBirths(options: {
   houses: readonly Building[];
   random: SeededRandom;
   foodDaysPerPerson: number;
-}): { home: Building }[] {
+}): { home: Building; parents: readonly [number, number] }[] {
   const { villagers, houses, random, foodDaysPerPerson } = options;
 
   if (foodDaysPerPerson < BIRTH_REQUIREMENTS.foodDaysPerPerson) {
@@ -287,14 +348,29 @@ function considerBirths(options: {
     return [];
   }
 
-  const parents = villagers.filter(
-    (villager) =>
-      villager.age >= CHILDBEARING_AGE_MIN &&
-      villager.age <= CHILDBEARING_AGE_MAX &&
-      villager.needs.health >= BIRTH_REQUIREMENTS.minimumHealth &&
-      villager.birthCooldownDays <= 0,
-  );
-  if (parents.length < 2) {
+  // A couple, rather than any two adults who happen to qualify. Both have to
+  // be well and both off cooldown, which is what makes a child something a
+  // particular household had rather than a number the settlement went up by.
+  const ready = (villager: Villager): boolean =>
+    villager.age >= CHILDBEARING_AGE_MIN &&
+    villager.age <= CHILDBEARING_AGE_MAX &&
+    villager.needs.health >= BIRTH_REQUIREMENTS.minimumHealth &&
+    villager.birthCooldownDays <= 0;
+
+  const byId = new Map(villagers.map((villager) => [villager.id, villager]));
+  const couple = villagers
+    .filter((villager) => {
+      if (villager.partnerId === null || villager.partnerId < villager.id) {
+        // Each couple considered once, from the lower id, so a pair is not
+        // examined twice and cannot have two children in a day.
+        return false;
+      }
+      const partner = byId.get(villager.partnerId);
+      return partner !== undefined && ready(villager) && ready(partner);
+    })
+    .sort((a, b) => a.id - b.id)[0];
+
+  if (!couple) {
     return [];
   }
 
@@ -304,9 +380,23 @@ function considerBirths(options: {
     return [];
   }
 
-  for (const parent of parents.slice(0, 2)) {
-    parent.birthCooldownDays = BIRTH_REQUIREMENTS.cooldownDays;
-  }
+  const partner = byId.get(couple.partnerId!)!;
+  couple.birthCooldownDays = BIRTH_REQUIREMENTS.cooldownDays;
+  partner.birthCooldownDays = BIRTH_REQUIREMENTS.cooldownDays;
 
-  return [{ home: spare }];
+  // The child joins its parents' household where there is room, and only falls
+  // back to any spare bed when there is not — a newborn billeted across the
+  // settlement from both its parents would make the family tree read as noise.
+  const family = houses.find(
+    (house) =>
+      (house.id === couple.homeId || house.id === partner.homeId) &&
+      (occupancy.get(house.id) ?? 0) < (house.definition.housing ?? 0),
+  );
+
+  return [
+    {
+      home: family ?? spare,
+      parents: [Math.min(couple.id, partner.id), Math.max(couple.id, partner.id)] as const,
+    },
+  ];
 }
