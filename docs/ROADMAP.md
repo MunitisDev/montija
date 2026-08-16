@@ -22,30 +22,31 @@ count is claimed**: nothing has yet pushed the renderer hard enough to find one.
 
 Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 
-| Phase | Name                  | Status          |
-| ----- | --------------------- | --------------- |
-| 0     | Repository inspection | **Implemented** |
-| 1     | Browser foundation    | **Implemented** |
-| 2     | Isometric world       | **Implemented** |
-| 3     | Villagers             | **Implemented** |
-| 4     | Job system            | **Implemented** |
-| 5     | Resource logistics    | **Implemented** |
-| 6     | Construction          | **Implemented** |
-| 7     | Economy               | **Implemented** |
-| 8     | Seasons and survival  | **Implemented** |
-| 9     | Save / load           | **Implemented** |
-| 10    | Mobile UX             | **Implemented** |
-| 11    | Performance           | **Implemented** |
-| 12    | Homes and population  | **Implemented** |
-| 13    | Seasons on screen     | **Implemented** |
-| 14    | Roads                 | **Implemented** |
-| 15    | Art pass              | **Implemented** |
-| 16    | Land use              | **Implemented** |
-| 17    | Professions           | **Implemented** |
-| 18    | Clothing              | **Implemented** |
-| 19    | Trade                 | **Implemented** |
-| 20    | Demolition            | **Implemented** |
-| 21    | Health                | **Implemented** |
+| Phase | Name                   | Status          |
+| ----- | ---------------------- | --------------- |
+| 0     | Repository inspection  | **Implemented** |
+| 1     | Browser foundation     | **Implemented** |
+| 2     | Isometric world        | **Implemented** |
+| 3     | Villagers              | **Implemented** |
+| 4     | Job system             | **Implemented** |
+| 5     | Resource logistics     | **Implemented** |
+| 6     | Construction           | **Implemented** |
+| 7     | Economy                | **Implemented** |
+| 8     | Seasons and survival   | **Implemented** |
+| 9     | Save / load            | **Implemented** |
+| 10    | Mobile UX              | **Implemented** |
+| 11    | Performance            | **Implemented** |
+| 12    | Homes and population   | **Implemented** |
+| 13    | Seasons on screen      | **Implemented** |
+| 14    | Roads                  | **Implemented** |
+| 15    | Art pass               | **Implemented** |
+| 16    | Land use               | **Implemented** |
+| 17    | Professions            | **Implemented** |
+| 18    | Clothing               | **Implemented** |
+| 19    | Trade                  | **Implemented** |
+| 20    | Demolition             | **Implemented** |
+| 21    | Health                 | **Implemented** |
+| 22    | Start screen and guide | **Implemented** |
 
 ---
 
@@ -551,3 +552,32 @@ hands not already committed to a workshop — so the labour bill is far steeper
 than the case count suggests. At twice the shipped rate, a settlement playing
 well lost most of the food it had banked for winter, which made sickness the
 game's dominant mechanic rather than its third one.
+
+---
+
+## Phase 22 — Start screen and guide — Implemented
+
+The game began mid-simulation, with no title and no explanation. A player who did not already know
+what Montija was had nowhere to find out, and the only route back to a saved settlement was a button
+in the corner of a HUD they had not yet learned to read.
+
+- A **start screen** over the founded world: Continue, New settlement, How to play, and the language
+  toggle. The clock is paused while it is open.
+- **How to play**, reachable from the menu and from a **?** button while playing. Opening it mid-game
+  pauses; closing it puts the clock back where it was.
+- Seven sections: the objective, how work happens, the controls, the year, what kills a settlement,
+  every resource, and every building.
+
+**The building and resource sections are generated from `data/buildings.ts` and `data/resources.ts`**,
+with real costs and real staffing read from the definitions. A guide written by hand rots — someone
+adds a building or changes a cost and the page quietly starts lying, and nothing fails, because prose
+does not compile. `tests/guide.test.ts` holds it to that: every building covered, every resource
+covered, costs matching the definitions, and no missing string in either language.
+
+Content and rendering are separate for the same reason. `guideContent.ts` produces the guide as
+data with no DOM, so it can be tested headlessly; `Guide.ts` only decides how it looks.
+
+Two notes on what this deliberately is not. **"New settlement" does not found a new one** — the world
+behind the menu is already new, and re-founding would discard it to generate an identical
+replacement. And there is no in-game pause menu; the **?** button covers the case that matters, and
+beginning again after a settlement dies is the failure overlay's job, which it already does.

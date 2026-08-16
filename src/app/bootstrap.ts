@@ -10,6 +10,7 @@
 
 import '@/ui/styles/base.css';
 import '@/ui/styles/hud.css';
+import '@/ui/styles/menu.css';
 
 import { Game } from '@/game/Game';
 import { PointerController } from '@/input/PointerController';
@@ -17,6 +18,8 @@ import { TouchController } from '@/input/TouchController';
 import { createPhaserGame } from '@/renderer/phaser/createPhaserGame';
 import { Hud } from '@/ui/hud/Hud';
 import { BuildMenu } from '@/ui/build-menu/BuildMenu';
+import { Guide } from '@/ui/guide/Guide';
+import { MainMenu } from '@/ui/menu/MainMenu';
 import { I18n } from '@/ui/i18n/I18n';
 import { StatsOverlay, requestedVillagers, statsRequested } from '@/ui/StatsOverlay';
 import { bindFullscreenButton } from '@/ui/Fullscreen';
@@ -70,6 +73,40 @@ export function start(): void {
   }
   const buildMenu = new BuildMenu(hudRoot, game, i18n);
 
+  // Both live outside #hud — see index.html for why — so they are looked up
+  // from the game root rather than the HUD layer.
+  const guide = new Guide(gameRoot, i18n);
+  const mainMenu = new MainMenu(gameRoot, game, i18n, guide);
+
+  // Opening the rules mid-game pauses, and closing them puts the clock back
+  // where it was: nobody wants to read about winter while winter happens.
+  const helpButton = hudRoot.querySelector<HTMLButtonElement>('[data-ui="help"]');
+  helpButton?.addEventListener('click', () => {
+    const wasPaused = game.clock.isPaused;
+    game.clock.pause();
+    guide.open({
+      closeLabel: i18n.t('menu.close'),
+      onClose: () => {
+        if (!wasPaused) {
+          game.clock.resume();
+        }
+      },
+    });
+  });
+
+  // The button is a glyph, so its only name is the one assistive technology
+  // reads — and that name has to change with the language like every other.
+  let labelledLanguageVersion = -1;
+  const relabelHelp = (): void => {
+    if (!helpButton || labelledLanguageVersion === i18n.changeVersion) {
+      return;
+    }
+    labelledLanguageVersion = i18n.changeVersion;
+    helpButton.setAttribute('aria-label', i18n.t('menu.help'));
+    helpButton.title = i18n.t('menu.help');
+  };
+  relabelHelp();
+
   // Mouse and touch are separate controllers feeding one intent sink, so a
   // hybrid device never processes the same gesture through both paths.
   const pointerController = new PointerController(canvasHost, game.input);
@@ -111,6 +148,7 @@ export function start(): void {
   const renderHud = (): void => {
     hud.update();
     buildMenu.update();
+    relabelHelp();
     debugOverlay?.update();
     statsOverlay?.update();
     window.requestAnimationFrame(renderHud);
@@ -118,6 +156,10 @@ export function start(): void {
   window.requestAnimationFrame(renderHud);
 
   document.body.classList.remove('is-loading');
+
+  // Last, so the menu opens over a world that is already drawn rather than
+  // over the empty canvas of a game still starting up.
+  mainMenu.open();
 }
 
 start();

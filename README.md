@@ -52,6 +52,11 @@ npm run dev      # http://localhost:5173
 
 ## Controls
 
+The game opens on a start screen with **How to play** on it, which explains all of this in the game
+itself, in English or Spanish. The same page is reachable while playing from the **?** button in the
+top bar. Its building and resource lists are generated from the game's own data tables, so they
+cannot drift out of step with what the game actually does.
+
 Landscape orientation is the target. Nothing requires a keyboard or a mouse.
 
 | Action | Desktop             | Touch           |

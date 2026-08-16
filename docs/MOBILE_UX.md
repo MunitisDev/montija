@@ -275,3 +275,32 @@ menu, then "Install app" or "Add to home screen".
 
 Orientation is deliberately left unlocked. The game now supports both, and the player has already
 decided how to hold their phone.
+
+---
+
+## Full-screen overlays — Implemented
+
+The start screen and the **How to play** sheet are the only two things in the game that take the
+whole screen. Both sit outside `#hud` and set `pointer-events: auto`, because that layer is
+transparent to pointers so world gestures reach the canvas — an overlay inheriting that would let a
+drag pan the settlement behind it.
+
+They are full-screen rather than floating windows for the reason the rest of this document keeps
+running into: in landscape, vertical room is what runs out. A dialog small enough to feel like a
+window is too small to read, and one large enough to read has stopped being a window. Neither is
+somewhere the player lingers, so taking the screen while they are open costs nothing.
+
+Two details that are easy to get wrong here:
+
+- **`touch-action: pan-y` on the sheet's scrolling body.** The document suppresses touch scrolling
+  everywhere so gestures belong to the camera. Without granting it back explicitly, the guide cannot
+  be read past its first screen on a phone — the one place in the game where scrolling is correct.
+- **The HUD stands down for the start screen.** Left up, the title was framed by a resource strip and
+  a build bar the player could see and not use, which reads as a game that started and then stopped.
+  It uses the same opacity fade as the loading state rather than a second mechanism.
+
+Below `34rem` wide the guide's two-column term/detail grid becomes a single stack; above it, terms
+sit in a 15rem column. Under `460px` tall the start screen drops its tagline and shortens its
+buttons, the same threshold the HUD uses.
+
+Verified at 1024×768 (tablet landscape) and 844×390 (landscape phone), in both languages.

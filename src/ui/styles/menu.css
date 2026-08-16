@@ -1,0 +1,329 @@
+/**
+ * The start screen and the instructions sheet.
+ *
+ * Both are full-screen overlays rather than floating windows. The primary
+ * target is a tablet in landscape, where a dialog small enough to feel like a
+ * window is too small to read, and one large enough to read has stopped being
+ * a window. Neither is a place the player lingers, so taking the screen for as
+ * long as they are open costs nothing.
+ *
+ * Everything here is inside the safe-area insets: an instruction sheet whose
+ * first line sits under a notch is an instruction sheet nobody reads.
+ */
+
+.menu,
+.sheet {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  padding: calc(var(--safe-top) + 16px) calc(var(--safe-right) + 16px)
+    calc(var(--safe-bottom) + 16px) calc(var(--safe-left) + 16px);
+  /* These two are the exception to the HUD's pointer-transparency: an overlay
+     that let drags through would pan the settlement behind it. */
+  pointer-events: auto;
+  overscroll-behavior: contain;
+}
+
+.menu[hidden],
+.sheet[hidden] {
+  display: none;
+}
+
+/*
+ * The HUD stands down for the title screen.
+ *
+ * Left up it framed the menu with a resource strip and a build bar the player
+ * could see and not use, which reads as the game having already started and
+ * then stopped. The same fade the loading screen uses, so there is one
+ * behaviour rather than two.
+ */
+body.is-menu-open #hud {
+  opacity: 0;
+}
+
+/* --- Start screen -------------------------------------------------------- */
+
+.menu {
+  align-items: center;
+  justify-content: center;
+  /*
+   * Dark enough to read against, sheer enough to keep the settlement visible.
+   *
+   * Seeing the world behind the title is most of the reason the menu is an
+   * overlay at all — the game gets to introduce itself before the player has
+   * pressed anything.
+   */
+  background: linear-gradient(rgba(10, 12, 9, 0.72), rgba(10, 12, 9, 0.88));
+  backdrop-filter: blur(4px);
+}
+
+.menu__panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 34rem;
+  text-align: center;
+}
+
+.menu__title {
+  margin: 0;
+  font-size: clamp(2.2rem, 7vh, 3.4rem);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--colour-ink);
+}
+
+.menu__tagline {
+  margin: 0 0 6px;
+  max-width: 30ch;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--colour-ink-dim);
+}
+
+.menu__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(20rem, 78vw);
+}
+
+.menu__button {
+  min-height: var(--touch-target);
+  padding: 0 20px;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--colour-ink);
+  background: var(--colour-panel);
+  border: 1px solid var(--colour-panel-edge);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.menu__button:hover:not(:disabled) {
+  border-color: rgba(201, 162, 39, 0.45);
+}
+
+.menu__button--primary {
+  background: rgba(201, 162, 39, 0.16);
+  border-color: rgba(201, 162, 39, 0.55);
+}
+
+.menu__button--primary:hover:not(:disabled) {
+  background: rgba(201, 162, 39, 0.26);
+}
+
+/*
+ * A disabled Continue stays on screen rather than disappearing.
+ *
+ * A menu whose buttons move depending on whether a save exists teaches the
+ * player a layout that then changes under them. Greyed out it also answers the
+ * question it raises — "can I come back to this?" — before they have played.
+ */
+.menu__button:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.menu__note {
+  margin: 0;
+  min-height: 1.1em;
+  font-size: 0.8rem;
+  color: var(--colour-ink-dim);
+}
+
+.menu__language {
+  margin-top: 4px;
+  min-height: 34px;
+  min-width: 44px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  color: var(--colour-ink-dim);
+  background: transparent;
+  border: 1px solid var(--colour-panel-edge);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.menu__language:hover {
+  color: var(--colour-ink);
+}
+
+/* --- Instructions sheet -------------------------------------------------- */
+
+.sheet {
+  justify-content: center;
+  background: rgba(10, 12, 9, 0.96);
+  backdrop-filter: blur(6px);
+}
+
+.sheet__panel {
+  display: flex;
+  flex-direction: column;
+  width: min(52rem, 100%);
+  min-height: 0;
+}
+
+.sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--colour-panel-edge);
+}
+
+.sheet__title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--colour-ink);
+}
+
+.sheet__close {
+  flex: 0 0 auto;
+  min-height: var(--touch-target);
+  padding: 0 18px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--colour-ink);
+  background: rgba(201, 162, 39, 0.16);
+  border: 1px solid rgba(201, 162, 39, 0.55);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.sheet__close:hover {
+  background: rgba(201, 162, 39, 0.26);
+}
+
+/*
+ * The one scrolling region in the whole game.
+ *
+ * `touch-action: pan-y` is load-bearing: the body suppresses touch scrolling
+ * everywhere so gestures belong to the camera, and without granting it back
+ * here the sheet cannot be read past its first screen on a phone.
+ */
+.sheet__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 14px 2px 4px;
+  overflow-y: auto;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
+
+/* --- Guide content ------------------------------------------------------- */
+
+.guide__section {
+  margin: 0 0 22px;
+}
+
+.guide__heading {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--colour-accent);
+}
+
+.guide__body {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--colour-ink);
+}
+
+.guide__body + .guide__list {
+  margin-top: 12px;
+}
+
+.guide__list {
+  display: grid;
+  /*
+   * Term and detail side by side where there is room, stacked where there is
+   * not. `minmax(0, …)` on both tracks stops a long building name forcing the
+   * grid wider than the sheet.
+   */
+  grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+  gap: 6px 18px;
+  margin: 0;
+}
+
+/*
+ * Rows keep their own height rather than being stretched to the tallest cell.
+ *
+ * Without this a building whose cost line wraps to two lines leaves its
+ * description floating in the middle of the gap, and a list of sixteen
+ * buildings turns visibly ragged.
+ */
+.guide__list > * {
+  align-self: start;
+}
+
+.guide__term {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.92rem;
+  color: var(--colour-ink);
+}
+
+.guide__meta {
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: var(--colour-ink-dim);
+}
+
+.guide__detail {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--colour-ink-dim);
+}
+
+/*
+ * Below this the two-column list is a column of two-word ragged fragments, so
+ * it becomes a stack. The measurement that matters is the sheet's width, not
+ * the device's, but a container query here would need a named container for
+ * one rule; the viewport is close enough while the sheet is full-bleed.
+ */
+@media (max-width: 34rem) {
+  .guide__list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .guide__detail {
+    margin-bottom: 10px;
+  }
+}
+
+/*
+ * Short landscape phones: the title alone can eat a third of the height, so
+ * the start screen tightens up rather than pushing its buttons off the bottom.
+ */
+@media (max-height: 460px) {
+  .menu__title {
+    font-size: 1.9rem;
+  }
+
+  .menu__tagline {
+    display: none;
+  }
+
+  .menu__actions {
+    width: min(24rem, 80vw);
+  }
+
+  .menu__button,
+  .sheet__close {
+    min-height: 40px;
+  }
+}

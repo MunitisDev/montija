@@ -146,6 +146,25 @@
             </div>
           </div>
 
+          <!-- The rules, reachable while playing: needing them is exactly when
+               leaving the settlement to find them is most annoying. -->
+          <button type="button" class="icon-button" data-ui="help" aria-label="How to play">
+            <svg
+              class="icon-button__glyph"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path
+                d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2.2a7.8 7.8 0 1 1 0 15.6 7.8 7.8 0 0 1 0-15.6z"
+              />
+              <path
+                d="M12 6.2c-2 0-3.4 1.1-3.8 3l2 .4c.2-1 .8-1.5 1.7-1.5.9 0 1.5.5 1.5 1.3 0 .6-.3 1-1.1 1.6-1 .8-1.4 1.5-1.4 2.6v.5h2v-.4c0-.7.2-1 1-1.6 1.1-.8 1.6-1.6 1.6-2.8 0-1.8-1.4-3.1-3.5-3.1z"
+              />
+              <circle cx="12" cy="17" r="1.2" />
+            </svg>
+          </button>
+
           <button
             type="button"
             class="language-button"
@@ -279,6 +298,46 @@
               4x
             </button>
           </div>
+        </div>
+      </div>
+
+      <!--
+        Start screen and instructions.
+
+        Siblings of #hud rather than children of it: that layer is transparent
+        to pointers so world gestures reach the canvas, and these two must
+        swallow every gesture they are given.
+      -->
+      <div class="menu" data-ui="menu" role="dialog" aria-modal="true" aria-label="Montija" hidden>
+        <div class="menu__panel">
+          <h1 class="menu__title">Montija</h1>
+          <p class="menu__tagline" data-ui="menu-tagline"></p>
+          <div class="menu__actions">
+            <button
+              type="button"
+              class="menu__button menu__button--primary"
+              data-ui="menu-continue"
+            ></button>
+            <button type="button" class="menu__button" data-ui="menu-new"></button>
+            <button type="button" class="menu__button" data-ui="menu-guide"></button>
+          </div>
+          <p class="menu__note" data-ui="menu-note"></p>
+          <button
+            type="button"
+            class="menu__language"
+            data-ui="menu-language"
+            aria-label="Language"
+          ></button>
+        </div>
+      </div>
+
+      <div class="sheet" data-ui="guide" role="dialog" aria-modal="true" hidden>
+        <div class="sheet__panel">
+          <header class="sheet__head">
+            <h2 class="sheet__title" data-ui="guide-title"></h2>
+            <button type="button" class="sheet__close" data-ui="guide-close"></button>
+          </header>
+          <div class="sheet__body guide" data-ui="guide-body"></div>
         </div>
       </div>
 

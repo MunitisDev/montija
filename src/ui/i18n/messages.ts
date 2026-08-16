@@ -151,6 +151,86 @@ export const EN = {
   'action.exitFullscreen': 'Leave fullscreen',
   'app.rotate': 'Rotate your device for the best view',
   'app.noscript': 'Montija needs JavaScript and WebGL to run.',
+
+  'menu.tagline': 'A settlement in the wilderness, and one winter to be ready for.',
+  'menu.newSettlement': 'New settlement',
+  'menu.continue': 'Continue',
+  'menu.noSave': 'Nothing saved yet',
+  'menu.howToPlay': 'How to play',
+  'menu.close': 'Close',
+  'menu.back': 'Back',
+  'menu.help': 'How to play',
+
+  'guide.title': 'How to play',
+  'guide.objective': 'What you are trying to do',
+  'guide.objective.body':
+    'Ten settlers arrive in spring with what they could carry. Nothing grows under snow, so everything eaten in winter has to be gathered and stored before it arrives. Survive the first winter and the settlement is yours to grow.',
+  'guide.loop': 'How work happens',
+  'guide.loop.body':
+    'You never order a villager about directly. You mark what needs doing and raise the buildings; they find the work themselves. Resources are real things in real places — a felled tree becomes logs on the ground, and those logs are worth nothing until somebody has carried them to a store.',
+  'guide.loop.designate': 'Mark it',
+  'guide.loop.designate.detail': 'Tap a tree or a stone deposit and choose to fell or mine it.',
+  'guide.loop.work': 'Somebody goes',
+  'guide.loop.work.detail': 'An idle villager takes the nearest job and walks to it.',
+  'guide.loop.haul': 'It is carried',
+  'guide.loop.haul.detail': 'What they produce is left where it falls until a hauler comes for it.',
+  'guide.loop.store': 'It counts',
+  'guide.loop.store.detail':
+    'Only what reaches a store is counted at the top of the screen. A small +n means the rest is still lying in the field.',
+  'guide.controls': 'Controls',
+  'guide.control.pan': 'Move the view',
+  'guide.control.pan.detail': 'Drag with one finger, or with the mouse.',
+  'guide.control.zoom': 'Zoom',
+  'guide.control.zoom.detail': 'Pinch with two fingers, or use the mouse wheel.',
+  'guide.control.select': 'Look at something',
+  'guide.control.select.detail':
+    'Tap a villager, a building or a tile. A panel appears at the bottom with what it is doing.',
+  'guide.control.build': 'Build',
+  'guide.control.build.detail':
+    'Tap a building in the bottom bar, move the view until the outline sits where you want it, then confirm. Red means the ground will not take it.',
+  'guide.control.speed': 'Speed',
+  'guide.control.speed.detail': 'Pause, 1x, 2x and 4x. Winter is worth watching slowly.',
+  'guide.control.save': 'Saving',
+  'guide.control.save.detail':
+    'The settlement saves itself every few days, and the buttons save and reload it by hand.',
+  'guide.seasons': 'The year',
+  'guide.season.spring': 'Foraging begins and the ground can be built on. The year starts here.',
+  'guide.season.summer': 'The best gathering of the year, and the time to expand.',
+  'guide.season.autumn': 'Harvest, and the last chance to fill the stores and the woodshed.',
+  'guide.season.winter':
+    'Nothing is gathered and firewood burns every day. You live on what you kept.',
+  'guide.hardship': 'What kills a settlement',
+  'guide.hardship.hunger': 'Hunger',
+  'guide.hardship.hunger.detail':
+    'Everyone eats one food a day. Food rots in the open, and far more slowly in a Food Storage.',
+  'guide.hardship.cold': 'Cold',
+  'guide.hardship.cold.detail':
+    'Firewood only warms people who have a house. A full woodshed and no roofs will still kill everyone.',
+  'guide.hardship.illness': 'Illness',
+  'guide.hardship.illness.detail':
+    'People fall ill now and then, far more often without a roof. They stop working for about a week; a Healer shortens it.',
+  'guide.hardship.age': 'Old age',
+  'guide.hardship.age.detail':
+    'Villagers grow old and die. Houses let families raise children, which is the only way the settlement lasts.',
+  'guide.resources': 'Resources',
+  'guide.buildings': 'Buildings',
+  'guide.workerSlots': 'workers',
+  'guide.noWorkers': 'nobody works here',
+  'guide.houses': 'houses',
+  'guide.free': 'costs nothing',
+
+  'resource.logs.purpose':
+    'Felled trees. Almost everything is built from them, and firewood is split from them.',
+  'resource.firewood.purpose': 'Burned on freezing days to keep houses warm.',
+  'resource.stone.purpose': 'Cut from rock faces. Most buildings need some.',
+  'resource.food.purpose': 'One eaten per person per day. It rots fastest lying in the open.',
+  'resource.iron.purpose': 'Dug out of a hillside by a mine, and forged into tools.',
+  'resource.tools.purpose':
+    'Worn down by work. While the settlement has them, every job goes up to half as fast again.',
+  'resource.hides.purpose': 'Brought in by hunters, and sewn into clothing.',
+  'resource.clothing.purpose': 'Worn in the cold. Warms people the fire alone cannot keep up with.',
+  'resource.herbs.purpose':
+    'Gathered while things grow, and they keep. A Healer treats the sick with them.',
 } as const;
 
 export type MessageKey = keyof typeof EN;
@@ -297,4 +377,87 @@ export const ES: Messages = {
   'action.exitFullscreen': 'Salir de pantalla completa',
   'app.rotate': 'Gira el dispositivo para ver mejor',
   'app.noscript': 'Montija necesita JavaScript y WebGL para funcionar.',
+
+  'menu.tagline': 'Un asentamiento en tierra salvaje, y un invierno para el que estar listo.',
+  'menu.newSettlement': 'Nueva partida',
+  'menu.continue': 'Continuar',
+  'menu.noSave': 'Todavía no hay nada guardado',
+  'menu.howToPlay': 'Cómo se juega',
+  'menu.close': 'Cerrar',
+  'menu.back': 'Volver',
+  'menu.help': 'Cómo se juega',
+
+  'guide.title': 'Cómo se juega',
+  'guide.objective': 'Qué hay que conseguir',
+  'guide.objective.body':
+    'Diez colonos llegan en primavera con lo que pudieron cargar. Bajo la nieve no crece nada, así que todo lo que se coma en invierno hay que recolectarlo y guardarlo antes de que llegue. Sobrevive al primer invierno y el asentamiento será tuyo para hacerlo crecer.',
+  'guide.loop': 'Cómo se trabaja',
+  'guide.loop.body':
+    'Nunca das órdenes a un aldeano concreto. Tú marcas lo que hay que hacer y levantas los edificios; ellos buscan el trabajo solos. Los recursos son cosas reales en lugares reales: un árbol talado deja troncos en el suelo, y esos troncos no valen nada hasta que alguien los lleva a un almacén.',
+  'guide.loop.designate': 'Márcalo',
+  'guide.loop.designate.detail':
+    'Toca un árbol o un yacimiento de piedra y elige talarlo o picarlo.',
+  'guide.loop.work': 'Alguien va',
+  'guide.loop.work.detail': 'Un aldeano sin tarea coge el trabajo más cercano y camina hasta él.',
+  'guide.loop.haul': 'Alguien lo lleva',
+  'guide.loop.haul.detail':
+    'Lo que producen se queda donde cae hasta que un acarreador viene a por ello.',
+  'guide.loop.store': 'Y entonces cuenta',
+  'guide.loop.store.detail':
+    'Arriba solo se cuenta lo que ha llegado a un almacén. Un pequeño +n indica lo que sigue tirado en el campo.',
+  'guide.controls': 'Controles',
+  'guide.control.pan': 'Mover la vista',
+  'guide.control.pan.detail': 'Arrastra con un dedo, o con el ratón.',
+  'guide.control.zoom': 'Acercar y alejar',
+  'guide.control.zoom.detail': 'Pellizca con dos dedos, o usa la rueda del ratón.',
+  'guide.control.select': 'Mirar algo',
+  'guide.control.select.detail':
+    'Toca un aldeano, un edificio o una casilla. Abajo aparece un panel con lo que está haciendo.',
+  'guide.control.build': 'Construir',
+  'guide.control.build.detail':
+    'Toca un edificio en la barra inferior, mueve la vista hasta que la silueta esté donde quieras y confirma. En rojo significa que el terreno no lo admite.',
+  'guide.control.speed': 'Velocidad',
+  'guide.control.speed.detail': 'Pausa, 1x, 2x y 4x. El invierno merece verse despacio.',
+  'guide.control.save': 'Guardado',
+  'guide.control.save.detail':
+    'El asentamiento se guarda solo cada pocos días, y los botones lo guardan y lo recargan a mano.',
+  'guide.seasons': 'El año',
+  'guide.season.spring': 'Empieza la recolección y ya se puede construir. El año arranca aquí.',
+  'guide.season.summer': 'La mejor recolección del año, y el momento de crecer.',
+  'guide.season.autumn': 'La cosecha, y la última ocasión de llenar la despensa y la leñera.',
+  'guide.season.winter':
+    'No se recolecta nada y la leña arde cada día. Se vive de lo que guardaste.',
+  'guide.hardship': 'Qué acaba con un asentamiento',
+  'guide.hardship.hunger': 'Hambre',
+  'guide.hardship.hunger.detail':
+    'Cada persona come una comida al día. La comida se pudre a la intemperie, y mucho más despacio en una Despensa.',
+  'guide.hardship.cold': 'Frío',
+  'guide.hardship.cold.detail':
+    'La leña solo calienta a quien tiene casa. Una leñera llena y ningún tejado mata igual a todo el mundo.',
+  'guide.hardship.illness': 'Enfermedad',
+  'guide.hardship.illness.detail':
+    'La gente enferma de vez en cuando, mucho más sin un techo. Dejan de trabajar cerca de una semana; un Sanador lo acorta.',
+  'guide.hardship.age': 'Vejez',
+  'guide.hardship.age.detail':
+    'Los aldeanos envejecen y mueren. Las casas permiten criar hijos, que es lo único que hace durar al asentamiento.',
+  'guide.resources': 'Recursos',
+  'guide.buildings': 'Edificios',
+  'guide.workerSlots': 'trabajadores',
+  'guide.noWorkers': 'aquí no trabaja nadie',
+  'guide.houses': 'aloja a',
+  'guide.free': 'no cuesta nada',
+
+  'resource.logs.purpose':
+    'Árboles talados. Casi todo se construye con ellos, y de ellos se parte la leña.',
+  'resource.firewood.purpose': 'Se quema los días de helada para calentar las casas.',
+  'resource.stone.purpose': 'Se saca de paredes de roca. Casi todos los edificios necesitan algo.',
+  'resource.food.purpose':
+    'Se come una por persona y día. Se pudre antes que nada tirada a la intemperie.',
+  'resource.iron.purpose': 'Lo extrae una mina de la ladera, y se forja en herramientas.',
+  'resource.tools.purpose':
+    'El trabajo las desgasta. Mientras el asentamiento tenga, cada tarea va hasta la mitad más rápido.',
+  'resource.hides.purpose': 'Las traen los cazadores, y se cosen en ropa.',
+  'resource.clothing.purpose': 'Se viste con frío. Abriga donde el fuego solo no llega.',
+  'resource.herbs.purpose':
+    'Se recogen mientras crecen y se conservan. Un Sanador cura con ellas a los enfermos.',
 };
