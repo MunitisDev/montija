@@ -44,6 +44,7 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 17    | Professions           | **Implemented** |
 | 18    | Clothing              | **Implemented** |
 | 19    | Trade                 | **Implemented** |
+| 20    | Demolition            | **Implemented** |
 
 ---
 
@@ -494,5 +495,24 @@ The way out of a map that will not give you something. Set out in
 - Food and firewood are never sold, and a surplus has to clear a floor before it
   counts as one.
 
-**Planned, and not built:** a per-trade interface. The post currently decides for
-itself what to buy and sell.
+The player names what to buy and sell from the post's panel, or leaves either on
+automatic. Naming a good does not override the safeguards.
+
+---
+
+## Phase 20 — Demolition — Implemented
+
+Nothing could be un-built, which mattered more the moment quarries and mines
+arrived: a permanent building in the wrong place was a permanent mistake.
+
+- A construction site is cancelled at once and hands back its delivered
+  materials.
+- A finished building is a job: somebody tears it down, and half the cost comes
+  back as salvage on the plot.
+- Ordering again cancels the order, so the button is its own undo.
+- Lowest priority in the game, alongside roads.
+
+Five things hold a reference to a building — its plot in the navigation grid,
+its staff, its yard, the jobs aimed at it and anyone walking to one — and each
+has its own test, because a demolition that misses one leaves a ghost the player
+cannot see and cannot fix.

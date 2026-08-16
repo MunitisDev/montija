@@ -20,9 +20,12 @@
  * playing the game. It is the answer to "this map has no iron", not to "I would
  * rather not build a quarry".
  *
- * There is no per-trade interface yet, and that is the honest limitation to
- * record: the post decides for itself. Letting the player name what to buy and
- * what to sell is the obvious next step and is not built.
+ * The player may **name what to buy and what to sell**, or leave either on
+ * automatic. Automatic is the default and stays useful: a settlement rarely
+ * wants something other than "get rid of the thing I have most of, get the
+ * thing I have least of", and being made to state it every time would be
+ * bookkeeping rather than a decision. Naming it matters when the settlement's
+ * biggest surplus is not the one it is willing to part with.
  */
 
 import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
@@ -63,6 +66,18 @@ export const SURPLUS_FLOOR = 80;
  * a way worth acting on, whatever the number says.
  */
 const NEVER_SOLD: ReadonlySet<ResourceId> = new Set<ResourceId>(['food', 'firewood']);
+
+/**
+ * What the player has asked the post to do.
+ *
+ * `null` on either side means "you decide", which is what both start as.
+ */
+export interface TradeOrder {
+  readonly sell: ResourceId | null;
+  readonly buy: ResourceId | null;
+}
+
+export const AUTOMATIC_TRADE: TradeOrder = { sell: null, buy: null };
 
 export interface TradeReport {
   /** What the settlement gave up today. */
@@ -109,6 +124,7 @@ export function runTrade(options: {
   readonly day: number;
   readonly season: Season;
   readonly posts: number;
+  readonly order?: TradeOrder;
 }): TradeReport {
   if (options.posts <= 0 || !merchantIsVisiting(options.day, options.season)) {
     return NO_TRADE;
@@ -119,9 +135,13 @@ export function runTrade(options: {
     held.set(resource, options.storages.totalOf(resource));
   }
 
-  const sell = largestSurplus(held);
-  const buy = scarcest(held);
-  if (sell === null || buy === null || sell === buy) {
+  const order = options.order ?? AUTOMATIC_TRADE;
+  // A named good still has to be a real surplus. The player asking to sell
+  // logs does not mean selling the last six of them, and a post that obeyed
+  // literally would be a worse tool than one that refused.
+  const sell = order.sell ?? largestSurplus(held);
+  const buy = order.buy ?? scarcest(held);
+  if (sell === null || buy === null || sell === buy || NEVER_SOLD.has(sell)) {
     return { ...NO_TRADE, merchantPresent: true };
   }
 

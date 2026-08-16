@@ -213,6 +213,12 @@
                 <span class="worker-control__count" data-hud="worker-count"></span>
                 <button type="button" data-hud="worker-more" aria-label="More workers">+</button>
               </span>
+              <!-- Only on a trading post: what the merchant should swap. -->
+              <span class="trade-control" data-hud="trade-control" hidden>
+                <button type="button" data-hud="trade-sell"></button>
+                <span class="trade-control__arrow" aria-hidden="true">→</span>
+                <button type="button" data-hud="trade-buy"></button>
+              </span>
               <button
                 type="button"
                 class="building-panel__demolish"

@@ -22,6 +22,8 @@ export const EN = {
   'hud.hides': 'Hides',
   'hud.clothing': 'Clothing',
   'hud.looseHint': 'on the ground, waiting to be carried in',
+  'trade.sellAuto': 'Any surplus',
+  'trade.buyAuto': 'Whatever is scarce',
 
   'season.spring': 'Spring',
   'season.summer': 'Summer',
@@ -155,6 +157,8 @@ export const ES: Messages = {
   'hud.hides': 'Pieles',
   'hud.clothing': 'Ropa',
   'hud.looseHint': 'en el suelo, esperando a que lo lleven al almacén',
+  'trade.sellAuto': 'Cualquier excedente',
+  'trade.buyAuto': 'Lo que escasee',
 
   'season.spring': 'Primavera',
   'season.summer': 'Verano',

@@ -62,6 +62,9 @@ interface HudElements {
   readonly workerCount: HTMLElement;
   readonly workerLabel: HTMLElement;
   readonly demolish: HTMLButtonElement;
+  readonly tradeControl: HTMLElement;
+  readonly tradeSell: HTMLButtonElement;
+  readonly tradeBuy: HTMLButtonElement;
   readonly workerFewer: HTMLButtonElement;
   readonly workerMore: HTMLButtonElement;
   readonly failure: HTMLElement;
@@ -108,6 +111,14 @@ export class Hud {
     this.bindWorkerControl();
     this.elements.demolish.addEventListener('click', () => {
       this.context.toggleSelectedDemolition();
+      this.update();
+    });
+    this.elements.tradeSell.addEventListener('click', () => {
+      this.context.cycleTradeChoice('sell');
+      this.update();
+    });
+    this.elements.tradeBuy.addEventListener('click', () => {
+      this.context.cycleTradeChoice('buy');
       this.update();
     });
     this.bindSessionButtons();
@@ -348,7 +359,18 @@ export class Hud {
     if (!building) {
       this.elements.workerControl.hidden = true;
       this.elements.demolish.hidden = true;
+      this.elements.tradeControl.hidden = true;
       return;
+    }
+
+    // Only a trading post has anything to say about trade, and only once it
+    // is finished — an unbuilt post cannot swap anything.
+    const trading = building.buildingId === 'trading-post' && building.complete;
+    this.elements.tradeControl.hidden = !trading;
+    if (trading) {
+      const order = this.context.tradeOrder;
+      this.elements.tradeSell.textContent = this.tradeLabel(order.sell, 'trade.sellAuto');
+      this.elements.tradeBuy.textContent = this.tradeLabel(order.buy, 'trade.buyAuto');
     }
 
     // Hidden on the founding yard, which has no Building behind it and is the
@@ -416,6 +438,13 @@ export class Hud {
       building.contents.length > 0
         ? `${this.i18n.t('building.holding')} ${this.describeAmounts(building.contents)}`
         : '';
+  }
+
+  /** A side of the trade, or the word for letting the post decide. */
+  private tradeLabel(resource: ResourceId | null, automatic: MessageKey): string {
+    return resource === null
+      ? this.i18n.t(automatic)
+      : this.i18n.t(`hud.${resource}` as MessageKey);
   }
 
   private describeAmounts(amounts: readonly { resource: ResourceId; amount: number }[]): string {
@@ -705,6 +734,9 @@ function collectElements(root: HTMLElement): HudElements {
     workerCount: requireElement(root, '[data-hud="worker-count"]'),
     workerLabel: requireElement(root, '[data-hud="worker-label"]'),
     demolish: requireElement(root, '[data-hud="demolish"]') as HTMLButtonElement,
+    tradeControl: requireElement(root, '[data-hud="trade-control"]'),
+    tradeSell: requireElement(root, '[data-hud="trade-sell"]') as HTMLButtonElement,
+    tradeBuy: requireElement(root, '[data-hud="trade-buy"]') as HTMLButtonElement,
     workerFewer: requireElement(root, '[data-hud="worker-fewer"]') as HTMLButtonElement,
     workerMore: requireElement(root, '[data-hud="worker-more"]') as HTMLButtonElement,
     failure: requireElement(root, '[data-hud="failure"]'),

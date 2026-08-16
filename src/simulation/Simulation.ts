@@ -21,7 +21,13 @@ import type { PlacementCheck } from './buildings/BuildingRegistry';
 import { isFinished, JobPriority } from './jobs/Job';
 import { JobManager } from './jobs/JobManager';
 import { StorageRegistry } from './logistics/Storage';
-import { NO_TRADE, runTrade, type TradeReport } from './logistics/TradeSystem';
+import {
+  AUTOMATIC_TRADE,
+  NO_TRADE,
+  runTrade,
+  type TradeOrder,
+  type TradeReport,
+} from './logistics/TradeSystem';
 import {
   DAYS_PER_SEASON,
   SEASONAL_YIELD,
@@ -180,6 +186,14 @@ export class Simulation {
   private lastForest: ForestReport = NO_FOREST_CHANGE;
   private lastEmployment: EmploymentReport = NO_EMPLOYMENT_CHANGE;
   private lastTrade: TradeReport = NO_TRADE;
+  /**
+   * What the player has told the post to trade, if anything.
+   *
+   * Settlement-wide rather than per post: two posts trading against each other
+   * is a puzzle nobody asked for, and the interesting decision is *what* to
+   * swap rather than *where*.
+   */
+  private tradeOrder: TradeOrder = AUTOMATIC_TRADE;
   private totalDeaths = 0;
   /**
    * The woods' own random stream.
@@ -459,6 +473,7 @@ export class Simulation {
     this.lastForest = NO_FOREST_CHANGE;
     this.lastEmployment = NO_EMPLOYMENT_CHANGE;
     this.lastTrade = NO_TRADE;
+    this.tradeOrder = AUTOMATIC_TRADE;
   }
 
   /**
@@ -578,6 +593,7 @@ export class Simulation {
       day: Math.floor(this.currentTick / TICKS_PER_DAY),
       season: this.year.season,
       posts: this.world.buildings.countOf('trading-post'),
+      order: this.tradeOrder,
     });
 
     this.runPopulationUpkeep();
@@ -862,6 +878,22 @@ export class Simulation {
       return;
     }
     this.lastEmployment = runEmployment(this.villagers.all, this.world.buildings);
+  }
+
+  /** What the post has been told to trade. Nulls mean "you decide". */
+  public get trading(): TradeOrder {
+    return this.tradeOrder;
+  }
+
+  /**
+   * Names what the post should sell and buy.
+   *
+   * A command like every other player intent, and one that cannot make the
+   * settlement do anything unsafe: a named good still has to clear the surplus
+   * floor, and food and firewood are still never sold.
+   */
+  public setTradeOrder(order: TradeOrder): void {
+    this.tradeOrder = order;
   }
 
   /**

@@ -226,3 +226,95 @@ function raiseTradingPost(simulation: Simulation): boolean {
   }
   return false;
 }
+
+describe('when the player names the trade', () => {
+  it('sells what they asked for rather than the biggest pile', () => {
+    // The reason the control exists: the settlement's biggest surplus is not
+    // always the one it is willing to part with.
+    const storages = yardWith({ logs: 900, stone: 400, iron: 0 });
+    const report = runTrade({
+      storages,
+      day: SUMMER_TRADING_DAY,
+      season: 'summer',
+      posts: 1,
+      order: { sell: 'stone', buy: null },
+    });
+
+    expect(report.sold).toBe('stone');
+    expect(storages.totalOf('logs')).toBe(900);
+  });
+
+  it('buys what they asked for rather than the scarcest thing', () => {
+    const storages = yardWith({ logs: 900, iron: 0, clothing: 5 });
+    const report = runTrade({
+      storages,
+      day: SUMMER_TRADING_DAY,
+      season: 'summer',
+      posts: 1,
+      order: { sell: null, buy: 'clothing' },
+    });
+
+    expect(report.bought).toBe('clothing');
+    expect(storages.totalOf('clothing')).toBeGreaterThan(5);
+  });
+
+  it('still refuses to sell food, however it is asked', () => {
+    // Offering the player a choice the game then quietly ignores would be
+    // worse than not offering it; refusing outright is at least honest.
+    const storages = yardWith({ food: 5000, iron: 0 });
+    const report = runTrade({
+      storages,
+      day: SUMMER_TRADING_DAY,
+      season: 'summer',
+      posts: 1,
+      order: { sell: 'food', buy: 'iron' },
+    });
+
+    expect(report.sold).toBeNull();
+    expect(storages.totalOf('food')).toBe(5000);
+  });
+
+  it('still leaves a working stock behind', () => {
+    // A named good is not a licence to sell the last of it.
+    const storages = yardWith({ stone: SURPLUS_FLOOR + 9, iron: 0 });
+    runTrade({
+      storages,
+      day: SUMMER_TRADING_DAY,
+      season: 'summer',
+      posts: 1,
+      order: { sell: 'stone', buy: 'iron' },
+    });
+
+    expect(storages.totalOf('stone')).toBeGreaterThanOrEqual(SURPLUS_FLOOR);
+  });
+
+  it('does nothing when both sides name the same good', () => {
+    const storages = yardWith({ logs: 900 });
+    const report = runTrade({
+      storages,
+      day: SUMMER_TRADING_DAY,
+      season: 'summer',
+      posts: 1,
+      order: { sell: 'logs', buy: 'logs' },
+    });
+
+    expect(report.boughtAmount).toBe(0);
+    expect(storages.totalOf('logs')).toBe(900);
+  });
+
+  it('starts on automatic and cycles back round to it', () => {
+    const simulation = new Simulation({
+      seed: 20260815,
+      worldWidth: 48,
+      worldHeight: 48,
+      startingVillagers: 2,
+    });
+    expect(simulation.trading).toEqual({ sell: null, buy: null });
+
+    simulation.setTradeOrder({ sell: 'logs', buy: 'iron' });
+    expect(simulation.trading.sell).toBe('logs');
+
+    simulation.setTradeOrder({ sell: null, buy: null });
+    expect(simulation.trading).toEqual({ sell: null, buy: null });
+  });
+});

@@ -308,8 +308,16 @@ working against the player:
 - **A surplus has to be a real one.** Below a floor, a settlement is not rich in
   something, it merely happens to have some.
 
-**Planned, and not built:** the post decides for itself. Letting the player name
-what to buy and what to sell is the obvious next step.
+The player may **name what to buy and what to sell** from the post's panel, or
+leave either on automatic. Automatic is the default and stays useful — a
+settlement rarely wants anything other than "get rid of the thing I have most
+of, get the thing I have least of" — and naming it matters when the biggest
+surplus is not the one the settlement is willing to part with.
+
+Naming a good does not override the safeguards: it still has to clear the
+surplus floor, and food and firewood are still never sold however they are
+asked. Offering a choice the game then quietly ignores would be worse than not
+offering it.
 
 ---
 

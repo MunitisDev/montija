@@ -28,6 +28,7 @@ import type { InputIntentSink } from '@/input/types';
 import { gridToScene, isInsideGrid, sceneToGrid } from '@/shared/math/isometric';
 import type { GridPoint, ScreenPoint } from '@/shared/types/geometry';
 import type { TerrainType } from '@/data/terrain';
+import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
 import { SeededRandom, deriveSeed } from '@/shared/math/random';
 import type { BuildingId, ResourceAmount } from '@/data/buildings';
 import type { PlacementCheck } from '@/simulation/buildings/BuildingRegistry';
@@ -166,6 +167,10 @@ export interface GameContext {
   adjustSelectedWorkers(delta: number): boolean;
   /** Orders the selected building pulled down, or takes the order back. */
   toggleSelectedDemolition(): boolean;
+  /** What the trading post has been told to swap. Nulls mean "you decide". */
+  readonly tradeOrder: { sell: ResourceId | null; buy: ResourceId | null };
+  /** Steps the sell or buy choice on to the next good, or back to automatic. */
+  cycleTradeChoice(side: 'sell' | 'buy'): void;
 
   /** The building being placed, or `null` when not in placement mode. */
   readonly placement: PlacementState | null;
@@ -821,12 +826,50 @@ export class Game implements GameContext, InputIntentSink {
     return acted;
   }
 
+  public get tradeOrder(): { sell: ResourceId | null; buy: ResourceId | null } {
+    return this.simulation.trading;
+  }
+
+  /**
+   * Steps one side of the trade on to the next good.
+   *
+   * A cycler rather than a dropdown: there are eight goods and two choices, and
+   * a native select on a phone is a full-screen wheel that covers the very
+   * settlement the player is deciding about. Automatic is one of the stops
+   * rather than a separate control, so the way back is the same gesture as the
+   * way forward.
+   */
+  public cycleTradeChoice(side: 'sell' | 'buy'): void {
+    const options: (ResourceId | null)[] = [null, ...TRADEABLE[side]];
+    const current = side === 'sell' ? this.simulation.trading.sell : this.simulation.trading.buy;
+    const next = options[(options.indexOf(current) + 1) % options.length] ?? null;
+
+    this.simulation.setTradeOrder(
+      side === 'sell'
+        ? { sell: next, buy: this.simulation.trading.buy }
+        : { sell: this.simulation.trading.sell, buy: next },
+    );
+    this.selectionChanges += 1;
+  }
+
   /** Re-reads the selected cell after the world changed underneath it. */
   private refreshSelection(cell: GridPoint): void {
     this.currentSelection = this.describeCell(cell, null);
     this.selectionChanges += 1;
   }
 }
+
+/**
+ * What each side of a trade may be set to.
+ *
+ * Food and firewood are missing from the sell list because the post will not
+ * take them however they are asked — offering the player a choice the game
+ * then refuses is worse than not offering it.
+ */
+const TRADEABLE: Readonly<Record<'sell' | 'buy', readonly ResourceId[]>> = {
+  sell: RESOURCE_IDS.filter((resource) => resource !== 'food' && resource !== 'firewood'),
+  buy: RESOURCE_IDS,
+};
 
 /**
  * How far from its centre the founding yard answers to a tap.
