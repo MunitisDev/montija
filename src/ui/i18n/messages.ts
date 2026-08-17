@@ -74,6 +74,18 @@ export const EN = {
   'villager.hauling': 'hauling',
   'villager.ill': 'ill',
   'villager.labourer': 'Labourer',
+  /**
+   * Which of the two, on a card.
+   *
+   * A word rather than a symbol: ♀ and ♂ are small, easy to confuse at a glance
+   * and read as clinical against the rest of this game's voice.
+   */
+  'sex.f': 'woman',
+  'sex.m': 'man',
+  'sex.f.child': 'girl',
+  'sex.m.child': 'boy',
+  'sex.f.elder': 'elder',
+  'sex.m.elder': 'elder',
   'need.hunger': 'Hunger',
   'need.warmth': 'Warmth',
   'need.health': 'Health',
@@ -496,6 +508,12 @@ export const ES: Messages = {
   'villager.hauling': 'acarreando',
   'villager.ill': 'enfermo',
   'villager.labourer': 'Peón',
+  'sex.f': 'mujer',
+  'sex.m': 'hombre',
+  'sex.f.child': 'niña',
+  'sex.m.child': 'niño',
+  'sex.f.elder': 'anciana',
+  'sex.m.elder': 'anciano',
   'need.hunger': 'Hambre',
   'need.warmth': 'Abrigo',
   'need.health': 'Salud',

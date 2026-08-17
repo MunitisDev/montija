@@ -1321,6 +1321,93 @@
 }
 
 /*
+ * The people under a building: a card each.
+ *
+ * A full-width row of its own inside the panel, scrolling sideways when there
+ * are more of them than there is room for — a five-slot workshop on a landscape
+ * phone is wider than the corner it sits in, and the alternative is a panel that
+ * grows until it covers the settlement it is describing.
+ */
+.cards {
+  display: flex;
+  flex: 1 0 100%;
+  gap: 8px;
+  margin-top: 2px;
+  padding-top: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-top: 1px solid rgba(216, 203, 168, 0.1);
+}
+
+.cards[hidden] {
+  display: none;
+}
+
+.cards::-webkit-scrollbar {
+  display: none;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  max-width: 190px;
+}
+
+/*
+ * The portrait: a silhouette on a disc in that person's own colour.
+ *
+ * The colour is theirs for life and comes from their id — see `cardModel.ts`.
+ * It is what makes two foragers of the same age tell apart at a glance, and it
+ * is the same idea the world sprites will use when they get their own clothes.
+ */
+.card__portrait {
+  display: grid;
+  place-items: end center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: currentColor;
+  /* The figure is drawn to the bottom edge of its box and cropped by the disc,
+     the way a portrait is: shoulders run off it rather than floating in it. */
+  overflow: hidden;
+}
+
+.card__face {
+  width: 30px;
+  height: 30px;
+  fill: rgba(18, 20, 15, 0.82);
+}
+
+.card__who {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+.card__name {
+  font-size: 0.76rem;
+  color: var(--colour-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card__detail {
+  font-size: 0.68rem;
+  color: var(--colour-ink-dim);
+  white-space: nowrap;
+}
+
+/* Somebody unwell is not working today, and the card should not pretend. */
+.card.is-ill .card__name {
+  color: #c98a3a;
+}
+
+/*
  * The worker quota, beside the building's name.
  *
  * Two buttons and a number, sized for a fingertip like everything else the

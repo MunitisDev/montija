@@ -31,6 +31,7 @@ const STRIP_RESOURCES: readonly ResourceId[] = ['food', 'logs', 'firewood', 'sto
 import type { GameContext } from '@/game/Game';
 import { hidesGroundPanel } from '@/game/selection';
 import { buildEndGame, type EndGameStat } from '@/ui/endgame/endGameModel';
+import { cardsFor, type PersonCard } from './cardModel';
 import { perSeason } from '@/ui/format/rates';
 import { productionSummary, type ProductionRate } from './productionModel';
 import type { SimulationSnapshot } from '@/simulation/Simulation';
@@ -58,6 +59,7 @@ interface HudElements {
   readonly buildingName: HTMLElement;
   readonly buildingState: HTMLElement;
   readonly buildingDetail: HTMLElement;
+  readonly buildingCards: HTMLElement;
   readonly workerControl: HTMLElement;
   readonly workerCount: HTMLElement;
   readonly workerLabel: HTMLElement;
@@ -383,6 +385,8 @@ export class Hud {
       `building.${building.buildingId}` as MessageKey,
     );
 
+    this.renderCards(building.complete ? building.id : null);
+
     if (!building.complete) {
       const percent = Math.round(building.progress * 100);
       // Said on the site as well as on the finished building: "is this worth
@@ -524,6 +528,72 @@ export class Hud {
       );
       roll.append(line);
     }
+  }
+
+  /**
+   * The people under the panel: a card each.
+   *
+   * Rebuilt whenever the selection changes, which is a tap — not a frame. A
+   * workshop holds at most a handful of them.
+   */
+  private renderCards(buildingId: number | null): void {
+    const cards = buildingId === null ? [] : cardsFor(this.context.simulation, buildingId);
+    this.elements.buildingCards.hidden = cards.length === 0;
+    if (cards.length === 0) {
+      this.elements.buildingCards.replaceChildren();
+      return;
+    }
+
+    this.elements.buildingCards.replaceChildren(
+      ...cards.map((person) => {
+        const card = document.createElement('div');
+        card.className = person.isIll ? 'card is-ill' : 'card';
+
+        const portrait = document.createElement('span');
+        portrait.className = 'card__portrait';
+        // The disc takes the colour and the silhouette is punched out of it, so
+        // one property carries a villager's whole identity.
+        portrait.style.color = person.colour;
+        portrait.innerHTML =
+          `<svg class="card__face" aria-hidden="true" focusable="false">` +
+          `<use href="#portrait-${person.portrait}" /></svg>`;
+
+        const who = document.createElement('span');
+        who.className = 'card__who';
+        who.append(
+          span('card__name', person.name),
+          span('card__detail', this.describePerson(person)),
+        );
+
+        card.append(portrait, who);
+        return card;
+      }),
+    );
+  }
+
+  /**
+   * The line under a name: age, which of the two, and what they know.
+   *
+   * The trade is named only once somebody has actually reached a level at it —
+   * a first-day forager is not an apprentice, and saying so would make the whole
+   * ladder meaningless.
+   */
+  private describePerson(person: PersonCard): string {
+    // A child is a girl or a boy and an elder is an elder — the Spanish needs
+    // the distinction anyway, and "woman, 8" would be wrong in any language.
+    const age =
+      person.portrait === 'child' ? '.child' : person.portrait === 'elder' ? '.elder' : '';
+    const parts = [
+      `${person.age} ${this.i18n.t('roster.years')}`,
+      this.i18n.t(`sex.${person.sex}${age}` as MessageKey),
+    ];
+    if (person.trade !== null) {
+      parts.push(this.i18n.t(`skill.${person.level}` as MessageKey));
+    }
+    if (person.isIll) {
+      parts.push(this.i18n.t('villager.ill'));
+    }
+    return parts.join(' · ');
   }
 
   private renderSelection(): void {
@@ -765,6 +835,7 @@ function collectElements(root: HTMLElement): HudElements {
     buildingName: requireElement(root, '[data-hud="building-name"]'),
     buildingState: requireElement(root, '[data-hud="building-state"]'),
     buildingDetail: requireElement(root, '[data-hud="building-detail"]'),
+    buildingCards: requireElement(root, '[data-hud="building-cards"]'),
     workerControl: requireElement(root, '[data-hud="worker-control"]'),
     workerCount: requireElement(root, '[data-hud="worker-count"]'),
     workerLabel: requireElement(root, '[data-hud="worker-label"]'),

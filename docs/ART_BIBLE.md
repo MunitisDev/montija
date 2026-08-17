@@ -381,3 +381,32 @@ small object on the plot says which trade it is without a label.
 Drawn **on the ground at the front of the plot**, not on the walls. Detail
 carved into a wall is the first thing to disappear when the player zooms out to
 look at the whole settlement; a silhouette on the plot survives it.
+
+---
+
+## Portraits — Implemented
+
+Not world art: these are the interface's faces, on the cards under a building's
+panel. Recorded here anyway, because the decisions they settle are the ones the
+villager sprites will have to answer too.
+
+| Face  | Chosen when          | Reads as                      |
+| ----- | -------------------- | ----------------------------- |
+| Child | under 18             | A big head on small shoulders |
+| Woman | 18–59, `sex === 'f'` | Long hair framing the face    |
+| Man   | 18–59, `sex === 'm'` | Broad, square shoulders       |
+| Elder | 60 and over          | A stoop, head low and forward |
+
+**Age decides before sex.** A settlement whose panels are full of children and
+elders looks like one, and that is the thing worth noticing about a population
+that has stopped working.
+
+Drawn as **silhouettes, cropped by a disc**, at a 24×24 box filled to its bottom
+edge so the shoulders run off the frame the way a portrait's do. No features: at
+thirty-two pixels a face is two dots and a smudge, so the difference has to be
+carried by mass and posture. That constraint will apply again on the map, where a
+villager is smaller still.
+
+**Each villager has a colour for life**, taken from their id out of a muted earthy
+set — dyed wool, not highlighter pens. It is the disc behind the silhouette here;
+on the map it should become the clothing.

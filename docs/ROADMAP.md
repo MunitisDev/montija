@@ -1029,5 +1029,12 @@ figures stop it being a page of figures.
 See [GAME_DESIGN.md](./GAME_DESIGN.md#the-labour-panel--implemented) for why the
 quota and the staff are two numbers rather than one.
 
-Still to come from the same report: the character card beside a building, and the
-art — children playing, elders walking, and villagers told apart by age and sex.
+The same report's **character card** landed with it: tapping a building now lists
+the people under it — portrait, name, age, which of the two, and their level at
+that trade — and under a house the family that sleeps there. Four faces, picked by
+age first and sex second, and a colour each that lasts a lifetime. See
+[GAME_DESIGN.md](./GAME_DESIGN.md#the-card-under-a-building--implemented).
+
+Still to come from that report: the world art — children playing or going to
+school, elders walking about, and villagers told apart on the map by age and sex
+the way the cards now tell them apart in the panel.

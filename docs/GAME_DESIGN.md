@@ -1274,3 +1274,38 @@ trade goes first — see the trades section above. This panel is where that beco
 visible.
 
 `tests/labour.test.ts`.
+
+---
+
+## The card under a building — Implemented
+
+Asked for in the same report as the labour panel: "the character's portrait, age,
+sex and trades with their level, on or beside the building."
+
+A workshop used to be a number. "Workers 2/2" answers how many and nothing else —
+not who, not that one of the two is fourteen, not that the settlement has just put
+its only master forager on a woodpile. Tapping a building now lists the people
+under it, a card each: portrait, name, age, which of the two, and their level at
+_that_ trade. Under a **house** the same cards are the family that sleeps there,
+because "Residents 3/4" has exactly the same problem.
+
+**Four faces rather than two.** Child, woman, man and elder, picked by age first
+and sex second, because age reads at a glance where a number does not: a
+settlement whose panels are full of children and elders looks like one, and that
+is the thing to notice about a population that has stopped working. The
+silhouettes are drawn to differ at thirty-two pixels — a big head on small
+shoulders, long hair, broad shoulders, a stoop — rather than by features, because
+at that size a face is two dots and a smudge.
+
+**Each villager has a colour, and keeps it for life.** Taken from their id out of a
+muted, earthy set — dyed wool, not highlighter pens. It is what tells two foragers
+of the same age apart at a glance, and it is the idea the world sprites will use
+when they get their own clothes.
+
+The level is named only once it has been earned. A forager three days in is not an
+apprentice, and the card says nothing rather than flattering her. Experience at
+another trade never appears: a master mason foraging is a forager, whatever else
+she can do.
+
+These are placeholder portraits, in the sense the art brief means: correct
+dimensions and anchors, no production artwork. `tests/cards.test.ts`.
