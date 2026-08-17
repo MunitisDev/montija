@@ -13,6 +13,7 @@ import { LIFESPAN_MAX } from '@/data/population';
 import { Building } from '@/simulation/buildings/Building';
 import { findAccessCell } from '@/simulation/buildings/BuildingRegistry';
 import { newChronicle } from '@/simulation/rescue/Chronicle';
+import { SPIRIT_NEUTRAL } from '@/simulation/seasons/SurvivalSystem';
 import { Villager } from '@/simulation/villagers/Villager';
 import type { SavedInventory, SaveGame } from './SaveGame';
 import { SAVE_VERSION } from './SaveGame';
@@ -49,6 +50,7 @@ export function serialise(simulation: Simulation, savedAt: string): SaveGame {
       hunger: villager.needs.hunger,
       warmth: villager.needs.warmth,
       health: villager.needs.health,
+      spirit: villager.needs.spirit,
       currentJobId: villager.currentJobId,
       lifespan: villager.lifespan,
       homeId: villager.homeId,
@@ -206,6 +208,10 @@ export function restore(simulation: Simulation, save: SaveGame): void {
       villager.needs.hunger = saved.hunger;
       villager.needs.warmth = saved.warmth;
       villager.needs.health = saved.health;
+      // Neutral for a save written before the settlement had a spirit, which
+      // is the honest reading: that settlement had neither Temple nor
+      // Cemetery, and neutral is exactly what having neither is worth.
+      villager.needs.spirit = saved.spirit ?? SPIRIT_NEUTRAL;
       villager.currentJobId = saved.currentJobId;
       villager.path = saved.path.map((step) => ({ gx: step.gx, gy: step.gy }));
       villager.destination = saved.destination ? { ...saved.destination } : null;

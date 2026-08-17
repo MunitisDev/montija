@@ -74,6 +74,17 @@ export const EN = {
   'villager.hauling': 'hauling',
   'villager.ill': 'ill',
   'villager.labourer': 'Labourer',
+  'need.hunger': 'Hunger',
+  'need.warmth': 'Warmth',
+  'need.health': 'Health',
+  'guide.needs': 'What every villager carries',
+  'guide.need.hunger': 'Falls without food, and takes health with it once it is empty.',
+  'guide.need.warmth':
+    'Falls on a freezing night without firewood, or without a house to burn it in.',
+  'guide.need.health': 'Only falls when hunger or warmth is already empty. At zero, somebody dies.',
+  'guide.need.spirit':
+    'The one meter that cannot kill anybody. It sits at 50 and is worth nothing there; a Cemetery and a staffed Temple lift it, and above 50 the whole settlement works faster. Below 50 nothing bad happens at all — you are simply not collecting.',
+  'need.spirit': 'Spirit',
 
   'building.house': 'House',
   'building.house.description':
@@ -116,11 +127,18 @@ export const EN = {
   'building.school': 'School',
   'building.school.description': 'Teaches the settlement its letters — and lets it write for help.',
 
+  'building.cemetery': 'Cemetery',
+  'building.cemetery.description':
+    'Ground for the dead. A settlement with nowhere to bury them grieves harder.',
+  'building.temple': 'Temple',
+  'building.temple.description': 'Somewhere to sit with the dead. Its keeper lifts everybody.',
+
   'build.open': 'Build',
   'build.shelter': 'Shelter',
   'build.food': 'Food',
   'build.materials': 'Materials',
   'build.workshops': 'Workshops',
+  'build.care': 'Care',
   'build.settlement': 'Settlement',
   'build.none': 'Nothing here yet',
 
@@ -214,6 +232,8 @@ export const EN = {
   'ledger.people.clothed': 'Clothed',
   'ledger.people.clothed.detail':
     'Share of the day the coats covered. Only matters on a freezing day.',
+  'ledger.people.spirit.detail':
+    '50 is neutral and costs nothing. A Cemetery and a staffed Temple lift it, and above 50 everyone works faster.',
   'ledger.buildings.underway': 'going up',
   'ledger.buildings.staffed': 'staffed',
   'ledger.buildings.beds': 'Beds',
@@ -435,6 +455,17 @@ export const ES: Messages = {
   'villager.hauling': 'acarreando',
   'villager.ill': 'enfermo',
   'villager.labourer': 'Peón',
+  'need.hunger': 'Hambre',
+  'need.warmth': 'Abrigo',
+  'need.health': 'Salud',
+  'guide.needs': 'Lo que lleva cada aldeano',
+  'guide.need.hunger': 'Baja sin comida, y cuando llega a cero se lleva la salud por delante.',
+  'guide.need.warmth': 'Baja en noche de helada sin leña, o sin casa donde quemarla.',
+  'guide.need.health':
+    'Solo baja cuando el hambre o el abrigo ya están a cero. A cero, alguien muere.',
+  'guide.need.spirit':
+    'El único marcador que no puede matar a nadie. Está en 50 y ahí no vale nada; un cementerio y un templo con guarda lo suben, y por encima de 50 todo el asentamiento trabaja más rápido. Por debajo de 50 no pasa nada malo: simplemente no estás cobrando.',
+  'need.spirit': 'Ánimo',
 
   'building.house': 'Casa',
   'building.house.description': 'Refugio para cuatro. La leña solo calienta a quien tiene casa.',
@@ -479,11 +510,18 @@ export const ES: Messages = {
   'building.school.description':
     'Enseña a leer y escribir al asentamiento, y le permite pedir ayuda.',
 
+  'building.cemetery': 'Cementerio',
+  'building.cemetery.description':
+    'Tierra para los muertos. Un asentamiento sin dónde enterrarlos lo lleva peor.',
+  'building.temple': 'Templo',
+  'building.temple.description': 'Un sitio donde acompañar a los muertos. Su guarda anima a todos.',
+
   'build.open': 'Construir',
   'build.shelter': 'Cobijo',
   'build.food': 'Comida',
   'build.materials': 'Materiales',
   'build.workshops': 'Talleres',
+  'build.care': 'Cuidados',
   'build.settlement': 'Villa',
   'build.none': 'Todavía no hay nada aquí',
 
@@ -577,6 +615,8 @@ export const ES: Messages = {
   'ledger.people.clothed': 'Con ropa',
   'ledger.people.clothed.detail':
     'Parte del día que cubrieron los abrigos. Solo cuenta en día de helada.',
+  'ledger.people.spirit.detail':
+    '50 es neutro y no cuesta nada. Un cementerio y un templo con guarda lo suben, y por encima de 50 todos trabajan más rápido.',
   'ledger.buildings.underway': 'en obras',
   'ledger.buildings.staffed': 'ocupados',
   'ledger.buildings.beds': 'Camas',

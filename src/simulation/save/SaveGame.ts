@@ -34,6 +34,8 @@ export interface SavedVillager {
   readonly hunger: number;
   readonly warmth: number;
   readonly health: number;
+  /** Absent in saves written before the settlement had a spirit; restores neutral. */
+  readonly spirit?: number;
   readonly currentJobId: number | null;
   /** Absent in saves written before villagers aged or had homes. */
   readonly lifespan?: number;

@@ -56,6 +56,7 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 29    | Getting home                  | **Implemented** |
 | 30    | The build menu                | **Implemented** |
 | 31    | Light and value               | **Implemented** |
+| 32    | Spirit                        | **Implemented** |
 
 ---
 
@@ -863,3 +864,33 @@ model, one camera, one sun, batch rendered - which is roughly 70 images for the
 finished buildings alone plus construction stages, and costs the free seasonal
 variants and continuous build progress that procedural art gives. A separate
 decision, and one that needs an artist.
+
+---
+
+## Phase 32 - Spirit - Implemented
+
+A cemetery and a temple, and the fourth need they answer.
+
+The settlement had nowhere to put its grief: people died and simply stopped
+being in the list. **Spirit** gives that somewhere to go, as a meter alongside
+hunger, warmth and health - and unlike those three it **cannot kill anybody**.
+
+It sits at 50, which is neutral and worth nothing. Above it everyone works
+faster, up to +25%. Below it nothing at all happens. A settlement that builds
+neither building plays exactly the game it played before either existed, which
+is the property the tests hold hardest: adding depth must not be a way of
+quietly adding difficulty to an opening that already kills seven seeds in
+eight.
+
+The **Cemetery** is cheap, unstaffed and mostly stone, and is worth a third of
+the settlement's solace. The **Temple** costs timber and a villager's working
+life, and is worth nearly two thirds. Either alone is worth building. Only
+death pushes spirit down, and what a death really costs is the climb back -
+which a settlement with a temple makes and one without does not.
+
+The build menu grew a sixth category, **Care**, taking the herbalist and the
+healer: the settlement group had reached six buildings, which is past the point
+where a group still reads without scrolling.
+
+Set out in [GAME_DESIGN.md](./GAME_DESIGN.md), including why the fourth need is
+a bonus rather than a requirement.

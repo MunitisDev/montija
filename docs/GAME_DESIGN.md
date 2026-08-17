@@ -720,6 +720,53 @@ settlement simply carried on being drawn as an empty valley.
 
 ---
 
+## Spirit — Implemented
+
+The fourth need, and the only one that **cannot kill anybody**. The whole
+design rests on that.
+
+Spirit sits at **50, which is neutral and worth exactly nothing**. Above it the
+whole settlement works faster, up to +25% at 100. Below it _nothing happens at
+all_. A settlement that never builds a Cemetery or a Temple therefore plays
+precisely the game it played before either existed — it collects no bonus and
+pays no penalty, which is the same bargain tools already make.
+
+That asymmetry is not squeamishness. A fourth need that could kill would be a
+fourth way for a first winter to end, on a game whose opening already kills a
+well-played settlement on seven seeds out of eight. Adding depth must not be a
+way of quietly adding difficulty.
+
+| Building     | Share of solace | Needs a keeper |
+| ------------ | --------------- | -------------- |
+| **Cemetery** | 0.35            | no             |
+| **Temple**   | 0.65            | yes            |
+
+Solace is the fraction of the settlement's need for it that its buildings
+answer, capped at 1. Both together reach the top; either alone is worth
+building, which is the point of splitting it. The Cemetery is cheap, unstaffed
+and mostly stone — a wall round a piece of ground. The Temple costs real timber
+and a villager's whole working life, and is worth nearly twice as much, because
+sitting with the dead takes somebody who is not doing anything else.
+
+**Spirit moves slowly** — 2.5 a day towards where solace would hold it — because
+it is the one need that is about how long people have been living somewhere. A
+Temple finished today lifts the settlement over the following weeks.
+
+**Only death pushes it down**, by 6 for everybody per villager buried that day.
+It can go below neutral, where it still costs nothing; what it costs is the
+_climb back_, which a settlement with a Temple makes and one without does not.
+
+Everybody shares one number. That is honest as well as simple: what raises it —
+ground to bury the dead in, somewhere to sit with them — belongs to the
+settlement rather than to any villager, exactly as tools and coats do.
+
+**Not measured in play.** The bonus size, the climb rate and the grief per death
+are considered numbers, not tested ones. What _is_ tested is the property that
+matters: a settlement with neither building runs at exactly the old speed, for
+ever. `tests/spirit.test.ts`.
+
+---
+
 ## Getting home — Implemented
 
 The game's only **win condition**, and the other half of the shipwreck. The settlers came ashore with

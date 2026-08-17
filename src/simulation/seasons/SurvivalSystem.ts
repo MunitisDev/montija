@@ -110,6 +110,51 @@ const HEALTH_LOST_PER_DAY = 10;
 /** Health recovered per day when neither need is exhausted. */
 const HEALTH_RESTORED_PER_DAY = 4;
 
+/**
+ * The spirit a settlement sits at with nowhere to bury its dead.
+ *
+ * **Neutral, not empty.** Everything about the fourth need hangs off this
+ * number: at or below it the settlement plays exactly the game it always did,
+ * and only above it is there a reward. A settlement that never builds a Temple
+ * or a Cemetery is not being punished — it is simply not collecting, which is
+ * the same bargain tools make.
+ */
+export const SPIRIT_NEUTRAL = 50;
+
+/**
+ * How fast spirit moves towards where the settlement's solace would hold it.
+ *
+ * Slow on purpose. A Temple finished today should lift the settlement over the
+ * following weeks rather than the following morning: it is the one need that
+ * is about how long people have been living somewhere.
+ */
+export const SPIRIT_MOVE_PER_DAY = 2.5;
+
+/**
+ * Spirit lost by everybody for each villager buried that day.
+ *
+ * A death is the only thing that pushes spirit down. It can push it below
+ * neutral, where it costs nothing — what it costs is the *climb back*, which a
+ * settlement with a Temple makes and one without does not.
+ */
+export const SPIRIT_LOST_PER_DEATH = 6;
+
+/**
+ * How much faster a settlement at peace works, at full spirit.
+ *
+ * Scaled from {@link SPIRIT_NEUTRAL} upwards, so 50 is +0% and 100 is +25%.
+ * Composes with the tool bonus rather than replacing it: a well-equipped,
+ * settled village is meaningfully quicker than a miserable ill-equipped one,
+ * and neither state is a penalty against the other.
+ */
+export const SPIRIT_WORK_BONUS = 0.25;
+
+/** The work multiplier a given spirit is worth. Never below 1. */
+export function spiritWorkBonus(spirit: number): number {
+  const above = Math.max(0, spirit - SPIRIT_NEUTRAL) / (100 - SPIRIT_NEUTRAL);
+  return 1 + SPIRIT_WORK_BONUS * above;
+}
+
 export interface DailyReport {
   readonly foodEaten: number;
   readonly firewoodBurned: number;
@@ -129,6 +174,8 @@ export interface DailyReport {
    * game has always run at.
    */
   readonly toolFraction: number;
+  /** The settlement's average spirit after the day, in `0..100`. */
+  readonly spirit: number;
 }
 
 export const EMPTY_REPORT: DailyReport = {
@@ -142,6 +189,7 @@ export const EMPTY_REPORT: DailyReport = {
   toolFraction: 0,
   clothingWorn: 0,
   clothingFraction: 0,
+  spirit: SPIRIT_NEUTRAL,
 };
 
 /**
@@ -153,6 +201,13 @@ export function runDay(
   villagers: readonly Villager[],
   storages: StorageRegistry,
   year: YearState,
+  /**
+   * How much of the settlement's need for solace its buildings answer, `0..1`.
+   *
+   * Passed in rather than worked out here, for the same reason the healer's
+   * capacity is: how a building is staffed is not this system's business.
+   */
+  solace = 0,
 ): { report: DailyReport; dead: Villager[] } {
   if (villagers.length === 0) {
     return { report: EMPTY_REPORT, dead: [] };
@@ -234,6 +289,26 @@ export function runDay(
     }
   }
 
+  // Spirit last, so the day's deaths are already known and the settlement
+  // grieves on the day it buries somebody rather than the day after.
+  //
+  // Everybody moves together: this is not a private mood, it is what it is
+  // like to live here. A shared number is also the only honest one, because
+  // what raises it — ground to bury the dead in, somewhere to sit with them —
+  // belongs to the settlement rather than to any villager.
+  const target = SPIRIT_NEUTRAL + (100 - SPIRIT_NEUTRAL) * Math.max(0, Math.min(1, solace));
+  const grief = dead.length * SPIRIT_LOST_PER_DEATH;
+  let spiritTotal = 0;
+  for (const villager of villagers) {
+    const towards = Math.sign(target - villager.needs.spirit) * SPIRIT_MOVE_PER_DAY;
+    const moved =
+      Math.abs(target - villager.needs.spirit) < SPIRIT_MOVE_PER_DAY
+        ? target
+        : villager.needs.spirit + towards;
+    villager.needs.spirit = clamp(moved - grief);
+    spiritTotal += villager.needs.spirit;
+  }
+
   return {
     report: {
       foodEaten: foodTaken,
@@ -246,13 +321,14 @@ export function runDay(
       toolFraction,
       clothingWorn,
       clothingFraction,
+      spirit: villagers.length === 0 ? SPIRIT_NEUTRAL : spiritTotal / villagers.length,
     },
     dead,
   };
 }
 
 function applyNeed(
-  needs: { hunger: number; warmth: number; health: number },
+  needs: { hunger: number; warmth: number },
   key: 'hunger' | 'warmth',
   suppliedFraction: number,
   restored: number,

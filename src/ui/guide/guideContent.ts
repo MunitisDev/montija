@@ -52,6 +52,7 @@ export const SECTION_IDS = [
   'loop',
   'controls',
   'seasons',
+  'needs',
   'hardship',
   'resources',
   'buildings',
@@ -68,6 +69,15 @@ export type SectionId = (typeof SECTION_IDS)[number];
 const LOOP_STEPS = ['designate', 'work', 'haul', 'store'] as const;
 const CONTROLS = ['pan', 'zoom', 'select', 'build', 'speed', 'save'] as const;
 const HARDSHIPS = ['hunger', 'cold', 'illness', 'age'] as const;
+
+/**
+ * The four meters on a villager, and how they differ.
+ *
+ * Spirit is in this list precisely because it is the odd one out: three of
+ * these can kill somebody and one cannot, and a player who assumes otherwise
+ * will build a Temple before a Gatherer Hut.
+ */
+const NEEDS = ['hunger', 'warmth', 'health', 'spirit'] as const;
 
 export function buildGuide(t: Translate): readonly GuideSection[] {
   return [
@@ -91,6 +101,13 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
       entries: SEASONS.map((season) => ({
         term: t(`season.${season}` as MessageKey),
         detail: t(`guide.season.${season}` as MessageKey),
+        meta: null,
+      })),
+    }),
+    section('needs', t, {
+      entries: NEEDS.map((need) => ({
+        term: t(`need.${need}` as MessageKey),
+        detail: t(`guide.need.${need}` as MessageKey),
         meta: null,
       })),
     }),

@@ -31,6 +31,7 @@ import type { Simulation } from '@/simulation/Simulation';
 import { DAYS_PER_YEAR } from '@/simulation/rescue/RescueSystem';
 import { SEASONAL_YIELD, TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
 import {
+  SPIRIT_NEUTRAL,
   CLOTHING_PER_VILLAGER_PER_COLD_DAY,
   FIREWOOD_PER_VILLAGER_PER_COLD_DAY,
   FOOD_PER_VILLAGER_PER_DAY,
@@ -318,6 +319,12 @@ function peopleTab(simulation: Simulation, t: Translate): LedgerTab {
             label: t('ledger.people.clothed'),
             value: percent(snapshot.lastDay.clothingFraction),
             detail: t('ledger.people.clothed.detail'),
+          },
+          {
+            label: t('need.spirit'),
+            value: String(Math.round(snapshot.lastDay.spirit)),
+            detail: t('ledger.people.spirit.detail'),
+            ...(snapshot.lastDay.spirit > SPIRIT_NEUTRAL ? { tone: 'good' as const } : {}),
           },
         ],
       },

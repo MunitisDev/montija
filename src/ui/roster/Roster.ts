@@ -20,6 +20,7 @@
 import type { GameContext } from '@/game/Game';
 import type { I18n } from '@/ui/i18n/I18n';
 import type { MessageKey } from '@/ui/i18n/messages';
+import { SPIRIT_NEUTRAL } from '@/simulation/seasons/SurvivalSystem';
 import {
   buildRoster,
   workPreferenceFrom,
@@ -188,13 +189,23 @@ export class Roster {
     const needs = document.createElement('div');
     needs.className = 'roster__needs';
 
-    const bars: [string, number][] = [
-      [t('roster.hunger'), person.needs.hunger],
-      [t('roster.warmth'), person.needs.warmth],
-      [t('roster.health'), person.needs.health],
+    /**
+     * Three needs and one bonus, which do not read the same way.
+     *
+     * Hunger, warmth and health are **requirements**: low is bad and is
+     * coloured as such. Spirit is a **bonus** that sits at neutral by default
+     * — colouring 50 red would tell the player something is wrong with a
+     * settlement that is playing exactly the game it always did. So it only
+     * ever colours upwards.
+     */
+    const bars: { label: string; value: number; bonus?: true }[] = [
+      { label: t('roster.hunger'), value: person.needs.hunger },
+      { label: t('roster.warmth'), value: person.needs.warmth },
+      { label: t('roster.health'), value: person.needs.health },
+      { label: t('need.spirit'), value: person.needs.spirit, bonus: true },
     ];
 
-    for (const [label, value] of bars) {
+    for (const { label, value, bonus } of bars) {
       const meter = document.createElement('div');
       meter.className = 'roster__meter';
       // Real semantics rather than a coloured div: a screen reader gets the
@@ -205,7 +216,11 @@ export class Roster {
       meter.setAttribute('aria-valuemin', '0');
       meter.setAttribute('aria-valuemax', '100');
       meter.title = `${label} ${value}%`;
-      if (value <= 25) {
+      if (bonus) {
+        if (value > SPIRIT_NEUTRAL) {
+          meter.classList.add('is-thriving');
+        }
+      } else if (value <= 25) {
         meter.classList.add('is-critical');
       } else if (value <= 55) {
         meter.classList.add('is-low');

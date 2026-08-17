@@ -71,7 +71,7 @@ interface BuildingMass {
   /** Set for a thatched roof rather than shingled: softer, straw-coloured. */
   readonly thatch?: boolean;
   /** Set for worked land rather than a structure: furrows, or fruit trees. */
-  readonly field?: 'crop' | 'orchard';
+  readonly field?: 'crop' | 'orchard' | 'graves';
   /**
    * A working prop standing on the plot beside the building.
    *
@@ -156,6 +156,19 @@ const MASS: Readonly<Record<BuildingId, BuildingMass>> = {
   // people read in needs light. It should be legible as the monument it is
   // from across the map, and it is the only building whose silhouette says
   // "this settlement has time to spare".
+  // Low walls round a piece of ground, and markers standing in it. Drawn as a
+  // field so the settlement's skyline stays buildings — a cemetery is worked
+  // ground, not a structure.
+  cemetery: { wallHeight: 5, roofHeight: 0, eaves: 0, field: 'graves' },
+  // Taller than a house and narrower than the school, under a steep roof. The
+  // one building whose silhouette should read as reaching upwards.
+  temple: {
+    wallHeight: 26,
+    roofHeight: 54,
+    eaves: 6,
+    plinth: 8,
+    windows: 2,
+  },
   school: {
     wallHeight: 30,
     roofHeight: 50,
@@ -204,6 +217,11 @@ export const BUILDING_COLOURS: Readonly<Record<BuildingId, BuildingPalette>> = {
   orchard: { wall: 0x4f5c37, roof: 0x44502f, trim: 0x3a4428 },
   // Dressed stone, paler and greyer than anything around it, under slate. The
   // settlement's one monument should be legible from across the map.
+  // Turned earth and grey markers, kept deliberately quiet.
+  cemetery: { wall: 0x5d6350, roof: 0x8d8a80, trim: 0x45483c },
+  // Limewashed like a house, under the darkest slate in the settlement: the
+  // one roof that should read as heavy.
+  temple: { wall: 0xada598, roof: 0x4c4740, trim: 0x37332c },
   school: { wall: 0xb6b1a1, roof: 0x60594a, trim: 0x413c33 },
 };
 
@@ -744,7 +762,7 @@ function drawField(
     groundY: number;
     halfW: number;
     halfH: number;
-    kind: 'crop' | 'orchard';
+    kind: 'crop' | 'orchard' | 'graves';
   },
 ): void {
   const { palette, cx, groundY, halfW, halfH, kind } = options;
@@ -763,7 +781,42 @@ function drawField(
     { x: cx, y: groundY + halfH },
   ]);
 
-  if (kind === 'crop') {
+  if (kind === 'graves') {
+    // Markers in rows, leaning slightly, each with its own small shadow. Stone
+    // rather than timber: a settlement that can spare masonry for its dead is
+    // saying something, and it is the reason the building costs stone at all.
+    let index = 0;
+    for (const [ox, oy] of [
+      [-0.5, -0.3],
+      [0, -0.52],
+      [0.5, -0.3],
+      [-0.52, 0.22],
+      [0, 0],
+      [0.52, 0.22],
+      [0, 0.5],
+    ] as const) {
+      const x = cx + halfW * ox * 0.66;
+      const y = groundY + halfH * oy * 0.66;
+      // Alternating lean, from the index rather than a random draw: this is
+      // drawn once into a texture, and the simulation's streams must never be
+      // touched from the renderer.
+      const lean = index % 3 === 0 ? -1 : index % 3 === 1 ? 0 : 1;
+      index += 1;
+
+      graphics.fillStyle(0x000000, 0.2);
+      graphics.fillEllipse(x + 1.5, y + 1, 8, 3);
+      graphics.fillStyle(shade(palette.roof, 0.82), 1);
+      polygon(graphics, [
+        { x: x - 2.4 + lean * 0.8, y: y - 9 },
+        { x: x + 2.4 + lean * 0.8, y: y - 9 },
+        { x: x + 2.4, y },
+        { x: x - 2.4, y },
+      ]);
+      // A lit top edge, so a marker is a slab rather than a smear.
+      graphics.fillStyle(shade(palette.roof, 1.16), 1);
+      graphics.fillRect(x - 2.4 + lean * 0.8, y - 9.5, 4.8, 1.4);
+    }
+  } else if (kind === 'crop') {
     // Furrows running along one axis, in the crop's own colour. Seven of them:
     // enough to read as ploughed, few enough not to shimmer when the camera
     // moves.

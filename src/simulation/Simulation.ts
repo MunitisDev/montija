@@ -72,7 +72,13 @@ import {
   type IllnessReport,
 } from './population/IllnessSystem';
 import { NO_SPOILAGE, runSpoilage, type SpoilageReport } from './resources/SpoilageSystem';
-import { EMPTY_REPORT, runDay, TOOL_WORK_BONUS, type DailyReport } from './seasons/SurvivalSystem';
+import {
+  EMPTY_REPORT,
+  runDay,
+  spiritWorkBonus,
+  TOOL_WORK_BONUS,
+  type DailyReport,
+} from './seasons/SurvivalSystem';
 import { VillagerSystem } from './villagers/VillagerSystem';
 import type { WorkPreference } from './villagers/Villager';
 import { World } from './world/World';
@@ -302,7 +308,13 @@ export class Simulation {
     // worth having in autumn, an orchard only then.
     this.villagers.productionScaleProvider = (profile) => SEASONAL_YIELD[profile][this.year.season];
     // Tools make every job quicker. With none, this is exactly 1.
-    this.villagers.workRateProvider = () => 1 + TOOL_WORK_BONUS * this.lastDayReport.toolFraction;
+    // Tools and spirit compose: a well-equipped, settled village is
+    // meaningfully quicker than a miserable ill-equipped one, and neither of
+    // the two low states is a penalty — both are simply the speed the game has
+    // always run at.
+    this.villagers.workRateProvider = () =>
+      (1 + TOOL_WORK_BONUS * this.lastDayReport.toolFraction) *
+      spiritWorkBonus(this.lastDayReport.spirit);
     this.villagers.onDemolished = (buildingId) => this.completeDemolition(buildingId);
     // Counted when the wall goes up rather than counted off the map later: a
     // building that was raised and then pulled down was still raised.
@@ -660,6 +672,29 @@ export class Simulation {
     return this.villagers.count === 0;
   }
 
+  /**
+   * How much of the settlement's need for solace its buildings answer, `0..1`.
+   *
+   * Summed from whatever declares a `solace` share, so adding a third such
+   * building later is a row in a data file. Worked out here rather than in the
+   * survival system for the same reason the healer's capacity is: how a
+   * building is staffed is not that system's business.
+   */
+  public get solace(): number {
+    let share = 0;
+    for (const building of this.world.buildings.all) {
+      const solace = building.definition.solace;
+      if (!solace || !building.isComplete) {
+        continue;
+      }
+      if (solace.needsWorker && building.workers.length === 0) {
+        continue;
+      }
+      share += solace.share;
+    }
+    return Math.min(1, share);
+  }
+
   /** How far the settlement has got towards getting off this coast. */
   public get rescue(): RescueReport {
     return readRescue(this.rescueState, this.currentTick, {
@@ -706,7 +741,7 @@ export class Simulation {
    * asks for consequences, not a medical simulation.
    */
   private runDailyUpkeep(): void {
-    const { report, dead } = runDay(this.villagers.all, this.storages, this.year);
+    const { report, dead } = runDay(this.villagers.all, this.storages, this.year, this.solace);
     this.lastDayReport = report;
 
     for (const villager of dead) {

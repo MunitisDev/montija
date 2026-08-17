@@ -476,6 +476,12 @@ body.is-menu-open #hud {
   background: var(--colour-alarm);
 }
 
+/* Spirit above neutral. The one meter that only ever colours upwards: below
+   neutral it is not a warning, it is simply nothing collected. */
+.roster__meter.is-thriving .roster__meter-fill {
+  background: var(--colour-accent);
+}
+
 .roster__family {
   display: flex;
   flex-direction: column;

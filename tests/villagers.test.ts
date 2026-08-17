@@ -7,6 +7,7 @@ import { StorageRegistry } from '@/simulation/logistics/Storage';
 import { Villager } from '@/simulation/villagers/Villager';
 import { VillagerSystem } from '@/simulation/villagers/VillagerSystem';
 import { World } from '@/simulation/world/World';
+import { SPIRIT_NEUTRAL } from '@/simulation/seasons/SurvivalSystem';
 
 const TICK_SECONDS = 0.1;
 
@@ -57,7 +58,7 @@ describe('Villager', () => {
     expect(villager.activity).toBe('idle');
   });
 
-  it('starts with full needs, which stay inert until Phase 8', () => {
+  it('starts full on the three needs that can kill, and neutral on the one that cannot', () => {
     const villager = new Villager({
       id: 1,
       name: 'Test',
@@ -67,7 +68,16 @@ describe('Villager', () => {
       lifespan: 70,
     });
 
-    expect(villager.needs).toEqual({ hunger: 100, warmth: 100, health: 100 });
+    // Spirit starts at neutral rather than full on purpose: at 50 it is worth
+    // nothing, which is exactly how the game played before it existed. A
+    // settlement that never builds a Temple collects no bonus and pays no
+    // penalty. See `VillagerNeeds.spirit`.
+    expect(villager.needs).toEqual({
+      hunger: 100,
+      warmth: 100,
+      health: 100,
+      spirit: SPIRIT_NEUTRAL,
+    });
   });
 
   it('clears its route on demand', () => {

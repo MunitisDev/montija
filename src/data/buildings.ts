@@ -26,7 +26,9 @@ export type BuildingId =
   | 'trading-post'
   | 'herbalist'
   | 'healer'
-  | 'school';
+  | 'school'
+  | 'cemetery'
+  | 'temple';
 
 /**
  * What a building is *for*, which is how the build menu is organised.
@@ -39,7 +41,8 @@ export type BuildingId =
  * Grouped by purpose rather than by cost or by unlock order, because "which
  * building makes food" is the question a player actually has.
  */
-export type BuildingCategory = 'shelter' | 'food' | 'materials' | 'workshops' | 'settlement';
+export type BuildingCategory =
+  'shelter' | 'food' | 'materials' | 'workshops' | 'care' | 'settlement';
 
 /** Menu order for the groups: what a settlement needs, roughly in that order. */
 export const BUILDING_CATEGORIES: readonly BuildingCategory[] = [
@@ -47,6 +50,7 @@ export const BUILDING_CATEGORIES: readonly BuildingCategory[] = [
   'food',
   'materials',
   'workshops',
+  'care',
   'settlement',
 ];
 
@@ -104,6 +108,24 @@ export interface BuildingDefinition {
    * says is that the working face must be within reach.
    */
   readonly adjacentTo?: TerrainType;
+
+  /**
+   * Set for a building that keeps the settlement's spirits up.
+   *
+   * Not a recipe and not care: what these produce is **solace**, which is not
+   * measured in units and is not delivered to anybody in particular. The
+   * settlement either has somewhere to bury its dead and somewhere to sit with
+   * them, or it does not.
+   *
+   * `share` is how much of the settlement's spirit this building can account
+   * for on its own, in `0..1`. The two together reach 1; either alone is worth
+   * building, which is the point of splitting it.
+   */
+  readonly solace?: {
+    readonly share: number;
+    /** Set when the building needs somebody in it to do anything at all. */
+    readonly needsWorker?: boolean;
+  };
 
   /**
    * Set for a building that nurses the sick.
@@ -253,7 +275,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
   },
   herbalist: {
     id: 'herbalist',
-    category: 'settlement',
+    category: 'care',
     name: "Herbalist's Hut",
     description: 'Gathers herbs in the growing seasons. They keep, and winter needs them.',
     footprint: { width: 2, height: 2 },
@@ -264,7 +286,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
   },
   healer: {
     id: 'healer',
-    category: 'settlement',
+    category: 'care',
     name: "Healer's House",
     description: 'Nurses the sick, using herbs. Its only output is that people stop dying.',
     footprint: { width: 2, height: 2 },
@@ -395,6 +417,48 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     buildTicks: 260,
     workerSlots: 0,
   },
+
+  /*
+   * Ground for the dead, and a roof to sit with them under.
+   *
+   * Both exist because the settlement had nowhere to put its grief: people
+   * died and simply stopped being in the list. They pay in **spirit** — see
+   * `VillagerNeeds.spirit` — which is a bonus and never a penalty, so a
+   * settlement that builds neither plays exactly the game it always did.
+   *
+   * The cemetery is cheap, unstaffed and mostly stone: it is a wall round a
+   * piece of ground. The temple costs real timber and a person's time, and is
+   * worth more than twice as much, because sitting with the dead takes
+   * somebody who is not doing anything else.
+   */
+  cemetery: {
+    id: 'cemetery',
+    category: 'settlement',
+    name: 'Cemetery',
+    description: 'Ground for the dead. A settlement with nowhere to bury them grieves harder.',
+    footprint: { width: 3, height: 3 },
+    constructionCost: [
+      { resource: 'stone', amount: 10 },
+      { resource: 'logs', amount: 4 },
+    ],
+    buildTicks: 90,
+    workerSlots: 0,
+    solace: { share: 0.35 },
+  },
+  temple: {
+    id: 'temple',
+    category: 'settlement',
+    name: 'Temple',
+    description: 'Somewhere to sit with the dead. Its keeper lifts the whole settlement.',
+    footprint: { width: 3, height: 3 },
+    constructionCost: [
+      { resource: 'logs', amount: 22 },
+      { resource: 'stone', amount: 16 },
+    ],
+    buildTicks: 200,
+    workerSlots: 1,
+    solace: { share: 0.65, needsWorker: true },
+  },
 };
 
 /** Menu order. Storage first, because nothing else works without somewhere to put things. */
@@ -415,6 +479,8 @@ export const BUILDING_IDS: readonly BuildingId[] = [
   'trading-post',
   'herbalist',
   'healer',
+  'cemetery',
+  'temple',
   // Last, because it is the last thing a settlement builds: the way home.
   'school',
 ];

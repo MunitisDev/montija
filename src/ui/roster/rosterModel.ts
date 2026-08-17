@@ -40,7 +40,13 @@ export interface RosterPerson {
   readonly isChild: boolean;
   readonly isIll: boolean;
   /** 0..100 each, genuinely per person. */
-  readonly needs: { readonly hunger: number; readonly warmth: number; readonly health: number };
+  readonly needs: {
+    readonly hunger: number;
+    readonly warmth: number;
+    readonly health: number;
+    /** Shared across the settlement rather than private — see `spirit`. */
+    readonly spirit: number;
+  };
   /** What they are doing right now, translated. */
   readonly activity: string;
   /** Where they work, translated — a building's name, or "labourer". */
@@ -197,6 +203,7 @@ function describe(
       hunger: Math.round(villager.needs.hunger),
       warmth: Math.round(villager.needs.warmth),
       health: Math.round(villager.needs.health),
+      spirit: Math.round(villager.needs.spirit),
     },
     activity: t(`villager.${villager.activity}` as MessageKey),
     job: employer ? t(`building.${employer.definition.id}` as MessageKey) : t('villager.labourer'),

@@ -51,6 +51,20 @@ export interface VillagerNeeds {
   warmth: number;
   /** 0 = dead, 100 = healthy. */
   health: number;
+  /**
+   * How the settlement feels about itself. 0 = wretched, 100 = at peace.
+   *
+   * The fourth need, and the only one that is a **bonus rather than a
+   * requirement**: 50 is neutral and is exactly how the game has always
+   * played. Above it people work faster; below it nothing bad happens at all.
+   * A settlement that never builds a Temple or a Cemetery is not punished for
+   * it — it simply never collects the reward, the same bargain tools make.
+   *
+   * That asymmetry is deliberate. A fourth need that could kill would be a
+   * fourth way for a first winter to end, on a game whose opening is already
+   * hard enough that a well-played settlement survives one seed in eight.
+   */
+  spirit: number;
 }
 
 export class Villager {
@@ -71,7 +85,7 @@ export class Villager {
   public previousPosition: WorldPoint;
 
   public activity: VillagerActivity = 'idle';
-  public readonly needs: VillagerNeeds = { hunger: 100, warmth: 100, health: 100 };
+  public readonly needs: VillagerNeeds = { hunger: 100, warmth: 100, health: 100, spirit: 50 };
   /** What the villager is physically carrying. */
   public readonly inventory = new Inventory(CARRY_CAPACITY);
 
