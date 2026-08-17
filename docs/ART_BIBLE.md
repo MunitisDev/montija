@@ -410,3 +410,41 @@ villager is smaller still.
 **Each villager has a colour for life**, taken from their id out of a muted earthy
 set — dyed wool, not highlighter pens. It is the disc behind the silhouette here;
 on the map it should become the clothing.
+
+---
+
+## Four villagers, and a colour each — Implemented
+
+A settlement of thirty was thirty of the same hooded figure. Age and sex exist in
+the simulation and matter to it — who may work, who may bear children, who has
+earned the walk about the village — and could not be seen at all.
+
+| Figure | Drawn for            | What carries it                          |
+| ------ | -------------------- | ---------------------------------------- |
+| Child  | under 18             | Two thirds the height, head too big      |
+| Woman  | 18–59, `sex === 'f'` | A skirt to the ankle, and a kerchief     |
+| Man    | 18–59, `sex === 'm'` | Legs apart, hood, widest at the shoulder |
+| Elder  | 60 and over          | Shorter, leaning forward, a staff        |
+
+**Age decides before sex**, so a fourteen-year-old holding a post is still drawn
+as a child — a settlement whose workshops are staffed by children should look
+like one.
+
+**The difference is outline, never detail.** A villager is 48 pixels tall beside
+a 96-pixel tree, and the player is usually zoomed further out than that. A
+different collar, a longer hood, a lighter shade: all invisible three tiles away.
+A skirt, a staff and a head half again too big are not. The old constraints still
+hold — humanoid at small size, never a cone (a pointed hood reads as a sapling),
+and a lit and a shaded plane on everything.
+
+**Each villager has a colour and keeps it for life**, taken from their id out of
+six muted dyes. It is worn as the tunic, with the outer garment the same colour
+darkened, so somebody reads as one person dressed rather than two halves painted.
+The same colour is the disc behind their portrait in the panels — see
+`shared/appearance.ts`, which both the Phaser renderer and the HTML panels read
+and neither owns.
+
+Twenty-four frames — four figures × six colours — drawn once at load into a
+single atlas, so the whole settlement is still one draw batch. Not a tint at draw
+time: the season tint already owns `setTint`, and a second one on top would wash
+every villager the same shade of whatever they were standing in.

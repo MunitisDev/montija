@@ -18,7 +18,8 @@ import { SKILL_THRESHOLD_DAYS } from '@/data/skills';
 import type { Building } from '@/simulation/buildings/Building';
 import { Simulation } from '@/simulation/Simulation';
 import { TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
-import { CARD_COLOURS, cardsFor, hasCards } from '@/ui/hud/cardModel';
+import { PERSON_COLOURS, cssColour } from '@/shared/appearance';
+import { cardsFor, hasCards } from '@/ui/hud/cardModel';
 
 const OPTIONS = { seed: 20260816, worldWidth: 64, worldHeight: 64, startingVillagers: 10 };
 
@@ -76,7 +77,7 @@ describe('what a card claims', () => {
       expect(card.name.length).toBeGreaterThan(0);
       expect(card.age).toBeGreaterThan(0);
       expect(['child', 'woman', 'man', 'elder']).toContain(card.portrait);
-      expect(CARD_COLOURS).toContain(card.colour);
+      expect(PERSON_COLOURS.map(cssColour)).toContain(card.colour);
     }
   });
 

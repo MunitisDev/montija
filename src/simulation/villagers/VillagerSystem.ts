@@ -31,6 +31,7 @@ import {
   WAYPOINT_TOLERANCE,
 } from '@/data/villagers';
 import {
+  ADULT_AGE,
   FOUNDER_AGE_MAX,
   FOUNDER_AGE_MIN,
   FOUNDING_YOUNG_AGE_MAX,
@@ -68,6 +69,33 @@ const PATH_REQUESTS_PER_TICK = 4;
 
 /** How far an idle villager will pick a new spot to wander to, in cells. */
 const WANDER_RADIUS = 12;
+
+/**
+ * How far a very small child strays, in cells.
+ *
+ * **Not a rule, a picture.** A two-year-old crossing twelve cells of wilderness
+ * on their own was the settlement saying something untrue about itself. Under
+ * this age they stay within sight of the house; over it they have the run of the
+ * village, which is what children in a village do.
+ *
+ * Deliberately the same *number of random draws* as a full-range wander, so
+ * adding it did not re-roll every existing seed — only the radius changes, not
+ * the sequence. See `docs/GAME_DESIGN.md` on determinism.
+ */
+const TODDLER_AGE = 4;
+const TODDLER_RADIUS = 3;
+
+/**
+ * Chance per decision that a school-age child heads for the school.
+ *
+ * Not every time: a village child who only ever walks between home and school is
+ * a commuter, not a child. The rest of the time they are somewhere about the
+ * place, which is the same wandering everybody else does.
+ *
+ * The draw only happens when a school actually stands, so a settlement without
+ * one consumes exactly the random numbers it always did.
+ */
+const SCHOOL_CHANCE = 0.45;
 
 /** Ticks a villager rests on arrival before looking for work again. */
 const IDLE_TICKS_MIN = 10;
@@ -1046,14 +1074,45 @@ export class VillagerSystem {
     villager.activity = 'idle';
   }
 
-  /** Picks a nearby reachable cell and routes to it. */
+  /**
+   * Picks a nearby reachable cell and routes to it.
+   *
+   * This is what everybody does when there is no work: the labourers between
+   * jobs, the children, and the elders who have earned the walk. Three shades of
+   * it, and the difference is only ever *where*:
+   *
+   * - a very small child stays within sight of the house;
+   * - a school-age child heads for the school about half the time, when there is
+   *   one to head for;
+   * - everybody else has the run of the settlement.
+   */
   private chooseWanderTarget(villager: Villager): void {
     const from = villager.cell;
 
+    const school = this.schoolFor(villager);
+    if (school && this.randomSource.next() < SCHOOL_CHANCE) {
+      this.totalPathRequests += 1;
+      const toSchool = findPath(this.world.navigation, from, school);
+      if (toSchool.path && toSchool.path.length > 0) {
+        villager.path = toSchool.path;
+        villager.destination = school;
+        villager.activity = 'walking';
+        return;
+      }
+      this.totalPathFailures += 1;
+    }
+
+    // A toddler wanders on the same draws as anybody else, over a shorter reach:
+    // changing how many numbers are taken from the stream would re-roll every
+    // settlement ever seeded.
+    const radius = villager.age < TODDLER_AGE ? TODDLER_RADIUS : WANDER_RADIUS;
+    const home = villager.age < TODDLER_AGE ? this.homeCell(villager) : null;
+    const origin = home ?? from;
+
     for (let attempt = 0; attempt < WANDER_ATTEMPTS; attempt += 1) {
       const target: GridPoint = {
-        gx: from.gx + this.randomSource.int(-WANDER_RADIUS, WANDER_RADIUS + 1),
-        gy: from.gy + this.randomSource.int(-WANDER_RADIUS, WANDER_RADIUS + 1),
+        gx: origin.gx + this.randomSource.int(-radius, radius + 1),
+        gy: origin.gy + this.randomSource.int(-radius, radius + 1),
       };
 
       if (!this.world.isWalkable(target)) {
@@ -1079,6 +1138,36 @@ export class VillagerSystem {
     // Nowhere to go right now — rest and try again shortly rather than
     // hammering the pathfinder every tick.
     villager.idleTicks = this.randomSource.int(IDLE_TICKS_MIN, IDLE_TICKS_MAX);
+  }
+
+  /**
+   * The school a child should be heading for, or `null`.
+   *
+   * `null` for everybody who is not a school-age child, and for every settlement
+   * that has not built one — which matters beyond tidiness: the caller only
+   * rolls a die once this returns a cell, so a settlement with no school draws
+   * exactly the random numbers it always drew.
+   */
+  private schoolFor(villager: Villager): GridPoint | null {
+    if (villager.age < TODDLER_AGE || villager.canWork || villager.age >= ADULT_AGE) {
+      return null;
+    }
+
+    for (const building of this.world.buildings.all) {
+      if (building.isComplete && building.definition.id === 'school') {
+        return building.accessCell;
+      }
+    }
+    return null;
+  }
+
+  /** The doorway of the house somebody sleeps in, when they have one. */
+  private homeCell(villager: Villager): GridPoint | null {
+    if (villager.homeId === null) {
+      return null;
+    }
+    const home = this.world.buildings.getById(villager.homeId);
+    return home ? home.accessCell : null;
   }
 
   private findSpawnCell(origin: GridPoint): GridPoint | null {

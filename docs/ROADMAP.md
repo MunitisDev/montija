@@ -1035,6 +1035,10 @@ that trade — and under a house the family that sleeps there. Four faces, picke
 age first and sex second, and a colour each that lasts a lifetime. See
 [GAME_DESIGN.md](./GAME_DESIGN.md#the-card-under-a-building--implemented).
 
-Still to come from that report: the world art — children playing or going to
-school, elders walking about, and villagers told apart on the map by age and sex
-the way the cards now tell them apart in the panel.
+**And the world art**, which finishes that report. Four figures on the map rather
+than one — child, woman, man, elder — each in the villager's own colour, told
+apart by outline rather than by detail because a villager is 48 pixels beside a
+96-pixel tree. Toddlers now stay within sight of the house, and school-age
+children head for the school when one stands. See
+[ART_BIBLE.md](./ART_BIBLE.md#four-villagers-and-a-colour-each--implemented) and
+[GAME_DESIGN.md](./GAME_DESIGN.md#children-and-elders-seen--implemented).

@@ -1309,3 +1309,38 @@ she can do.
 
 These are placeholder portraits, in the sense the art brief means: correct
 dimensions and anchors, no production artwork. `tests/cards.test.ts`.
+
+---
+
+## Children and elders, seen — Implemented
+
+The last of the report that asked for trades and the labour panel: "children
+should have a little figure on screen too, and from 2 to 14 go about the village
+playing or going to school; elders over 60 who no longer work should walk about
+the village consuming resources like anybody else but producing nothing."
+
+Most of that was already true and invisible. Nobody under fourteen or over sixty
+is ever put to work, and everybody with no work to do wanders — so the children
+and the elders have always been walking about the settlement, drawn as the same
+hooded adult as everybody else. Making them _look_ like themselves is the
+[art bible's](./ART_BIBLE.md#four-villagers-and-a-colour-each--implemented)
+half of the answer. Two things in the simulation needed fixing to go with it.
+
+**A two-year-old crossed twelve cells of wilderness alone.** Under four they now
+keep within about three cells of their own front door. Over four they have the
+run of the village, which is what children in a village do.
+
+**The school did nothing, including nothing to look at.** School-age children now
+head for it about half the time, when one has been built — the rest of the time
+they are somewhere about the place, because a child who only ever walks between
+home and school is a commuter. It still teaches them nothing and its description
+says so; a building children visibly walk to is a different thing from a
+sentence in a menu.
+
+**Neither change moved the random stream**, and that shaped both of them. The
+toddler draws exactly as many numbers as any other wanderer — only the radius
+differs — and the school die is rolled only once a school actually stands. A
+settlement without one consumes the numbers it always did, so no seed was
+re-rolled and no balance figure measured on one became a lie.
+`tests/childhood.test.ts` pins the villagers' RNG cursor after six days of the
+reference settlement for exactly that reason.

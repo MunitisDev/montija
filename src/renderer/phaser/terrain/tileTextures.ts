@@ -25,6 +25,7 @@ import { BUILDING_IDS, type BuildingId } from '@/data/buildings';
 import { SEASONS, type Season } from '@/simulation/seasons/SeasonClock';
 import { drawGroundTile, TERRAIN_VARIANTS } from './groundArt';
 import { contactShadow, shade } from './shading';
+import { PERSON_COLOURS, VILLAGER_LOOKS, type VillagerLook } from '@/shared/appearance';
 import { drawTree, TREE_HEIGHT, TREE_SHAPES, TREE_WIDTH } from './treeArt';
 import { BUILDING_COLOURS, buildingTextureSpec, drawBuilding } from './buildingArt';
 
@@ -33,7 +34,7 @@ export const TextureKeys = {
   terrainAtlas: 'terrain-atlas',
   treeAtlas: 'tree-atlas',
   selection: 'selection-diamond',
-  villager: 'villager',
+  villagerAtlas: 'villager-atlas',
   villagerRing: 'villager-ring',
   designation: 'designation-mark',
   logPile: 'pile-logs',
@@ -48,6 +49,9 @@ export const TextureKeys = {
     `${type}-${season}-${variant % TERRAIN_VARIANTS}`,
   /** Frame name within the tree atlas. */
   treeFrame: (variant: number, season: Season): string => `tree-${variant % TREE_SHAPES}-${season}`,
+  /** Frame name within the villager atlas: one figure in one person's colour. */
+  villagerFrame: (look: VillagerLook, colourIndex: number): string =>
+    `villager-${look}-${colourIndex % PERSON_COLOURS.length}`,
 } as const;
 
 /**
@@ -87,9 +91,10 @@ export const STORAGE_HEIGHT = 96;
 const VILLAGER_WIDTH = 32;
 
 /** Cloth and skin tones, kept muted and earthy like everything else. */
-const VILLAGER_CLOTH = 0x6b5f4b;
-const VILLAGER_CLOAK = 0x4f4638;
 const VILLAGER_SKIN = 0xa88a6d;
+/** A child's hair, and an elder's staff: the two things not made of cloth. */
+const VILLAGER_HAIR = 0x5a4a38;
+const VILLAGER_STAFF = 0x6b5a42;
 
 /**
  * Builds every placeholder texture once, at scene start.
@@ -109,11 +114,7 @@ export function createPlaceholderTextures(scene: Phaser.Scene): void {
     graphics.clear();
   }
 
-  if (!scene.textures.exists(TextureKeys.villager)) {
-    drawVillager(graphics);
-    graphics.generateTexture(TextureKeys.villager, VILLAGER_WIDTH, VILLAGER_HEIGHT);
-    graphics.clear();
-  }
+  buildVillagerAtlas(scene, graphics);
 
   if (!scene.textures.exists(TextureKeys.villagerRing)) {
     drawVillagerRing(graphics);
@@ -281,83 +282,313 @@ function drawSelectionDiamond(graphics: Phaser.GameObjects.Graphics): void {
 }
 
 /**
- * A villager: a hooded figure, faceted, no face, adult proportions.
+ * A villager: a faceted figure, no face, and never a cone.
  *
- * Anchored at the feet by the renderer. Three readability constraints drive the
- * shape, all learned from looking at it in the world: the silhouette must be
- * clearly humanoid at small size; it must not resemble a conifer, since trees
- * share the scene and a pointed hood reads as a sapling; and it must have a lit
- * and a shaded side like everything else, or a person standing beside a
- * faceted building looks like a sticker on it.
+ * Anchored at the feet by the renderer. Four readability constraints drive every
+ * one of these shapes, all learned from looking at them in the world: the
+ * silhouette must be clearly humanoid at small size; it must not resemble a
+ * conifer, since trees share the scene and a pointed hood reads as a sapling; it
+ * must have a lit and a shaded side like everything else, or a person standing
+ * beside a faceted building looks like a sticker on it; and **the four kinds must
+ * differ in outline**, not in detail, because at this size detail is a smudge.
  *
- * Deliberately not a chibi — the art direction rules out cartoon proportions —
- * and deliberately small against a 96px tree. The settlement is the subject.
+ * Deliberately not chibi — the art direction rules out cartoon proportions — and
+ * deliberately small against a 96px tree. The settlement is the subject.
+ *
+ * @param look which figure. See `shared/appearance.ts` for who gets which.
+ * @param cloth the person's own colour, worn as the tunic. Their outer garment
+ *   is the same colour darkened, so a villager reads as one person dressed
+ *   rather than two halves painted.
  */
-function drawVillager(graphics: Phaser.GameObjects.Graphics): void {
+function drawVillager(
+  graphics: Phaser.GameObjects.Graphics,
+  look: VillagerLook,
+  cloth: number,
+): void {
   const cx = VILLAGER_WIDTH / 2;
   const feet = VILLAGER_HEIGHT;
+  const cloak = shade(cloth, 0.62);
 
   // Cast the way everything else casts: down and to the right, with a
   // penumbra. A villager is small, so the rhombus is small — but a scene where
   // only the buildings have soft shadows looks worse than one where nothing
   // does. See `shading.ts`.
-  contactShadow(graphics, { x: cx, y: feet - 2 }, 9, 3.5);
+  contactShadow(graphics, { x: cx, y: feet - 2 }, look === 'child' ? 7 : 9, 3.5);
+
+  if (look === 'child') {
+    drawChild(graphics, cx, feet, cloth, cloak);
+    return;
+  }
+  if (look === 'woman') {
+    drawWoman(graphics, cx, feet, cloth, cloak);
+    return;
+  }
+  drawGrownFigure(graphics, cx, feet, cloth, cloak, look === 'elder');
+}
+
+/**
+ * A grown man, and — stooped, shorter and leaning on a staff — an elder.
+ *
+ * One function for both because they are the same figure at two ages, and
+ * writing them apart would let them drift into two unrelated people.
+ */
+function drawGrownFigure(
+  graphics: Phaser.GameObjects.Graphics,
+  cx: number,
+  feet: number,
+  cloth: number,
+  cloak: number,
+  old: boolean,
+): void {
+  // An elder stands shorter and leans forward. Both are posture rather than
+  // detail, which is the only thing that survives at this size.
+  const drop = old ? 4 : 0;
+  const lean = old ? 1.6 : 0;
 
   // Boots, darker than the leggings above them.
-  graphics.fillStyle(shade(VILLAGER_CLOAK, 0.7), 1);
+  graphics.fillStyle(shade(cloak, 0.7), 1);
   graphics.fillRect(cx - 6.5, feet - 6, 5, 5);
   graphics.fillRect(cx + 1.5, feet - 6, 5, 5);
 
   // Legs, set apart so the gap reads at a glance. Lit on the left.
-  graphics.fillStyle(shade(VILLAGER_CLOAK, 1.1), 1);
+  graphics.fillStyle(shade(cloak, 1.1), 1);
   graphics.fillRect(cx - 6, feet - 17, 4, 12);
-  graphics.fillStyle(shade(VILLAGER_CLOAK, 0.86), 1);
+  graphics.fillStyle(shade(cloak, 0.86), 1);
   graphics.fillRect(cx + 2, feet - 17, 4, 12);
 
   // Body: shoulders wider than the head, tapering to the waist. The shoulder
   // line is what makes the shape read as a person rather than a cone. Split
   // down the middle so the torso has two planes.
-  graphics.fillStyle(shade(VILLAGER_CLOTH, 1.14), 1);
+  graphics.fillStyle(shade(cloth, 1.14), 1);
   polygonAt(graphics, [
-    [cx - 9, feet - 33],
-    [cx, feet - 33],
+    [cx - 9 + lean, feet - 33 + drop],
+    [cx + lean, feet - 33 + drop],
     [cx, feet - 15],
     [cx - 7, feet - 15],
   ]);
-  graphics.fillStyle(shade(VILLAGER_CLOTH, 0.86), 1);
+  graphics.fillStyle(shade(cloth, 0.86), 1);
   polygonAt(graphics, [
-    [cx, feet - 33],
-    [cx + 9, feet - 33],
+    [cx + lean, feet - 33 + drop],
+    [cx + 9 + lean, feet - 33 + drop],
     [cx + 7, feet - 15],
     [cx, feet - 15],
   ]);
 
   // A belt, which is most of what stops the torso reading as a sack.
-  graphics.fillStyle(shade(VILLAGER_CLOAK, 0.72), 1);
+  graphics.fillStyle(shade(cloak, 0.72), 1);
   graphics.fillRect(cx - 7.5, feet - 20, 15, 2.5);
 
   // Arms, hanging close to the body.
-  graphics.fillStyle(shade(VILLAGER_CLOAK, 1.06), 1);
-  graphics.fillRect(cx - 11, feet - 32, 3, 13);
-  graphics.fillStyle(shade(VILLAGER_CLOAK, 0.82), 1);
-  graphics.fillRect(cx + 8, feet - 32, 3, 13);
+  graphics.fillStyle(shade(cloak, 1.06), 1);
+  graphics.fillRect(cx - 11 + lean, feet - 32 + drop, 3, 13);
+  graphics.fillStyle(shade(cloak, 0.82), 1);
+  graphics.fillRect(cx + 8 + lean, feet - 32 + drop, 3, 13);
+
+  // A staff: the one prop, and the fastest way to read "old" in a silhouette.
+  if (old) {
+    graphics.fillStyle(shade(VILLAGER_STAFF, 0.9), 1);
+    graphics.fillRect(cx + 11, feet - 34, 2, 33);
+  }
 
   // Rounded hood behind the head — never a point.
-  graphics.fillStyle(shade(VILLAGER_CLOAK, 1.04), 1);
-  graphics.fillCircle(cx, feet - 38, 6.5);
-  graphics.fillRect(cx - 6.5, feet - 38, 13, 6);
+  graphics.fillStyle(shade(cloak, 1.04), 1);
+  graphics.fillCircle(cx + lean, feet - 38 + drop, 6.5);
+  graphics.fillRect(cx - 6.5 + lean, feet - 38 + drop, 13, 6);
   // The hood's shaded right side.
-  graphics.fillStyle(shade(VILLAGER_CLOAK, 0.82), 1);
+  graphics.fillStyle(shade(cloak, 0.82), 1);
   polygonAt(graphics, [
-    [cx + 1, feet - 44.5],
-    [cx + 6.5, feet - 38],
-    [cx + 6.5, feet - 32],
-    [cx + 1, feet - 32],
+    [cx + 1 + lean, feet - 44.5 + drop],
+    [cx + 6.5 + lean, feet - 38 + drop],
+    [cx + 6.5 + lean, feet - 32 + drop],
+    [cx + 1 + lean, feet - 32 + drop],
   ]);
 
   // Face opening, in shadow inside the hood.
-  graphics.fillStyle(shade(VILLAGER_SKIN, 0.86), 1);
-  graphics.fillCircle(cx - 0.5, feet - 37.5, 3.6);
+  graphics.fillStyle(shade(VILLAGER_SKIN, old ? 0.78 : 0.86), 1);
+  graphics.fillCircle(cx - 0.5 + lean, feet - 37.5 + drop, 3.6);
+}
+
+/**
+ * A woman: narrower at the shoulder, and a skirt to the ankle.
+ *
+ * The skirt is the whole difference and it is deliberately the *outline* — a
+ * figure that widens towards the ground rather than splitting into two legs.
+ * Anything smaller than that (a different colour, a longer hood) is invisible
+ * three tiles away, which is where the player usually is.
+ */
+function drawWoman(
+  graphics: Phaser.GameObjects.Graphics,
+  cx: number,
+  feet: number,
+  cloth: number,
+  cloak: number,
+): void {
+  graphics.fillStyle(shade(cloak, 0.7), 1);
+  graphics.fillRect(cx - 4, feet - 4, 3.5, 3.5);
+  graphics.fillRect(cx + 0.5, feet - 4, 3.5, 3.5);
+
+  // The skirt, in two planes like everything else.
+  graphics.fillStyle(shade(cloak, 1.08), 1);
+  polygonAt(graphics, [
+    [cx - 6, feet - 21],
+    [cx, feet - 21],
+    [cx, feet - 3],
+    [cx - 8.5, feet - 3],
+  ]);
+  graphics.fillStyle(shade(cloak, 0.84), 1);
+  polygonAt(graphics, [
+    [cx, feet - 21],
+    [cx + 6, feet - 21],
+    [cx + 8.5, feet - 3],
+    [cx, feet - 3],
+  ]);
+
+  // Bodice: narrower shoulders than a man's, and a waist.
+  graphics.fillStyle(shade(cloth, 1.14), 1);
+  polygonAt(graphics, [
+    [cx - 7, feet - 32],
+    [cx, feet - 32],
+    [cx, feet - 20],
+    [cx - 5, feet - 20],
+  ]);
+  graphics.fillStyle(shade(cloth, 0.86), 1);
+  polygonAt(graphics, [
+    [cx, feet - 32],
+    [cx + 7, feet - 32],
+    [cx + 5, feet - 20],
+    [cx, feet - 20],
+  ]);
+
+  graphics.fillStyle(shade(cloak, 0.72), 1);
+  graphics.fillRect(cx - 5.5, feet - 22, 11, 2.5);
+
+  graphics.fillStyle(shade(cloak, 1.06), 1);
+  graphics.fillRect(cx - 9, feet - 31, 2.5, 12);
+  graphics.fillStyle(shade(cloak, 0.82), 1);
+  graphics.fillRect(cx + 6.5, feet - 31, 2.5, 12);
+
+  // A kerchief rather than a hood: it sits closer to the head and falls behind
+  // the shoulder, so the head reads smaller than a hooded one at a glance.
+  graphics.fillStyle(shade(cloak, 1.04), 1);
+  graphics.fillCircle(cx, feet - 37, 5.8);
+  polygonAt(graphics, [
+    [cx - 5.8, feet - 37],
+    [cx + 5.8, feet - 37],
+    [cx + 4, feet - 29],
+    [cx - 4, feet - 29],
+  ]);
+  graphics.fillStyle(shade(cloak, 0.82), 1);
+  polygonAt(graphics, [
+    [cx + 0.5, feet - 42.8],
+    [cx + 5.8, feet - 37],
+    [cx + 4, feet - 29],
+    [cx + 0.5, feet - 29],
+  ]);
+
+  graphics.fillStyle(shade(VILLAGER_SKIN, 0.9), 1);
+  graphics.fillCircle(cx - 0.5, feet - 36.5, 3.2);
+}
+
+/**
+ * A child: shorter, with a head too big for the body.
+ *
+ * Two thirds the height of an adult and bare-headed. The proportion is the
+ * point — a child drawn as a small adult reads as an adult standing further
+ * away, which on an isometric map is exactly the wrong thing to say.
+ */
+function drawChild(
+  graphics: Phaser.GameObjects.Graphics,
+  cx: number,
+  feet: number,
+  cloth: number,
+  cloak: number,
+): void {
+  graphics.fillStyle(shade(cloak, 0.7), 1);
+  graphics.fillRect(cx - 4.5, feet - 4, 3.5, 3.5);
+  graphics.fillRect(cx + 1, feet - 4, 3.5, 3.5);
+
+  graphics.fillStyle(shade(cloak, 1.1), 1);
+  graphics.fillRect(cx - 4, feet - 12, 3, 8);
+  graphics.fillStyle(shade(cloak, 0.86), 1);
+  graphics.fillRect(cx + 1, feet - 12, 3, 8);
+
+  // A short tunic, straight from the shoulder — no belt at this size.
+  graphics.fillStyle(shade(cloth, 1.14), 1);
+  polygonAt(graphics, [
+    [cx - 6, feet - 23],
+    [cx, feet - 23],
+    [cx, feet - 11],
+    [cx - 5, feet - 11],
+  ]);
+  graphics.fillStyle(shade(cloth, 0.86), 1);
+  polygonAt(graphics, [
+    [cx, feet - 23],
+    [cx + 6, feet - 23],
+    [cx + 5, feet - 11],
+    [cx, feet - 11],
+  ]);
+
+  graphics.fillStyle(shade(cloak, 1.06), 1);
+  graphics.fillRect(cx - 7.5, feet - 22, 2, 9);
+  graphics.fillStyle(shade(cloak, 0.82), 1);
+  graphics.fillRect(cx + 5.5, feet - 22, 2, 9);
+
+  // Bare head, and a big one: half again the head of an adult on a body two
+  // thirds the height.
+  graphics.fillStyle(shade(VILLAGER_HAIR, 1.02), 1);
+  graphics.fillCircle(cx, feet - 28, 5.4);
+  graphics.fillStyle(shade(VILLAGER_HAIR, 0.8), 1);
+  polygonAt(graphics, [
+    [cx + 0.5, feet - 33.4],
+    [cx + 5.4, feet - 28],
+    [cx + 3, feet - 23.4],
+    [cx + 0.5, feet - 23.4],
+  ]);
+  graphics.fillStyle(VILLAGER_SKIN, 1);
+  graphics.fillCircle(cx - 0.5, feet - 27.5, 3.4);
+}
+
+/**
+ * Every figure in every colour, in one texture.
+ *
+ * Twenty-four small frames drawn once at load, rather than one sprite tinted at
+ * draw time: the season tint already owns `setTint`, and a second tint on top of
+ * it would wash the whole settlement the same shade of whatever it was standing
+ * in. One batch for every villager on screen, however many kinds are walking
+ * about.
+ */
+function buildVillagerAtlas(scene: Phaser.Scene, graphics: Phaser.GameObjects.Graphics): void {
+  if (scene.textures.exists(TextureKeys.villagerAtlas)) {
+    return;
+  }
+
+  VILLAGER_LOOKS.forEach((look, row) => {
+    PERSON_COLOURS.forEach((colour, column) => {
+      graphics.translateCanvas(column * VILLAGER_WIDTH, row * VILLAGER_HEIGHT);
+      drawVillager(graphics, look, colour);
+      graphics.translateCanvas(-column * VILLAGER_WIDTH, -row * VILLAGER_HEIGHT);
+    });
+  });
+  graphics.generateTexture(
+    TextureKeys.villagerAtlas,
+    PERSON_COLOURS.length * VILLAGER_WIDTH,
+    VILLAGER_LOOKS.length * VILLAGER_HEIGHT,
+  );
+  graphics.clear();
+
+  const texture = scene.textures.get(TextureKeys.villagerAtlas);
+  VILLAGER_LOOKS.forEach((look, row) => {
+    PERSON_COLOURS.forEach((_colour, column) => {
+      texture.add(
+        TextureKeys.villagerFrame(look, column),
+        0,
+        column * VILLAGER_WIDTH,
+        row * VILLAGER_HEIGHT,
+        VILLAGER_WIDTH,
+        VILLAGER_HEIGHT,
+      );
+    });
+  });
 }
 
 /** Fills a polygon from pixel points. */

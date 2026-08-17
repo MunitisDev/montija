@@ -137,7 +137,8 @@ export const EN = {
   'building.orchard.description': 'Years to establish, and then the best harvest there is.',
 
   'building.school': 'School',
-  'building.school.description': 'Somewhere for the children to learn. No effect yet.',
+  'building.school.description':
+    'The children walk here when there is one. It teaches them nothing yet.',
 
   'building.cemetery': 'Cemetery',
   'building.cemetery.description':
@@ -566,7 +567,8 @@ export const ES: Messages = {
   'building.orchard.description': 'Tarda años en dar fruto, y luego da la mejor cosecha.',
 
   'building.school': 'Escuela',
-  'building.school.description': 'Un sitio donde aprendan los niños. Aún sin efecto.',
+  'building.school.description':
+    'Los niños vienen aquí cuando hay una. Todavía no les enseña nada.',
 
   'building.cemetery': 'Cementerio',
   'building.cemetery.description':

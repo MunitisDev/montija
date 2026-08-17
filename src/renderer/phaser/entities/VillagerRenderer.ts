@@ -10,10 +10,17 @@
  * each sprite is placed between the villager's previous and current position
  * using the clock's tick alpha. This is presentation only — the interpolated
  * position is never fed back into the simulation.
+ *
+ * **Which figure and which colour** come from `shared/appearance.ts`, and are
+ * re-read every sync rather than fixed when the sprite is made: a child turns
+ * eighteen and a worker turns sixty while the sprite is on screen, and a
+ * settlement whose people never visibly grow up would be lying about the one
+ * thing this art is for.
  */
 
 import type Phaser from 'phaser';
 import { VILLAGER_HEIGHT, TextureKeys } from '@/renderer/phaser/terrain/tileTextures';
+import { colourIndexFor, lookFor } from '@/shared/appearance';
 import { RenderLayer, depthFor } from '@/renderer/phaser/sorting';
 import { worldToScene } from '@/shared/math/isometric';
 import type { WorldPoint } from '@/shared/types/geometry';
@@ -22,6 +29,8 @@ import type { Villager } from '@/simulation/villagers/Villager';
 export class VillagerRenderer {
   private readonly scene: Phaser.Scene;
   private readonly sprites = new Map<number, Phaser.GameObjects.Image>();
+  /** The frame each sprite is showing, so an unchanged one is left alone. */
+  private readonly frames = new Map<number, string>();
   /** Seasonal light, applied to new arrivals as well as everyone present. */
   private seasonTint = 0xffffff;
   private readonly selectionRing: Phaser.GameObjects.Image;
@@ -47,6 +56,15 @@ export class VillagerRenderer {
       live.add(villager.id);
       const sprite = this.spriteFor(villager);
 
+      // A birthday can change the figure: a child becomes a woman, a woman an
+      // elder. Compared rather than set, because setting a texture every frame
+      // for three hundred sprites is work for nothing.
+      const frame = TextureKeys.villagerFrame(lookFor(villager), colourIndexFor(villager));
+      if (this.frames.get(villager.id) !== frame) {
+        sprite.setTexture(TextureKeys.villagerAtlas, frame);
+        this.frames.set(villager.id, frame);
+      }
+
       const position = interpolate(villager.previousPosition, villager.position, alpha);
       const scene = worldToScene(position);
       sprite.setPosition(scene.px, scene.py);
@@ -69,6 +87,7 @@ export class VillagerRenderer {
       if (!live.has(id)) {
         sprite.destroy();
         this.sprites.delete(id);
+        this.frames.delete(id);
       }
     }
 
@@ -95,6 +114,7 @@ export class VillagerRenderer {
       sprite.destroy();
     }
     this.sprites.clear();
+    this.frames.clear();
     this.selectionRing.destroy();
   }
 
@@ -105,7 +125,9 @@ export class VillagerRenderer {
     }
 
     const sprite = this.scene.add
-      .image(0, 0, TextureKeys.villager)
+      // The frame is set by `sync` on the same pass, from the villager's age and
+      // sex — this is only which atlas it comes out of.
+      .image(0, 0, TextureKeys.villagerAtlas)
       // Anchored at the feet, per the art bible, so the villager stands on the
       // tile rather than hovering over its centre.
       .setOrigin(0.5, 1)

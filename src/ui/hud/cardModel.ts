@@ -16,35 +16,18 @@
  */
 
 import { buildingDefinition, type BuildingId } from '@/data/buildings';
-import { ADULT_AGE, RETIREMENT_AGE } from '@/data/population';
 import { skillLevelOf, skillYears, type SkillLevel } from '@/data/skills';
+import { colourFor, cssColour, lookFor, type VillagerLook } from '@/shared/appearance';
 import type { Simulation } from '@/simulation/Simulation';
 import type { Sex, Villager } from '@/simulation/villagers/Villager';
 
 /**
  * Which face to draw.
  *
- * Four rather than two, because age reads at a glance where a number does not: a
- * settlement of children and elders looks like one, and that is the thing a
- * player needs to notice about a population that has stopped working.
+ * The same four the map draws, and by the same rule — see `shared/appearance.ts`.
+ * A person recognisable in the panel and not on the ground would be two people.
  */
-export type PortraitKind = 'child' | 'woman' | 'man' | 'elder';
-
-/**
- * The colours villagers are told apart by.
- *
- * Muted and earthy on purpose — dyed wool, not highlighter pens. Assigned by id
- * so somebody keeps the same colour for their whole life, which is what makes it
- * worth having at all.
- */
-export const CARD_COLOURS: readonly string[] = [
-  '#8a7a5c',
-  '#6f7f6a',
-  '#8c6a5a',
-  '#6c7484',
-  '#8a7f96',
-  '#7f8a6a',
-];
+export type PortraitKind = VillagerLook;
 
 export interface PersonCard {
   readonly id: number;
@@ -113,8 +96,8 @@ export function cardFor(villager: Villager, trade: BuildingId | null): PersonCar
     name: villager.name,
     age: villager.age,
     sex: villager.sex,
-    portrait: portraitFor(villager),
-    colour: CARD_COLOURS[villager.id % CARD_COLOURS.length] ?? CARD_COLOURS[0]!,
+    portrait: lookFor(villager),
+    colour: cssColour(colourFor(villager)),
     isIll: villager.isIll,
     level,
     years: skillYears(days),
@@ -122,16 +105,6 @@ export function cardFor(villager: Villager, trade: BuildingId | null): PersonCar
     // has a trade in the sense that she is standing in a hut, and in no other.
     trade: level === 'none' ? null : trade,
   };
-}
-
-function portraitFor(villager: Villager): PortraitKind {
-  if (villager.age < ADULT_AGE) {
-    return 'child';
-  }
-  if (villager.age >= RETIREMENT_AGE) {
-    return 'elder';
-  }
-  return villager.sex === 'f' ? 'woman' : 'man';
 }
 
 /** Whether a building has people worth drawing cards for at all. */
