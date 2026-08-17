@@ -37,12 +37,12 @@ first thing anybody sees is their own people on the shore they washed up on.
 
 What is in that cargo says the same thing again:
 
-| Salvage      | Why                                                                      |
-| ------------ | ------------------------------------------------------------------------ |
-| 45 logs      | A ship is made of timber, and a hull on a beach comes apart into it      |
-| 120 food     | Ship's stores. Unchanged: the grace it buys is measured and load-bearing |
-| 8 iron       | Fittings and nails. Useless until there is a Blacksmith to work them     |
-| **no stone** | Nobody salvages rock from a boat                                         |
+| Salvage      | Why                                                                   |
+| ------------ | --------------------------------------------------------------------- |
+| 45 logs      | A ship is made of timber, and a hull on a beach comes apart into it   |
+| 156 food     | Ship's stores — fifteen days for ten mouths, most of which rots first |
+| 8 iron       | Fittings and nails. Useless until there is a Blacksmith to work them  |
+| **no stone** | Nobody salvages rock from a boat                                      |
 
 **No stone is the interesting one.** It makes the first morning of the game a
 search rather than a shopping trip. It also forced a change: the Gatherer Hut
@@ -51,9 +51,20 @@ starved on day 22 of three seeds out of four while hunting a deposit it could
 not eat. Wood gets you fed; stone is for everything that has to last.
 
 Measured across eight seeds, a well-played settlement survives its first year on
-2 of them — exactly the same as before the shipwreck — and most of the deaths
-moved from starving in spring to failing in winter, which is the failure this
-game is about.
+4 of them, and most of the deaths moved from starving in spring to failing in
+winter, which is the failure this game is about. See
+[Difficulty](#why-the-other-four-die--measured-not-fixed) for what kills the
+other four.
+
+**The salvaged rations are fifteen days, not fifteen days of slack.** They were
+raised from 120 to 156 to widen the opening, and the measured effect was much
+smaller than the number suggests: food rots at a tenth a day and the beach yard
+is an open yard, so the pile decays as it is eaten and is gone in about ten days
+whatever size it starts at. Thirty per cent more food moved the first death of a
+do-nothing settlement by **one day**, and changed the outcome of a well-played or
+half-played year on **none** of the eight seeds. Anything given to the opening
+has to survive the night before it can help, which is a point about the Food
+Storage rather than about generosity.
 
 ---
 
@@ -89,8 +100,10 @@ physically hold, and deliberately exclude what is still lying in the field — t
 | Firewood | burned, one per villager per freezing day | indefinitely               |
 | Stone    | construction                              | indefinitely               |
 
-The settlers arrive with 120 food, 30 logs and 12 stone. The food is about twelve days' grace for
-ten villagers — enough to raise a Gatherer Hut without hurrying, and not enough to ignore.
+The settlers arrive with 156 food, 45 logs, 8 iron and **no stone** — see
+[Where they came from](#where-they-came-from--implemented) for why each. On paper the food is fifteen
+days' grace for ten villagers; in practice it is about ten, because it is sitting in an open yard
+losing a tenth of itself every night.
 
 ---
 
@@ -672,14 +685,38 @@ measured run above, the well-played settlement ends winter with six food in stor
 already gone.
 
 **That table is one seed.** Running the same well-played script across eight seeds, the settlement
-survives its first year on **one of them**. The table above is not wrong — it is what that seed does
+survives its first year on **four of them**. The table above is not wrong — it is what that seed does
 — but it describes a scenario on a knife edge, and the balance suite being pinned to a single seed
 makes it fragile in both directions: a change that alters the founding party at all can flip which
-seed lives without changing the difficulty at all. Measured, before and after such a change: **1 of
-8 either way.**
+seed lives without changing the difficulty at all.
 
-The honest summary is that the opening is considerably harder than the table implies, which matches
-what playing it feels like. Fixing that is a difficulty pass, not a bug fix, and it has not been
+> This figure said **1 of 8** for a long while and was simply out of date — it predated the
+> entombment fix, employment and the clothing line. Re-measured, it is 4 of 8. Recorded here as a
+> caution: a measured number in a document decays, and this one had drifted a long way.
+
+### Why the other four die — measured, not fixed
+
+All four fail the same way, and **not** the way it looks from outside. They reach the first freezing
+day of autumn with two hundred logs in the yard, a full larder, and _nothing built_: no house, no
+woodcutter, no Food Storage. Every site is waiting for stone. With no house standing, no firewood is
+burned for anybody — warmth has nowhere to be spent — so all ten freeze to death in midwinter beside
+food they could have eaten.
+
+The cause is a job-priority accident rather than a balance problem. Felling and mining are both
+`normal` priority, so the choice between them comes down to which is nearer, and **there is always
+another tree nearer than the quarry.** On those seeds the nearest deposit is a long walk, so fifty
+mining jobs sat unclaimed for thirty-two days while the settlement cheerfully chopped wood it had no
+woodcutter to burn.
+
+Raising stalled gathering above felling was tried and **backed out**, because measurement did not
+support it: still 4 of 8, and three seeds died _earlier_ — they starved in summer instead, because
+diverting hands to the quarry left the food piling up at the hut uncollected. Two attempts at
+limiting the diversion (a priority rung below hauling, then a cap of three gatherers) both left the
+same three seeds starving. The economy has no spare labour, so anything taken out of hauling comes
+straight off the settlement's food.
+
+So the finding stands and the fix does not: the opening is harder than the table implies, and the
+reason is now known rather than guessed. It belongs to a difficulty pass, and that pass has not been
 done.
 
 ---

@@ -134,10 +134,32 @@ describe('the first winter', () => {
   it('gives a do-nothing settlement time to notice before it dies', () => {
     // The settlers' supplies must outlast the time it takes to see the problem
     // and raise a hut, or the opening is unwinnable rather than difficult.
+    //
+    // Asserted as a measured number of days rather than derived from the stock,
+    // because **the stock is not the grace period and it was misleading to
+    // pretend otherwise.** Food rots at a tenth a day in an open yard, and the
+    // beach yard is an open yard, so the starting pile decays as it is eaten:
+    // raising it from 120 to 156 — thirty per cent, three and a half days of
+    // rations — moved the first death by exactly *one* day. Anything spent on
+    // the opening has to survive the night before it can help.
     const result = runYear(idle);
-    const grace = STARTING_RESOURCES.food / (10 * FOOD_PER_VILLAGER_PER_DAY);
-    expect(grace).toBeGreaterThanOrEqual(10);
-    expect(result.firstDeathDay).toBeGreaterThan(grace + 8);
+    expect(result.firstDeathDay).toBeGreaterThan(18);
+  });
+
+  it('loses most of the settlers salvaged food to the weather', () => {
+    // Kept as a test because it is the least obvious thing about the opening and
+    // the reason "just start them with more food" does not work. Ten a day is
+    // eaten and a tenth of the remainder turns overnight, so the pile is gone in
+    // about ten days however big it was.
+    const result = runYear(idle);
+    const firstTenDays = result.log.slice(0, 10);
+    const eaten = firstTenDays.reduce((total, day) => total + day.foodEaten, 0);
+    const spoiled = firstTenDays.reduce((total, day) => total + day.spoiledFood, 0);
+
+    expect(spoiled).toBeGreaterThan(eaten * 0.5);
+    // Ten days in, a stock that was meant to last fifteen is already spent.
+    expect(firstTenDays.at(-1)!.food).toBe(0);
+    expect(STARTING_RESOURCES.food / (10 * FOOD_PER_VILLAGER_PER_DAY)).toBeGreaterThan(15);
   });
 
   it('kills a settlement that leaves its food supply too long', () => {

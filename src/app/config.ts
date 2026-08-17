@@ -59,11 +59,20 @@ export const STARTING_VILLAGERS = 10;
  * the yard doing nothing until there is a Blacksmith to work it, which is
  * deliberate: it is a promise that the settlement has somewhere to grow into.
  *
- * Food is unchanged. The grace it buys — long enough to see the problem and
- * raise a hut — is load-bearing and measured in the balance tests.
+ * **Food is the grace period, and it was too short.** Ten people eat ten a day,
+ * so this is simply how many days the settlers have before the settlement has
+ * to be feeding itself. At 120 that was twelve days — and twelve days is not
+ * enough, because the opening is not one task but three in sequence: find a
+ * stone deposit, raise a Gatherer Hut, and get the food it forages carried in.
+ * A player who spends the first week working out *what* to do has already lost.
+ *
+ * 156 is fifteen days, and it is a deliberate difficulty change rather than a
+ * tuning nudge — a wider window to make the first mistake in and still recover.
+ * What it does *not* do is change how the year ends: a settlement that never
+ * gets a food supply going still dies, three days later than before.
  */
 export const STARTING_RESOURCES = {
-  food: 120,
+  food: 156,
   logs: 45,
   iron: 8,
 } as const;

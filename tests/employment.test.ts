@@ -225,6 +225,14 @@ describe('only the staff work the workshop', () => {
     let employeeDidOtherWork = false;
     let sawWinter = false;
     for (let tick = 1; tick <= TICKS_PER_DAY * 58; tick += 1) {
+      // Re-provisioned daily, because this test is about *employment* and must
+      // not quietly become a test about famine. A single lump of food cannot
+      // last fifty-eight days at a tenth spoiling a night, and a settlement that
+      // starves puts its gatherers to bed ill — where they do no other work, and
+      // the assertion below fails for entirely the wrong reason.
+      if (tick % TICKS_PER_DAY === 0) {
+        provision(simulation);
+      }
       simulation.update(tick, TICK);
       if (simulation.snapshot().season !== 'winter') {
         continue;
@@ -306,8 +314,19 @@ function place(simulation: Simulation, id: BuildingId): Building | null {
  */
 function provision(simulation: Simulation): void {
   const yard = simulation.storages.all[0];
-  yard?.inventory.add('food', 900);
-  yard?.inventory.add('firewood', 900);
+  if (yard) {
+    // Topped up *to* a level rather than by a lump. Adding 900 of each on top of
+    // whatever the settlers carried ashore overflowed the 2000-cell yard the
+    // moment their rations grew, and a yard with no room accepts nothing — so
+    // the test quietly provisioned an empty settlement and failed for a reason
+    // that had nothing to do with employment.
+    for (const [resource, level] of [
+      ['food', 700],
+      ['firewood', 700],
+    ] as const) {
+      yard.inventory.add(resource, Math.max(0, level - yard.inventory.count(resource)));
+    }
+  }
 
   while (simulation.snapshot().housingCapacity < simulation.villagers.all.length) {
     if (!raise(simulation, 'house')) {
