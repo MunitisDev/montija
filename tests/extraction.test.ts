@@ -146,25 +146,36 @@ describe('iron and tools', () => {
     expect(simulation.snapshot().lastDay.toolFraction).toBeGreaterThan(0);
   });
 
-  it('charges wear against people of working age, not children or elders', () => {
+  it('charges wear against people of working age, at the stated rate', () => {
+    // **Measured over twenty days rather than one.** A twentieth of a tool per
+    // worker is not a whole tool, and a yard holds whole tools — a player
+    // reported seeing decimals in their stores, quite rightly. The fraction now
+    // goes on a running tab and is paid in whole units, so the claim to test is
+    // the *rate*, and that the shelf never holds part of anything.
+    //
+    // Fourteen to sixty: a thirteen year old and a retired villager both eat and
+    // both need a fire, and neither wears out a tool.
     const simulation = new Simulation(OPTIONS);
     const yard = simulation.storages.all[0];
     if (!yard) {
       return;
     }
-    yard.inventory.add('tools', 100);
+    yard.inventory.add('tools', 200);
+    const stocked = simulation.storages.totalOf('tools');
 
-    // Fourteen to sixty. A thirteen year old and a retired villager both eat and
-    // both need a fire, and neither wears out a tool.
     const workers = simulation.villagers.all.filter((villager) => villager.canWork).length;
-    for (let tick = 1; tick <= TICKS_PER_DAY + 1; tick += 1) {
-      simulation.update(tick, TICK);
+    const days = 20;
+    for (let day = 0; day < days; day += 1) {
+      for (let tick = 0; tick < TICKS_PER_DAY; tick += 1) {
+        simulation.update(simulation.tick + 1, TICK);
+        expect(Number.isInteger(simulation.storages.totalOf('tools'))).toBe(true);
+      }
     }
 
-    expect(simulation.snapshot().lastDay.toolsWorn).toBeCloseTo(
-      workers * TOOLS_PER_WORKER_PER_DAY,
-      5,
-    );
+    const worn = stocked - simulation.storages.totalOf('tools');
+    // Within one tool of the exact rate: whatever is still owed is not yet paid.
+    expect(Math.abs(worn - days * workers * TOOLS_PER_WORKER_PER_DAY)).toBeLessThan(1);
+    expect(worn).toBeGreaterThan(0);
   });
 
   it('makes work measurably quicker', () => {

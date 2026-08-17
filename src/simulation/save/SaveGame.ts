@@ -171,6 +171,15 @@ export interface SaveGame {
   readonly jobs: readonly Job[];
   readonly deaths: number;
   /**
+   * Fractional wear the settlement still owes, as pairs.
+   *
+   * Tools and coats wear at a twentieth a day and herbs at a half, and stores
+   * hold whole things — so the remainder is carried rather than rounded away.
+   * Dropping it on load would quietly forgive whatever was owed, which over a
+   * long game is free tools. Absent in older saves, which restore owing nothing.
+   */
+  readonly wear?: readonly (readonly [string, number])[];
+  /**
    * Lifetime totals.
    *
    * Saved rather than recomputed because they are about the past, and a

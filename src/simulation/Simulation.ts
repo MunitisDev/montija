@@ -30,6 +30,7 @@ import {
   type TradeReport,
 } from './logistics/TradeSystem';
 import { newChronicle, type Chronicle } from './history/Chronicle';
+import { WearLedger } from './resources/wear';
 
 import {
   DAYS_PER_SEASON,
@@ -281,6 +282,15 @@ export class Simulation {
 
   /** Who reached a new level at their trade today. */
   private lastSkills: SkillReport = NO_SKILL_CHANGE;
+
+  /**
+   * What the settlement owes in fractions of a tool, a coat and a bundle.
+   *
+   * Three things wear out at less than one a day, and a yard holds whole things.
+   * The remainder is kept here rather than rounded away, so the long-run rate is
+   * exactly the rate the data says — see `resources/wear.ts`.
+   */
+  private readonly wear = new WearLedger();
 
   constructor(options: SimulationOptions) {
     this.seed = options.seed >>> 0;
@@ -582,6 +592,15 @@ export class Simulation {
     Object.assign(this.chronicle, chronicle);
   }
 
+  /** What the settlement owes in fractional wear, for the serialiser. */
+  public get wearDebt(): readonly (readonly [ResourceId, number])[] {
+    return this.wear.state();
+  }
+
+  public restoreWearDebt(pairs: readonly (readonly [ResourceId, number])[]): void {
+    this.wear.restore(pairs);
+  }
+
   public restoreClock(tick: number, deaths: number): void {
     this.currentTick = tick;
     this.totalDeaths = deaths;
@@ -806,7 +825,13 @@ export class Simulation {
    * asks for consequences, not a medical simulation.
    */
   private runDailyUpkeep(): void {
-    const { report, dead } = runDay(this.villagers.all, this.storages, this.year, this.solace);
+    const { report, dead } = runDay(
+      this.villagers.all,
+      this.storages,
+      this.year,
+      this.solace,
+      this.wear,
+    );
     this.lastDayReport = report;
 
     for (const villager of dead) {
@@ -1473,9 +1498,18 @@ export class Simulation {
 
     // Herbs are taken for the patients actually being looked after, so a
     // half-staffed healer costs half the herbs rather than all of them.
+    //
+    // Half a bundle per patient is not a whole number, so it goes on the wear tab
+    // and is paid in whole bundles — the shelf holds bundles, not halves. What is
+    // *supplied* is read off the shelf rather than off today's withdrawal, for
+    // the same reason the tool coverage is: a rate that pays every other day
+    // would otherwise make care flicker on and off.
     const herbsWanted = sick * staffed * HERBS_PER_PATIENT_PER_DAY;
-    const herbsTaken = herbsWanted === 0 ? 0 : this.takeStored('herbs', herbsWanted);
-    const supplied = herbsWanted === 0 ? 0 : herbsTaken / herbsWanted;
+    const supplied =
+      herbsWanted === 0 ? 0 : Math.min(1, this.storages.totalOf('herbs') / herbsWanted);
+    const herbsTaken = this.wear.spend('herbs', herbsWanted, (resource, whole) =>
+      this.takeStored(resource, whole),
+    );
 
     const report = runIllness(this.villagers.all, this.illnessRandom, staffed * supplied);
     return { ...report, herbsUsed: herbsTaken };

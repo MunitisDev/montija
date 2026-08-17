@@ -9,6 +9,15 @@
  * Capacity is a single unit budget rather than per-resource slots. That keeps a
  * storage yard from holding unlimited amounts of everything, and keeps the
  * arithmetic simple enough to reason about in tests.
+ *
+ * **Everything in here is a whole number of things.** A resource in this game is
+ * a physical object somebody carried, and there is no such thing as 0.35 of a
+ * tool. The rule is enforced here rather than trusted to callers because it was
+ * not: tools wear out at a twentieth per worker per day, that fraction was taken
+ * straight out of the yard, and a player quite reasonably reported seeing
+ * decimals in their stores. Anything that consumes a fraction of something a day
+ * now owes it up — see `resources/wear.ts` — and this class simply refuses to
+ * hold a part of anything.
  */
 
 import { type ResourceId } from '@/data/resources';
@@ -65,10 +74,14 @@ export class Inventory {
    *   is how resources disappear.
    */
   public add(resource: ResourceId, amount: number): number {
-    if (amount <= 0) {
+    // Floored, not rounded: adding half a log must never round up into a whole
+    // one. A caller with a fraction to place is a caller with a bug, and the
+    // return value tells them nothing was taken.
+    const whole = Math.floor(amount);
+    if (whole <= 0) {
       return 0;
     }
-    const accepted = Math.min(amount, this.freeSpace);
+    const accepted = Math.min(whole, this.freeSpace);
     if (accepted > 0) {
       this.amounts.set(resource, this.count(resource) + accepted);
     }
@@ -81,11 +94,14 @@ export class Inventory {
    * @returns how much was actually removed.
    */
   public remove(resource: ResourceId, amount: number): number {
-    if (amount <= 0) {
+    // Floored for the same reason `add` is: taking 0.35 of a tool would leave
+    // 0.65 of one behind, which is not a thing that can be in a yard.
+    const whole = Math.floor(amount);
+    if (whole <= 0) {
       return 0;
     }
     const held = this.count(resource);
-    const removed = Math.min(amount, held);
+    const removed = Math.min(whole, held);
     if (removed > 0) {
       const left = held - removed;
       if (left === 0) {

@@ -21,6 +21,7 @@ import {
   runDay,
 } from '@/simulation/seasons/SurvivalSystem';
 import { StorageRegistry } from '@/simulation/logistics/Storage';
+import { WearLedger } from '@/simulation/resources/wear';
 import { Villager } from '@/simulation/villagers/Villager';
 import { recipe } from '@/data/recipes';
 import { buildingDefinition } from '@/data/buildings';
@@ -103,12 +104,53 @@ describe('wearing it', () => {
     expect(report.clothingWorn).toBe(0);
   });
 
-  it('wears out on a freezing day, for everyone', () => {
-    const storages = stocked({ firewood: 100, clothing: 100 });
-    const { report } = runDay(people(6, true), storages, FREEZING);
+  it('wears out at the stated rate over a winter, for everyone', () => {
+    // **A day no longer takes a fraction of a coat**, because a yard holds whole
+    // coats and a player quite reasonably objected to seeing 99.7 of one. Six
+    // villagers owe 0.3 of a coat a night, so one coat comes off the shelf every
+    // fourth night — and over enough nights the average is exactly the rate the
+    // data states. That is what the running tab in `resources/wear.ts` buys, and
+    // it is the claim worth testing.
+    const storages = stocked({ firewood: 1000, clothing: 100 });
+    const villagers = people(6, true);
+    const wear = new WearLedger();
+    const nights = 40;
 
-    // Children too: a coat keeps a child warm the same as anyone.
-    expect(report.clothingWorn).toBeCloseTo(6 * CLOTHING_PER_VILLAGER_PER_COLD_DAY, 5);
+    let worn = 0;
+    for (let night = 0; night < nights; night += 1) {
+      const { report } = runDay(villagers, storages, FREEZING, 0, wear);
+      worn += report.clothingWorn;
+      // And never a fraction of one, on any night.
+      expect(Number.isInteger(report.clothingWorn)).toBe(true);
+    }
+
+    const expected = nights * 6 * CLOTHING_PER_VILLAGER_PER_COLD_DAY;
+    // Within one coat: whatever is still owed has not been paid yet.
+    expect(Math.abs(worn - expected)).toBeLessThan(1);
+    // Children too: a coat keeps a child warm the same as anyone, and six people
+    // wearing them is what produced that total.
+    expect(worn).toBeGreaterThan(0);
+  });
+
+  it('keeps the shelf in whole coats', () => {
+    const storages = stocked({ firewood: 1000, clothing: 50 });
+    const villagers = people(6, true);
+    const wear = new WearLedger();
+
+    for (let night = 0; night < 12; night += 1) {
+      runDay(villagers, storages, FREEZING, 0, wear);
+      expect(Number.isInteger(storages.totalOf('clothing'))).toBe(true);
+    }
+  });
+
+  it('still reads as fully clothed on a day it takes nothing', () => {
+    // Coverage is read off the shelf rather than off the withdrawal. Read off the
+    // withdrawal it would say "unclothed" on three nights in four, and the warmth
+    // it drives would flicker.
+    const storages = stocked({ firewood: 1000, clothing: 100 });
+    const { report } = runDay(people(6, true), storages, FREEZING, 0, new WearLedger());
+
+    expect(report.clothingWorn).toBe(0);
     expect(report.clothingFraction).toBe(1);
   });
 

@@ -22,6 +22,7 @@
 
 import type { ResourceId } from '@/data/resources';
 import type { StorageRegistry } from '@/simulation/logistics/Storage';
+import { WearLedger } from '@/simulation/resources/wear';
 import type { Villager } from '@/simulation/villagers/Villager';
 import type { YearState } from './SeasonClock';
 
@@ -208,10 +209,22 @@ export function runDay(
    * capacity is: how a building is staffed is not this system's business.
    */
   solace = 0,
+  /**
+   * The settlement's running tab of fractional wear.
+   *
+   * Tools and coats wear out at a twentieth a day, and a yard holds whole
+   * things — so the fraction is owed up and paid in whole units. Passed in
+   * rather than kept here because it has to survive a save; see
+   * `resources/wear.ts`.
+   */
+  wear: WearLedger = new WearLedger(),
 ): { report: DailyReport; dead: Villager[] } {
   if (villagers.length === 0) {
     return { report: EMPTY_REPORT, dead: [] };
   }
+
+  const spend = (resource: ResourceId, demand: number): number =>
+    wear.spend(resource, demand, (which, whole) => takeFromStorages(storages, which, whole));
 
   const foodWanted = villagers.length * FOOD_PER_VILLAGER_PER_DAY;
   const foodTaken = takeFromStorages(storages, 'food', foodWanted);
@@ -237,17 +250,25 @@ export function runDay(
   // retired villagers count. Nothing is taken when the settlement has none, and
   // nothing is lost by that — an unequipped settlement simply works at the rate
   // it always did.
+  //
+  // **Coverage is read off the stock, not off today's withdrawal**, and that is
+  // not a detail. A twentieth of a tool per worker means a village of ten owes
+  // half a tool a day and hands one over every second day — so a fraction based
+  // on what was taken would read 0 on one day and 2 on the next, and the work
+  // bonus it drives would flicker between nothing and double. What the number is
+  // supposed to mean is "is this settlement equipped today", and the honest
+  // answer to that is whether the yard could cover the day's wear.
   const workers = villagers.filter((villager) => villager.canWork).length;
   const toolsWanted = workers * TOOLS_PER_WORKER_PER_DAY;
-  const toolsWorn = takeFromStorages(storages, 'tools', toolsWanted);
-  const toolFraction = toolsWanted === 0 ? 0 : Math.min(1, toolsWorn / toolsWanted);
+  const toolFraction = coverage(storages, 'tools', toolsWanted);
+  const toolsWorn = spend('tools', toolsWanted);
 
   // Coats wear out on people's backs, and only in the cold. Nothing is taken
   // from a settlement that has none, and nothing is lost by that: an unclothed
   // settlement is exactly as warm as it always was.
   const clothingWanted = needsFire ? villagers.length * CLOTHING_PER_VILLAGER_PER_COLD_DAY : 0;
-  const clothingWorn = takeFromStorages(storages, 'clothing', clothingWanted);
-  const clothingFraction = clothingWanted === 0 ? 0 : Math.min(1, clothingWorn / clothingWanted);
+  const clothingFraction = coverage(storages, 'clothing', clothingWanted);
+  const clothingWorn = spend('clothing', clothingWanted);
 
   const dead: Villager[] = [];
   let sleepingRough = 0;
@@ -341,6 +362,20 @@ function applyNeed(
 
 function clamp(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+/**
+ * How much of a day's wear the settlement could actually cover, in `0..1`.
+ *
+ * Read off the stock rather than off what was withdrawn, so a rate that only
+ * hands over a whole unit every other day does not make this flicker. `0` when
+ * nothing is wanted, which is what "not equipped" has always meant here.
+ */
+function coverage(storages: StorageRegistry, resource: ResourceId, wanted: number): number {
+  if (wanted <= 0) {
+    return 0;
+  }
+  return Math.min(1, storages.totalOf(resource) / wanted);
 }
 
 /** Draws from every yard until the amount is met. */

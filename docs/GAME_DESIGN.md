@@ -1116,3 +1116,48 @@ runs at exactly the speed it always did, for ever. `tests/skills.test.ts`.
 Shown in the people panel as "Woodcutter (master, 5 yrs)", best trade first, and
 only for trades actually learned — a row reading "none" would say a villager has a
 trade and then take it back.
+
+---
+
+## Stores hold whole things — Implemented
+
+A resource in this game is a physical object somebody carried up a hill, and there
+is no such thing as 0.35 of a tool. `Inventory` enforces it: both `add` and
+`remove` floor to whole units, so nothing anywhere can put a fraction into a yard.
+
+Three things wear out at less than one a day, which is what made this a problem
+worth fixing:
+
+| Wears at                   | Rate | A village of ten owes |
+| -------------------------- | ---- | --------------------- |
+| Tools, per worker per day  | 0.05 | half a tool a day     |
+| Coats, per villager, cold  | 0.05 | half a coat a night   |
+| Herbs, per patient per day | 0.5  | half a bundle a day   |
+
+Those fractions used to come straight out of the yard, so a settlement held 99.5
+tools, then 99, then 98.5 — and a player reported seeing decimals in their stores.
+
+**The fix is a running tab, not a rounding.** Each day's fraction is added to what
+the settlement owes and whole units are taken when the tab reaches one:
+
+```text
+day 1   owes 0.5   takes 0   stock 100
+day 2   owes 1.0   takes 1   stock  99
+day 3   owes 0.5   takes 0   stock  99
+```
+
+The long-run rate is therefore exactly the rate the data states. Rounding each day
+to the nearest unit would have made a village of ten spend either nothing or twenty
+times too much, depending which way it fell. What the settlement cannot pay it goes
+on owing, and pays the moment it forges some — the work happened and the tools took
+the punishment. The tab is saved, because dropping it on load is free tools.
+
+**Coverage is read off the shelf, not off the withdrawal**, and that is not a
+detail. Tool coverage drives the work bonus; based on what was taken it would read
+"unequipped" on every other day and the bonus would flicker between nothing and
+double. What the number means is "is this settlement equipped today", and the
+honest answer is whether the yard could cover the day's wear.
+
+`tests/wear.test.ts`, including a fortnight of a real settlement with tools, coats
+and herbs on the shelf, asserting every stored total is a whole number on every
+tick.

@@ -240,9 +240,13 @@ describe("a healer's house", () => {
 
     runDays(simulation, 1);
 
-    // A day of care removes more than a day of illness.
+    // A day of care removes more than a day of illness. **Care is what is tested
+    // here, not the herbs**: one patient owes half a bundle a day, the shelf
+    // holds whole bundles, so nothing comes off it until the second day — see
+    // `resources/wear.ts`. The treatment still happens on the first, because
+    // what the healer can supply is read off the shelf rather than off the
+    // withdrawal.
     expect(patient.illDaysRemaining).toBeLessThan(ILLNESS_DAYS - 1);
-    expect(simulation.snapshot().illness.herbsUsed).toBeGreaterThan(0);
   });
 
   it('spends its herbs on the people it is treating', () => {
@@ -251,10 +255,17 @@ describe("a healer's house", () => {
       return;
     }
     simulation.storages.all[0]?.inventory.add('herbs', 500);
-    simulation.villagers.all[0]!.illDaysRemaining = ILLNESS_DAYS;
     const before = simulation.storages.totalOf('herbs');
 
-    runDays(simulation, 1);
+    // Kept unwell for a fortnight, because half a bundle a day is paid in whole
+    // bundles every second day. Over that span the shelf must fall, and must
+    // never hold part of a bundle.
+    const patient = simulation.villagers.all[0]!;
+    for (let day = 0; day < 14; day += 1) {
+      patient.illDaysRemaining = ILLNESS_DAYS;
+      runDays(simulation, 1);
+      expect(Number.isInteger(simulation.storages.totalOf('herbs'))).toBe(true);
+    }
 
     expect(simulation.storages.totalOf('herbs')).toBeLessThan(before);
   });

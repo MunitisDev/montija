@@ -106,6 +106,7 @@ export function serialise(simulation: Simulation, savedAt: string): SaveGame {
     // makes this a copy rather than a conversion.
     jobs: simulation.jobs.all.map((job) => ({ ...job })),
     deaths: simulation.snapshot().deaths,
+    wear: simulation.wearDebt.map(([resource, owed]) => [resource, owed] as const),
     chronicle: { ...simulation.snapshot().chronicle },
     random: {
       villagers: simulation.villagers.randomState,
@@ -247,6 +248,9 @@ export function restore(simulation: Simulation, save: SaveGame): void {
   // Older saves have no chronicle and restore at zero: a settlement whose
   // history was never written down, honestly reported as such.
   simulation.restoreChronicle(save.chronicle ?? newChronicle());
+  simulation.restoreWearDebt(
+    (save.wear ?? []).map(([resource, owed]) => [resource as ResourceId, owed] as const),
+  );
   simulation.restoreClock(save.simulationTime, save.deaths);
 }
 
