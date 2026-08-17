@@ -123,6 +123,16 @@ const EMPLOYMENT_INTERVAL_TICKS = 25;
 const SALVAGE_SHARE = 0.5;
 
 /**
+ * How far the founding yard reaches from the cell it is recorded at.
+ *
+ * The wreck's cargo is a single point in the simulation and three cells across
+ * on screen, and that discrepancy has to be agreed on by everything that cares:
+ * the ground it clears, the taps it answers to, and the sprite drawn for it.
+ * One radius here rather than three copies that can drift apart.
+ */
+export const FOUNDING_YARD_RADIUS = 1;
+
+/**
  * What the settlement most needs to hear about, or `null` when all is well.
  *
  * The simulation reports the condition; whether and how to show it is the UI's
@@ -1658,7 +1668,25 @@ export class Simulation {
    * middle of the map, and the sea is in shot from the first frame.
    */
   private foundStorageYard(): void {
-    const yard = this.storages.add({ cell: this.world.landfallCell, capacity: 2000 });
+    const cell = this.world.landfallCell;
+
+    // **The camp stands on cleared ground, like everything else does.**
+    //
+    // Nothing in this game may be built on standing forest, and the founding
+    // yard was the one thing exempt from that — because it is not placed, it is
+    // simply declared at the landfall. So a camp that came ashore in a wood sat
+    // with trees growing through it: drawn over them, and with the cells still
+    // counting as slow woodland underfoot.
+    //
+    // The yard is recorded as one cell and stands three across, so all nine are
+    // cleared. Nothing is salvaged from it — see `World.clearGround`.
+    for (let dy = -FOUNDING_YARD_RADIUS; dy <= FOUNDING_YARD_RADIUS; dy += 1) {
+      for (let dx = -FOUNDING_YARD_RADIUS; dx <= FOUNDING_YARD_RADIUS; dx += 1) {
+        this.world.clearGround({ gx: cell.gx + dx, gy: cell.gy + dy });
+      }
+    }
+
+    const yard = this.storages.add({ cell, capacity: 2000 });
 
     // Everything they could carry up the beach. Timber, no stone, and iron
     // they cannot use yet — see STARTING_RESOURCES for why each of those.

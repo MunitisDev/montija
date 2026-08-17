@@ -22,7 +22,7 @@ import {
   ZOOM_LIMITS,
 } from '@/app/config';
 import { CameraController } from '@/renderer/camera/CameraController';
-import { Simulation, type SimulationSnapshot } from '@/simulation/Simulation';
+import { FOUNDING_YARD_RADIUS, Simulation, type SimulationSnapshot } from '@/simulation/Simulation';
 import { SimulationClock, type SimulationSpeed } from '@/simulation/SimulationClock';
 import type { InputIntentSink } from '@/input/types';
 import { gridToScene, isInsideGrid, sceneToGrid } from '@/shared/math/isometric';
@@ -108,6 +108,16 @@ export interface Selection {
 export interface BuildingSelection {
   readonly id: number;
   readonly buildingId: BuildingId;
+  /**
+   * The whole patch of ground this building stands on.
+   *
+   * Carried on the selection so the marker can outline the building rather than
+   * the one cell that happened to be tapped. A player who taps the corner of a
+   * three-by-three quarry has selected the quarry, and the game should look like
+   * it agrees.
+   */
+  readonly origin: GridPoint;
+  readonly footprint: { readonly width: number; readonly height: number };
   readonly complete: boolean;
   /** Construction progress in `0..1`; `1` once finished. */
   readonly progress: number;
@@ -674,6 +684,8 @@ export class Game implements GameContext, InputIntentSink {
     return {
       id: building.id,
       buildingId: definition.id,
+      origin: building.origin,
+      footprint: definition.footprint,
       complete: building.isComplete,
       progress,
       missingMaterials,
@@ -708,9 +720,14 @@ export class Game implements GameContext, InputIntentSink {
       return null;
     }
 
+    const span = FOUNDING_YARD_RADIUS * 2 + 1;
     return {
       id: yard.id,
       buildingId: 'storage-yard',
+      // Recorded as a point and standing three across, so the outline is built
+      // back out from its centre rather than read off a footprint it has not got.
+      origin: { gx: yard.cell.gx - FOUNDING_YARD_RADIUS, gy: yard.cell.gy - FOUNDING_YARD_RADIUS },
+      footprint: { width: span, height: span },
       complete: true,
       progress: 1,
       missingMaterials: [],
@@ -914,14 +931,6 @@ const TRADEABLE: Readonly<Record<'sell' | 'buy', readonly ResourceId[]>> = {
   sell: RESOURCE_IDS.filter((resource) => resource !== 'food' && resource !== 'firewood'),
   buy: RESOURCE_IDS,
 };
-
-/**
- * How far from its centre the founding yard answers to a tap.
- *
- * It is drawn three cells across but recorded as a single point, so matching
- * only the exact centre would leave most of what the player can see inert.
- */
-const FOUNDING_YARD_RADIUS = 1;
 
 /** An inventory as a plain list, so the UI never touches simulation objects. */
 function inventoryAmounts(inventory: Inventory): readonly ResourceAmount[] {

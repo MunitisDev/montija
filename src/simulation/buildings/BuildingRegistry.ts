@@ -139,6 +139,20 @@ export class BuildingRegistry {
     const building = new Building(this.nextId, buildingId, origin);
     this.nextId += 1;
     this.byId.set(building.id, building);
+
+    // **The ground is cleared for the foundations.** A road under a building is
+    // a road nobody can walk on, and leaving it there left a beaten track drawn
+    // underneath a wall — visible at the footprint's edges and, worse, still
+    // counted by the navigation grid as a road the hauliers could use.
+    //
+    // Lifted at placement rather than at completion, because that is when the
+    // player watches it happen: they put a warehouse across their own path and
+    // the path goes, rather than staying for the four days it takes to build and
+    // then vanishing for no visible reason.
+    for (const cell of building.cells()) {
+      world.liftRoad(cell);
+    }
+
     building.accessCell = findAccessCell(world, building);
     this.changeVersion += 1;
     return building;
@@ -179,7 +193,11 @@ export class BuildingRegistry {
    * is easy to forget: a demolished building whose cells stay blocked leaves a
    * hole in the map that nothing can walk through and nothing can explain.
    * Rebuilt from the terrain rather than simply cleared, so a cell that was
-   * *also* forest or road goes back to being forest or road.
+   * *also* forest goes back to being forest.
+   *
+   * A road that was under it does **not** come back: {@link place} takes it up
+   * for the foundations, and pulling a building down does not re-beat a track
+   * somebody has to walk before it exists again.
    */
   public demolish(world: World, buildingId: number): Building | null {
     const building = this.byId.get(buildingId);

@@ -14,11 +14,13 @@ import type { ResourceId } from '@/data/resources';
 import { RenderLayer, depthFor, depthForFootprint } from '@/renderer/phaser/sorting';
 import { TextureKeys, buildingGroundLine } from '@/renderer/phaser/terrain/tileTextures';
 import { gridToScene } from '@/shared/math/isometric';
+import { FOUNDING_YARD_RADIUS } from '@/simulation/Simulation';
 import type { StorageRegistry } from '@/simulation/logistics/Storage';
 import type { ResourcePileRegistry } from '@/simulation/resources/ResourcePile';
 
 /** Storage yards occupy a 3x3 footprint, per the art bible. */
-const STORAGE_FOOTPRINT = 3;
+/** Derived, so the sprite is exactly as wide as the ground the yard clears. */
+const STORAGE_FOOTPRINT = FOUNDING_YARD_RADIUS * 2 + 1;
 
 export class ResourceRenderer {
   private readonly scene: Phaser.Scene;

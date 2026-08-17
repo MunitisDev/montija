@@ -222,6 +222,40 @@ export class World {
   }
 
   /**
+   * Clears a cell of anything standing on it, leaving open ground.
+   *
+   * The difference from {@link fellTree} is that nothing is salvaged: the tree
+   * is gone and there are no logs where it stood. That is the honest reading of
+   * ground being cleared *for* something rather than harvested — the settlers
+   * dragging their cargo up the beach pushed the scrub aside, they did not
+   * spend their first hour stacking timber.
+   *
+   * Roads go too, for the same reason a building takes up the road beneath it.
+   *
+   * @returns `true` when anything was actually removed
+   */
+  public clearGround(cell: GridPoint): boolean {
+    let cleared = false;
+
+    const tree = this.trees.getAt(cell);
+    if (tree && this.trees.remove(tree.id)) {
+      cleared = true;
+    }
+    if (this.terrain.contains(cell.gx, cell.gy) && this.terrain.getAt(cell) === 'forest') {
+      this.terrain.set(cell.gx, cell.gy, 'grass');
+      cleared = true;
+    }
+    if (this.roads.lift(cell.gx, cell.gy)) {
+      cleared = true;
+    }
+
+    if (cleared) {
+      this.navigation.refreshCell(this.terrain, cell.gx, cell.gy);
+    }
+    return cleared;
+  }
+
+  /**
    * Mines a surface stone deposit, dropping stone and opening the tile.
    *
    * Stone is impassable, so the deposit becomes walkable grass once worked out

@@ -28,6 +28,7 @@ import type { ResourceId } from '@/data/resources';
  */
 const STRIP_RESOURCES: readonly ResourceId[] = ['food', 'logs', 'firewood', 'stone'];
 import type { GameContext } from '@/game/Game';
+import { hidesGroundPanel } from '@/game/selection';
 import type { SimulationSnapshot } from '@/simulation/Simulation';
 import { SIMULATION_SPEEDS, type SimulationSpeed } from '@/simulation/SimulationClock';
 import { TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
@@ -471,6 +472,15 @@ export class Hud {
     this.renderBuildingPanel();
     const selection = this.context.selection;
     if (!selection) {
+      this.elements.selection.hidden = true;
+      return;
+    }
+
+    // A building speaks for itself through its own panel. This one used to sit
+    // underneath it still describing the ground beneath the floorboards —
+    // "grass", a cell reference, and a *Lay road* button for a cell with a
+    // workshop standing on it. All of it unanswerable, so none of it is shown.
+    if (hidesGroundPanel(selection)) {
       this.elements.selection.hidden = true;
       return;
     }

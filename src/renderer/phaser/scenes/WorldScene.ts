@@ -9,6 +9,7 @@
 
 import Phaser from 'phaser';
 import type { GameContext } from '@/game/Game';
+import { selectedCells } from '@/game/selection';
 import { PhaserCameraBinding } from '@/renderer/phaser/camera/PhaserCameraBinding';
 import { TerrainRenderer } from '@/renderer/phaser/terrain/TerrainRenderer';
 import { VillagerRenderer } from '@/renderer/phaser/entities/VillagerRenderer';
@@ -40,7 +41,15 @@ export class WorldScene extends Phaser.Scene {
   private buildingRenderer!: BuildingRenderer;
   private weatherRenderer!: WeatherRenderer;
   private hearthRenderer!: HearthRenderer;
-  private selectionMarker!: Phaser.GameObjects.Image;
+  /**
+   * One marker per selected cell, grown on demand and never shrunk.
+   *
+   * A single tile diamond could not outline a building: scaling one up only
+   * works for a square footprint, and the game has buildings that are not
+   * square. A handful of tile markers is exact for any shape, and the pool caps
+   * itself at the largest footprint anybody ever selects — nine cells today.
+   */
+  private selectionMarkers: Phaser.GameObjects.Image[] = [];
   /** Season the world is currently painted and tinted for. */
   private renderedSeason = '';
   /** The world generation currently drawn, so a new settlement rebuilds. */
@@ -78,10 +87,7 @@ export class WorldScene extends Phaser.Scene {
     this.weatherRenderer = new WeatherRenderer(this);
     this.hearthRenderer = new HearthRenderer(this);
 
-    this.selectionMarker = this.add
-      .image(0, 0, TextureKeys.selection)
-      .setOrigin(0.5, 0.5)
-      .setVisible(false);
+    this.selectionMarkers = [];
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -199,15 +205,31 @@ export class WorldScene extends Phaser.Scene {
     this.renderedSelectionVersion = this.context.selectionVersion;
 
     const selection = this.context.selection;
-    if (!selection) {
-      this.selectionMarker.setVisible(false);
-      return;
-    }
+    // A building answers for every cell it stands on, so selecting one outlines
+    // the whole building. Anything else is a single tile.
+    const cells = selection ? selectedCells(selection) : [];
 
-    const position = gridToScene(selection.cell);
-    this.selectionMarker
-      .setPosition(position.px, position.py)
-      .setDepth(depthFor(selection.cell.gx, selection.cell.gy, RenderLayer.Overlay))
-      .setVisible(true);
+    for (let index = 0; index < cells.length; index += 1) {
+      const cell = cells[index]!;
+      const position = gridToScene(cell);
+      this.markerAt(index)
+        .setPosition(position.px, position.py)
+        .setDepth(depthFor(cell.gx, cell.gy, RenderLayer.Overlay))
+        .setVisible(true);
+    }
+    for (let index = cells.length; index < this.selectionMarkers.length; index += 1) {
+      this.selectionMarkers[index]!.setVisible(false);
+    }
+  }
+
+  /** The pooled marker for a slot, created the first time that slot is needed. */
+  private markerAt(index: number): Phaser.GameObjects.Image {
+    const existing = this.selectionMarkers[index];
+    if (existing) {
+      return existing;
+    }
+    const marker = this.add.image(0, 0, TextureKeys.selection).setOrigin(0.5, 0.5);
+    this.selectionMarkers[index] = marker;
+    return marker;
   }
 }
