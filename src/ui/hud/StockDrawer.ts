@@ -12,13 +12,15 @@
  * between this and the ledger, which is where the same numbers go when the
  * player actually wants to sit and think about them.
  *
- * Each row carries what is stored, what is still lying in the field, and the
- * net per day at the current staffing — which is the answer to "have we got
- * enough coats", the question the raw total cannot answer on its own.
+ * Each row carries what is stored, what is still lying in the field, and the net
+ * over a season at the current staffing — which is the answer to "have we got
+ * enough coats", the question the raw total cannot answer on its own. A season
+ * rather than a day because a day's net is a fraction; see `@/ui/format/rates`.
  */
 
 import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
 import type { GameContext } from '@/game/Game';
+import { signedSeason } from '@/ui/format/rates';
 import type { I18n } from '@/ui/i18n/I18n';
 import { estimateFlows, totalDemand } from '@/ui/ledger/ledgerModel';
 
@@ -137,17 +139,12 @@ export class StockDrawer {
         parts.push(`+${loose} ${this.i18n.t('stock.loose')}`);
       }
       if (made > 0 || spent > 0) {
-        parts.push(`${signed(made - spent)}${this.i18n.t('stock.perDay')}`);
+        parts.push(`${signedSeason(made - spent)}${this.i18n.t('stock.perSeason')}`);
       }
       elements.note.textContent = parts.join(' · ');
       elements.note.classList.toggle('is-bad', spent > made);
     }
   }
-}
-
-function signed(value: number): string {
-  const rounded = Math.round(value * 10) / 10;
-  return rounded > 0 ? `+${rounded}` : String(rounded);
 }
 
 function requireElement(root: HTMLElement, selector: string): HTMLElement {

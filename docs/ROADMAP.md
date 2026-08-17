@@ -759,7 +759,7 @@ settlement's numbers live as the game learns to make more things.
 
 - **The resource strip is a button.** It carries the four a settlement lives or
   dies by; a tap opens a drawer with every good it has met, each with what is
-  stored, what is lying in the field, and the net per day. The drawer does not
+  stored, what is lying in the field, and the net over a season. The drawer does not
   pause and does not take the screen — a glance at the stores is not stopping to
   read.
 - **One button for the clock**, cycling pause, 1x, 2x, 4x. The four speed

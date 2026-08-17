@@ -1161,3 +1161,38 @@ honest answer is whether the yard could cover the day's wear.
 `tests/wear.test.ts`, including a fortnight of a real settlement with tools, coats
 and herbs on the shelf, asserting every stored total is a whole number on every
 tick.
+
+---
+
+## Rates are quoted by the season - Implemented
+
+Whole stores were the smaller half of that problem. Every _rate_ the interface
+quoted was still a fraction, because a day is too short a window for these numbers
+to come out whole:
+
+| The panel used to say  | It now says          |
+| ---------------------- | -------------------- |
+| At best 10.3 stone/day | At best 123 a season |
+| Tools -0.5/day         | Tools -6 a season    |
+| net +0.4/day           | net +5 a season      |
+
+A season is twelve days, it is the unit the calendar and the whole survival loop
+already run on, and it is long enough that the same rates land on whole numbers a
+player can compare against what is on the shelf. "Is 10.3 enough?" is arithmetic
+the game already knows how to do.
+
+**The conversion is a display one and lives in exactly one place**,
+`src/ui/format/rates.ts`. Everything behind it stays per-day: the simulation spends
+by the day, `estimateFlows` estimates by the day, and `productionSummary` now
+returns the _unrounded_ per-day rate so the seasonal figure rounds once rather than
+twice. A rate that is real but smaller than a season keeps its sign instead of
+rounding to nothing — `0` beside a red row would be the sheet contradicting itself.
+
+**One figure stays in days on purpose.** "Stores last about 4 days" is the one
+number a player has to act on tonight, and "about 0 seasons" would bury it. So does
+the ledger's "Yesterday, actually" section, which is a measured fact rather than a
+projection and is worth reading precisely because it sits next to a seasonal
+estimate.
+
+`tests/rates.test.ts` pins the conversion, that the model keeps its rate exact, and
+that no figure the ledger prints contains a decimal point.

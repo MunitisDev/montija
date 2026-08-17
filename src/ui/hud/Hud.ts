@@ -30,7 +30,8 @@ import type { ResourceId } from '@/data/resources';
 const STRIP_RESOURCES: readonly ResourceId[] = ['food', 'logs', 'firewood', 'stone'];
 import type { GameContext } from '@/game/Game';
 import { hidesGroundPanel } from '@/game/selection';
-import { productionSummary } from './productionModel';
+import { perSeason } from '@/ui/format/rates';
+import { productionSummary, type ProductionRate } from './productionModel';
 import type { SimulationSnapshot } from '@/simulation/Simulation';
 import { SIMULATION_SPEEDS, type SimulationSpeed } from '@/simulation/SimulationClock';
 import { TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
@@ -443,10 +444,13 @@ export class Hud {
   /**
    * A building's ceiling, as one line, or `''` when it makes nothing.
    *
-   * "At best 10.3 stone a day", and for anything that comes out of the ground
+   * "At best 123 stone a season", and for anything that comes out of the ground
    * the season that figure belongs to — a Gatherer Hut's summer is forty per
    * cent better than its autumn and its winter is nothing at all, so quoting the
    * peak silently would be the panel overpromising.
+   *
+   * A season rather than a day because a day's worth of most of these is a
+   * fraction, and "10.3 stone" is a number nobody can plan a winter with.
    */
   private describeProduction(buildingId: BuildingId): string {
     const summary = productionSummary(buildingId);
@@ -454,23 +458,27 @@ export class Hud {
       return '';
     }
 
-    const outputs = summary.outputs
-      .map((rate) => `${rate.perDay} ${this.i18n.t(`hud.${rate.resource}` as MessageKey)}`)
-      .join(' + ');
+    const outputs = this.describeRates(summary.outputs);
     const season = summary.peakSeason
       ? ` (${this.i18n.t(`season.${summary.peakSeason}` as MessageKey)})`
       : '';
-    const line = `${this.i18n.t('building.atBest')} ${outputs} ${this.i18n.t('building.perDay')}${season}`;
+    const line = `${this.i18n.t('building.atBest')} ${outputs} ${this.i18n.t('building.perSeason')}${season}`;
 
     if (summary.inputs.length === 0) {
       return line;
     }
     // A workshop that eats a resource is a decision about that resource too: a
-    // Woodcutter at full tilt is four logs a day nobody else is building with.
-    const inputs = summary.inputs
-      .map((rate) => `${rate.perDay} ${this.i18n.t(`hud.${rate.resource}` as MessageKey)}`)
+    // Woodcutter at full tilt is forty-eight logs a season nobody else is
+    // building with.
+    return `${line}, ${this.i18n.t('building.consuming')} ${this.describeRates(summary.inputs)}`;
+  }
+
+  private describeRates(rates: readonly ProductionRate[]): string {
+    return rates
+      .map(
+        (rate) => `${perSeason(rate.perDay)} ${this.i18n.t(`hud.${rate.resource}` as MessageKey)}`,
+      )
       .join(' + ');
-    return `${line}, ${this.i18n.t('building.consuming')} ${inputs}`;
   }
 
   /** A side of the trade, or the word for letting the post decide. */

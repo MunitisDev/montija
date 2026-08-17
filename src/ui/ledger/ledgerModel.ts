@@ -13,12 +13,19 @@
  * what. "Will we get through winter" is a question for this sheet.
  *
  * **Production and consumption are estimates, and are labelled as such.** The
- * production figure is what the staffed workshops would make in a day if
- * nobody ever walked anywhere, waited for an input to arrive or stopped for the
- * night. Real output is lower — usually well under it, because travel is most
- * of a villager's day. It is still worth showing: the *ordering* is honest
- * (which workshop feeds the settlement, which barely registers) and so is the
+ * production figure is what the staffed workshops would make if nobody ever
+ * walked anywhere, waited for an input to arrive or stopped for the night. Real
+ * output is lower — usually well under it, because travel is most of a
+ * villager's day. It is still worth showing: the *ordering* is honest (which
+ * workshop feeds the settlement, which barely registers) and so is the
  * comparison against demand, which is exact.
+ *
+ * **Every rate on the sheet is shown by the season, not by the day.** The
+ * arithmetic below is per-day throughout — the simulation spends by the day and
+ * the "stores last about N days" runway needs a daily figure to divide by — and
+ * the conversion happens once, at the point of printing, through
+ * `@/ui/format/rates`. A day is too short a window for these numbers to come out
+ * whole; see that module for why twelve days is the right one.
  *
  * **Demand is exact where the simulation is exact.** Food, firewood, tools and
  * coats all come out of `SurvivalSystem`'s own constants rather than a second
@@ -39,6 +46,7 @@ import {
   TOOLS_PER_WORKER_PER_DAY,
   TOOL_WORK_BONUS,
 } from '@/simulation/seasons/SurvivalSystem';
+import { seasonFigure, signedSeason } from '@/ui/format/rates';
 import type { MessageKey } from '@/ui/i18n/messages';
 
 export type Translate = (key: MessageKey) => string;
@@ -423,10 +431,10 @@ function productionTab(flows: Flows, t: Translate): LedgerTab {
     const net = made - demand;
     rows.push({
       label: t(`hud.${resource}` as MessageKey),
-      value: `+${round1(made)}`,
+      value: `+${seasonFigure(made)}`,
       detail:
         demand > 0
-          ? `${t('ledger.flow.net')} ${signed(net)} ${t('ledger.flow.perDay')}`
+          ? `${t('ledger.flow.net')} ${signedSeason(net)} ${t('ledger.flow.perSeason')}`
           : t('ledger.flow.noDemand'),
       ...(demand > 0 ? { tone: net >= 0 ? ('good' as const) : ('bad' as const) } : {}),
     });
@@ -463,6 +471,10 @@ function consumptionTab(simulation: Simulation, flows: Flows, t: Translate): Led
     // "Forever" is the honest answer above the line, and "none" is the honest
     // answer at zero — "lasts about 0 days" is a countdown dressed over an
     // empty shelf, and reads as an emergency even where there is none.
+    //
+    // **The runway stays in days on purpose**, where the figure beside it is a
+    // season. A larder with four days left is the one moment the player needs a
+    // number they can act on tonight, and "lasts about 0 seasons" would bury it.
     const detail =
       net >= 0
         ? t('ledger.flow.sustained')
@@ -471,17 +483,21 @@ function consumptionTab(simulation: Simulation, flows: Flows, t: Translate): Led
           : `${t('ledger.flow.lasts')} ${Math.floor(stored / -net)} ${t('ledger.flow.days')}`;
     rows.push({
       label: t(`hud.${resource}` as MessageKey),
-      value: `-${round1(demand)}`,
+      value: `-${seasonFigure(demand)}`,
       detail,
       ...(net >= 0 ? { tone: 'good' as const } : { tone: 'bad' as const }),
     });
   }
 
+  // The one section on the sheet that is a fact rather than a projection, and it
+  // stays a single day — that is what makes it worth reading next to a seasonal
+  // estimate. Stores hold whole things, so all four of these are already whole;
+  // rounding is belt and braces.
   const yesterday: LedgerRow[] = [
-    { label: t('ledger.spent.food'), value: round1(snapshot.lastDay.foodEaten) },
-    { label: t('ledger.spent.firewood'), value: round1(snapshot.lastDay.firewoodBurned) },
-    { label: t('ledger.spent.tools'), value: round1(snapshot.lastDay.toolsWorn) },
-    { label: t('ledger.spent.clothing'), value: round1(snapshot.lastDay.clothingWorn) },
+    { label: t('ledger.spent.food'), value: whole(snapshot.lastDay.foodEaten) },
+    { label: t('ledger.spent.firewood'), value: whole(snapshot.lastDay.firewoodBurned) },
+    { label: t('ledger.spent.tools'), value: whole(snapshot.lastDay.toolsWorn) },
+    { label: t('ledger.spent.clothing'), value: whole(snapshot.lastDay.clothingWorn) },
   ];
 
   return {
@@ -522,12 +538,6 @@ function percent(fraction: number): string {
   return `${Math.round(fraction * 100)}%`;
 }
 
-/** One decimal, and no trailing `.0` — `4` reads better than `4.0`. */
-function round1(value: number): string {
-  return String(Math.round(value * 10) / 10);
-}
-
-function signed(value: number): string {
-  const rounded = Math.round(value * 10) / 10;
-  return rounded > 0 ? `+${rounded}` : String(rounded);
+function whole(value: number): string {
+  return String(Math.round(value));
 }

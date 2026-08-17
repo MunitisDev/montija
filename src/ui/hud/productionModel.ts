@@ -1,5 +1,5 @@
 /**
- * What a building can make in a day, at full staff.
+ * What a building can make, at full staff.
  *
  * **The numbers existed and were unknowable.** A Quarry cuts four stone every
  * seventy ticks in three posts; a Woodcutter turns one log into four firewood
@@ -26,7 +26,13 @@ import { SEASONAL_YIELD, TICKS_PER_DAY, type Season } from '@/simulation/seasons
 
 export interface ProductionRate {
   readonly resource: ResourceId;
-  /** Units a day with every post filled, in this building's best season. */
+  /**
+   * Units a day with every post filled, in this building's best season.
+   *
+   * Unrounded, and usually not a whole number — a Quarry's three cutters make
+   * 10.285… stone a day. Rounding belongs to whoever prints it, and the panel
+   * prints a season's worth; see `@/ui/format/rates`.
+   */
   readonly perDay: number;
 }
 
@@ -70,16 +76,18 @@ export function productionSummary(buildingId: BuildingId): ProductionSummary {
 
   return {
     // Rounded per run, exactly as the simulation rounds it, so the panel cannot
-    // promise a fraction of a log that never appears.
+    // promise a fraction of a log that never appears. The runs themselves are
+    // left fractional: a workshop mid-run at nightfall finishes it the next
+    // morning, so over a season the fraction is real output.
     outputs: recipe.outputs.map((output) => ({
       resource: output.resource,
-      perDay: round(Math.round(output.amount * scale) * runsPerDay),
+      perDay: Math.round(output.amount * scale) * runsPerDay,
     })),
     // Inputs are not scaled by the season: a woodcutter splits the same log in
     // January. Only what comes *out* of the ground rides the year.
     inputs: recipe.inputs.map((input) => ({
       resource: input.resource,
-      perDay: round(input.amount * runsPerDay),
+      perDay: input.amount * runsPerDay,
     })),
     peakSeason,
   };
@@ -95,9 +103,4 @@ function bestSeason(curve: Readonly<Record<Season, number>>): Season {
     }
   }
   return best;
-}
-
-/** One decimal place, and no trailing `.0` — "8" reads better than "8.0". */
-function round(value: number): number {
-  return Math.round(value * 10) / 10;
 }
