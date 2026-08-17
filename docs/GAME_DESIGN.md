@@ -622,6 +622,33 @@ outbreak a curve to be studied rather than a problem to be answered, and the ans
 
 ---
 
+## Who sleeps where — Implemented
+
+A house holds four, and a couple takes one to themselves **on purpose**: the two spare beds are
+their children's. A household split across two roofs is the thing `settleCouples` exists to prevent,
+and it is why a settlement of five couples eventually wants five houses rather than three.
+
+Unpaired adults have no such claim, and until recently they kept whichever house they were assigned
+on the day it went up. A settlement of ten could end up spread across five four-bed cottages at half
+occupancy — having paid for two houses it did not need, and leaving nothing free for the next couple
+to move into. `gatherSingles` now pulls them together after the couples have settled: filled houses
+first, never onto a family, and never a lodger left on a couple whose next child would then have
+nowhere to sleep. A grown child still living with their parents is not a lodger and is left alone.
+
+### The founding party — measured, not changed
+
+Founders' sexes are an even coin each, so a party can come out seven to three and make three couples
+where another makes five. Dealing a balanced five-and-five was built and measured: it is a real
+improvement for the lopsided seeds and it costs nothing in difficulty — **1 of 8 seeds survive
+either way** — but it moves _which_ seed survives, and the balance suite is pinned to one. It also
+needs `FOUNDER_AGE_MAX` capped at the childbearing age, since a founder rolled at 43 can never pair
+with anybody and is a settler born too old to help found anything.
+
+The age cap shipped; the balanced deal did not. It belongs with the difficulty pass rather than
+ahead of it.
+
+---
+
 ## Difficulty
 
 Measured by `tests/balance.test.ts`, which plays a full year headlessly at four levels of attention.
@@ -643,6 +670,17 @@ an invisible rule.
 The intended shape is that a prepared settlement survives its first winter _narrowly_: in the
 measured run above, the well-played settlement ends winter with six food in store and its firewood
 already gone.
+
+**That table is one seed.** Running the same well-played script across eight seeds, the settlement
+survives its first year on **one of them**. The table above is not wrong — it is what that seed does
+— but it describes a scenario on a knife edge, and the balance suite being pinned to a single seed
+makes it fragile in both directions: a change that alters the founding party at all can flip which
+seed lives without changing the difficulty at all. Measured, before and after such a change: **1 of
+8 either way.**
+
+The honest summary is that the opening is considerably harder than the table implies, which matches
+what playing it feels like. Fixing that is a difficulty pass, not a bug fix, and it has not been
+done.
 
 ---
 

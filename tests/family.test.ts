@@ -23,6 +23,7 @@ import { CHILDBEARING_AGE_MAX, CHILDBEARING_AGE_MIN } from '@/data/population';
 import { FEMININE_NAMES, MASCULINE_NAMES } from '@/data/villagers';
 import { restore, serialise } from '@/simulation/save/serialise';
 import { TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
+import type { Building } from '@/simulation/buildings/Building';
 import type { Villager } from '@/simulation/villagers/Villager';
 
 const TICK = 0.1;
@@ -61,6 +62,34 @@ function raiseAFamily(days: number, seed = OPTIONS.seed): Simulation {
   }
 
   return simulation;
+}
+
+/** Raises one house wherever the map will take it, and finishes it. */
+function raise(simulation: Simulation, id: 'house'): Building | null {
+  for (let gy = 0; gy < simulation.world.height; gy += 1) {
+    for (let gx = 0; gx < simulation.world.width; gx += 1) {
+      if (simulation.canPlaceBuilding(id, { gx, gy }).ok) {
+        const building = simulation.placeBuilding(id, { gx, gy });
+        if (building) {
+          simulation.world.buildings.complete(simulation.world, building);
+        }
+        return building;
+      }
+    }
+  }
+  return null;
+}
+
+/** Runs the clock, keeping the settlement fed so nothing starves mid-test. */
+function step(simulation: Simulation, ticks: number): void {
+  for (let tick = 0; tick < ticks; tick += 1) {
+    if (simulation.tick % TICKS_PER_DAY === 0) {
+      for (const yard of simulation.storages.all) {
+        yard.inventory.add('food', Math.max(0, 200 - yard.inventory.count('food')));
+      }
+    }
+    simulation.update(simulation.tick + 1, TICK);
+  }
 }
 
 function partners(simulation: Simulation): Villager[] {
@@ -279,6 +308,90 @@ describe('households', () => {
     for (const [homeId, count] of occupancy) {
       const house = simulation.world.buildings.getById(homeId);
       expect(count, `house ${homeId}`).toBeLessThanOrEqual(house?.definition.housing ?? 0);
+    }
+  });
+
+  it('moves unpaired adults in together rather than one to a house', () => {
+    // A couple keeps a house to itself on purpose: the spare beds are for the
+    // children. Singles have no such claim, and left alone they each kept
+    // whichever house they were assigned on the day it went up — a settlement
+    // of ten spread over five four-bed cottages, having paid for houses it did
+    // not need and leaving nothing free for the next couple.
+    //
+    // The state is built rather than waited for: it needs unpaired adults, and
+    // a settlement left to itself pairs everyone off on its first day.
+    const simulation = new Simulation(OPTIONS);
+    const houses: Building[] = [];
+    for (let i = 0; i < 4; i += 1) {
+      const house = raise(simulation, 'house');
+      expect(house).not.toBeNull();
+      houses.push(house!);
+    }
+
+    // Past childbearing age, so nobody pairs and everybody stays a single.
+    for (const villager of simulation.villagers.all) {
+      villager.age = 50;
+      villager.partnerId = null;
+    }
+    // One to a house, which is the state being complained about.
+    simulation.villagers.all.forEach((villager, index) => {
+      villager.homeId = index < houses.length ? houses[index]!.id : null;
+    });
+
+    step(simulation, TICKS_PER_DAY + 1);
+
+    const occupancy = new Map<number, number>();
+    for (const villager of simulation.villagers.all) {
+      if (villager.homeId !== null) {
+        occupancy.set(villager.homeId, (occupancy.get(villager.homeId) ?? 0) + 1);
+      }
+    }
+
+    // Ten singles and sixteen beds should fill houses, not sprinkle across
+    // them: at most one house is left part-filled by the remainder.
+    const used = houses.filter((house) => (occupancy.get(house.id) ?? 0) > 0);
+    const partial = used.filter(
+      (house) => (occupancy.get(house.id) ?? 0) < (house.definition.housing ?? 0),
+    );
+    expect(used.length).toBeLessThanOrEqual(3);
+    expect(partial.length).toBeLessThanOrEqual(1);
+  });
+
+  it('never lodges a single on a couple, whose spare beds are their children’s', () => {
+    // The packing pass must not park a lodger on a family, or the next child
+    // born to them has nowhere to sleep and the household splits — which is
+    // the whole thing `settleCouples` exists to prevent.
+    const simulation = new Simulation(OPTIONS);
+    for (let i = 0; i < 4; i += 1) {
+      expect(raise(simulation, 'house')).not.toBeNull();
+    }
+    step(simulation, TICKS_PER_DAY * 2);
+
+    // One villager pushed past childbearing age, so the settlement has exactly
+    // one single among its couples and the pass has somewhere wrong to put it.
+    const odd = simulation.villagers.all[0]!;
+    const partner = simulation.villagers.all.find((v) => v.id === odd.partnerId);
+    odd.age = 50;
+    odd.partnerId = null;
+    if (partner) {
+      partner.partnerId = null;
+      partner.age = 50;
+    }
+    step(simulation, TICKS_PER_DAY + 1);
+
+    const byId = new Map(simulation.villagers.all.map((v) => [v.id, v]));
+    for (const villager of simulation.villagers.all) {
+      if (villager.homeId === null || villager.partnerId !== null || villager.parentIds !== null) {
+        continue;
+      }
+      const lodgingWithACouple = simulation.villagers.all.some(
+        (other) =>
+          other.homeId === villager.homeId &&
+          other.id !== villager.id &&
+          other.partnerId !== null &&
+          byId.get(other.partnerId)?.homeId === villager.homeId,
+      );
+      expect(lodgingWithACouple, `${villager.name} is lodging with a couple`).toBe(false);
     }
   });
 

@@ -109,6 +109,9 @@ export function runPopulationDay(options: {
   assignHomes(survivors, houses);
   const paired = formPairs(survivors);
   settleCouples(survivors, houses);
+  // Last, so it packs whatever the couples left behind rather than being
+  // undone by them a line later.
+  gatherSingles(survivors, houses);
 
   const born = considerBirths({ villagers: survivors, houses, random, foodDaysPerPerson });
   const arrivals = considerImmigration({ villagers: survivors, houses, random, foodDaysPerPerson });
@@ -368,6 +371,93 @@ function settleCouples(villagers: readonly Villager[], houses: readonly Building
       person.homeId = destination.id;
       occupancy.set(destination.id, (occupancy.get(destination.id) ?? 0) + 1);
     }
+  }
+}
+
+/**
+ * Moves unpaired adults in together.
+ *
+ * A couple takes a house to themselves on purpose — the two spare beds are for
+ * the children they are going to have, and a household split across two roofs
+ * is the thing `settleCouples` exists to prevent. Unpaired adults have no such
+ * claim. Left alone they each kept whichever house they were assigned on the
+ * day it was built, so a settlement of ten could end up spread across five
+ * four-bed cottages at half occupancy, having paid for two houses it did not
+ * need and leaving nothing free for the next couple.
+ *
+ * So singles are pulled together into as few houses as possible: filled houses
+ * first, and never into one a couple has to themselves. What that frees is a
+ * whole house, which is the point.
+ *
+ * Deliberately not applied to children, who live where their parents do.
+ */
+function gatherSingles(villagers: readonly Villager[], houses: readonly Building[]): void {
+  if (houses.length === 0) {
+    return;
+  }
+
+  const occupancy = new Map<number, number>();
+  const couplesIn = new Set<number>();
+  for (const villager of villagers) {
+    if (villager.homeId === null) {
+      continue;
+    }
+    occupancy.set(villager.homeId, (occupancy.get(villager.homeId) ?? 0) + 1);
+    if (villager.isAdult && villager.partnerId !== null) {
+      couplesIn.add(villager.homeId);
+    }
+  }
+
+  // A grown child still living with their parents is not a lodger — they were
+  // born there, and turning them out the day they came of age would be the
+  // opposite of the household this pass exists to protect.
+  const bornInto = (villager: Villager): boolean =>
+    villager.parentIds !== null &&
+    villagers.some(
+      (other) => villager.parentIds!.includes(other.id) && other.homeId === villager.homeId,
+    );
+
+  const singles = villagers.filter(
+    (villager) =>
+      villager.isAdult &&
+      villager.partnerId === null &&
+      villager.homeId !== null &&
+      !bornInto(villager),
+  );
+
+  for (const single of singles) {
+    // The fullest house that still has room and no household of its own. Ties
+    // break on the lower id so the pass is deterministic, which every part of
+    // this simulation has to be.
+    const destination = houses
+      .filter((house) => {
+        if (couplesIn.has(house.id) || house.id === single.homeId) {
+          return false;
+        }
+        return (occupancy.get(house.id) ?? 0) < (house.definition.housing ?? 0);
+      })
+      .sort((a, b) => {
+        const byRoom = (occupancy.get(b.id) ?? 0) - (occupancy.get(a.id) ?? 0);
+        return byRoom !== 0 ? byRoom : a.id - b.id;
+      })[0];
+
+    // Two reasons to move, and only two.
+    //
+    // **Lodging on a family.** A couple's spare beds are their children's, so a
+    // single who ended up under their roof leaves if there is anywhere else to
+    // go — otherwise the next child born there has nowhere to sleep.
+    //
+    // **Filling a house rather than half-filling two.** Otherwise this is
+    // shuffling people between beds for no reason.
+    const here = occupancy.get(single.homeId!) ?? 0;
+    const lodging = couplesIn.has(single.homeId!);
+    if (!destination || (!lodging && (occupancy.get(destination.id) ?? 0) < here)) {
+      continue;
+    }
+
+    occupancy.set(single.homeId!, here - 1);
+    single.homeId = destination.id;
+    occupancy.set(destination.id, (occupancy.get(destination.id) ?? 0) + 1);
   }
 }
 

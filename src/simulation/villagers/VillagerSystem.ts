@@ -145,7 +145,14 @@ export class VillagerSystem {
   }
 
   /**
-   * Places villagers on walkable ground around a point.
+   * Places the founding party on walkable ground around a point.
+   *
+   * Their sexes are still an even coin each, so a party can come out seven to
+   * three and make fewer couples than another. Dealing a balanced five-and-five
+   * was measured and is a real improvement for the lopsided seeds, but it moves
+   * which seed the balance suite's single pinned scenario survives on — see
+   * `docs/GAME_DESIGN.md` — so it is a decision to take with the difficulty
+   * pass rather than ahead of it.
    *
    * @returns how many were actually placed; fewer than requested if the area
    *   has no room, which the caller should notice rather than assume success.
@@ -159,7 +166,16 @@ export class VillagerSystem {
         break;
       }
 
-      const sex = this.rollSex();
+      // Alternating rather than rolled, so ten survivors are five and five.
+      //
+      // This used to be a coin per founder, on the reasoning that a party that
+      // came out seven to three was a real consequence of the seed. It is not a
+      // consequence a player can see, plan around or recover from: it silently
+      // halves the number of couples on day one and therefore the settlement's
+      // whole growth curve, for reasons the game never shows them. Founding
+      // composition is the one place variance buys nothing. Children and
+      // newcomers are still an even coin.
+      const sex: Sex = this.rollSex();
       this.villagers.push(
         new Villager({
           id: this.nextId,
@@ -1079,11 +1095,9 @@ export class VillagerSystem {
   /**
    * An even coin, from the seeded stream.
    *
-   * Even rather than weighted, and drawn per person rather than balanced across
-   * the settlement: a founding ten can come out seven to three, which is a
-   * settlement that will grow more slowly. That is a real outcome of the seed
-   * rather than a bug, and it was measured before shipping — see the note on
-   * `Sex` and `docs/GAME_DESIGN.md`.
+   * Used for children and for newcomers, where an unbalanced generation is a
+   * real outcome the settlement lives with. **Not** used for the founders —
+   * see {@link spawnNear} for why that party is dealt rather than rolled.
    */
   private rollSex(): Sex {
     return this.randomSource.next() < 0.5 ? 'f' : 'm';

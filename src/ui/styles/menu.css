@@ -211,7 +211,17 @@ body.is-menu-open #hud {
 .sheet__body {
   flex: 1 1 auto;
   min-height: 0;
-  padding: 14px 2px 4px;
+  /*
+   * Room on the right for the scrollbar, and for the numbers.
+   *
+   * With 2px of padding the figures in the ledger ran under the scrollbar and
+   * off the edge — "100" read as "10" on a phone, which on a page whose whole
+   * job is reporting figures is the worst thing it could do. `scrollbar-gutter`
+   * reserves the track whether or not it is showing, so the column does not
+   * shift as content grows past a screenful.
+   */
+  padding: 14px 12px 4px 2px;
+  scrollbar-gutter: stable;
   overflow-y: auto;
   touch-action: pan-y;
   overscroll-behavior: contain;

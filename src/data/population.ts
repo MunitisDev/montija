@@ -25,9 +25,17 @@ export const WORKING_AGE = 15;
 export const LIFESPAN_MIN = 55;
 export const LIFESPAN_MAX = 78;
 
-/** Age range of the founding settlers. Adults, with working years ahead. */
+/**
+ * Age range of the founding settlers.
+ *
+ * Capped at the childbearing age rather than above it. A founder rolled at 43
+ * could never pair with anybody and never have a child — they were a settler
+ * born too old to help found anything, which is not a decision the player made
+ * or could see. The survivors of a wreck are whoever was on the ship, and a
+ * ship's company is young.
+ */
 export const FOUNDER_AGE_MIN = 18;
-export const FOUNDER_AGE_MAX = 45;
+export const FOUNDER_AGE_MAX = 40;
 
 /** Years within which a villager may have a child. */
 export const CHILDBEARING_AGE_MIN = 18;
