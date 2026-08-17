@@ -29,6 +29,7 @@ import type { TerrainType } from '@/data/terrain';
 import { TILE_HEIGHT, TILE_WIDTH } from '@/shared/math/isometric';
 import type { Season } from '@/simulation/seasons/SeasonClock';
 import { groundDetail, hasSnow, terrainPalette } from './seasonalPalette';
+import { shade } from './shading';
 
 /** How many drawn variants each terrain type has. */
 export const TERRAIN_VARIANTS = 4;
@@ -419,12 +420,4 @@ function facet(
  */
 function screen(spot: Spot): [number, number] {
   return [HALF_WIDTH + spot.a * HALF_WIDTH, HALF_HEIGHT + spot.b * HALF_HEIGHT];
-}
-
-/** Multiplies a colour's brightness, clamped per channel. */
-export function shade(colour: number, factor: number): number {
-  const r = Math.min(255, Math.round(((colour >> 16) & 0xff) * factor));
-  const g = Math.min(255, Math.round(((colour >> 8) & 0xff) * factor));
-  const b = Math.min(255, Math.round((colour & 0xff) * factor));
-  return (r << 16) | (g << 8) | b;
 }

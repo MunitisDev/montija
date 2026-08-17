@@ -55,6 +55,7 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 28    | Stores, clock and ledger      | **Implemented** |
 | 29    | Getting home                  | **Implemented** |
 | 30    | The build menu                | **Implemented** |
+| 31    | Light and value               | **Implemented** |
 
 ---
 
@@ -832,3 +833,33 @@ quarry.
 Set out in [MOBILE_UX.md](./MOBILE_UX.md), including why the panel sits above
 the bar rather than over the world and why the bar wraps in portrait rather than
 truncating what it says.
+
+---
+
+## Phase 31 - Light and value - Implemented
+
+Asked whether the art could reach the quality of a low-poly 3D render. Two
+findings, and the second was the one that mattered.
+
+**Shading detail helps a little.** Contact shadows with a penumbra, ambient
+occlusion where walls meet the ground and the roof, a lit arris on the wall
+corner, a fascia so the roof slab has thickness, and framed and recessed doors
+and windows. All of it now lives in one module, `shading.ts`, so buildings,
+trees and villagers cast the same way - and all of it is free at runtime,
+because every object is drawn into its texture once at load.
+
+**Value separation helps enormously.** Every building was brown walls under a
+slightly darker brown roof, which zoomed out is one silhouette with no parts.
+Repainting the seventeen palettes so a roof and its wall differ clearly in
+lightness - limewashed daub under russet tile for a house, pale cut stone under
+slate for a quarry, dressed stone for the school - did more than every piece of
+shading above put together. "Muted" had been read as "low contrast".
+
+Set out in [ART_BIBLE.md](./ART_BIBLE.md).
+
+**What this does not reach**, and cannot: the ray-traced soft shadows and
+bevelled geometry of an actual 3D render. That needs pre-rendered sprites - a
+model, one camera, one sun, batch rendered - which is roughly 70 images for the
+finished buildings alone plus construction stages, and costs the free seasonal
+variants and continuous build progress that procedural art gives. A separate
+decision, and one that needs an artist.

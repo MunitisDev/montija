@@ -23,7 +23,8 @@ import { TERRAIN_TYPES, type TerrainType } from '@/data/terrain';
 import { TILE_HEIGHT, TILE_WIDTH } from '@/shared/math/isometric';
 import { BUILDING_IDS, type BuildingId } from '@/data/buildings';
 import { SEASONS, type Season } from '@/simulation/seasons/SeasonClock';
-import { drawGroundTile, TERRAIN_VARIANTS, shade } from './groundArt';
+import { drawGroundTile, TERRAIN_VARIANTS } from './groundArt';
+import { contactShadow, shade } from './shading';
 import { drawTree, TREE_HEIGHT, TREE_SHAPES, TREE_WIDTH } from './treeArt';
 import { BUILDING_COLOURS, buildingTextureSpec, drawBuilding } from './buildingArt';
 
@@ -296,9 +297,11 @@ function drawVillager(graphics: Phaser.GameObjects.Graphics): void {
   const cx = VILLAGER_WIDTH / 2;
   const feet = VILLAGER_HEIGHT;
 
-  // Soft contact shadow, so the figure sits on the ground rather than floats.
-  graphics.fillStyle(0x000000, 0.24);
-  graphics.fillEllipse(cx, feet - 2, 18, 7);
+  // Cast the way everything else casts: down and to the right, with a
+  // penumbra. A villager is small, so the rhombus is small — but a scene where
+  // only the buildings have soft shadows looks worse than one where nothing
+  // does. See `shading.ts`.
+  contactShadow(graphics, { x: cx, y: feet - 2 }, 9, 3.5);
 
   // Boots, darker than the leggings above them.
   graphics.fillStyle(shade(VILLAGER_CLOAK, 0.7), 1);

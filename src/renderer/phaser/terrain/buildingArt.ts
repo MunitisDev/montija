@@ -36,6 +36,7 @@ import type Phaser from 'phaser';
 
 import { BUILDINGS, type BuildingId } from '@/data/buildings';
 import { TILE_HEIGHT, TILE_WIDTH } from '@/shared/math/isometric';
+import { bevel, contactShadow, occlude, polygon, shade, type Point } from './shading';
 
 export interface BuildingPalette {
   readonly wall: number;
@@ -44,11 +45,6 @@ export interface BuildingPalette {
 }
 
 /** How each building is massed. Footprint comes from the building data. */
-interface Point {
-  readonly x: number;
-  readonly y: number;
-}
-
 /** The four corners of a footprint rhombus, at some height. */
 interface Rhombus {
   readonly back: Point;
@@ -172,25 +168,43 @@ const MASS: Readonly<Record<BuildingId, BuildingMass>> = {
 
 /** Muted, earthy, and distinguishable at a glance without being colourful. */
 export const BUILDING_COLOURS: Readonly<Record<BuildingId, BuildingPalette>> = {
-  house: { wall: 0x6b5a44, roof: 0x5a4a35, trim: 0x4a3d2c },
-  'storage-yard': { wall: 0x6b573c, roof: 0x574733, trim: 0x453824 },
-  'food-storage': { wall: 0x6a6048, roof: 0x565039, trim: 0x45402d },
-  'gatherer-hut': { wall: 0x5f6248, roof: 0x4c5039, trim: 0x3d402d },
-  woodcutter: { wall: 0x67543f, roof: 0x534431, trim: 0x423628 },
-  forester: { wall: 0x5b5c41, roof: 0x4a4b34, trim: 0x3b3c29 },
-  quarry: { wall: 0x6c6960, roof: 0x565349, trim: 0x413f38 },
-  mine: { wall: 0x615d55, roof: 0x4b4840, trim: 0x38352f },
-  blacksmith: { wall: 0x5e5044, roof: 0x413a33, trim: 0x332e28 },
-  'trading-post': { wall: 0x6e5c46, roof: 0x59493a, trim: 0x453a2d },
-  herbalist: { wall: 0x5d6a4c, roof: 0x7a6942, trim: 0x3c452f },
-  healer: { wall: 0x6f6c60, roof: 0x4f4c44, trim: 0x3c3a34 },
-  hunter: { wall: 0x63533f, roof: 0x7a6942, trim: 0x40362a },
-  tailor: { wall: 0x6a5a55, roof: 0x4e4340, trim: 0x3d3532 },
+  // Limewashed daub on a dark oak frame, under a russet tiled roof. The single
+  // biggest change the art ever had: every building used to be brown walls
+  // under a slightly darker brown roof, and at a settlement's worth of zoom
+  // that is one silhouette with no parts. Value separation, not detail, is
+  // what makes a roof read as a roof.
+  house: { wall: 0xa79c85, roof: 0x7b4a33, trim: 0x3b3228 },
+  // Open yards keep their timber: no roof to contrast against, and they should
+  // read as structures rather than as dwellings.
+  'storage-yard': { wall: 0x8a7350, roof: 0x574733, trim: 0x4a3826 },
+  // A granary. Daub like a house, but its roof is ochre thatch-board rather
+  // than tile — cheaper building, cheaper roof.
+  'food-storage': { wall: 0x9c9179, roof: 0x6d5a3a, trim: 0x3f382a },
+  // Thatched, so the roof colour is barely used; the walls carry the identity.
+  'gatherer-hut': { wall: 0x8d8a6c, roof: 0x4c5039, trim: 0x3b4030 },
+  // A workshop: timber walls, dark shingles. Still a clear gap between them.
+  woodcutter: { wall: 0x86714f, roof: 0x4a3b2a, trim: 0x362c20 },
+  forester: { wall: 0x7f8058, roof: 0x44452f, trim: 0x33341f },
+  // Cut rock, pale and cold, under slate.
+  quarry: { wall: 0x8e8a7e, roof: 0x4a473e, trim: 0x37352f },
+  mine: { wall: 0x807a70, roof: 0x413e37, trim: 0x2f2c28 },
+  // The forge: soot has been at these walls, and its roof is the darkest in
+  // the settlement.
+  blacksmith: { wall: 0x8a7867, roof: 0x3a322b, trim: 0x2b2620 },
+  'trading-post': { wall: 0x9c8664, roof: 0x6a4b33, trim: 0x3f3427 },
+  // Thatch over herb-stained boards.
+  herbalist: { wall: 0x7f8a63, roof: 0x7a6942, trim: 0x39422d },
+  // Plastered and kept clean, which is the point of the building.
+  healer: { wall: 0xa9a493, roof: 0x5a564a, trim: 0x36332d },
+  hunter: { wall: 0x8a7454, roof: 0x7a6942, trim: 0x3c3327 },
+  // A workshop with good light, and the palest walls of the working buildings.
+  tailor: { wall: 0xa08c84, roof: 0x584740, trim: 0x342c29 },
+  // Worked ground rather than buildings — the wall colour is the soil.
   'crop-field': { wall: 0x6d6234, roof: 0x5b5230, trim: 0x4a4128 },
   orchard: { wall: 0x4f5c37, roof: 0x44502f, trim: 0x3a4428 },
-  // Paler and greyer than anything around it: dressed stone rather than the
-  // rough timber the rest of the settlement is thrown together from.
-  school: { wall: 0x7d786a, roof: 0x625a4a, trim: 0x474135 },
+  // Dressed stone, paler and greyer than anything around it, under slate. The
+  // settlement's one monument should be legible from across the map.
+  school: { wall: 0xb6b1a1, roof: 0x60594a, trim: 0x413c33 },
 };
 
 /** Breathing room above the roof, so nothing touches the texture edge. */
@@ -285,16 +299,8 @@ export function drawBuilding(
   const sill = rhombus(groundY - plinthHeight);
   const top = rhombus(groundY - mass.wallHeight);
 
-  // A soft shadow on the plot itself, so the building is planted rather than
-  // floating. Drawn to the full footprint, inset included, so it reads as
-  // contact rather than as a halo.
-  graphics.fillStyle(0x000000, 0.22);
-  polygon(graphics, [
-    { x: cx, y: groundY - halfH },
-    { x: cx + halfW + 2, y: groundY },
-    { x: cx, y: groundY + halfH + 1 },
-    { x: cx - halfW - 2, y: groundY },
-  ]);
+  // Planted rather than floating, and softly: see `contactShadow`.
+  contactShadow(graphics, { x: cx, y: groundY }, halfW + 2, halfH + 1);
 
   // A stone footing, where the building has one. Rubble rather than dressed
   // masonry: this is a frontier settlement, not a cathedral.
@@ -325,6 +331,25 @@ export function drawBuilding(
   graphics.fillStyle(shade(palette.wall, 0.78), 1);
   polygon(graphics, [top.front, top.right, sill.right, sill.front]);
 
+  // Gloom collecting where the walls meet the ground. The single strongest
+  // cue that a building is standing in the scene rather than pasted onto it.
+  const wallSpan = mass.wallHeight - plinthHeight;
+  const baseGloom = Math.max(2.5, wallSpan * 0.16);
+  occlude(
+    graphics,
+    { x: sill.left.x, y: sill.left.y - baseGloom },
+    { x: sill.front.x, y: sill.front.y - baseGloom },
+    baseGloom,
+    0.17,
+  );
+  occlude(
+    graphics,
+    { x: sill.front.x, y: sill.front.y - baseGloom },
+    { x: sill.right.x, y: sill.right.y - baseGloom },
+    baseGloom,
+    0.2,
+  );
+
   if (mass.open) {
     // An open yard: show the floor inside the low walls rather than a roof.
     graphics.fillStyle(shade(palette.trim, 0.9), 1);
@@ -354,39 +379,117 @@ export function drawBuilding(
     thatch: mass.thatch === true,
   });
 
+  // The roof casts onto the wall it sits on. Without this the two read as
+  // stickers on the same plane, however carefully the roof itself is shaded.
+  //
+  // Started at the roof's lower edge rather than at the wall top: the eaves
+  // oversail, so the wall the shadow actually falls on begins half an eave
+  // below where the wall geometry says it does. Kept light — the first pass
+  // of this stacked with the fascia below and turned the wall into a band of
+  // gloom with a stripe of stone showing.
+  const eaveDrop = mass.eaves / 2;
+  const eaveGloom = Math.max(2, wallSpan * 0.1);
+  occlude(
+    graphics,
+    { x: top.left.x, y: top.left.y + eaveDrop },
+    { x: top.front.x, y: top.front.y + eaveDrop },
+    eaveGloom,
+    0.17,
+  );
+  occlude(
+    graphics,
+    { x: top.front.x, y: top.front.y + eaveDrop },
+    { x: top.right.x, y: top.right.y + eaveDrop },
+    eaveGloom,
+    0.2,
+  );
+
+  // The arris where the two walls meet, catching the key light. One bright
+  // line is the difference between a folded sheet and a corner.
+  graphics.fillStyle(shade(palette.wall, 1.24), 0.9);
+  polygon(graphics, [
+    { x: top.front.x - 1, y: top.front.y },
+    { x: top.front.x + 1, y: top.front.y },
+    { x: sill.front.x + 1, y: sill.front.y },
+    { x: sill.front.x - 1, y: sill.front.y },
+  ]);
+
   // A door on the left wall, which faces the camera.
-  const wallSpan = mass.wallHeight - plinthHeight;
+  //
+  // Framed and set back rather than painted on. A dark quad on a pale wall
+  // reads as a hole cut in card; a lighter frame with the opening recessed
+  // inside it reads as a doorway, and it is the same four polygons.
   const doorHeight = Math.min(wallSpan - 3, 16);
   if (doorHeight > 6) {
     const doorY = groundY - plinthHeight;
+    const jamb = (t: number, lift: number) => ({
+      x: cx - halfW * t,
+      y: doorY + halfH * t - lift,
+    });
+
+    // The frame is the dark oak the rest of the building is framed in; the
+    // leaf inside it is lighter boarding. The first pass had these the other
+    // way round and the result was a black hole punched in a pale wall.
     graphics.fillStyle(palette.trim, 1);
     polygon(graphics, [
-      { x: cx - halfW * 0.42, y: doorY + halfH * 0.42 - doorHeight },
-      { x: cx - halfW * 0.16, y: doorY + halfH * 0.16 - doorHeight },
-      { x: cx - halfW * 0.16, y: doorY + halfH * 0.16 },
-      { x: cx - halfW * 0.42, y: doorY + halfH * 0.42 },
+      jamb(0.46, doorHeight + 2),
+      jamb(0.12, doorHeight + 2),
+      jamb(0.12, 0),
+      jamb(0.46, 0),
     ]);
-    // A lintel over it, one shade lighter, so the opening has an edge.
-    graphics.fillStyle(shade(palette.trim, 1.4), 1);
+
+    graphics.fillStyle(shade(palette.trim, 1.95), 1);
     polygon(graphics, [
-      { x: cx - halfW * 0.46, y: doorY + halfH * 0.46 - doorHeight - 2 },
-      { x: cx - halfW * 0.12, y: doorY + halfH * 0.12 - doorHeight - 2 },
-      { x: cx - halfW * 0.12, y: doorY + halfH * 0.12 - doorHeight },
-      { x: cx - halfW * 0.46, y: doorY + halfH * 0.46 - doorHeight },
+      jamb(0.42, doorHeight),
+      jamb(0.16, doorHeight),
+      jamb(0.16, 0),
+      jamb(0.42, 0),
+    ]);
+
+    // The head of the opening, in shadow, which is what says "set back".
+    graphics.fillStyle(0x000000, 0.32);
+    polygon(graphics, [
+      jamb(0.42, doorHeight),
+      jamb(0.16, doorHeight),
+      jamb(0.16, doorHeight - 2),
+      jamb(0.42, doorHeight - 2),
     ]);
   }
 
   // Windows on the right wall, small and dark: glass was for churches.
+  //
+  // Framed rather than punched: a flat dark quad on a flat wall is a hole in
+  // a sticker, and the frame plus the shadow it drops inside is what makes it
+  // an opening in something with thickness.
   for (let index = 0; index < (mass.windows ?? 0); index += 1) {
     const t = 0.28 + index * 0.34;
     const y = groundY - plinthHeight + halfH * t - wallSpan * 0.62;
     const x = cx + halfW * t;
+
+    graphics.fillStyle(shade(palette.trim, 1.25), 1);
+    polygon(graphics, [
+      { x: x - 6.5, y: y - 3.5 },
+      { x: x + 2, y: y + 0.75 },
+      { x: x + 2, y: y + 9.5 },
+      { x: x - 6.5, y: y + 6.25 },
+    ]);
+
     graphics.fillStyle(WINDOW_DARK, 1);
     polygon(graphics, [
       { x: x - 5, y: y - 2 },
       { x: x + 1, y: y + 1 },
       { x: x + 1, y: y + 8 },
       { x: x - 5, y: y + 5 },
+    ]);
+
+    // The reveal: the wall's own thickness, in shadow along the head of the
+    // opening. Sells the recess more cheaply than any amount of frame does.
+    graphics.fillStyle(0x000000, 0.35);
+    polygon(graphics, [
+      { x: x - 5, y: y - 2 },
+      { x: x + 1, y: y + 1 },
+      { x: x + 1, y: y + 2.6 },
+      { x: x - 5, y: y - 0.4 },
     ]);
   }
 
@@ -783,6 +886,21 @@ function drawRoof(
     { x: eF.x + 1, y: eF.y },
     { x: eF.x - 1, y: eF.y },
   ]);
+
+  // The fascia: the roof slab seen edge-on where it oversails the wall.
+  //
+  // Until this existed the roof was a fan of triangles with no thickness, and
+  // the eaves ended in a line of zero width — which is the one thing no real
+  // roof does. Two or three pixels of dark board along the near edges is
+  // enough for the eye to read a slab with a shadow under it.
+  const fascia = Math.max(1.5, eaves * 0.26);
+  graphics.fillStyle(shade(roof, 0.6), 1);
+  polygon(graphics, [eL, eF, { x: eF.x, y: eF.y + fascia }, { x: eL.x, y: eL.y + fascia }]);
+  polygon(graphics, [eF, eR, { x: eR.x, y: eR.y + fascia }, { x: eF.x, y: eF.y + fascia }]);
+
+  // And the arris along the top of that board, which is what catches the sun
+  // when a roof is looked at from below.
+  bevel(graphics, eL, eF, shade(roof, 1.3), 1.2);
 }
 
 /** Crates and sacks, so a storage yard reads as holding something. */
@@ -798,26 +916,4 @@ function drawStackedGoods(
   graphics.fillRect(cx + crate * 0.3, y - crate * 0.6, crate * 1.2, crate * 0.8);
   graphics.fillStyle(0x6d5c40, 1);
   graphics.fillRect(cx - crate * 0.5, y - crate * 1.5, crate, crate * 0.9);
-}
-
-function polygon(graphics: Phaser.GameObjects.Graphics, points: readonly Point[]): void {
-  graphics.beginPath();
-  const [first, ...rest] = points;
-  if (!first) {
-    return;
-  }
-  graphics.moveTo(first.x, first.y);
-  for (const point of rest) {
-    graphics.lineTo(point.x, point.y);
-  }
-  graphics.closePath();
-  graphics.fillPath();
-}
-
-/** Multiplies a colour's brightness, clamped per channel. */
-function shade(colour: number, factor: number): number {
-  const r = Math.min(255, Math.round(((colour >> 16) & 0xff) * factor));
-  const g = Math.min(255, Math.round(((colour >> 8) & 0xff) * factor));
-  const b = Math.min(255, Math.round((colour & 0xff) * factor));
-  return (r << 16) | (g << 8) | b;
 }

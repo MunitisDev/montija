@@ -30,7 +30,7 @@ import {
   hasSnow,
   trunkColour,
 } from './seasonalPalette';
-import { shade } from './groundArt';
+import { contactShadow, shade } from './shading';
 
 /** Tree sprite dimensions, per the art bible. */
 export const TREE_WIDTH = 64;
@@ -92,9 +92,9 @@ function drawConifer(
   // the needles only thin.
   const needles = bare ? Math.max(fullness, 0.82) : fullness;
 
-  // Contact shadow, so the tree sits on the ground rather than hovering.
-  graphics.fillStyle(0x000000, 0.2);
-  graphics.fillEllipse(cx, TREE_HEIGHT - 4, 26, 9);
+  // Contact shadow, cast the way everything else in the settlement casts:
+  // down and to the right, with a penumbra. See `shading.ts`.
+  contactShadow(graphics, { x: cx, y: TREE_HEIGHT - 4 }, 13, 4.5);
 
   // Trunk, with its own lit and shaded side.
   graphics.fillStyle(shade(trunk, 1.12), 1);

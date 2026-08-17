@@ -143,6 +143,46 @@ orders.
 An asset lit from a different direction will look wrong next to everything else. This is the single
 most common consistency failure in isometric art.
 
+**One module owns all of it: `renderer/phaser/terrain/shading.ts`.** Buildings, trees and villagers
+all cast through the same `contactShadow`, so nothing can quietly start casting a different way.
+
+Three things live there beyond the light direction, and each is a specific cure for a specific tell
+that an object is a flat polygon rather than a thing:
+
+- **Contact shadows have a penumbra.** Three rings, widest and faintest first. A hard-edged shadow
+  is the loudest remaining giveaway; a real one is tight and dark at the contact and fades from
+  there, and the eye reads that gradient as _sitting on_ rather than _drawn over_.
+- **Corners collect gloom** (`occlude`). Light does not reach into the join between two surfaces, so
+  every corner in the world is darker than the faces meeting there. Approximating that at the wall
+  base and under the eaves is most of what separates a rendered object from a flat one. **Keep it
+  light**: the first pass stacked base gloom, eaves gloom and the roof fascia and turned a wall into
+  a band of darkness with a stripe of stone showing.
+- **Seams catch light** (`bevel`). Timber and stone have a rounded arris. One bright line along the
+  corner where two walls meet is the difference between a corner and a fold in paper.
+
+All of it is free at runtime: every object is drawn into its texture once, at load.
+
+---
+
+## Value separation — Implemented
+
+**The single biggest change the art has had, and it was not detail.**
+
+Every building used to be brown walls under a slightly darker brown roof. Zoomed out to a
+settlement, that is one silhouette with no parts: a Woodcutter, a House and a Tailor were the same
+brown lozenge. Adding ambient occlusion, bevels and a roof fascia to that changed almost nothing,
+because the problem was never the shading — it was that **the roof and the wall had the same
+value**.
+
+The rule now: **a roof and the wall under it must differ clearly in lightness**, not only in hue. A
+house is limewashed daub on a dark oak frame under a russet tiled roof, which is both historically
+right and immediately readable at any zoom. Workshops keep timber walls but the roof drops well
+below them; quarry and mine are pale cut stone under slate; the School is dressed stone, paler than
+anything around it, because the settlement's one monument should be legible from across the map.
+
+"Muted" was being read as "low contrast". The brief asks for muted greens, earth tones and aged
+timber — none of which requires a roof to be invisible against its own wall.
+
 ---
 
 ## Seasonal variants
