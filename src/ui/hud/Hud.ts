@@ -30,6 +30,7 @@ import type { ResourceId } from '@/data/resources';
 const STRIP_RESOURCES: readonly ResourceId[] = ['food', 'logs', 'firewood', 'stone'];
 import type { GameContext } from '@/game/Game';
 import { hidesGroundPanel } from '@/game/selection';
+import { buildEndGame, type EndGameStat } from '@/ui/endgame/endGameModel';
 import { perSeason } from '@/ui/format/rates';
 import { productionSummary, type ProductionRate } from './productionModel';
 import type { SimulationSnapshot } from '@/simulation/Simulation';
@@ -68,6 +69,11 @@ interface HudElements {
   readonly workerMore: HTMLButtonElement;
   readonly failure: HTMLElement;
   readonly failureSurvived: HTMLElement;
+  readonly failureStats: HTMLElement;
+  readonly failureCauses: HTMLElement;
+  readonly failureRollTitle: HTMLElement;
+  readonly failureRoll: HTMLElement;
+  readonly failureIll: HTMLElement;
   readonly failureRestart: HTMLButtonElement;
   readonly speedButton: HTMLButtonElement;
   readonly speedLabel: HTMLElement;
@@ -234,13 +240,7 @@ export class Hud {
     if (failureKey !== this.lastRenderedFailure) {
       this.elements.failure.hidden = !snapshot.hasFailed;
       if (snapshot.hasFailed) {
-        const survived = [
-          this.i18n.t('failure.survived'),
-          `${this.i18n.t('time.yearShort')}${snapshot.year}`,
-          this.i18n.t(`season.${snapshot.season}` as MessageKey),
-          `${this.i18n.t('time.dayShort')}${snapshot.dayOfSeason}`,
-        ].join(' · ');
-        this.elements.failureSurvived.textContent = survived;
+        this.renderEndGame();
       }
       this.lastRenderedFailure = failureKey;
     }
@@ -494,6 +494,38 @@ export class Hud {
       .join(', ');
   }
 
+  /**
+   * Draws the closing page.
+   *
+   * Called once, when the settlement fails — the whole panel is rebuilt rather
+   * than diffed, because it happens exactly as often as a settlement ends and
+   * nothing on it will change afterwards.
+   */
+  private renderEndGame(): void {
+    const report = buildEndGame(this.context.simulation, (key) => this.i18n.t(key));
+
+    this.elements.failureSurvived.textContent = report.ended;
+    fillFigures(this.elements.failureStats, report.stats);
+    fillFigures(this.elements.failureCauses, report.causes);
+    this.elements.failureRollTitle.textContent = report.rollTitle;
+    this.elements.failureIll.textContent = report.illNote;
+
+    const roll = this.elements.failureRoll;
+    roll.replaceChildren();
+    const years = this.i18n.t('end.years');
+    for (const entry of report.roll) {
+      const line = document.createElement('li');
+      line.className = 'failure__entry';
+      line.append(
+        span('failure__who', entry.note ? `${entry.name} — ${entry.note}` : entry.name),
+        span('failure__age', `${entry.age} ${years}`),
+        span('failure__how', entry.cause),
+        span('failure__when', entry.when),
+      );
+      roll.append(line);
+    }
+  }
+
   private renderSelection(): void {
     this.renderBuildingPanel();
     const selection = this.context.selection;
@@ -744,10 +776,34 @@ function collectElements(root: HTMLElement): HudElements {
     workerMore: requireElement(root, '[data-hud="worker-more"]') as HTMLButtonElement,
     failure: requireElement(root, '[data-hud="failure"]'),
     failureSurvived: requireElement(root, '[data-hud="failure-survived"]'),
+    failureStats: requireElement(root, '[data-hud="failure-stats"]'),
+    failureCauses: requireElement(root, '[data-hud="failure-causes"]'),
+    failureRollTitle: requireElement(root, '[data-hud="failure-roll-title"]'),
+    failureRoll: requireElement(root, '[data-hud="failure-roll"]'),
+    failureIll: requireElement(root, '[data-hud="failure-ill"]'),
     failureRestart: requireElement(root, '[data-hud="failure-restart"]') as HTMLButtonElement,
     speedButton: requireElement(root, '[data-ui="speed-cycle"]') as HTMLButtonElement,
     speedLabel: requireElement(root, '[data-hud="speed-label"]'),
   };
+}
+
+/** Writes a definition list of labelled figures, replacing whatever was there. */
+function fillFigures(list: HTMLElement, stats: readonly EndGameStat[]): void {
+  list.replaceChildren();
+  for (const stat of stats) {
+    const term = document.createElement('dt');
+    term.textContent = stat.label;
+    const value = document.createElement('dd');
+    value.textContent = stat.value;
+    list.append(term, value);
+  }
+}
+
+function span(className: string, text: string): HTMLElement {
+  const element = document.createElement('span');
+  element.className = className;
+  element.textContent = text;
+  return element;
 }
 
 function requireElement(root: HTMLElement, selector: string): HTMLElement {

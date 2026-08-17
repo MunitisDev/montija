@@ -25,22 +25,29 @@ SaveGame
 ├── jobs             the whole board, verbatim
 ├── deaths           the settlement's toll
 ├── chronicle        lifetime tallies, for the settlement's own history page
+├── necrology        every death: name, age, cause, year — the closing page's roll
+├── wear             fractional wear the settlement still owes
 └── random           each seeded stream's position
 ```
 
-### Why the chronicle is stored rather than recomputed
+### Why the chronicle and the roll of the dead are stored rather than recomputed
 
 Every figure in it is about the **past**: who was born, who was buried, how many walls went up, the
 coldest night anybody stood through. A snapshot of the present cannot be asked what the past was —
 by year thirty most of the people the chronicle counts are dead and most of its winters are decades
 gone. Recording it as it happens is the only way to have it at all.
 
+The roll of the dead is the stronger case of the same argument: a name and an age at death cannot be
+recomputed from _anything_, because the person they belong to is gone. A settlement that forgot its
+dead on every reload would show a clean history beside an unexplained population.
+
 A save written before the rescue arc was removed may still carry a `rescue` field. Nothing reads it,
 and an unknown field is ignored rather than rejected, so those settlements load exactly as they were
 apart from a bottle nobody is waiting on any more.
 
-Both are optional fields. A save written before there was a way off this coast restores as a
-settlement that never sent for anyone, with an empty history — which is the honest reading of it.
+`chronicle`, `necrology` and `wear` are all optional fields, so a save from before any of them
+existed still loads: it restores with an empty history and an empty roll, which is the honest reading
+of a settlement whose past was never written down.
 
 ### Why terrain is stored rather than regenerated
 

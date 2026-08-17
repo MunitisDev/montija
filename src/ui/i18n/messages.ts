@@ -171,6 +171,27 @@ export const EN = {
   'failure.body': 'Nobody survived. The wilderness has it back.',
   'failure.survived': 'Survived',
   'failure.restart': 'Begin again',
+
+  /**
+   * The closing page.
+   *
+   * The four causes are the ones the simulation has. Illness is not among them
+   * because it does not kill anybody in this game — it costs a settlement its
+   * working days and the starvation comes later — so the roll says who *was* ill
+   * instead, which is true. See `endGameModel.ts`.
+   */
+  'end.stats': 'What this place was',
+  'end.causes': 'What took them',
+  'end.roll': 'Everyone who lived here',
+  'end.averageAge': 'Average age at death',
+  'end.wereIll': 'of them were ill at the end.',
+  'end.years': 'yrs',
+  'death.hunger': 'Hunger',
+  'death.cold': 'Cold',
+  'death.hungerAndCold': 'Hunger and cold',
+  'death.oldAge': 'Old age',
+  'death.ill.f': 'ill',
+  'death.ill.m': 'ill',
   'building.underConstruction': 'Under construction',
   'building.waitingFor': 'Waiting for',
   'building.workers': 'Workers',
@@ -551,6 +572,19 @@ export const ES: Messages = {
   'failure.body': 'No sobrevivió nadie. El bosque se lo ha quedado.',
   'failure.survived': 'Sobrevivió',
   'failure.restart': 'Empezar de nuevo',
+
+  'end.stats': 'Lo que fue este lugar',
+  'end.causes': 'De qué murieron',
+  'end.roll': 'Todos los que vivieron aquí',
+  'end.averageAge': 'Edad media al morir',
+  'end.wereIll': 'de ellos estaban enfermos al final.',
+  'end.years': 'años',
+  'death.hunger': 'Hambre',
+  'death.cold': 'Frío',
+  'death.hungerAndCold': 'Hambre y frío',
+  'death.oldAge': 'Vejez',
+  'death.ill.f': 'enferma',
+  'death.ill.m': 'enfermo',
   'building.underConstruction': 'En construcción',
   'building.waitingFor': 'Esperando',
   'building.workers': 'Trabajadores',

@@ -46,6 +46,7 @@ import {
   TOOLS_PER_WORKER_PER_DAY,
   TOOL_WORK_BONUS,
 } from '@/simulation/seasons/SurvivalSystem';
+import { deathsByCause } from '@/ui/endgame/endGameModel';
 import { seasonFigure, signedSeason } from '@/ui/format/rates';
 import type { MessageKey } from '@/ui/i18n/messages';
 
@@ -241,12 +242,27 @@ function chronicleTab(simulation: Simulation, t: Translate): LedgerTab {
     });
   }
 
+  // What took the ones who are gone. The same question the closing page answers,
+  // asked while the player can still do something about it — and only about
+  // causes that have actually taken somebody, because a list of four zeroes on a
+  // settlement that has never lost anybody reads as a forecast.
+  const causes: LedgerRow[] = deathsByCause(simulation, t).map((entry) => ({
+    label: entry.label,
+    value: entry.value,
+    ...(entry.cause === 'oldAge' ? {} : { tone: 'bad' as const }),
+  }));
+
+  const sections: LedgerSection[] = [{ id: 'history', title: '', rows }];
+  if (causes.length > 0) {
+    sections.push({ id: 'causes', title: t('end.causes'), rows: causes });
+  }
+
   return {
     id: 'chronicle',
     title: t('chronicle.title'),
     note: t('chronicle.note'),
-    // No heading: one section, and repeating the tab's own name under it is noise.
-    sections: [{ id: 'history', title: '', rows }],
+    // The first section has no heading: repeating the tab's own name is noise.
+    sections,
   };
 }
 

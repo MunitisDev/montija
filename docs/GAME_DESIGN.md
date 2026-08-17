@@ -1164,7 +1164,7 @@ tick.
 
 ---
 
-## Rates are quoted by the season - Implemented
+## Rates are quoted by the season — Implemented
 
 Whole stores were the smaller half of that problem. Every _rate_ the interface
 quoted was still a fraction, because a day is too short a window for these numbers
@@ -1196,3 +1196,43 @@ estimate.
 
 `tests/rates.test.ts` pins the conversion, that the model keeps its rate exact, and
 that no figure the ledger prints contains a decimal point.
+
+---
+
+## The closing page — Implemented
+
+When the last villager went, the game said four words and offered a button. That is
+the wrong amount of ceremony for something a player spent an hour on, and worse, it
+withheld the one thing they wanted: **why**. A settlement that starves in its second
+winter and one that quietly ages out over thirty years ended with the same sentence.
+
+Every death is now written down as it happens — name, age, season, cause, the trade
+they had reached and whether they were ill at the end — in `Necrology`, beside the
+chronicle. The end screen shows the settlement's totals, a count by cause, and the
+roll of everyone who ever lived here, most recent first: the deaths that ended the
+settlement are the ones that explain it, and the founders are history that can wait
+further down the list.
+
+| Cause         | What it means                                               |
+| ------------- | ----------------------------------------------------------- |
+| Hunger        | health reached zero with the larder empty                   |
+| Cold          | health reached zero with no fire, or no house to burn it in |
+| Hunger & cold | both had run out — the settlement failing at both           |
+| Old age       | they reached the end of their span                          |
+
+**Illness is deliberately not a cause**, because in this game it does not kill
+anybody: a case costs the settlement somebody's working days, and the starvation
+comes in winter. Naming it on the one screen whose whole job is to explain what
+really happened would be inventing a mechanic. Each line says whether that person
+_was_ ill instead, which is true of them, and the roll notes how many at the foot.
+
+`hungerAndCold` is its own cause rather than a coin toss between the other two.
+Picking one would tell a player to fix half of what went wrong.
+
+The same count, by cause, appears on the ledger's chronicle page while the game is
+still running — the same question asked where the player can still answer it. Only
+causes that have actually taken somebody are listed: four zeroes on a settlement
+that has never lost anybody reads as a forecast rather than a record.
+
+The roll is saved. `tests/necrology.test.ts` covers the attribution, one record per
+death, agreement with the chronicle's own count, and survival through a save.

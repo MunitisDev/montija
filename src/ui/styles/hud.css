@@ -963,14 +963,30 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   gap: 10px;
-  padding: 24px;
+  padding: 20px;
   text-align: center;
   background: rgba(10, 12, 9, 0.82);
   backdrop-filter: blur(3px);
   pointer-events: auto;
+  overflow-y: auto;
   z-index: 5;
+}
+
+/*
+ * Centred when it fits, scrolled when it does not.
+ *
+ * The auto margins rather than `justify-content: center`, which on a landscape
+ * phone clips the top of an overflowing column and puts the *Begin again* button
+ * somewhere the player cannot reach. A closing page with a roll of forty names is
+ * taller than 390 pixels and has to stay reachable to the end.
+ */
+.failure__title {
+  margin-top: auto;
+}
+
+.failure__restart {
+  margin-bottom: auto;
 }
 
 .failure[hidden] {
@@ -978,7 +994,7 @@
 }
 
 .failure__title {
-  margin: 0;
+  margin-bottom: 0;
   font-size: 1.4rem;
   font-weight: 500;
   color: var(--colour-ink);
@@ -992,8 +1008,128 @@
   color: var(--colour-ink-dim);
 }
 
+/*
+ * The closing page.
+ *
+ * Two columns of figures on anything wide enough, one on a phone held upright,
+ * and the roll scrolling inside its own box so the title and the *Begin again*
+ * button never leave the screen. Capped in height rather than length: a long
+ * settlement's roll is a hundred names, and all of them are worth keeping.
+ */
+.failure__sheet {
+  display: grid;
+  gap: 10px 22px;
+  grid-template-columns: 1fr;
+  width: min(680px, 100%);
+  margin-top: 6px;
+  text-align: left;
+}
+
+@media (min-width: 620px) {
+  .failure__sheet {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* The roll takes the full width under both columns of figures. */
+  .failure__block--roll {
+    grid-column: 1 / -1;
+  }
+}
+
+.failure__block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+}
+
+.failure__heading {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--colour-ink-faint, var(--colour-ink-dim));
+}
+
+.failure__figures {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 12px;
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--colour-ink-dim);
+}
+
+.failure__figures dt {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.failure__figures dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--colour-ink);
+}
+
+.failure__roll {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  /* Fills whatever the figures left, and scrolls inside it. A long settlement's
+   * roll is a hundred names and every one of them is worth keeping. */
+  /* A window on the roll rather than the whole of it: enough rows to see the
+   * pattern, and it scrolls for the rest. */
+  max-height: min(34vh, 240px);
+  overflow-y: auto;
+  font-size: 0.82rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.failure__entry {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0 12px;
+  padding: 5px 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.failure__who {
+  color: var(--colour-ink);
+}
+
+/* The age, kept beside the name: it is half of what the line is for. */
+.failure__age {
+  color: var(--colour-ink);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.failure__how,
+.failure__when {
+  font-size: 0.76rem;
+  color: var(--colour-ink-dim);
+}
+
+.failure__when {
+  text-align: right;
+}
+
+.failure__note {
+  margin: 4px 0 0;
+  font-size: 0.76rem;
+  color: var(--colour-ink-dim);
+}
+
+.failure__note:empty {
+  display: none;
+}
+
 .failure__restart {
-  margin-top: 8px;
+  margin-top: 12px;
   min-height: var(--touch-target);
   padding: 0 22px;
   font-family: inherit;
@@ -1007,6 +1143,36 @@
 
 .failure__restart:hover {
   background: rgba(201, 162, 39, 0.26);
+}
+
+/*
+ * A landscape phone has about 390 pixels of height for all of this.
+ *
+ * Everything tightens and the roll shows fewer names; the page still scrolls to
+ * the button. Nothing is hidden — a closing page that dropped half its figures on
+ * the platform the game is aimed at would be the wrong half of the work.
+ */
+@media (max-height: 480px) {
+  .failure {
+    gap: 6px;
+    padding: 12px;
+  }
+
+  .failure__title {
+    font-size: 1.15rem;
+  }
+
+  .failure__body {
+    max-width: 60ch;
+  }
+
+  .failure__roll {
+    max-height: 112px;
+  }
+
+  .failure__restart {
+    margin-top: 6px;
+  }
 }
 
 /*

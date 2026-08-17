@@ -14,6 +14,7 @@ import { LIFESPAN_MAX } from '@/data/population';
 import { Building } from '@/simulation/buildings/Building';
 import { findAccessCell } from '@/simulation/buildings/BuildingRegistry';
 import { newChronicle } from '@/simulation/history/Chronicle';
+import type { DeathRecord } from '@/simulation/history/Necrology';
 import { SPIRIT_NEUTRAL } from '@/simulation/seasons/SurvivalSystem';
 import { Villager } from '@/simulation/villagers/Villager';
 import type { SavedInventory, SaveGame } from './SaveGame';
@@ -108,6 +109,7 @@ export function serialise(simulation: Simulation, savedAt: string): SaveGame {
     deaths: simulation.snapshot().deaths,
     wear: simulation.wearDebt.map(([resource, owed]) => [resource, owed] as const),
     chronicle: { ...simulation.snapshot().chronicle },
+    necrology: simulation.necrology.all.map((record) => ({ ...record })),
     random: {
       villagers: simulation.villagers.randomState,
       forest: simulation.forestRandomState,
@@ -248,6 +250,9 @@ export function restore(simulation: Simulation, save: SaveGame): void {
   // Older saves have no chronicle and restore at zero: a settlement whose
   // history was never written down, honestly reported as such.
   simulation.restoreChronicle(save.chronicle ?? newChronicle());
+  // Cast rather than validated: the fields are written by this same serialiser,
+  // and a save from another version is already rejected by the version check.
+  simulation.restoreNecrology((save.necrology ?? []) as readonly DeathRecord[]);
   simulation.restoreWearDebt(
     (save.wear ?? []).map(([resource, owed]) => [resource as ResourceId, owed] as const),
   );

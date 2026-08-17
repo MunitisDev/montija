@@ -975,3 +975,39 @@ no longer _dies_ on the reference seed — a village with three teenagers in it 
 smaller in its first year, and one hut nearly feeds it — so the hut ladder is now
 asserted where it is still visible: **food banked entering winter**, 5 on one hut,
 47 on two, 52 on three, averaged over 24 seeds.
+
+---
+
+## Phase 35 — Whole numbers, whole rocks, and a closing page — Implemented
+
+Three more player reports, and the last one turned into the end of the game.
+
+**"Tools are generated in decimals."** Quite right: three things wear at less than
+one a day, and the fraction came straight out of the yard, so a settlement of ten
+held 99.5 tools. Stores now hold whole things and the remainder is carried as a
+running tab — see
+[GAME_DESIGN.md](./GAME_DESIGN.md#stores-hold-whole-things--implemented).
+
+**"Show estimates by the month so they round."** There are no months — the calendar
+is four seasons of twelve days — so every rate on screen is quoted **by the season**
+instead: 123 stone rather than 10.3, −6 tools rather than −0.5. The conversion
+happens once, at the point of printing, in `ui/format/rates.ts`; everything behind
+it is still per-day, because the simulation spends by the day and "stores last about
+four days" needs a daily figure to divide by.
+
+**"The cross on a stone deposit sits too high, as if it were a tree."** It was
+literally that: the mark table gave mining the same 34-pixel lift as felling. A tree
+is a 96-pixel sprite; a deposit is a few low boulders drawn into the ground tile.
+The lift is now derived from the boulder art itself, so retuning the rocks moves the
+mark with them.
+
+**The closing page.** Asked for as "statistics at the end of the game, including the
+whole population, what each of them died of and at what age" — and it replaces four
+words and a button. Every death is recorded as it happens, and the end screen shows
+the settlement's totals, a count by cause, and the roll of everyone who lived here.
+See [GAME_DESIGN.md](./GAME_DESIGN.md#the-closing-page--implemented), including why
+illness is not one of the causes.
+
+Also verified rather than changed: selecting the ground under a building. Every cell
+of a footprint selects the building and the tile panel stays shut, which Phase 33
+already fixed — confirmed cell by cell in the browser.

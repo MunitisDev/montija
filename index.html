@@ -296,11 +296,32 @@
           <p class="stock-drawer__foot" data-ui="stock-foot"></p>
         </div>
 
-        <!-- Shown when the last villager is gone. -->
+        <!--
+          Shown when the last villager is gone.
+
+          A closing page rather than a notice: the totals, what took each of
+          them, and the roll of everyone who ever lived here. The roll scrolls
+          on its own so the title and the button stay put on a phone.
+        -->
         <div class="failure" data-hud="failure" role="alertdialog" hidden>
           <h2 class="failure__title" data-i18n="failure.title"></h2>
           <p class="failure__body" data-i18n="failure.body"></p>
           <p class="failure__stat" data-hud="failure-survived"></p>
+          <div class="failure__sheet">
+            <section class="failure__block">
+              <h3 class="failure__heading" data-i18n="end.stats"></h3>
+              <dl class="failure__figures" data-hud="failure-stats"></dl>
+            </section>
+            <section class="failure__block">
+              <h3 class="failure__heading" data-i18n="end.causes"></h3>
+              <dl class="failure__figures" data-hud="failure-causes"></dl>
+            </section>
+            <section class="failure__block failure__block--roll">
+              <h3 class="failure__heading" data-hud="failure-roll-title"></h3>
+              <ol class="failure__roll" data-hud="failure-roll"></ol>
+              <p class="failure__note" data-hud="failure-ill"></p>
+            </section>
+          </div>
           <button type="button" class="failure__restart" data-hud="failure-restart"></button>
         </div>
 

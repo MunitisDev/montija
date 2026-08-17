@@ -30,6 +30,7 @@ import {
   type TradeReport,
 } from './logistics/TradeSystem';
 import { newChronicle, type Chronicle } from './history/Chronicle';
+import { causeOfDeath, Necrology, type DeathRecord } from './history/Necrology';
 import { WearLedger } from './resources/wear';
 
 import {
@@ -194,6 +195,8 @@ export interface SimulationSnapshot {
   readonly skills: SkillReport;
   /** Lifetime totals: the settlement's own history, recorded as it happens. */
   readonly chronicle: Readonly<Chronicle>;
+  /** The roll of the dead: who, how old, and of what. Oldest entry first. */
+  readonly necrology: readonly DeathRecord[];
   readonly deaths: number;
   /** Lowest health among the living, so the HUD can warn before people die. */
   readonly lowestHealth: number;
@@ -269,6 +272,14 @@ export class Simulation {
 
   /** Lifetime tallies. Recorded as they happen; the present cannot be asked. */
   private readonly chronicle: Chronicle = newChronicle();
+  /**
+   * Every death, with an age and a cause.
+   *
+   * Public because it is read as a whole rather than through a summary: the end
+   * screen lists the roll, and the ledger counts it by cause. Writing to it
+   * belongs to this class alone.
+   */
+  public readonly necrology = new Necrology();
   /**
    * The woods' own random stream.
    *
@@ -467,6 +478,7 @@ export class Simulation {
       stored: this.totalsFrom((resource) => this.storages.totalOf(resource)),
       loose: this.totalsFrom((resource) => this.world.piles.totalOf(resource)),
       chronicle: this.chronicle,
+      necrology: this.necrology.all,
     };
   }
 
@@ -590,6 +602,16 @@ export class Simulation {
    */
   public restoreChronicle(chronicle: Readonly<Chronicle>): void {
     Object.assign(this.chronicle, chronicle);
+  }
+
+  /**
+   * Puts the roll of the dead back after a load.
+   *
+   * A settlement that forgot its dead on every reload would report a clean
+   * history and an unexplained population, which is worse than no roll at all.
+   */
+  public restoreNecrology(records: readonly DeathRecord[]): void {
+    this.necrology.restore(records);
   }
 
   /** What the settlement owes in fractional wear, for the serialiser. */
@@ -834,7 +856,12 @@ export class Simulation {
     );
     this.lastDayReport = report;
 
+    // The roll is written before the villager is removed, because everything it
+    // records — their age, their trade, which need had run out — only exists
+    // while they do.
+    const when = this.year;
     for (const villager of dead) {
+      this.necrology.record(villager, causeOfDeath(villager), when);
       this.villagers.remove(villager.id);
       this.totalDeaths += 1;
       this.chronicle.died += 1;
@@ -902,7 +929,9 @@ export class Simulation {
       foodDaysPerPerson: people === 0 ? 0 : this.storages.totalOf('food') / people,
     });
 
+    const when = this.year;
     for (const villager of day.died) {
+      this.necrology.record(villager, 'oldAge', when);
       this.villagers.remove(villager.id);
       this.totalDeaths += 1;
       this.chronicle.died += 1;

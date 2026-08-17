@@ -199,6 +199,26 @@ export interface SaveGame {
     readonly roughNights: number;
   };
   /**
+   * The roll of the dead: a line each, with an age and a cause.
+   *
+   * Saved for the same reason as the chronicle and more strongly: a name and an
+   * age at death cannot be recomputed from anything, because the person they
+   * belong to is gone. A settlement that forgot its dead on every reload would
+   * show a clean history beside an unexplained population. Absent in older
+   * saves, which restore with an empty roll.
+   */
+  readonly necrology?: readonly {
+    readonly name: string;
+    readonly sex: string;
+    readonly age: number;
+    readonly cause: string;
+    readonly year: number;
+    readonly season: string;
+    readonly ill: boolean;
+    readonly trade: string | null;
+    readonly level?: string;
+  }[];
+  /**
    * Where each random stream had got to.
    *
    * Without this a loaded settlement restarts its RNG from the seed and makes
