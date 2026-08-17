@@ -131,6 +131,10 @@ const SALVAGE_SHARE = 0.5;
 export type Advice =
   | 'starving'
   | 'freezing'
+  /** Sites are standing half-built waiting for a material nobody has any of. */
+  | 'siteStalled'
+  /** Goods are lying in the field with no yard that will take them. */
+  | 'storageFull'
   | 'noShelter'
   | 'foodLow'
   | 'needMoreHuts'
@@ -199,6 +203,14 @@ export interface SimulationSnapshot {
    * wrong.
    */
   readonly advice: Advice;
+  /**
+   * The material stalling construction, when `advice` is `siteStalled`.
+   *
+   * Carried alongside rather than baked into the advice, because "waiting for
+   * stone" and "waiting for iron" are the same condition and the player needs
+   * the noun. An advice that could not name it would send them looking.
+   */
+  readonly stalledMaterial: ResourceId | null;
   /**
    * `true` once the last villager is gone.
    *
@@ -437,6 +449,7 @@ export class Simulation {
       illness: this.lastIllness,
       deaths: this.totalDeaths,
       advice: this.adviseOn(year),
+      stalledMaterial: this.stalledMaterial(),
       hasFailed: this.hasFailed,
       lowestHealth: this.villagers.all.reduce(
         (lowest, villager) => Math.min(lowest, villager.needs.health),
@@ -621,8 +634,26 @@ export class Simulation {
     // a healthy woodpile has no way to guess that the wood is not being burned
     // for anyone. Said before the cold rather than during it.
     const winterIsNear = year.season === 'autumn' || year.season === 'winter';
-    if (this.lastPopulation.homeless > 0 && winterIsNear) {
+    if (this.lastPopulation.homeless > 0 && winterIsNear && !this.hasHousingUnderway()) {
       return 'noShelter';
+    }
+
+    // A site waiting for a material the settlement has none of will wait for
+    // ever, and nothing on screen says so. Reported *after* the two that kill
+    // people and before everything else, because it is the one condition where
+    // the settlement looks busy and is not: villagers walk logs to a house that
+    // cannot be finished, and the player watches work happening and nothing
+    // being built.
+    const stalled = this.stalledMaterial();
+    if (stalled) {
+      return 'siteStalled';
+    }
+
+    // The other silent dead end, and the same class of failure: a pile with
+    // nowhere to go is simply left where it lies, so the settlement quietly
+    // stops carrying anything in and nothing on screen says why.
+    if (this.hasHomelessPile()) {
+      return 'storageFull';
     }
 
     const huts = this.world.buildings.countOf('gatherer-hut');
@@ -665,6 +696,79 @@ export class Simulation {
   /** The calendar at the current tick. */
   public get year(): YearState {
     return yearStateAt(this.currentTick);
+  }
+
+  /**
+   * A material every stalled site is waiting for and the settlement has none of.
+   *
+   * `null` when nothing is stuck. Deliberately only fires on **zero in store**:
+   * a site short of stone while a quarry is cutting it is not stalled, it is
+   * waiting, and the player does not need telling.
+   */
+  public stalledMaterial(): ResourceId | null {
+    for (const site of this.world.buildings.underConstruction()) {
+      for (const cost of site.definition.constructionCost) {
+        if (site.stillNeeds(cost.resource) > 0 && this.storages.totalOf(cost.resource) <= 0) {
+          return cost.resource;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * The nearest-listed site still owing this material, or `null`.
+   *
+   * Used only when the yards are full — see `createHaulJobs`. First match
+   * rather than nearest: this is a rescue from a stalled settlement, and any
+   * site that wants the goods ends the stall.
+   */
+  private siteNeeding(resource: ResourceId): Building | null {
+    for (const site of this.world.buildings.underConstruction()) {
+      if (site.stillNeeds(resource) > 0) {
+        return site;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * `true` when something is lying in the field that no yard will accept.
+   *
+   * Either the settlement has no yard for it or every yard that would take it
+   * is full. `createHaulJobs` leaves such a pile alone — correctly, there is
+   * nothing to be done with it — and until now said nothing about it.
+   */
+  private hasHomelessPile(): boolean {
+    for (const pile of this.world.piles.all) {
+      if (pile.isEmpty) {
+        continue;
+      }
+      if (
+        !this.storages.findNearestAccepting(pile.cell, pile.resource) &&
+        !this.siteNeeding(pile.resource)
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * `true` when houses are already on their way up.
+   *
+   * Telling a player to build Houses while a dozen stand half-built is the
+   * game lying to them about what is wrong, and it is exactly what happened:
+   * every site was waiting on stone and the banner kept asking for more
+   * houses. What they needed to hear was about the stone.
+   */
+  private hasHousingUnderway(): boolean {
+    for (const site of this.world.buildings.underConstruction()) {
+      if ((site.definition.housing ?? 0) > 0) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /** `true` when everyone has died. The settlement has failed. */
@@ -1511,15 +1615,29 @@ export class Simulation {
       }
 
       const storage = this.storages.findNearestAccepting(pile.cell, pile.resource);
-      if (!storage) {
-        // Nowhere to put it. Leave the pile be; a new yard may appear later.
+      // **No yard will take it, so try a building site that wants it.**
+      //
+      // A settlement whose yards are full of stone used to stop carrying
+      // timber in altogether: the pile sat where it fell, the sites waited for
+      // the timber, and nothing moved again. Sending it straight to a site
+      // that needs it is both the obvious thing a real settlement would do and
+      // the only way out of that, since the yard is not going to empty itself.
+      //
+      // Deliberately a **fallback rather than a preference**. Sites first would
+      // reroute the whole economy through construction and starve the yards;
+      // this only ever fires where the alternative is nothing happening at all.
+      // A site's materials inventory holds exactly what it still owes, so it
+      // cannot be over-filled, and any remainder goes back on the ground.
+      const destination = storage?.cell ?? this.siteNeeding(pile.resource)?.accessCell;
+      if (!destination) {
+        // Nowhere at all. Leave the pile be; a yard or a site may appear later.
         continue;
       }
 
       this.jobs.create({
         type: 'haul',
         target: pile.cell,
-        deliverTo: storage.cell,
+        deliverTo: destination,
         // Carrying goods in outranks cutting more down. At equal priority the
         // nearest job won, so a marked stand of trees buried the hauling: the
         // settlement starved with fifty food lying in piles beside the hut,

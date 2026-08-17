@@ -212,7 +212,13 @@ export class Hud {
     if (advice !== this.lastRenderedAdvice) {
       this.elements.advice.hidden = advice === null;
       if (advice) {
-        this.elements.advice.textContent = this.i18n.t(`warning.${advice}` as MessageKey);
+        const text = this.i18n.t(`warning.${advice}` as MessageKey);
+        // The stalled-site warning is the one that has to name a noun: "work
+        // has stopped" without saying *what for* sends the player looking.
+        this.elements.advice.textContent =
+          advice === 'siteStalled' && snapshot.stalledMaterial
+            ? `${text} ${this.i18n.t(`hud.${snapshot.stalledMaterial}` as MessageKey)}`
+            : text;
       }
       this.lastRenderedAdvice = advice;
     }

@@ -691,8 +691,43 @@ warning at a time on purpose — the player needs to know what to do next, not e
 ever go wrong.
 
 In order of precedence: people starving, people freezing, people with no house as winter approaches,
+**building work stalled for want of a material**, **goods lying in the field with nowhere to go**,
 nobody gathering food, one hut for too many mouths, food rotting with nowhere to keep it, no
 woodcutter with winter in sight, not enough firewood to last it.
+
+### The two silent dead ends — found by playing
+
+Both of these look identical from outside: villagers walking about, work apparently happening, and
+nothing getting built.
+
+**A site waiting for a material the settlement has none of.** Reported from a real game — a dozen
+houses ordered, every one short of stone, a settlement carrying none, and the banner still advising
+the player to _build Houses_. That last part was the worst of it: the game was answering a question
+nobody had asked while the actual problem went unmentioned. The warning now names the material, and
+`noShelter` no longer fires while housing is already going up.
+
+It deliberately only triggers on **zero in store**. A site short of stone while a quarry is cutting
+it is not stalled, it is waiting, and saying so would be crying wolf.
+
+**A pile with nowhere to go.** `createHaulJobs` leaves a pile alone when no yard will accept it —
+correctly, since there is nothing to be done — and did so in silence, so the settlement quietly
+stopped carrying anything in.
+
+The first is not a bug in the simulation: a house genuinely cannot be built without stone, and what
+was broken is that the game knew and did not say.
+
+**The second one got a real fix as well.** When no yard will take a pile, the settlement now looks
+for a **building site that still needs that material** and carries it straight there. A settlement
+whose yards were full of stone used to stop carrying timber in altogether — the pile sat where it
+fell, the sites waited for that timber, and nothing moved again, because the yard was never going to
+empty itself.
+
+Deliberately a **fallback rather than a preference**. Routing every pile through construction first
+would reroute the whole economy and starve the yards the settlement lives out of; this only ever
+fires where the alternative is nothing happening at all. A site's materials inventory holds exactly
+what it still owes, so it cannot be over-filled, and any remainder goes back on the ground.
+
+`tests/stalled.test.ts`.
 
 "People are starving" fires on genuine hunger rather than on a day's missed delivery. A settlement
 living hand to mouth has shortfall days routinely while nobody is any thinner, and an alarm that

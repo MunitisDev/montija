@@ -57,6 +57,7 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 30    | The build menu                | **Implemented** |
 | 31    | Light and value               | **Implemented** |
 | 32    | Spirit                        | **Implemented** |
+| 33    | The silent dead ends          | **Implemented** |
 
 ---
 
@@ -894,3 +895,42 @@ where a group still reads without scrolling.
 
 Set out in [GAME_DESIGN.md](./GAME_DESIGN.md), including why the fourth need is
 a bonus rather than a requirement.
+
+---
+
+## Phase 33 - The silent dead ends - Implemented
+
+A played game reported a blockage: piles of logs on the ground, villagers
+walking back and forth doing nothing, and a dozen houses that never finished.
+
+Reproduced headlessly rather than guessed at, and the cause was exact: **every
+site was waiting for stone, and the settlement had none.** A wrecked settlement
+comes ashore with no stone at all, so a player who orders houses before finding
+a rock face stalls every one of them. The board fills with felling work, the
+villagers get on with that, and nothing is ever built.
+
+The banner made it worse. It was saying _"people have no house for the winter -
+build Houses"_ to a player who had ordered twelve. The game was answering a
+question nobody asked while the actual problem went unmentioned for forty days.
+
+Two warnings, and one thing the guidance stops saying:
+
+- **Building work has stopped** - naming the material, and only when the store
+  is at zero. A site short of stone while a quarry cuts it is waiting, not
+  stalled.
+- **Goods are lying in the field with nowhere to go** - the other silent dead
+  end, where `createHaulJobs` correctly leaves a pile alone because no yard will
+  take it, and said nothing.
+- **No more asking for houses that are already going up.**
+
+And one real logistics fix, asked for while the above was being written: when
+no yard will take a pile, the settlement now carries it **straight to a building
+site that needs it**. Full yards of stone used to block timber entirely - the
+pile sat, the sites waited for that timber, and the yard was never going to
+empty itself. A fallback rather than a preference: sites first would reroute the
+whole economy and starve the yards, so it only fires where the alternative is
+nothing happening at all.
+
+The stalled-site warning was not a simulation bug - a house cannot be built
+without stone, and what was broken is that the game knew and did not say. Set
+out in [GAME_DESIGN.md](./GAME_DESIGN.md).
