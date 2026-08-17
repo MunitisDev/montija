@@ -1011,3 +1011,23 @@ illness is not one of the causes.
 Also verified rather than changed: selecting the ground under a building. Every cell
 of a footprint selects the building and the tile panel stays shut, which Phase 33
 already fixed — confirmed cell by cell in the browser.
+
+---
+
+## Phase 36 — The labour panel — Implemented
+
+"A menu where you can see at a glance the buildings, their worker occupancy and
+the labourers available, with +/- buttons on screen, giving priority to the
+labourers who are specialists in that job."
+
+The priority half shipped in Phase 34; this is the menu. Every workplace on one
+page, the labourers counted at the top, who is at each post and what they are worth
+at it, and a stepper per row. Its own door in the top bar rather than a tab of the
+ledger: the ledger reports and never acts, and controls scattered through a page of
+figures stop it being a page of figures.
+
+See [GAME_DESIGN.md](./GAME_DESIGN.md#the-labour-panel--implemented) for why the
+quota and the staff are two numbers rather than one.
+
+Still to come from the same report: the character card beside a building, and the
+art — children playing, elders walking, and villagers told apart by age and sex.

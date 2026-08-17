@@ -380,6 +380,100 @@ body.is-menu-open #hud {
   color: var(--colour-ink-dim);
 }
 
+/* --- The labour panel ---------------------------------------------------- */
+
+/*
+ * Shares the people panel's chrome and summary, and adds one row shape: a
+ * workplace on the left, a stepper on the right. Deliberately roomy — the
+ * buttons are the point of the page and they are pressed with a thumb.
+ */
+.labour__post {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(216, 203, 168, 0.07);
+}
+
+.labour__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.labour__name {
+  font-size: 0.94rem;
+  color: var(--colour-ink);
+}
+
+/* Who is actually there. Wraps rather than truncating: on a three-slot workshop
+   these are three names the player is deciding about. */
+.labour__staff {
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--colour-ink-dim);
+}
+
+.labour__controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.labour__control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.labour__count {
+  min-width: 3.2ch;
+  text-align: center;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--colour-ink);
+}
+
+/* Asked for and not filled: the thing the player opened this panel to find. */
+.labour__count.is-short,
+.labour__staff.is-short,
+.roster__stat-value.is-short {
+  color: #c98a3a;
+}
+
+.labour__slots {
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  color: var(--colour-ink-faint, var(--colour-ink-dim));
+}
+
+.labour__step {
+  min-width: var(--touch-target, 44px);
+  min-height: var(--touch-target, 44px);
+  font-family: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--colour-ink);
+  background: rgba(216, 203, 168, 0.08);
+  border: 1px solid var(--colour-panel-edge);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.labour__step:hover:not(:disabled) {
+  background: rgba(201, 162, 39, 0.2);
+  border-color: rgba(201, 162, 39, 0.5);
+}
+
+.labour__step:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 .roster__household {
   margin: 0 0 20px;
 }

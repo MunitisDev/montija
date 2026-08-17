@@ -1236,3 +1236,41 @@ that has never lost anybody reads as a forecast rather than a record.
 
 The roll is saved. `tests/necrology.test.ts` covers the attribution, one record per
 death, agreement with the chronicle's own count, and survival through a save.
+
+---
+
+## The labour panel — Implemented
+
+A player with nine workshops and a settlement that had stopped growing asked for
+"a menu that shows the buildings, their worker occupancy and the labourers going
+spare, with +/- buttons on screen". They were right that the game could not answer
+it: the only way to find out who was working where was to tap each building in
+turn, and moving one person meant tapping the building they should leave, then the
+building they should join, with the map in between. On a tablet that is a dozen
+taps for one decision.
+
+Every workplace is now on one page, with the labourers counted at the top —
+because every post filled is one of them gone, and that trade is the whole
+decision.
+
+**The quota and the staff are different numbers and both are shown.** A workshop
+can ask for three and hold one, because there is nobody spare or because a hut
+asked first. The buttons move the quota; the figure reads `staffed/asked for`, and
+goes amber when they disagree. Hiding the difference behind one number would make
+the panel lie on exactly the settlements that need it.
+
+Each row names who is actually there and their level at that trade, specialists
+first. Workshops the settlement has more than one of are numbered in the order they
+were built, because two rows both saying "Gatherer Hut" leave the player choosing
+between two things they cannot tell apart.
+
+A quota change re-runs employment immediately, so the page shows the result of a
+press without waiting for a tick — which it has to, because the clock is stopped
+while the panel is open. That is also why the whole page is redrawn on each press:
+taking a hand off one workshop can fill a vacancy at another.
+
+Who gets the post was already decided: whoever has the most experience at that
+trade goes first — see the trades section above. This panel is where that becomes
+visible.
+
+`tests/labour.test.ts`.

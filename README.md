@@ -78,19 +78,23 @@ settlement has none of marked in red. Move the camera until the ghost sits where
 press **Place**; villagers carry the materials from storage and construct it.
 
 Tap the **resource strip** to drop down every good the settlement has, with what is stored, what is
-still lying in the field, and the net per day.
+still lying in the field, and the net over a season.
 
-The top bar carries four more ways in. The **people** button lists everyone grouped by household —
+The top bar carries five more ways in. The **people** button lists everyone grouped by household —
 ages, families, how each of them is doing, and a picker to post somebody to a particular workshop or
-keep them on hauling. The **ledger** counts the settlement in five tabs, including how far it has got
+keep them on hauling. The **work** button answers the other half of that question, by workplace
+rather than by household: every workshop at once, who is at it, and a pair of buttons to ask for one
+more or one fewer. The **ledger** counts the settlement in five tabs, including how far it has got
 and the settlement's own history. The **cog** holds the rules, saving, loading, full screen and
 language. All of them pause the game while they are open.
 
 The remaining button is the clock: one tap cycles pause, 1x, 2x and 4x.
 
 **The chronicle.** The ledger's last tab is the only page about the past: who was born here, who is
-buried here, the coldest night, the nights somebody slept without a roof. It is recorded as it
-happens, because by year thirty the settlement cannot be asked what it used to be.
+buried here, what took them, the coldest night, the nights somebody slept without a roof. It is
+recorded as it happens, because by year thirty the settlement cannot be asked what it used to be.
+When the last villager goes, the same record becomes the closing page: the totals, the count by
+cause, and the roll of everyone who ever lived there with their age and what took them.
 
 ## Architecture in one paragraph
 

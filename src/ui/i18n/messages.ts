@@ -180,6 +180,28 @@ export const EN = {
    * working days and the starvation comes later — so the roll says who *was* ill
    * instead, which is true. See `endGameModel.ts`.
    */
+  /**
+   * The labour panel: every workplace at once, with a pair of buttons each.
+   *
+   * The quota and the staff are different numbers on purpose — see
+   * `labourModel.ts`.
+   */
+  'labour.title': 'Work',
+  'labour.open': 'Work',
+  'labour.labourers': 'Labourers',
+  'labour.employed': 'At a workplace',
+  'labour.workforce': 'Of working age',
+  'labour.vacancies': 'Unfilled',
+  /** A count of posts, singular and plural: "1 post", "3 posts". */
+  'labour.slots.one': 'post',
+  'labour.slots.many': 'posts',
+  'labour.nobody': 'nobody yet',
+  'labour.more': 'One more',
+  'labour.fewer': 'One fewer',
+  'labour.none': 'Nothing built that anybody can work at yet.',
+  'labour.note':
+    'The figure is who is there against how many you asked for. Labourers fell, haul and build; every post filled is one of them gone. Whoever knows the trade best goes first.',
+
   'end.stats': 'What this place was',
   'end.causes': 'What took them',
   'end.roll': 'Everyone who lived here',
@@ -572,6 +594,21 @@ export const ES: Messages = {
   'failure.body': 'No sobrevivió nadie. El bosque se lo ha quedado.',
   'failure.survived': 'Sobrevivió',
   'failure.restart': 'Empezar de nuevo',
+
+  'labour.title': 'Trabajo',
+  'labour.open': 'Trabajo',
+  'labour.labourers': 'Peones',
+  'labour.employed': 'Con puesto',
+  'labour.workforce': 'En edad de trabajar',
+  'labour.vacancies': 'Sin cubrir',
+  'labour.slots.one': 'puesto',
+  'labour.slots.many': 'puestos',
+  'labour.nobody': 'todavía nadie',
+  'labour.more': 'Uno más',
+  'labour.fewer': 'Uno menos',
+  'labour.none': 'Todavía no hay nada construido donde se pueda trabajar.',
+  'labour.note':
+    'La cifra es quién está frente a cuántos pediste. Los peones talan, acarrean y construyen; cada puesto cubierto es uno menos. Va primero quien mejor conoce el oficio.',
 
   'end.stats': 'Lo que fue este lugar',
   'end.causes': 'De qué murieron',

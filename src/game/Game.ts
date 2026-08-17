@@ -190,11 +190,13 @@ export interface GameContext {
    */
   setWorkPreference(villagerId: number, preference: WorkPreference): boolean;
   /**
-   * Sends somebody to the water with the settlement's message.
+   * Changes how many people a named building should employ.
    *
-   * Returns `false` when there is no school, the bottle is already away, or
-   * somebody is already carrying it — see `rescue/RescueSystem.ts`.
+   * The same command `adjustSelectedWorkers` issues, without needing the
+   * building to be the thing the player last tapped — the labour panel changes
+   * quotas across the whole settlement without touching the map.
    */
+  adjustWorkersAt(buildingId: number, delta: number): boolean;
 
   /** The building being placed, or `null` when not in placement mode. */
   readonly placement: PlacementState | null;
@@ -836,6 +838,21 @@ export class Game implements GameContext, InputIntentSink {
    * having: a settlement that is starving does not need three people splitting
    * firewood, and until this existed there was no way to say so.
    */
+  public adjustWorkersAt(buildingId: number, delta: number): boolean {
+    const building = this.simulation.world.buildings.getById(buildingId);
+    if (!building) {
+      return false;
+    }
+
+    const changed = this.simulation.setDesiredWorkers(buildingId, building.desiredWorkers + delta);
+    // The selection may be showing this very building, and its panel carries the
+    // same figure. Refreshing keeps the two from disagreeing on screen.
+    if (changed && this.currentSelection) {
+      this.refreshSelection(this.currentSelection.cell);
+    }
+    return changed;
+  }
+
   public adjustSelectedWorkers(delta: number): boolean {
     const selection = this.currentSelection;
     const building = selection?.building;

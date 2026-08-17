@@ -171,6 +171,22 @@
             </svg>
           </button>
 
+          <!-- Who works where. Beside the people button because the two
+               answer halves of the same question: that one is by household,
+               this one is by workplace. -->
+          <button type="button" class="icon-button" data-ui="labour-open" aria-label="Work">
+            <svg
+              class="icon-button__glyph"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <!-- A hammer: head across the top left, handle down to the right. -->
+              <path d="M3.1 7.4 7.4 3.1l4.9 4.9-4.3 4.3z" />
+              <path d="m9.4 12.5 2.1-2.1 8.6 8.6a1.5 1.5 0 0 1-2.1 2.1z" opacity=".55" />
+            </svg>
+          </button>
+
           <!-- One button for the clock, cycling pause, 1x, 2x, 4x. Four
                buttons for four speeds cost a corner of the bottom bar to say
                something one button says in two characters. -->
@@ -501,6 +517,23 @@
             <button type="button" class="sheet__close" data-ui="roster-close"></button>
           </header>
           <div class="sheet__body roster" data-ui="roster-body"></div>
+        </div>
+      </div>
+
+      <!--
+        Work: every workplace at once, with a pair of buttons each.
+
+        Its own door rather than a page of the ledger: the ledger reports and
+        never acts, and controls scattered through a page of figures stop it
+        being a page of figures.
+      -->
+      <div class="sheet" data-ui="labour" role="dialog" aria-modal="true" hidden>
+        <div class="sheet__panel">
+          <header class="sheet__head">
+            <h2 class="sheet__title" data-ui="labour-title"></h2>
+            <button type="button" class="sheet__close" data-ui="labour-close"></button>
+          </header>
+          <div class="sheet__body roster" data-ui="labour-body"></div>
         </div>
       </div>
 

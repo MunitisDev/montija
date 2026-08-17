@@ -19,6 +19,7 @@ import { createPhaserGame } from '@/renderer/phaser/createPhaserGame';
 import { Hud } from '@/ui/hud/Hud';
 import { BuildMenu } from '@/ui/build-menu/BuildMenu';
 import { Guide } from '@/ui/guide/Guide';
+import { Labour } from '@/ui/labour/Labour';
 import { Roster } from '@/ui/roster/Roster';
 import { Ledger } from '@/ui/ledger/Ledger';
 import { StockDrawer } from '@/ui/hud/StockDrawer';
@@ -72,6 +73,7 @@ export function start(): void {
   // from the game root rather than the HUD layer.
   const guide = new Guide(gameRoot, i18n);
   const roster = new Roster(gameRoot, game, i18n);
+  const labour = new Labour(gameRoot, game, i18n);
   const ledger = new Ledger(gameRoot, game, i18n);
   // The ledger reports and never acts: every tab it has is a page of figures.
   // The hook stays because a future tab may want a button, and the panel should
@@ -113,6 +115,11 @@ export function start(): void {
   const rosterButton = hudRoot.querySelector<HTMLButtonElement>('[data-ui="roster-open"]');
   rosterButton?.addEventListener('click', () => openPaused(roster));
 
+  // Work stops the clock like the rest. Moving six people between workshops is
+  // a decision, and a decision taken against a running winter is a race.
+  const labourButton = hudRoot.querySelector<HTMLButtonElement>('[data-ui="labour-open"]');
+  labourButton?.addEventListener('click', () => openPaused(labour));
+
   // The ledger stops the clock like the other sheets: its whole point is
   // arithmetic the player wants to sit with.
   const ledgerButton = hudRoot.querySelector<HTMLButtonElement>('[data-ui="ledger-open"]');
@@ -146,6 +153,10 @@ export function start(): void {
     if (rosterButton) {
       rosterButton.setAttribute('aria-label', i18n.t('roster.open'));
       rosterButton.title = i18n.t('roster.open');
+    }
+    if (labourButton) {
+      labourButton.setAttribute('aria-label', i18n.t('labour.open'));
+      labourButton.title = i18n.t('labour.open');
     }
   };
   relabelGlyphs();
