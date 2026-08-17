@@ -7,6 +7,7 @@
 
 import type Phaser from 'phaser';
 import { overlayDepth } from '@/renderer/phaser/sorting';
+import { ROCK_PEAK_LIFT } from '@/renderer/phaser/terrain/groundArt';
 import { TextureKeys } from '@/renderer/phaser/terrain/tileTextures';
 import { gridToScene } from '@/shared/math/isometric';
 import type { JobType } from '@/simulation/jobs/Job';
@@ -28,13 +29,18 @@ const PLAYER_DESIGNATED: ReadonlySet<JobType> = new Set<JobType>([
 /**
  * How far above the cell each mark is lifted, in pixels.
  *
- * A mark on a tree has to sit up in the canopy to read as being *on* it. A road
- * order is a mark on the ground and belongs on the ground — lifting it would
- * leave it hovering over the cell in front of the one it refers to.
+ * **Each lift is the height of the thing it marks**, and getting that wrong is
+ * what a player sees. A tree is a 34-pixel sprite standing on its cell, so its
+ * mark has to sit up in the canopy to read as being *on* it. A stone deposit is
+ * not: it is drawn into the ground tile itself as a few low boulders, the
+ * tallest of which rises about ten pixels above the middle of the diamond. It
+ * borrowed the tree's lift and the cross floated in mid-air well clear of the
+ * rock — marking, to the eye, whatever stood behind it. A road order is a mark
+ * on the ground and belongs flat on it.
  */
-const MARK_LIFT: Readonly<Partial<Record<JobType, number>>> = {
+export const MARK_LIFT: Readonly<Partial<Record<JobType, number>>> = {
   'chop-tree': 34,
-  'gather-stone': 34,
+  'gather-stone': ROCK_PEAK_LIFT,
   'pave-road': 0,
 };
 

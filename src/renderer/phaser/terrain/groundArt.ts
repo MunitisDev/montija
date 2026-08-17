@@ -238,7 +238,7 @@ function drawRockFacets(
   for (const block of ROCK_BLOCKS[variant] ?? []) {
     // Top face, catching the light.
     facet(graphics, shade(base, 1.24), [
-      { a: block.a, b: block.b - block.rise - 0.24 },
+      { a: block.a, b: block.b - block.rise - ROCK_CROWN_RISE },
       { a: block.a + 0.3, b: block.b - block.rise },
       { a: block.a, b: block.b - block.rise + 0.2 },
       { a: block.a - 0.3, b: block.b - block.rise },
@@ -371,6 +371,15 @@ interface RockBlock extends Spot {
   readonly rise: number;
 }
 
+/**
+ * How far a block's top face reaches beyond its own rise, in diamond units.
+ *
+ * The crown is a diamond in its own right, so the highest pixel of a boulder is
+ * this much above where the block nominally ends. Named because `ROCK_PEAK_LIFT`
+ * has to agree with the drawing exactly.
+ */
+const ROCK_CROWN_RISE = 0.24;
+
 const ROCK_BLOCKS: readonly (readonly RockBlock[])[] = [
   [
     { a: -0.2, b: 0.16, rise: 0.5 },
@@ -387,6 +396,20 @@ const ROCK_BLOCKS: readonly (readonly RockBlock[])[] = [
     { a: 0.36, b: 0.04, rise: 0.2 },
   ],
 ];
+
+/**
+ * How far the tallest boulder's crown stands above the middle of a rock tile.
+ *
+ * Exported because anything the player puts *on* a deposit has to know how tall
+ * one is. A mining mark used to borrow the tree's height and floated in mid-air
+ * well clear of the rock; deriving the figure from the blocks themselves means
+ * retuning the rock art moves the mark with it instead of leaving it wrong.
+ */
+export const ROCK_PEAK_LIFT = Math.round(
+  Math.max(
+    ...ROCK_BLOCKS.flat().map((block) => (block.rise + ROCK_CROWN_RISE - block.b) * HALF_HEIGHT),
+  ),
+);
 
 // --- drawing helpers --------------------------------------------------------
 
