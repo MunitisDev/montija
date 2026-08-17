@@ -12,6 +12,7 @@
  * never the authority. A small `+n` marks units still lying in the field.
  */
 
+import type { BuildingId } from '@/data/buildings';
 import type { ResourceId } from '@/data/resources';
 
 /**
@@ -29,6 +30,7 @@ import type { ResourceId } from '@/data/resources';
 const STRIP_RESOURCES: readonly ResourceId[] = ['food', 'logs', 'firewood', 'stone'];
 import type { GameContext } from '@/game/Game';
 import { hidesGroundPanel } from '@/game/selection';
+import { productionSummary } from './productionModel';
 import type { SimulationSnapshot } from '@/simulation/Simulation';
 import { SIMULATION_SPEEDS, type SimulationSpeed } from '@/simulation/SimulationClock';
 import { TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
@@ -412,7 +414,13 @@ export class Hud {
 
     if (!building.complete) {
       const percent = Math.round(building.progress * 100);
-      this.elements.buildingState.textContent = `${this.i18n.t('building.underConstruction')} ${percent}%`;
+      // Said on the site as well as on the finished building: "is this worth
+      // carrying stone across the map for?" is a question asked *before* it is
+      // standing, not after.
+      const promise = this.describeProduction(building.buildingId);
+      this.elements.buildingState.textContent =
+        `${this.i18n.t('building.underConstruction')} ${percent}%` +
+        (promise ? ` · ${promise}` : '');
       // Materials are reported apart from progress, because "waiting for stone"
       // and "half built" are different problems with different answers.
       this.elements.buildingDetail.textContent =
@@ -440,6 +448,13 @@ export class Hud {
     if (building.housing > 0) {
       state.push(`${this.i18n.t('building.residents')} ${building.residents}/${building.housing}`);
     }
+    // What it can make. The one thing a workshop is *for* was the one thing the
+    // panel never said, so a player choosing between a Quarry and a Woodcutter
+    // was comparing two rates neither of which was on screen.
+    const rate = this.describeProduction(building.buildingId);
+    if (rate) {
+      state.push(rate);
+    }
     this.elements.buildingState.textContent = state.join(' · ');
 
     // A workshop with nobody in it looks identical to a working one, and the
@@ -453,6 +468,39 @@ export class Hud {
       building.contents.length > 0
         ? `${this.i18n.t('building.holding')} ${this.describeAmounts(building.contents)}`
         : '';
+  }
+
+  /**
+   * A building's ceiling, as one line, or `''` when it makes nothing.
+   *
+   * "At best 10.3 stone a day", and for anything that comes out of the ground
+   * the season that figure belongs to — a Gatherer Hut's summer is forty per
+   * cent better than its autumn and its winter is nothing at all, so quoting the
+   * peak silently would be the panel overpromising.
+   */
+  private describeProduction(buildingId: BuildingId): string {
+    const summary = productionSummary(buildingId);
+    if (summary.outputs.length === 0) {
+      return '';
+    }
+
+    const outputs = summary.outputs
+      .map((rate) => `${rate.perDay} ${this.i18n.t(`hud.${rate.resource}` as MessageKey)}`)
+      .join(' + ');
+    const season = summary.peakSeason
+      ? ` (${this.i18n.t(`season.${summary.peakSeason}` as MessageKey)})`
+      : '';
+    const line = `${this.i18n.t('building.atBest')} ${outputs} ${this.i18n.t('building.perDay')}${season}`;
+
+    if (summary.inputs.length === 0) {
+      return line;
+    }
+    // A workshop that eats a resource is a decision about that resource too: a
+    // Woodcutter at full tilt is four logs a day nobody else is building with.
+    const inputs = summary.inputs
+      .map((rate) => `${rate.perDay} ${this.i18n.t(`hud.${rate.resource}` as MessageKey)}`)
+      .join(' + ');
+    return `${line}, ${this.i18n.t('building.consuming')} ${inputs}`;
   }
 
   /** A side of the trade, or the word for letting the post decide. */

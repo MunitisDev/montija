@@ -133,6 +133,42 @@ The settlement is founded with one storage yard already standing, holding the se
 It accepts every resource, which is what a settlers' communal store would — but it is an open yard,
 and food does not keep in one. See [Spoilage](#spoilage--implemented).
 
+Nothing may be built on standing forest, and nothing stands on a road: a building takes the road up
+beneath it when it is placed, and the founding camp clears its own nine cells when the settlers come
+ashore. Nothing is salvaged from that clearing — they pushed the scrub aside dragging cargo up the
+beach rather than stacking timber.
+
+### What a building can make — Implemented
+
+Every post filled, in the building's best season. **Shown in the building's own panel**, derived from
+the recipe rather than written down, so retuning a recipe moves the figure with it. It is a ceiling:
+real output falls short of it for travel, hauling and illness, and rises above it with tools and a
+settled village.
+
+| Building        | At best                  | Uses            |
+| --------------- | ------------------------ | --------------- |
+| Gatherer Hut    | 24 food a day (summer)   | —               |
+| Crop Field      | 34.7 food a day (autumn) | —               |
+| Orchard         | 52.8 food a day (autumn) | —               |
+| Hunter's Lodge  | 17.5 food + 6.5 hides    | —               |
+| Herbalist's Hut | 8 herbs a day (summer)   | —               |
+| **Quarry**      | **10.3 stone a day**     | —               |
+| Mine            | 2.7 iron a day           | —               |
+| Woodcutter      | 16 firewood a day        | 4 logs          |
+| Blacksmith      | 6 tools a day            | 4 iron + 2 logs |
+| Tailor          | 4.4 clothing a day       | 6.5 hides       |
+
+**The Forester's Lodge is not on that list, because it makes nothing.** It works on the map instead:
+it plants saplings and marks surplus trees for felling, keeping about 110 trees standing inside a
+radius of 10. Its yield is the wood still standing in ten years, which is not a number a day — so its
+panel quotes no rate rather than a misleading zero.
+
+Two figures worth comparing, since they are the ones the first winter turns on: a Quarry is 10.3 stone
+a day from three workers, and a Woodcutter turns 4 logs into 16 firewood a day from two. Ten villagers
+burn 10 firewood on a freezing day, so one Woodcutter covers a settlement of that size with room to
+spare — provided it ever gets built. See
+[Difficulty](#the-measurement-that-settles-it).
+
 ---
 
 ## Spoilage — Implemented
@@ -710,34 +746,77 @@ mining jobs sat unclaimed for thirty-two days while the settlement cheerfully ch
 woodcutter to burn.
 
 Raising stalled gathering above felling was tried and **backed out**, because measurement did not
-support it: still 4 of 8, and three seeds died _earlier_ — they starved in summer instead, because
+support it: survival flat, and three seeds died _earlier_ — they starved in summer instead, because
 diverting hands to the quarry left the food piling up at the hut uncollected. Two attempts at
 limiting the diversion (a priority rung below hauling, then a cap of three gatherers) both left the
 same three seeds starving. The economy has no spare labour, so anything taken out of hauling comes
 straight off the settlement's food.
 
+#### The measurement that settles it
+
+**Mining is not broken; it is outcompeted.** Twelve deposits marked and nothing else asked of
+anybody, ten days, eight seeds — then the identical run with forty felling orders added. Same worlds,
+same deposits, same days. Stone delivered to the yards:
+
+| Nearest deposit | Mining alone | With trees also marked |
+| --------------- | ------------ | ---------------------- |
+| 8 cells         | 64           | 6                      |
+| 11 cells        | 50           | 0                      |
+| 12 cells        | 60           | 12                     |
+| **1 cell**      | **72**       | **72**                 |
+| 14 cells        | 46           | 0                      |
+| 30 cells        | 0            | 0                      |
+| 21 cells        | 16           | 0                      |
+| 14 cells        | 60           | 0                      |
+
+Marking trees costs the settlement about three quarters of its stone, and on five of the eight it
+takes it to **zero**. The single seed that is unaffected is the one whose rock is a single cell from
+the camp — where no tree can be nearer. That is the mechanism, isolated: not distance, not hauling,
+not the work rate, just the tie on priority being broken by proximity.
+
+Pinned in `tests/stone-supply.test.ts`, written as characterisation tests that fail loudly when this
+is fixed.
+
 ### Things tried on the opening that did not work
 
-Three attempts, all measured, none shipped. Recorded so they are not tried again blind — and because
-they agree on one thing: **the opening is not short of food, it is short of shelter.**
+Four attempts, all measured, one shipped. Recorded so they are not tried again blind — and because
+they agree on one thing: **the opening is not short of food, it is short of firewood.**
 
-| Attempt                                  | Result                                                                 |
-| ---------------------------------------- | ---------------------------------------------------------------------- |
-| +30% starting food (120 → 156) — shipped | Idle settlement dies 1 day later. No played year changed on any seed.  |
-| Stalled gathering outranks felling       | Backed out. Survival flat; three seeds starved in summer instead.      |
-| Food Storage for timber only (no stone)  | Backed out. Food banked 63 → 120, survival flat, reference seed worse. |
+| Attempt                                    | Result                                                                 |
+| ------------------------------------------ | ---------------------------------------------------------------------- |
+| +30% starting food (120 → 156) — shipped   | Idle settlement dies 1 day later. No played year changed on any seed.  |
+| Stalled gathering outranks felling         | Backed out. Survival flat; three seeds starved in summer instead.      |
+| Food Storage for timber only (no stone)    | Backed out. Food banked 63 → 120, survival flat, reference seed worse. |
+| Playing better — the `disciplined` opening | No change. 222 deaths against 220 over 24 seeds.                       |
 
-The last one is the most instructive, because it worked exactly as designed and still did not help.
-Dropping the 2 stone means the wreck's timber buys a larder on the first morning, and the settlers'
-rations stop rotting — food banked entering winter **nearly doubled**, 63 to 120 averaged over 24
-seeds. Survival did not move (2 of 24 became 1 of 24; 220 deaths became 222), and on the reference
-seed the well-played settlement went from losing nobody to losing two, which would have meant
-weakening the suite's central claim in exchange for nothing.
+The last one is not a code change at all: it is the best opening anybody has found, played by a script
+that marks stone first, gets a larder up on day four, roofs everybody before the cold and adds a
+Forester's Lodge and a Quarry afterwards — and orders felling **only when the yard is short of logs**,
+so the mining is not buried. It works exactly as intended in every measurable way except the one that
+counts: the larder finishes on day 8 instead of day 28, timber waste falls from 205 leftover logs to
+50 — and it still reaches winter with an empty woodshed, because the Woodcutter needs 4 stone. On the
+reference seed it is actually _worse_, burying everybody where `prepared` buries nobody.
 
-That is the whole finding in one line: **more food, and better-kept food, do not save a settlement
-that freezes.** Until the stone reaches the building sites there is no house; with no house no
-firewood is burned for anybody; and the settlement dies of cold with a full larder. Every lever on
-the food side is pushing on the wrong end of the chain.
+The timber-only larder is the most instructive of the code changes, because it worked exactly as
+designed and still did not help. Dropping the 2 stone means the wreck's timber buys a larder on the
+first morning, and the settlers' rations stop rotting — food banked entering winter **nearly doubled**,
+63 to 120 averaged over 24 seeds. Survival did not move (2 of 24 became 1 of 24; 220 deaths became
+222), and on the reference seed the well-played settlement went from losing nobody to losing two,
+which would have meant weakening the suite's central claim in exchange for nothing.
+
+That is the whole finding in one line: **more food, better-kept food and better play do not save a
+settlement that freezes.** The chain is
+
+```text
+no stone reaches the yard
+  └─▶ the Woodcutter is never finished (8 logs and 4 stone)
+        └─▶ no firewood is made at all
+              └─▶ nobody is warmed, and winter kills everyone
+```
+
+and every lever tried so far pushes on the wrong end of it. A well-played settlement enters winter
+with **zero firewood on every seed but one**, and that one is the seed whose rock is a single cell
+from the camp.
 
 So the finding stands and the fix does not. The reason the opening is hard is now known rather than
 guessed, and it belongs to a difficulty pass that has not been done.

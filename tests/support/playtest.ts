@@ -211,11 +211,23 @@ export function designateNearbyStone(simulation: Simulation, count: number): num
  * signal: a settlement that cannot find room for a hut has a different problem
  * from one that cannot afford it.
  */
-export function buildNearby(simulation: Simulation, buildingId: BuildingId): boolean {
+export function buildNearby(
+  simulation: Simulation,
+  buildingId: BuildingId,
+  /**
+   * How far out to look, in cells.
+   *
+   * Default for anything that can stand on open ground. A Quarry and a Mine must
+   * touch a rock face, and on some seeds the nearest one is a long way off — so
+   * those need a wider search or they silently never get built, which reads in
+   * the results as "the quarry did not help" rather than "there was no quarry".
+   */
+  radius = 30,
+): boolean {
   const centre = settlementCentre(simulation);
   const { footprint } = buildingDefinition(buildingId);
 
-  for (const cell of spiral(centre, 30)) {
+  for (const cell of spiral(centre, radius)) {
     // Keep a gap around the centre so buildings do not wall in the yard.
     if (simulation.canPlaceBuilding(buildingId, cell).ok) {
       return simulation.placeBuilding(buildingId, cell) !== null;
