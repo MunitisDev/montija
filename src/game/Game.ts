@@ -21,6 +21,7 @@ import {
   WORLD_WIDTH,
   ZOOM_LIMITS,
 } from '@/app/config';
+import { isAlreadySelected } from './selection';
 import { CameraController } from '@/renderer/camera/CameraController';
 import { FOUNDING_YARD_RADIUS, Simulation, type SimulationSnapshot } from '@/simulation/Simulation';
 import { SimulationClock, type SimulationSpeed } from '@/simulation/SimulationClock';
@@ -610,10 +611,29 @@ export class Game implements GameContext, InputIntentSink {
   }
 
   public onSelect(point: ScreenPoint): void {
+    // **A tap while placing means "never mind".** The ghost is framed with the
+    // camera, so a tap has no other job during placement — and tapping the map
+    // to get rid of it is what a player reaches for before finding the Cancel
+    // button. A drag is not a tap and still just moves the camera.
+    if (this.currentPlacement) {
+      this.cancelPlacement();
+      return;
+    }
+
     const cell = this.screenToGrid(point);
 
     if (!cell) {
       // Tapping off-map clears the selection rather than leaving a stale one.
+      this.currentSelection = null;
+      this.selectionChanges += 1;
+      return;
+    }
+
+    // Tapping what is already selected puts the panel away. Checked before the
+    // villager lookup so that tapping a building twice closes it even if
+    // somebody has since walked across its doorstep.
+    const standing = this.simulation.world.buildings.getAt(cell);
+    if (isAlreadySelected(this.currentSelection, cell, standing?.id ?? null)) {
       this.currentSelection = null;
       this.selectionChanges += 1;
       return;

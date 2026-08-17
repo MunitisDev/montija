@@ -393,14 +393,19 @@
   flex-wrap: wrap;
 }
 
+/*
+ * No frame around the category buttons.
+ *
+ * The bar used to be a panel with the five buttons inside it: a border and a
+ * background around a row of things that already have their own border and
+ * background. Two boxes saying the same thing, and the outer one ate a strip of
+ * the world along the bottom of the screen for nothing. The buttons stand on
+ * their own.
+ */
 .build-bar {
   display: flex;
   align-items: center;
   min-height: var(--touch-target);
-  padding: 0 14px;
-  background: var(--colour-panel);
-  border: 1px solid var(--colour-panel-edge);
-  border-radius: 6px;
 }
 
 /*

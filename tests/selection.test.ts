@@ -13,8 +13,9 @@
 
 import { describe, expect, it } from 'vitest';
 
-import type { Selection } from '@/game/Game';
-import { hidesGroundPanel, selectedCells } from '@/game/selection';
+import { Game, type Selection } from '@/game/Game';
+import { hidesGroundPanel, isAlreadySelected, selectedCells } from '@/game/selection';
+import type { GridPoint } from '@/shared/types/geometry';
 
 describe('what a tap covers', () => {
   it('marks one cell of bare ground', () => {
@@ -119,3 +120,109 @@ function building(
     },
   };
 }
+
+describe('tapping the same thing twice', () => {
+  it('closes a tile that is already open', () => {
+    // The only gesture a player has for "never mind" was tapping somewhere
+    // else, which selects something else. Toggling is the missing half.
+    const current = tile({ gx: 4, gy: 7 });
+    expect(isAlreadySelected(current, { gx: 4, gy: 7 }, null)).toBe(true);
+  });
+
+  it('leaves a different tile alone', () => {
+    expect(isAlreadySelected(tile({ gx: 4, gy: 7 }), { gx: 4, gy: 8 }, null)).toBe(false);
+  });
+
+  it('closes a building tapped anywhere on its footprint', () => {
+    // The far corner of a quarry is the same quarry. The toggle has to agree
+    // with the outline, which already treats every cell as the building.
+    const current = onBuilding({ gx: 10, gy: 10 }, 3);
+    expect(isAlreadySelected(current, { gx: 12, gy: 12 }, 3)).toBe(true);
+  });
+
+  it('leaves a different building alone', () => {
+    expect(isAlreadySelected(onBuilding({ gx: 10, gy: 10 }, 3), { gx: 20, gy: 20 }, 9)).toBe(false);
+  });
+
+  it('does not confuse a building with the ground beside it', () => {
+    expect(isAlreadySelected(onBuilding({ gx: 10, gy: 10 }, 3), { gx: 10, gy: 10 }, null)).toBe(
+      false,
+    );
+    expect(isAlreadySelected(tile({ gx: 10, gy: 10 }), { gx: 10, gy: 10 }, 3)).toBe(false);
+  });
+
+  it('has nothing to close when nothing is selected', () => {
+    expect(isAlreadySelected(null, { gx: 1, gy: 1 }, null)).toBe(false);
+  });
+});
+
+function tile(cell: GridPoint): Selection {
+  return base(cell, null);
+}
+
+function onBuilding(cell: GridPoint, id: number): Selection {
+  return base(cell, {
+    id,
+    buildingId: 'quarry',
+    origin: cell,
+    footprint: { width: 3, height: 3 },
+    complete: true,
+    progress: 1,
+    missingMaterials: [],
+    workers: 0,
+    workerSlots: 3,
+    desiredWorkers: 3,
+    contents: [],
+    housing: 0,
+    residents: 0,
+    demolitionOrdered: false,
+  });
+}
+
+function base(cell: GridPoint, building: Selection['building']): Selection {
+  return {
+    cell,
+    terrain: 'grass',
+    walkable: true,
+    buildable: true,
+    villager: null,
+    treeId: null,
+    isStoneDeposit: false,
+    designated: false,
+    building,
+    hasRoad: false,
+    roadDesignated: false,
+    canPave: true,
+  };
+}
+
+describe('a tap while placing a building', () => {
+  it('cancels the placement instead of selecting anything', () => {
+    // The ghost is framed with the camera, so a tap has no other job during
+    // placement — and tapping the map is what a player reaches for before they
+    // find the Cancel button. A drag is not a tap and still pans.
+    const game = new Game({ seed: 20260816 });
+    game.onSelect({ sx: 100, sy: 100 });
+    const chosen = game.selection;
+    expect(chosen).not.toBeNull();
+
+    game.beginPlacement('house');
+    expect(game.placement).not.toBeNull();
+    game.onSelect({ sx: 300, sy: 200 });
+
+    expect(game.placement).toBeNull();
+    // And it selected nothing new: the tap was spent on the ghost. Whatever was
+    // already open stays open, because cancelling a build is not a reason to
+    // close an unrelated panel.
+    expect(game.selection).toBe(chosen);
+  });
+
+  it('selects normally once there is no ghost', () => {
+    const game = new Game({ seed: 20260816 });
+    game.beginPlacement('house');
+    game.onSelect({ sx: 100, sy: 100 });
+    game.onSelect({ sx: 100, sy: 100 });
+
+    expect(game.selection).not.toBeNull();
+  });
+});

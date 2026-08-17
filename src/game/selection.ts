@@ -49,3 +49,34 @@ export function selectedCells(selection: Selection): readonly GridPoint[] {
 export function hidesGroundPanel(selection: Selection): boolean {
   return selection.building !== null && selection.villager === null;
 }
+
+/**
+ * `true` when a tap landed on the thing that is already selected.
+ *
+ * Tapping the same place twice should put the panel away rather than redraw it:
+ * on a tablet the panel covers the corner of the map, and the only gesture a
+ * player has for "never mind" is tapping somewhere else — which selects
+ * something else. Toggling is the missing half.
+ *
+ * A **building answers for every cell it stands on**, so tapping its far corner
+ * after tapping its near one is still the same building and still closes it.
+ * That is the same rule `selectedCells` draws by, and the two must agree or the
+ * outline would say one thing and the toggle another.
+ */
+export function isAlreadySelected(
+  current: Selection | null,
+  cell: GridPoint,
+  buildingId: number | null,
+): boolean {
+  if (!current) {
+    return false;
+  }
+  if (current.building && buildingId !== null) {
+    return current.building.id === buildingId;
+  }
+  // One of the two is a bare tile, so only the exact cell counts.
+  if (current.building || buildingId !== null) {
+    return false;
+  }
+  return current.cell.gx === cell.gx && current.cell.gy === cell.gy;
+}
