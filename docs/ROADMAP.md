@@ -1065,3 +1065,20 @@ cancel the placement."** It does. A drag is still a drag.
 
 **"I would take the frame off the buttons along the bottom."** Gone: it was a
 panel wrapped around five buttons that already had their own.
+
+---
+
+## Phase 38 — Room left in the sheds — Implemented
+
+"Can you put in information about the % full of the storage yards and food
+stores? And warnings if any category goes over 90%." Both, in the drawer, the
+ledger and the building panel, with the warning line shared between the banner and
+the sheet. See
+[GAME_DESIGN.md](./GAME_DESIGN.md#how-full-the-stores-are--implemented) — including
+the bug it turned up, where a _full_ yard dropped out of the count of how full the
+yards were.
+
+The same pass re-measured the opening on the player's own line — eight stone on
+day one, top up when short — and found a second, different way settlements die:
+food rotting in the field for want of hands to carry it, in summer, long before
+the winter the game is about. Recorded, not fixed.

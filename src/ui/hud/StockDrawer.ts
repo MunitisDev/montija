@@ -22,6 +22,7 @@ import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
 import type { GameContext } from '@/game/Game';
 import { signedSeason } from '@/ui/format/rates';
 import type { I18n } from '@/ui/i18n/I18n';
+import type { MessageKey } from '@/ui/i18n/messages';
 import { estimateFlows, totalDemand } from '@/ui/ledger/ledgerModel';
 
 /**
@@ -114,11 +115,22 @@ export class StockDrawer {
     if (this.i18n.changeVersion !== this.renderedLanguageVersion) {
       this.renderedLanguageVersion = this.i18n.changeVersion;
       this.toggle.setAttribute('aria-label', this.i18n.t('hud.stores'));
-      this.foot.textContent = this.i18n.t('stock.foot');
     }
     if (!this.isOpen) {
       return;
     }
+
+    // How full the buildings are, above the caveat. "Have I room for this
+    // harvest" is a question about the shed, and there was nowhere on screen
+    // that answered it — a settlement whose larder is full stops carrying food
+    // in and says nothing about why.
+    // The larder line only once one is built: before that the founding yard is
+    // both, and the same figure twice under two names is noise.
+    const fills = [this.describeFill('logs', 'stock.yards')];
+    if (this.context.simulation.storages.hasLarder) {
+      fills.push(this.describeFill('food', 'stock.larders'));
+    }
+    this.foot.textContent = `${fills.join(' · ')} — ${this.i18n.t('stock.foot')}`;
 
     const snapshot = this.context.snapshot();
     const flows = estimateFlows(this.context.simulation);
@@ -144,6 +156,22 @@ export class StockDrawer {
       elements.note.textContent = parts.join(' · ');
       elements.note.classList.toggle('is-bad', spent > made);
     }
+  }
+
+  /**
+   * One store's fill, as `Yards 26% (520/2000)`.
+   *
+   * "None built" rather than a percentage when there is nowhere at all: nought
+   * of nought is not empty, and a settlement with no larder is in a different
+   * kind of trouble from one with an empty larder.
+   */
+  private describeFill(resource: ResourceId, label: MessageKey): string {
+    const { used, capacity } = this.context.simulation.storages.fill(resource);
+    const name = this.i18n.t(label);
+    if (capacity <= 0) {
+      return `${name} ${this.i18n.t('stock.none')}`;
+    }
+    return `${name} ${Math.round((used / capacity) * 100)}% (${used}/${capacity})`;
   }
 }
 

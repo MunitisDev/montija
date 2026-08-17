@@ -35,7 +35,7 @@
 import { recipe as findRecipe } from '@/data/recipes';
 import { WORKING_AGE } from '@/data/population';
 import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
-import type { Simulation } from '@/simulation/Simulation';
+import { STORAGE_WARNING_FRACTION, type Simulation } from '@/simulation/Simulation';
 import { hasColdReading } from '@/simulation/history/Chronicle';
 import { DAYS_PER_YEAR, SEASONAL_YIELD, TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
 import {
@@ -410,6 +410,16 @@ function buildingsTab(simulation: Simulation, t: Translate): LedgerTab {
   }
 
   const snapshot = simulation.snapshot();
+  // How full the sheds are. A settlement whose larder has filled stops carrying
+  // food in and says nothing about why, so the figure belongs somewhere a player
+  // can find it before that happens.
+  const stores: LedgerRow[] = [fillRow(simulation, 'logs', t('ledger.stores.yards'), t)];
+  // The food line only once a larder stands: until then the founding yard is
+  // both stores, and the same figure under two names says nothing twice.
+  if (simulation.storages.hasLarder) {
+    stores.push(fillRow(simulation, 'food', t('ledger.stores.larders'), t));
+  }
+
   return {
     id: 'buildings',
     title: t('ledger.tab.buildings'),
@@ -426,6 +436,7 @@ function buildingsTab(simulation: Simulation, t: Translate): LedgerTab {
           },
         ],
       },
+      { id: 'stores', title: t('ledger.section.stores'), rows: stores },
       {
         id: 'standing',
         title: t('ledger.section.standing'),
@@ -433,6 +444,31 @@ function buildingsTab(simulation: Simulation, t: Translate): LedgerTab {
         rows,
       },
     ],
+  };
+}
+
+/**
+ * One line of how full the buildings that take a resource are.
+ *
+ * Amber from nine tenths, which is where the settlement starts warning about it
+ * — the two must agree, or the sheet and the banner would disagree on screen.
+ */
+function fillRow(
+  simulation: Simulation,
+  resource: ResourceId,
+  label: string,
+  t: Translate,
+): LedgerRow {
+  const { used, capacity } = simulation.storages.fill(resource);
+  if (capacity <= 0) {
+    return { label, value: t('ledger.stores.none'), tone: 'bad' as const };
+  }
+  const fraction = used / capacity;
+  return {
+    label,
+    value: `${Math.round(fraction * 100)}%`,
+    detail: `${used} / ${capacity}`,
+    ...(fraction >= STORAGE_WARNING_FRACTION ? { tone: 'bad' as const } : {}),
   };
 }
 

@@ -139,6 +139,10 @@ export type Advice =
   | 'siteStalled'
   /** Goods are lying in the field with no yard that will take them. */
   | 'storageFull'
+  /** The yards are nearly full, and will start turning goods away. */
+  | 'storageFilling'
+  /** The larders are nearly full, and the next harvest has nowhere to go. */
+  | 'larderFilling'
   | 'noShelter'
   | 'foodLow'
   | 'needMoreHuts'
@@ -146,6 +150,22 @@ export type Advice =
   | 'firewoodLow'
   | 'firewoodShort'
   | null;
+
+/**
+ * How full a set of stores has to be before the settlement is warned.
+ *
+ * Nine tenths, because the warning has to arrive while there is still time to do
+ * something: a yard that has actually filled is already turning goods away, and
+ * by then the answer is "you needed another one yesterday".
+ */
+export const STORAGE_WARNING_FRACTION = 0.9;
+
+/** `true` when a set of stores exists and is nearly full. */
+function nearlyFull(fill: { readonly used: number; readonly capacity: number }): boolean {
+  // Capacity of nothing is not fullness — a settlement with no larder at all is
+  // a different problem with a different sentence.
+  return fill.capacity > 0 && fill.used / fill.capacity >= STORAGE_WARNING_FRACTION;
+}
 
 /**
  * Roughly how many villagers one Gatherer Hut keeps fed.
@@ -711,6 +731,20 @@ export class Simulation {
     // stops carrying anything in and nothing on screen says why.
     if (this.hasHomelessPile()) {
       return 'storageFull';
+    }
+
+    // Said *before* it happens, which is the whole difference. A yard that has
+    // just filled has already begun leaving goods in the field; a yard at nine
+    // tenths is a building the player still has time to raise. Food first: a
+    // full larder in autumn is a winter's harvest left to rot.
+    // Only once a larder exists. Before that the founding yard is the food store
+    // *and* the timber store, and telling the player their larders are full when
+    // they have none reads as a bug — the yard warning below covers it.
+    if (this.storages.hasLarder && nearlyFull(this.storages.fill('food'))) {
+      return 'larderFilling';
+    }
+    if (nearlyFull(this.storages.fill('logs'))) {
+      return 'storageFilling';
     }
 
     const huts = this.world.buildings.countOf('gatherer-hut');

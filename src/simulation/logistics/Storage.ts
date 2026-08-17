@@ -64,11 +64,26 @@ export class Storage {
     return this.accepted ? [...this.accepted] : null;
   }
 
+  /**
+   * `true` when a hauler could put this down here *right now*.
+   *
+   * Two questions in one, deliberately, because that is what a hauler needs to
+   * ask: is this the kind of thing this yard takes, and is there room. Anything
+   * asking only the first — how full the food stores are, say — wants
+   * {@link isFor} instead, or it will quietly skip the full ones.
+   */
   public accepts(resource: ResourceId): boolean {
-    if (this.accepted && !this.accepted.has(resource)) {
-      return false;
-    }
-    return this.inventory.freeSpace > 0;
+    return this.isFor(resource) && this.inventory.freeSpace > 0;
+  }
+
+  /**
+   * `true` when this yard is *for* a resource, whether or not it has room.
+   *
+   * Split out after a full yard vanished from the settlement's own count of how
+   * full its yards were — the one store the figure most needed to include.
+   */
+  public isFor(resource: ResourceId): boolean {
+    return !this.accepted || this.accepted.has(resource);
   }
 }
 
@@ -93,6 +108,38 @@ export class StorageRegistry {
 
   public markChanged(): void {
     this.changeVersion += 1;
+  }
+
+  /** `true` once a purpose-built food store stands, as against the open yard. */
+  public get hasLarder(): boolean {
+    return this.storages.some((storage) => storage.preservation < 1 && storage.isFor('food'));
+  }
+
+  /**
+   * How full the buildings that take a given resource are.
+   *
+   * **Asked by resource rather than by kind of building**, because that is the
+   * question with an answer: a Storage Yard takes eight goods and a Food Storage
+   * takes one, and what a player wants to know is "have I room for more food",
+   * not "how full is that shed". Summed across every store that would accept it.
+   *
+   * `capacity` is 0 when the settlement has nowhere at all to put the stuff —
+   * which is not the same as full, and is the state that quietly kills a
+   * settlement: gathered food with nowhere to go simply rots where it lies.
+   */
+  public fill(resource: ResourceId): { readonly used: number; readonly capacity: number } {
+    let used = 0;
+    let capacity = 0;
+    for (const storage of this.storages) {
+      // `isFor`, not `accepts`: a full yard is exactly the one this figure is
+      // about, and `accepts` would drop it for having no room left.
+      if (!storage.isFor(resource)) {
+        continue;
+      }
+      used += storage.inventory.total;
+      capacity += storage.inventory.capacity;
+    }
+    return { used, capacity };
   }
 
   public add(options: Omit<StorageOptions, 'id'>): Storage {

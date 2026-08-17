@@ -1395,3 +1395,58 @@ a measurement, not a change: dropping the stone cost gets firewood onto exactly
 one seed, which is not enough to ship a balance change for.
 
 `tests/woodland.test.ts`.
+
+---
+
+## How full the stores are — Implemented
+
+Asked for after a settlement died with food lying in the field: **the room left in
+the sheds, and a warning before it runs out.**
+
+The figure is asked **by resource rather than by building**, because that is the
+question with an answer: a Storage Yard takes eight goods and a Food Storage takes
+one. "Have I room for this harvest" is about the pool, not about one shed. It
+appears in the stock drawer's foot, on the ledger's buildings page — amber from
+nine tenths — and under any store the player taps.
+
+**A warning at nine tenths**, in `STORAGE_WARNING_FRACTION`, shared by the banner
+and the sheet so the two cannot disagree on screen. Nine tenths because the
+warning has to arrive while there is still time to raise another shed; a yard that
+has actually filled is already turning goods away.
+
+**The larder line only appears once a larder is built.** The founding yard takes
+everything, so before that both figures are the same number under two names, and
+"your larders are full" to a settlement with no larder reads as a bug.
+
+### The bug it turned up
+
+`Storage.accepts(resource)` meant two things at once — _is this the kind of thing I
+take_ and _have I room_ — so a full yard answered "no" to "do you take logs" and
+**dropped out of the count of how full the yards were**, at exactly the moment the
+figure mattered. Split into `accepts` (a hauler's question) and `isFor` (a
+bookkeeper's).
+
+### And a correction to what kills a settlement
+
+The opening was re-measured on a leaner line than the one in
+[Why they die](#why-they-die--measured-not-fixed): eight stone marked on the first
+day and small top-ups when short, rather than thirty marked up front. Over 24
+seeds it is **220 deaths against 222** — no better — but it fails in a completely
+different way, and the old explanation does not describe it:
+
+|                  | The line above | The lean line                             |
+| ---------------- | -------------- | ----------------------------------------- |
+| Buildings raised | almost none    | 3 houses and a Woodcutter on all 24       |
+| Deaths by hunger | —              | **120**                                   |
+| Deaths by cold   | —              | 90                                        |
+| First death      | midwinter      | **day 23, in summer**, on a third of them |
+
+At day 22 a failing settlement holds **126 food lying in the field, none in
+store**, ten people starving beside it, four labourers, and a job board carrying
+**99 felling orders and up to 112 mining orders**. The food is made and never
+carried: the settlement out-produces the hands it has to carry, while those same
+hands are spread across two hundred standing orders.
+
+That is a **hauling** failure, not a storage one and not the stone one. It is not
+fixed, and it is not the same problem as the one above — both are real, and the
+one a player meets first depends on how they open.

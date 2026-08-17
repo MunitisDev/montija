@@ -12,7 +12,7 @@
  * never the authority. A small `+n` marks units still lying in the field.
  */
 
-import type { BuildingId } from '@/data/buildings';
+import { buildingDefinition, type BuildingId } from '@/data/buildings';
 import type { ResourceId } from '@/data/resources';
 
 /**
@@ -439,10 +439,14 @@ export class Hud {
       return;
     }
 
-    this.elements.buildingDetail.textContent =
+    // A store says how full it is as well as what is in it: "holding 40 food" is
+    // a number about the food, and the question a player has is about the room.
+    const fill = this.storeFill(building.buildingId);
+    const holding =
       building.contents.length > 0
         ? `${this.i18n.t('building.holding')} ${this.describeAmounts(building.contents)}`
         : '';
+    this.elements.buildingDetail.textContent = [holding, fill].filter(Boolean).join(' · ');
   }
 
   /**
@@ -536,6 +540,26 @@ export class Hud {
    * Rebuilt whenever the selection changes, which is a tap — not a frame. A
    * workshop holds at most a handful of them.
    */
+  /**
+   * How full this kind of store is, settlement-wide, or `''` for anything else.
+   *
+   * Across every store that takes the same goods rather than this one alone: a
+   * player with three yards has one pool, and "this shed is 40% full" while the
+   * others are brimming would be a true sentence pointing the wrong way.
+   */
+  private storeFill(buildingId: BuildingId): string {
+    const definition = buildingDefinition(buildingId);
+    const accepts = definition.storage?.accepts?.[0];
+    if (!accepts) {
+      return '';
+    }
+    const { used, capacity } = this.context.simulation.storages.fill(accepts);
+    if (capacity <= 0) {
+      return '';
+    }
+    return `${Math.round((used / capacity) * 100)}% ${this.i18n.t('building.full')}`;
+  }
+
   private renderCards(buildingId: number | null): void {
     const cards = buildingId === null ? [] : cardsFor(this.context.simulation, buildingId);
     this.elements.buildingCards.hidden = cards.length === 0;
