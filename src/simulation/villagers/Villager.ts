@@ -11,7 +11,7 @@
  * board offers rather than holding a trade.
  */
 
-import { WORKING_AGE } from '@/data/population';
+import { ADULT_AGE, RETIREMENT_AGE, WORKING_AGE } from '@/data/population';
 import type { GridPoint, WorldPoint } from '@/shared/types/geometry';
 import { Inventory } from '@/simulation/resources/Inventory';
 
@@ -194,6 +194,17 @@ export class Villager {
    */
   public illDaysRemaining = 0;
 
+  /**
+   * Days this villager has spent unwell in their whole life.
+   *
+   * Kept because sickness shortens a life: the effective lifespan is the one
+   * rolled at birth less a year for every {@link ILL_DAYS_PER_YEAR_LOST} days of
+   * it. A running total rather than a lifespan decremented in place, so the
+   * number rolled from the seed stays readable and the cost is always derivable
+   * from it.
+   */
+  public illDaysLived = 0;
+
   /** `true` while this villager is unwell. */
   public get isIll(): boolean {
     return this.illDaysRemaining > 0;
@@ -216,9 +227,37 @@ export class Villager {
     this.lifespan = options.lifespan;
   }
 
-  /** Children do not work. They eat, and they grow up. */
+  /**
+   * `true` for one of the household's grown-ups.
+   *
+   * Marries, may take a house, and takes up one of its adult places. **Not** the
+   * same as being able to work — see {@link canWork}. The two were one getter
+   * for a long time, and separating them is what lets a house hold a family
+   * rather than four people who happen to fit.
+   */
   public get isAdult(): boolean {
-    return this.age >= WORKING_AGE;
+    return this.age >= ADULT_AGE;
+  }
+
+  /**
+   * `true` for somebody the settlement can put to work.
+   *
+   * From fourteen until they retire. Children below it are fed and grow up;
+   * elders above it are fed and do not. Everything that asks "how many hands has
+   * this settlement got" asks this, not {@link isAdult}.
+   */
+  public get canWork(): boolean {
+    return this.age >= WORKING_AGE && this.age < RETIREMENT_AGE;
+  }
+
+  /** `true` for somebody past working age, who lives on and does not work. */
+  public get isElder(): boolean {
+    return this.age >= RETIREMENT_AGE;
+  }
+
+  /** `true` for somebody too young to be one of the grown-ups. */
+  public get isChild(): boolean {
+    return this.age < ADULT_AGE;
   }
 
   /** The cell the villager is currently standing in. */

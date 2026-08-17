@@ -117,6 +117,12 @@ export function runIllness(
 
   for (const villager of villagers) {
     if (villager.illDaysRemaining > 0) {
+      // **A day spent unwell is a day off the end of a life.** Counted here,
+      // spent in `PopulationSystem`. This is what makes a Healer's House worth
+      // building rather than a convenience: shortening cases lengthens lives,
+      // so the settlement's life expectancy is something the player builds.
+      villager.illDaysLived += 1;
+
       // Care shortens a case rather than curing it outright: a healer is
       // somebody who gets you through it, not a switch that turns it off.
       villager.illDaysRemaining -= 1 + CARE_RECOVERY_SHARE * care * ILLNESS_DAYS;

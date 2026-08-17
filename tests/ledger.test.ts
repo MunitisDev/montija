@@ -115,15 +115,21 @@ describe('the counts', () => {
     );
   });
 
-  it('splits adults and children so the two make up the whole', () => {
+  it('splits the settlement into children, workers and elders that make up the whole', () => {
+    // **Three groups rather than two, and that is the point of the panel.** A
+    // settlement can sit at twenty people with half its workshops empty, and the
+    // reason is always how many of the twenty are under fourteen or over sixty —
+    // which "adults and children" could not tell the player.
     const simulation = new Simulation(OPTIONS);
     run(simulation, TICKS_PER_DAY * 4);
     const tabs = buildLedger(simulation, t);
 
     const total = Number(figure(tabs, 'people', 'ledger.people.total'));
-    const adults = Number(figure(tabs, 'people', 'ledger.people.adults'));
+    const workers = Number(figure(tabs, 'people', 'ledger.people.workers'));
     const children = Number(figure(tabs, 'people', 'ledger.people.children'));
-    expect(adults + children).toBe(total);
+    const elders = Number(figure(tabs, 'people', 'ledger.people.elders'));
+
+    expect(children + workers + elders).toBe(total);
   });
 
   it('counts a building only once it is standing', () => {

@@ -10,9 +10,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  ADULT_AGE,
   BIRTH_REQUIREMENTS,
   IMMIGRATION_REQUIREMENTS,
   LIFESPAN_MAX,
+  RETIREMENT_AGE,
   WORKING_AGE,
 } from '@/data/population';
 import { SeededRandom } from '@/shared/math/random';
@@ -173,14 +175,40 @@ describe('ageing', () => {
 });
 
 describe('children', () => {
-  it('counts anyone below working age as a child', () => {
+  it('separates working from being grown up, and from being retired', () => {
+    // **Three ages, not one.** These were a single getter for a long time, and
+    // conflating them cost the settlement four years of everybody's labour and,
+    // worse, filled houses with children who counted as grown-ups — so one
+    // family of four blocked every birth in the village.
     const child = person({ id: 1, age: WORKING_AGE - 1 });
-    const adult = person({ id: 2, age: WORKING_AGE });
+    const youth = person({ id: 2, age: WORKING_AGE });
+    const grownUp = person({ id: 3, age: ADULT_AGE });
+    const elder = person({ id: 4, age: RETIREMENT_AGE });
 
+    // A thirteen year old does neither.
+    expect(child.canWork).toBe(false);
     expect(child.isAdult).toBe(false);
-    expect(adult.isAdult).toBe(true);
 
-    const day = runDay({ villagers: [child, adult] });
+    // A fourteen year old works, and is still a child at home.
+    expect(youth.canWork).toBe(true);
+    expect(youth.isAdult).toBe(false);
+    expect(youth.isChild).toBe(true);
+
+    // At eighteen they are one of the household's grown-ups.
+    expect(grownUp.canWork).toBe(true);
+    expect(grownUp.isAdult).toBe(true);
+
+    // At sixty they stop working and go on living, eating and needing a fire.
+    expect(elder.canWork).toBe(false);
+    expect(elder.isAdult).toBe(true);
+    expect(elder.isElder).toBe(true);
+  });
+
+  it('reports children and grown-ups by adulthood, not by working age', () => {
+    const youth = person({ id: 1, age: WORKING_AGE });
+    const grownUp = person({ id: 2, age: ADULT_AGE });
+
+    const day = runDay({ villagers: [youth, grownUp] });
     expect(day.report.children).toBe(1);
     expect(day.report.adults).toBe(1);
   });
@@ -217,10 +245,27 @@ describe('births', () => {
     expect(daysUntilBirth(setup)).toBeNull();
   });
 
-  it('never happens without a spare bed', () => {
-    // Two adults and two children already fill the only house.
+  it('happens however many children the household already has', () => {
+    // **This test used to assert the opposite, and the opposite was the bug.**
+    // A house held four *residents*, so a couple with two children filled it,
+    // the birth check found no spare bed anywhere in the village, and growth
+    // stopped dead — a player watched a settlement sit at twenty people for
+    // years with workshops standing empty.
+    //
+    // A house now holds four grown-ups and as many of their children as they
+    // have. What limits a village is food, health and how many couples it has,
+    // which are all things the player can do something about.
     const setup = fertile();
     setup.villagers.push(person({ id: 3, age: 2 }), person({ id: 4, age: 3 }));
+    expect(daysUntilBirth(setup)).not.toBeNull();
+  });
+
+  it('never happens in a settlement with no houses at all', () => {
+    // The bed limit is gone; needing somewhere to live is not. Clearing the
+    // couple's `homeId` would prove nothing — housing is reassigned at the top
+    // of the same day, before births are considered — so the houses go instead.
+    const setup = fertile();
+    setup.buildings = withHouses(0);
     expect(daysUntilBirth(setup)).toBeNull();
   });
 

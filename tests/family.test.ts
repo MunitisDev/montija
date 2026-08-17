@@ -295,13 +295,19 @@ describe('households', () => {
     expect(couples).toBeGreaterThan(0);
   });
 
-  it('never overfills a house to do it', () => {
-    // Pushing a third person onto the street to seat a couple would be a far
+  it('never puts more grown-ups in a house than it holds', () => {
+    // Pushing a third adult onto the street to seat a couple would be a far
     // worse outcome than a couple who have not moved in yet.
+    //
+    // **Grown-ups, not residents.** A house's figure is a count of adults, and
+    // children do not count against it — a family is a family, and a couple with
+    // three children under a four-adult roof is exactly right. Counting the
+    // children was what stalled settlements: a full house meant no more births
+    // anywhere in the village.
     const simulation = raiseAFamily(240);
     const occupancy = new Map<number, number>();
     for (const villager of simulation.villagers.all) {
-      if (villager.homeId !== null) {
+      if (villager.homeId !== null && villager.isAdult) {
         occupancy.set(villager.homeId, (occupancy.get(villager.homeId) ?? 0) + 1);
       }
     }
@@ -309,6 +315,27 @@ describe('households', () => {
       const house = simulation.world.buildings.getById(homeId);
       expect(count, `house ${homeId}`).toBeLessThanOrEqual(house?.definition.housing ?? 0);
     }
+  });
+
+  it('houses children with their parents, however many there are', () => {
+    const simulation = raiseAFamily(240);
+    const byId = new Map(simulation.villagers.all.map((villager) => [villager.id, villager]));
+
+    let checked = 0;
+    for (const child of simulation.villagers.all) {
+      if (!child.isChild || child.parentIds === null) {
+        continue;
+      }
+      const parents = child.parentIds
+        .map((id) => byId.get(id))
+        .filter((parent): parent is NonNullable<typeof parent> => parent !== undefined);
+      if (parents.length === 0 || parents.every((parent) => parent.homeId === null)) {
+        continue;
+      }
+      checked += 1;
+      expect(parents.some((parent) => parent.homeId === child.homeId)).toBe(true);
+    }
+    expect(checked).toBeGreaterThan(0);
   });
 
   it('moves unpaired adults in together rather than one to a house', () => {
@@ -328,11 +355,17 @@ describe('households', () => {
       houses.push(house!);
     }
 
-    // Past childbearing age, so nobody pairs and everybody stays a single.
-    for (const villager of simulation.villagers.all) {
-      villager.age = 50;
+    // **Ages spaced eight years apart, so nobody pairs.** Being past
+    // childbearing age used to be enough, and is not any more: pairing has no
+    // upper age limit now, because a widow of fifty who finds somebody her own
+    // age is a household. What keeps them single is the six-year gap rule.
+    // Lifespans are lifted out of the way so the elders among them do not die
+    // mid-test and turn this into a measurement of old age.
+    simulation.villagers.all.forEach((villager, index) => {
+      villager.age = 20 + index * 8;
+      villager.lifespan = 200;
       villager.partnerId = null;
-    }
+    });
     // One to a house, which is the state being complained about.
     simulation.villagers.all.forEach((villager, index) => {
       villager.homeId = index < houses.length ? houses[index]!.id : null;
@@ -342,13 +375,13 @@ describe('households', () => {
 
     const occupancy = new Map<number, number>();
     for (const villager of simulation.villagers.all) {
-      if (villager.homeId !== null) {
+      if (villager.homeId !== null && villager.isAdult) {
         occupancy.set(villager.homeId, (occupancy.get(villager.homeId) ?? 0) + 1);
       }
     }
 
-    // Ten singles and sixteen beds should fill houses, not sprinkle across
-    // them: at most one house is left part-filled by the remainder.
+    // Ten singles and sixteen adult places should fill houses, not sprinkle
+    // across them: at most one house is left part-filled by the remainder.
     const used = houses.filter((house) => (occupancy.get(house.id) ?? 0) > 0);
     const partial = used.filter(
       (house) => (occupancy.get(house.id) ?? 0) < (house.definition.housing ?? 0),

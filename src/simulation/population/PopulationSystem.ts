@@ -26,15 +26,18 @@
  */
 
 import {
+  ADULT_AGE,
   BIRTH_CHANCE_PER_DAY,
   BIRTH_REQUIREMENTS,
   CHILDBEARING_AGE_MAX,
   CHILDBEARING_AGE_MIN,
+  ILL_DAYS_PER_YEAR_LOST,
   IMMIGRANTS_PER_ARRIVAL,
   IMMIGRATION_CHANCE_PER_DAY,
   IMMIGRATION_REQUIREMENTS,
   LIFESPAN_MAX,
   LIFESPAN_MIN,
+  MAX_PAIR_AGE_GAP,
 } from '@/data/population';
 import { DAYS_PER_SEASON } from '@/simulation/seasons/SeasonClock';
 import type { Building } from '@/simulation/buildings/Building';
@@ -172,8 +175,11 @@ function considerImmigration(options: {
     return 0;
   }
 
-  const capacity = houses.reduce((total, house) => total + (house.definition.housing ?? 0), 0);
-  const spare = capacity - villagers.filter((villager) => villager.homeId !== null).length;
+  // Adult places, and adults filling them: a newcomer needs a grown-up's place,
+  // and a household's children were never taking one.
+  const capacity = houses.reduce((total, house) => total + adultCapacityOf(house), 0);
+  const spare =
+    capacity - villagers.filter((villager) => villager.homeId !== null && villager.isAdult).length;
   if (spare < IMMIGRATION_REQUIREMENTS.spareHousing) {
     return 0;
   }
@@ -238,10 +244,12 @@ function formPairs(villagers: readonly Villager[]): number {
     }
   }
 
+  // **No upper age limit, because widowhood has no upper age limit.** Bearing
+  // children does — see `considerBirths` — but a widow of fifty who finds
+  // somebody her own age is a household, and refusing to model it left every
+  // survivor of a long marriage alone for the rest of their life.
   const eligible = (villager: Villager): boolean =>
-    villager.partnerId === null &&
-    villager.age >= CHILDBEARING_AGE_MIN &&
-    villager.age <= CHILDBEARING_AGE_MAX;
+    villager.partnerId === null && villager.age >= ADULT_AGE;
 
   // Two queues rather than one list paired off in order: a couple is one of
   // each. A settlement founded lopsided therefore makes fewer couples and grows
@@ -249,12 +257,39 @@ function formPairs(villagers: readonly Villager[]): number {
   const women = villagers.filter((v) => eligible(v) && v.sex === 'f').sort((a, b) => a.id - b.id);
   const men = villagers.filter((v) => eligible(v) && v.sex === 'm').sort((a, b) => a.id - b.id);
 
+  // **Closest in age, within six years.** Matching the two queues off by id was
+  // what this did before, and the id order is arrival order — so it would marry
+  // a nineteen year old to a forty year old purely because that was the order
+  // they turned up in. Nearest-age is both plausible and stable: candidates are
+  // taken in id order and ties break on the lower id, so a settlement replayed
+  // from its seed forms exactly the same households.
+  const taken = new Set<number>();
   let pairs = 0;
-  for (let i = 0; i < Math.min(women.length, men.length); i += 1) {
-    const woman = women[i]!;
-    const man = men[i]!;
-    woman.partnerId = man.id;
-    man.partnerId = woman.id;
+
+  for (const woman of women) {
+    let best: Villager | null = null;
+    let bestGap = Number.POSITIVE_INFINITY;
+
+    for (const man of men) {
+      if (taken.has(man.id)) {
+        continue;
+      }
+      const gap = Math.abs(man.age - woman.age);
+      if (gap > MAX_PAIR_AGE_GAP) {
+        continue;
+      }
+      if (gap < bestGap || (gap === bestGap && best !== null && man.id < best.id)) {
+        best = man;
+        bestGap = gap;
+      }
+    }
+
+    if (!best) {
+      continue;
+    }
+    taken.add(best.id);
+    woman.partnerId = best.id;
+    best.partnerId = woman.id;
     pairs += 1;
   }
 
@@ -286,14 +321,16 @@ function settleCouples(villagers: readonly Villager[], houses: readonly Building
   }
 
   const byId = new Map(villagers.map((villager) => [villager.id, villager]));
+  // Adults only: a house's capacity is a count of grown-ups, and a family's own
+  // children must never be the reason their parents cannot live together.
   const occupancy = new Map<number, number>();
   for (const villager of villagers) {
-    if (villager.homeId !== null) {
+    if (villager.homeId !== null && villager.isAdult) {
       occupancy.set(villager.homeId, (occupancy.get(villager.homeId) ?? 0) + 1);
     }
   }
 
-  const capacityOf = (house: Building): number => house.definition.housing ?? 0;
+  const capacityOf = adultCapacityOf;
 
   // Who else is under each roof, so a couple can tell a household from a
   // dormitory. Children do not count: a couple sharing with their own children
@@ -399,11 +436,11 @@ function gatherSingles(villagers: readonly Villager[], houses: readonly Building
   const occupancy = new Map<number, number>();
   const couplesIn = new Set<number>();
   for (const villager of villagers) {
-    if (villager.homeId === null) {
+    if (villager.homeId === null || !villager.isAdult) {
       continue;
     }
     occupancy.set(villager.homeId, (occupancy.get(villager.homeId) ?? 0) + 1);
-    if (villager.isAdult && villager.partnerId !== null) {
+    if (villager.partnerId !== null) {
       couplesIn.add(villager.homeId);
     }
   }
@@ -434,7 +471,7 @@ function gatherSingles(villagers: readonly Villager[], houses: readonly Building
         if (couplesIn.has(house.id) || house.id === single.homeId) {
           return false;
         }
-        return (occupancy.get(house.id) ?? 0) < (house.definition.housing ?? 0);
+        return (occupancy.get(house.id) ?? 0) < adultCapacityOf(house);
       })
       .sort((a, b) => {
         const byRoom = (occupancy.get(b.id) ?? 0) - (occupancy.get(a.id) ?? 0);
@@ -480,12 +517,27 @@ function ageEveryone(villagers: readonly Villager[]): Villager[] {
     if (villager.birthCooldownDays > 0) {
       villager.birthCooldownDays -= 1;
     }
-    if (villager.age >= villager.lifespan) {
+    if (villager.age >= expectedLifespan(villager)) {
       died.push(villager);
     }
   }
 
   return died;
+}
+
+/**
+ * How long this villager will actually live.
+ *
+ * The span rolled at birth, less a year for every stretch of illness they got
+ * through. **This is the whole return on a Healer's House**: a healer shortens
+ * cases, shorter cases cost fewer years, and the settlement's life expectancy is
+ * therefore something the player builds rather than something the seed decides.
+ *
+ * Exported because it is the honest answer to "how long will this person live?"
+ * and the roster and ledger should quote it rather than the raw roll.
+ */
+export function expectedLifespan(villager: Villager): number {
+  return villager.lifespan - Math.floor(villager.illDaysLived / ILL_DAYS_PER_YEAR_LOST);
 }
 
 /**
@@ -498,13 +550,32 @@ function ageEveryone(villagers: readonly Villager[]): Villager[] {
 function assignHomes(villagers: readonly Villager[], houses: readonly Building[]): void {
   const capacity = new Map<number, number>();
   for (const house of houses) {
-    capacity.set(house.id, house.definition.housing ?? 0);
+    capacity.set(house.id, adultCapacityOf(house));
+  }
+
+  // **Children live with their parents, and never against the count.** A house
+  // holds four grown-ups and as many of their children as they have: a family
+  // is a family, and turning the fifth child out into the snow — or, as it
+  // actually happened, refusing to have one at all — is not what a house is for.
+  //
+  // Done before anything else so a child never loses their place to an adult.
+  const byId = new Map(villagers.map((villager) => [villager.id, villager]));
+  for (const villager of villagers) {
+    if (!villager.isChild || villager.parentIds === null) {
+      continue;
+    }
+    const parentHome = villager.parentIds
+      .map((id) => byId.get(id))
+      .find((parent) => parent !== undefined && parent.homeId !== null)?.homeId;
+    if (parentHome !== undefined && parentHome !== null) {
+      villager.homeId = parentHome;
+    }
   }
 
   // Keep existing homes first, so nobody is shuffled between houses for no
   // reason — and so the household a child was born into stays that household.
   for (const villager of villagers) {
-    if (villager.homeId === null) {
+    if (villager.homeId === null || !villager.isAdult) {
       continue;
     }
     const room = capacity.get(villager.homeId);
@@ -519,6 +590,15 @@ function assignHomes(villagers: readonly Villager[], houses: readonly Building[]
     if (villager.homeId !== null) {
       continue;
     }
+    // A child with no parent to follow — orphaned, or a newcomer's — is housed
+    // like anybody else, but still without taking one of the adult places.
+    if (villager.isChild) {
+      const anywhere = houses[0];
+      if (anywhere) {
+        villager.homeId = anywhere.id;
+      }
+      continue;
+    }
     for (const house of houses) {
       const room = capacity.get(house.id) ?? 0;
       if (room > 0) {
@@ -528,6 +608,19 @@ function assignHomes(villagers: readonly Villager[], houses: readonly Building[]
       }
     }
   }
+}
+
+/**
+ * How many grown-ups a house holds.
+ *
+ * The `housing` figure in the building data means **adults**, not residents. It
+ * used to mean residents, and that is what stalled settlements: a couple with
+ * two children filled a four-bed cottage, so the birth check found no spare bed
+ * anywhere in the village and the population stopped dead. A player reported it
+ * as "it has settled at twenty people".
+ */
+function adultCapacityOf(house: Building): number {
+  return house.definition.housing ?? 0;
 }
 
 /**
@@ -557,18 +650,7 @@ function considerBirths(options: {
   if (foodDaysPerPerson < BIRTH_REQUIREMENTS.foodDaysPerPerson) {
     return [];
   }
-
-  const occupancy = new Map<number, number>();
-  for (const villager of villagers) {
-    if (villager.homeId !== null) {
-      occupancy.set(villager.homeId, (occupancy.get(villager.homeId) ?? 0) + 1);
-    }
-  }
-
-  const spare = houses.find(
-    (house) => (occupancy.get(house.id) ?? 0) < (house.definition.housing ?? 0),
-  );
-  if (!spare) {
+  if (houses.length === 0) {
     return [];
   }
 
@@ -582,51 +664,63 @@ function considerBirths(options: {
     villager.birthCooldownDays <= 0;
 
   const byId = new Map(villagers.map((villager) => [villager.id, villager]));
-  const couple = villagers
+
+  // **Every couple gets its own chance, and that is the fix to a stalled
+  // settlement.** This used to take the first ready couple in the village and
+  // roll once for the whole settlement, so growth was capped near two children a
+  // year however many households there were — a player watched their population
+  // sit at twenty for years with workshops standing empty. A settlement of eight
+  // couples should grow four times as fast as a settlement of two, because it is
+  // four times as many families.
+  //
+  // Taken in id order so the run of random draws is fixed by the seed, which is
+  // what keeps a settlement's history reproducible.
+  const couples = villagers
     .filter((villager) => {
       if (villager.partnerId === null || villager.partnerId < villager.id) {
-        // Each couple considered once, from the lower id, so a pair is not
-        // examined twice and cannot have two children in a day.
+        // Each couple considered once, from the lower id, so a pair cannot have
+        // two children in a day.
         return false;
       }
       const partner = byId.get(villager.partnerId);
       return partner !== undefined && ready(villager) && ready(partner);
     })
-    .sort((a, b) => a.id - b.id)[0];
+    .sort((a, b) => a.id - b.id);
 
-  if (!couple) {
-    return [];
-  }
+  const born: { home: Building; parents: readonly [number, number]; familyName: string }[] = [];
 
-  // One roll a day for the settlement. `random` is the seeded stream, never
-  // Math.random, so a settlement's history is reproducible from its seed.
-  if (random.next() >= BIRTH_CHANCE_PER_DAY) {
-    return [];
-  }
+  for (const mother of couples) {
+    const partner = byId.get(mother.partnerId!)!;
 
-  const partner = byId.get(couple.partnerId!)!;
-  couple.birthCooldownDays = BIRTH_REQUIREMENTS.cooldownDays;
-  partner.birthCooldownDays = BIRTH_REQUIREMENTS.cooldownDays;
+    // A household needs a roof of its own to raise a child under. There is no
+    // bed to count any more — a house holds its family's children without limit
+    // — so what is required is simply that the parents have a home.
+    const home =
+      houses.find((house) => house.id === mother.homeId || house.id === partner.homeId) ?? null;
+    if (!home) {
+      continue;
+    }
 
-  // The child joins its parents' household where there is room, and only falls
-  // back to any spare bed when there is not — a newborn billeted across the
-  // settlement from both its parents would make the family tree read as noise.
-  const family = houses.find(
-    (house) =>
-      (house.id === couple.homeId || house.id === partner.homeId) &&
-      (occupancy.get(house.id) ?? 0) < (house.definition.housing ?? 0),
-  );
+    // One roll per couple per day. `random` is the seeded stream, never
+    // Math.random, so a settlement's history is reproducible from its seed.
+    if (random.next() >= BIRTH_CHANCE_PER_DAY) {
+      continue;
+    }
 
-  // The child carries the father's family name. A convention rather than a
-  // rule of the world, chosen so a household reads as one family — and the
-  // same convention as the couple moving into his house, so the two agree.
-  const father = couple.sex === 'm' ? couple : partner;
+    mother.birthCooldownDays = BIRTH_REQUIREMENTS.cooldownDays;
+    partner.birthCooldownDays = BIRTH_REQUIREMENTS.cooldownDays;
 
-  return [
-    {
-      home: family ?? spare,
-      parents: [Math.min(couple.id, partner.id), Math.max(couple.id, partner.id)] as const,
+    // The child carries the father's family name. A convention rather than a
+    // rule of the world, chosen so a household reads as one family — and the
+    // same convention as the couple moving into his house, so the two agree.
+    const father = mother.sex === 'm' ? mother : partner;
+
+    born.push({
+      home,
+      parents: [Math.min(mother.id, partner.id), Math.max(mother.id, partner.id)] as const,
       familyName: familyNameOf(father),
-    },
-  ];
+    });
+  }
+
+  return born;
 }

@@ -110,13 +110,13 @@ losing a tenth of itself every night.
 
 Definitions live in `src/data/buildings.ts`; the build menu is generated from them.
 
-| Building     | Cost             | Slots | Effect                             |
-| ------------ | ---------------- | ----- | ---------------------------------- |
-| House        | 8 logs, 4 stone  | —     | houses 4, and heats them           |
-| Storage Yard | 6 logs           | —     | stores logs, stone, firewood       |
-| Food Storage | 6 logs, 2 stone  | —     | stores food, and keeps it          |
-| Gatherer Hut | 10 logs, 2 stone | 2     | forages food, scaled by the season |
-| Woodcutter   | 8 logs, 4 stone  | 2     | 1 log → 4 firewood                 |
+| Building     | Cost             | Slots | Effect                               |
+| ------------ | ---------------- | ----- | ------------------------------------ |
+| House        | 8 logs, 4 stone  | —     | 4 grown-ups + their children, heated |
+| Storage Yard | 6 logs           | —     | stores logs, stone, firewood         |
+| Food Storage | 6 logs, 2 stone  | —     | stores food, and keeps it            |
+| Gatherer Hut | 10 logs, 2 stone | 2     | forages food, scaled by the season   |
+| Woodcutter   | 8 logs, 4 stone  | 2     | 1 log → 4 firewood                   |
 
 Later buildings are listed under the systems they belong to. Two of them serve
 [Illness](#illness--implemented):
@@ -205,23 +205,66 @@ Spoilage is deterministic. A settlement losing a random amount each night would 
 
 ## Homes and the years — Implemented
 
-A House shelters four people, and **firewood only warms somebody who has one**.
+A House shelters a family, and **firewood only warms somebody who has one**.
 A settlement with full yards and a healthy woodpile but no houses spends winter
 outdoors: measured over a year, that settlement loses everyone on day 44 with
 149 food still in store. Somebody sleeping rough gets a quarter of the fire's
 benefit — there is a communal hearth, and standing beside it beats nothing.
 
-Villagers age a year for every year of days, and each is born with a lifespan
-between 55 and 78 drawn from the seeded stream, so a founding generation does
-not die together. Below fifteen they are children: they eat, they do not work,
-and they grow up.
+### The four ages of a villager — Implemented
 
-A settlement grows when it has earned it — a spare bed, two healthy adults of an
-age to raise a child, and twelve days of food per person in store. Growth is
-slow on purpose, roughly a couple of children a year at best, because the brief
-asks for many years rather than a boom. Measured over six years, a well-run
-settlement went from ten to twelve and then stopped, capped by its own housing:
-the way to grow is to build.
+One number used to do three jobs, and separating them is what makes a household a
+household:
+
+| From | What changes                                                                |
+| ---- | --------------------------------------------------------------------------- |
+| 0    | A child. Eats, grows up, lives with its parents wherever they live.         |
+| 14   | **Works.** Fetches, carries, takes a post — and is still a child at home.   |
+| 18   | **A grown-up.** Marries, may take a house, occupies one of its four places. |
+| 60   | **Retired.** Still eats, still needs a fire, does not work.                 |
+
+A house holds **four grown-ups and as many of their children as they have**. That
+is the change that matters: it used to hold four _residents_, so a couple with two
+children filled a cottage and the settlement stopped having children at all.
+
+Villagers age a year for every year of days, and each is born with a lifespan
+between 64 and 76 drawn from the seeded stream — about seventy — so a founding
+generation does not die together.
+
+**Illness shortens a life.** Every twelve days a villager spends unwell costs them
+a year off the end. This is the whole return on a Healer's House: it shortens
+cases, shorter cases cost fewer years, so life expectancy is something the player
+builds rather than something the seed decides. Measured on a well-tended
+settlement, mean expected lifespan comes out at 69–70.
+
+### Couples — Implemented
+
+A pairing needs both people **18 or over** and **no more than six years apart**,
+and it matches the closest in age rather than whoever arrived first — lining the
+unattached up by id and matching them off married a nineteen year old to a forty
+year old whenever that was the order they turned up in.
+
+There is **no upper age limit**, because widowhood has none: a widow of fifty who
+finds somebody her own age is a household, and refusing to model it left every
+survivor of a long marriage alone for the rest of a seventy-year life. Bearing
+children still stops at forty-two.
+
+### Growth — Implemented
+
+A settlement grows when it has earned it: a household with a roof of its own, two
+healthy parents of an age, and twelve days of food per person in store.
+
+**Every couple gets its own chance each day.** This used to be one roll for the
+whole village, so eight households grew no faster than two and the ceiling was
+about two children a year whatever the player did. A player reported the result
+from a long game — _"year six, no trouble, and the population has settled at
+twenty, so I have buildings with nobody in them"_ — and measured on a kept-fed,
+kept-housed settlement it was exactly that: 24 people in year four, still 24 in
+year twenty. Sixteen years flat.
+
+Measured on the same fixture after the change: 35 people by year two, 63 by year
+six, and thereafter limited by housing — grown children with nowhere to live show
+up as homeless, which is the game asking for another house.
 
 **Newcomers arrive** at a settlement visibly worth joining: eighteen days of food per person and at
 least two empty beds. The bar is deliberately higher than a birth's — a family already living
@@ -254,8 +297,8 @@ Priorities, highest first:
 | -------- | -------------------------------- | ------------------------------------------------------------------- |
 | urgent   | production                       | a workshop has a fixed number of slots; leaving one empty wastes it |
 | high     | construction, hauling to storage | use what you already have before gathering more                     |
-| normal   | felling trees, mining stone      | raw material, and the most abundant kind of work                    |
-| low      | laying roads                     | an improvement, never a reason to leave food in the field           |
+| normal   | felling, mining, laying roads    | raw material and improvements: the most abundant kind of work       |
+| low      | demolition                       | tearing down is never more urgent than feeding anybody              |
 
 That ordering is load-bearing rather than cosmetic. With production and hauling merely equal to
 felling, a player who marked a stand of trees posted dozens of _nearer_ jobs, and the settlement
@@ -434,12 +477,12 @@ Every job carries a priority, and a villager takes the highest-priority job they
 are allowed to do, breaking ties on distance and then on job id so a settlement
 replayed from its seed behaves identically.
 
-| Priority   | Work                                                           |
-| ---------- | -------------------------------------------------------------- |
-| **urgent** | producing at a workshop — employees only                       |
-| **high**   | building; hauling goods **in** from the field                  |
-| **normal** | felling, mining, planting; hauling materials **out** to a site |
-| **low**    | laying roads; demolition                                       |
+| Priority   | Work                                                                   |
+| ---------- | ---------------------------------------------------------------------- |
+| **urgent** | producing at a workshop — employees only                               |
+| **high**   | building; hauling goods **in** from the field                          |
+| **normal** | felling, mining, planting, paving; hauling materials **out** to a site |
+| **low**    | demolition                                                             |
 
 Two asymmetries in that table are deliberate and were each put there to fix
 something measured.
@@ -449,9 +492,17 @@ won, so a marked stand of trees buried the hauling and a settlement starved with
 fifty food lying in piles beside the hut, because nobody would stop chopping
 long enough to carry it in.
 
-**Roads and demolition sit below everything.** A settlement must never pave a
-path while its food sits in the field, and tearing something down is never more
-urgent than feeding the people who live there.
+**Demolition sits below everything.** Tearing something down is never more urgent
+than feeding the people who live there.
+
+**Paving used to sit there too, and `low` turned out to mean never.** The idea was
+that roads get built with the hours nobody else needed, and there are no such
+hours: a running settlement always has a tree marked or a load to carry, so the
+order sat on the board for ever. A player reported it from year six as "nobody
+makes roads", and measured on a two-year-old settlement of nineteen people it was
+nine roads ordered and **nought laid** in fifteen days. At `normal` all nine went
+down. The rule `low` was protecting is kept by hauling being `high`: the
+settlement still never paves while its dinner is in the field.
 
 ### Should the player set priorities? — measured, and no
 

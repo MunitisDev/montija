@@ -233,10 +233,11 @@ export function runDay(
   // having no home — which is nonsense in both directions.
   const warmFraction = firewoodWanted === 0 ? 0 : firewoodTaken / firewoodWanted;
 
-  // Tools are worn out by the people doing the work, so children do not count.
-  // Nothing is taken when the settlement has none, and nothing is lost by that
-  // — an unequipped settlement simply works at the rate it always did.
-  const workers = villagers.filter((villager) => villager.isAdult).length;
+  // Tools are worn out by the people doing the work, so neither children nor
+  // retired villagers count. Nothing is taken when the settlement has none, and
+  // nothing is lost by that — an unequipped settlement simply works at the rate
+  // it always did.
+  const workers = villagers.filter((villager) => villager.canWork).length;
   const toolsWanted = workers * TOOLS_PER_WORKER_PER_DAY;
   const toolsWorn = takeFromStorages(storages, 'tools', toolsWanted);
   const toolFraction = toolsWanted === 0 ? 0 : Math.min(1, toolsWorn / toolsWanted);

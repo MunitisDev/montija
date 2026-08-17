@@ -106,7 +106,8 @@ export function runEmployment(
     }
 
     const building = posts.get(villager.employerId);
-    if (!building || !villager.isAdult) {
+    // Retiring at sixty releases the post as surely as dying does.
+    if (!building || !villager.canWork) {
       villager.employerId = null;
       released += 1;
       continue;
@@ -136,7 +137,7 @@ export function runEmployment(
 
     const waiting = villagers.filter(
       (villager) =>
-        villager.isAdult && villager.employerId === null && villager.workPreference === building.id,
+        villager.canWork && villager.employerId === null && villager.workPreference === building.id,
     ).length;
     if (waiting === 0) {
       continue;
@@ -179,7 +180,7 @@ export function runEmployment(
   }
 
   const unemployed = villagers.filter(
-    (villager) => villager.isAdult && villager.employerId === null,
+    (villager) => villager.canWork && villager.employerId === null,
   );
 
   let hired = 0;

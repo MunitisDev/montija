@@ -225,6 +225,69 @@ describe('laying roads', () => {
     expect(simulation.world.navigation.costAt(cell.gx, cell.gy)).toBeLessThan(plain);
   });
 
+  it('lays it even while there is other work standing', () => {
+    // **The bug a player found in year six: "nobody makes roads".** Paving was
+    // the only job in the game at `low` priority, on the theory that roads get
+    // built with the hours nobody else needed — and in a settlement that is
+    // actually running there are no such hours. There is always another tree
+    // marked or another load to carry, so the order sat on the board for ever.
+    //
+    // Measured on a two-year-old settlement of nineteen people: nine roads
+    // ordered, **nought laid** in fifteen days. At `normal` all nine went down.
+    const simulation = new Simulation(OPTIONS);
+    const cell = openCellNear(simulation, simulation.world.centreCell);
+    expect(cell).not.toBeNull();
+    if (!cell) {
+      return;
+    }
+
+    // A board that never empties: forty trees marked is more felling than ten
+    // villagers get through in the time this test runs.
+    let marked = 0;
+    for (let gy = 0; gy < simulation.world.height && marked < 40; gy += 1) {
+      for (let gx = 0; gx < simulation.world.width && marked < 40; gx += 1) {
+        if (simulation.designateTreeForFelling({ gx, gy })) {
+          marked += 1;
+        }
+      }
+    }
+    expect(marked).toBeGreaterThan(20);
+    expect(simulation.designateRoad(cell)).toBe(true);
+
+    for (let tick = 0; tick < 3000 && !simulation.hasRoad(cell); tick += 1) {
+      simulation.update(tick, TICK);
+    }
+
+    expect(simulation.hasRoad(cell)).toBe(true);
+    // And the felling is still going: the road did not get laid because the
+    // settlement ran out of work, which is the condition that never arrives.
+    expect(
+      simulation.jobs.all.filter((job) => job.type === 'chop-tree' && job.state !== 'complete')
+        .length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('still carries the food in before it paves the path', () => {
+    // The rule that `low` was protecting, and the one worth keeping: hauling is
+    // `high`, so a settlement never paves while its dinner sits in the field.
+    const simulation = new Simulation(OPTIONS);
+    const cell = openCellNear(simulation, simulation.world.centreCell);
+    if (!cell) {
+      return;
+    }
+
+    simulation.world.piles.drop(simulation.world.landfallCell, 'food', 20);
+    expect(simulation.designateRoad(cell)).toBe(true);
+    // Hauling jobs are posted during the tick, not the moment the pile lands.
+    simulation.update(1, TICK);
+
+    const road = simulation.jobs.all.find((job) => job.type === 'pave-road');
+    const haul = simulation.jobs.all.find((job) => job.type === 'haul');
+    expect(road).toBeDefined();
+    expect(haul).toBeDefined();
+    expect(haul!.priority).toBeGreaterThan(road!.priority);
+  });
+
   it('refuses a second order on a cell already ordered', () => {
     const simulation = new Simulation(OPTIONS);
     const cell = openCellNear(simulation, simulation.world.centreCell);

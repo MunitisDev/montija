@@ -300,9 +300,10 @@ export class VillagerSystem {
       pathBudget -= 1;
 
       // Real work first; wandering is only what they do when there is none.
-      // Children are not put to work — they eat and grow up, which is the cost
-      // of a population that renews itself.
-      if (!villager.isAdult || !this.tryTakeJob(villager)) {
+      // Children below working age are not put to work — they eat and grow up,
+      // which is the cost of a population that renews itself — and neither are
+      // elders, who have earned the walk about the village they are taking.
+      if (!villager.canWork || !this.tryTakeJob(villager)) {
         this.chooseWanderTarget(villager);
       }
     }

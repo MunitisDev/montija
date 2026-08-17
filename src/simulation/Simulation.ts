@@ -535,10 +535,18 @@ export class Simulation {
     const job = this.jobs.create({
       type: 'pave-road',
       target: cell,
-      // Below everything else, and deliberately so: a settlement must never
-      // pave a path while its food sits in the field. Roads get built with the
-      // hours nobody else needed.
-      priority: JobPriority.low,
+      // **`low` meant never.** The idea was that roads get built with the hours
+      // nobody else needed, and the flaw is that there are no such hours: a
+      // running settlement always has a tree marked or a load to carry, so
+      // paving sat at the bottom of the board for ever and not one road was ever
+      // laid. A player reported it as "nobody makes roads", which is exactly what
+      // it was.
+      //
+      // `normal` puts paving alongside felling, where the nearest job wins — so
+      // a road the player asked for gets laid within a day or two. It still
+      // loses to hauling at `high`, which keeps the rule that actually mattered:
+      // the settlement never paves a path while its food sits in the field.
+      priority: JobPriority.normal,
       targetEntityId: cellId,
     });
     return job !== null;

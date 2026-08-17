@@ -26,6 +26,7 @@
  */
 
 import { recipe as findRecipe } from '@/data/recipes';
+import { WORKING_AGE } from '@/data/population';
 import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
 import type { Simulation } from '@/simulation/Simulation';
 import { DAYS_PER_YEAR } from '@/simulation/rescue/RescueSystem';
@@ -159,12 +160,15 @@ export function estimateFlows(simulation: Simulation): Flows {
   }
 
   const people = simulation.villagers.all;
-  const adults = people.filter((villager) => villager.isAdult).length;
+  // Workers, not grown-ups: tools are worn by whoever is doing the work, and
+  // that is fourteen to sixty. Must match `SurvivalSystem`, or the ledger
+  // forecasts a demand the settlement does not have.
+  const workers = people.filter((villager) => villager.canWork).length;
   const housed = people.filter((villager) => villager.homeId !== null).length;
   const freezing = simulation.year.isFreezing;
 
   add(survivalDemand, 'food', people.length * FOOD_PER_VILLAGER_PER_DAY);
-  add(survivalDemand, 'tools', adults * TOOLS_PER_WORKER_PER_DAY);
+  add(survivalDemand, 'tools', workers * TOOLS_PER_WORKER_PER_DAY);
   if (freezing) {
     // Only houses are heated, so an unhoused settlement burns nothing — and
     // pays for it in warmth rather than in firewood.
@@ -245,10 +249,10 @@ function rescueTab(simulation: Simulation, t: Translate): LedgerTab {
 function peopleTab(simulation: Simulation, t: Translate): LedgerTab {
   const snapshot = simulation.snapshot();
   const people = simulation.villagers.all;
-  const adults = people.filter((villager) => villager.isAdult);
+  const workers = people.filter((villager) => villager.canWork);
   const ill = people.filter((villager) => villager.isIll).length;
   const homeless = people.filter((villager) => villager.homeId === null).length;
-  const employed = adults.filter((villager) => villager.employerId !== null).length;
+  const employed = workers.filter((villager) => villager.employerId !== null).length;
 
   return {
     id: 'people',
@@ -259,10 +263,18 @@ function peopleTab(simulation: Simulation, t: Translate): LedgerTab {
         title: t('ledger.section.population'),
         rows: [
           { label: t('ledger.people.total'), value: String(people.length) },
-          { label: t('ledger.people.adults'), value: String(adults.length) },
+          // Three groups rather than two, because that is the shape of the
+          // problem a player runs into: a settlement can stall with twenty
+          // people and half its workshops empty, and the reason is always how
+          // many of the twenty are under fourteen or over sixty.
+          { label: t('ledger.people.workers'), value: String(workers.length) },
           {
             label: t('ledger.people.children'),
-            value: String(people.length - adults.length),
+            value: String(people.filter((villager) => villager.age < WORKING_AGE).length),
+          },
+          {
+            label: t('ledger.people.elders'),
+            value: String(people.filter((villager) => villager.isElder).length),
           },
           {
             label: t('ledger.people.homeless'),
@@ -284,7 +296,7 @@ function peopleTab(simulation: Simulation, t: Translate): LedgerTab {
           { label: t('ledger.people.employed'), value: String(employed) },
           {
             label: t('ledger.people.labourers'),
-            value: String(adults.length - employed),
+            value: String(workers.length - employed),
             detail: t('ledger.people.labourers.detail'),
           },
           {
