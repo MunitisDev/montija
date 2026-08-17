@@ -30,34 +30,23 @@ export const WORLD_HEIGHT = 96;
 export const STARTING_VILLAGERS = 10;
 
 /**
- * What the settlers arrive with, per the MVP brief's "basic resources".
+ * What the settlers arrive with.
  *
- * Not generosity — a grace period. Villagers eat from the first day, and the
- * only food source is a Gatherer Hut that costs logs, stone, hauling and
- * labour to raise. Starting at zero meant starving before the settlement could
- * possibly feed itself, which reads as the game being broken rather than hard.
+ * Not a starting bonus but **what ten people could carry out in the night**, and
+ * the difference shows in what is missing.
  *
- * 120 food is twelve days for ten people: one full season to get a hut
- * standing. The logs and stone are enough for that hut and a house.
- */
-/**
- * What the settlers dragged out of the surf.
+ * **Timber, because it is worth the weight.** Enough to raise the first two or
+ * three buildings, which is the difference between a camp and a settlement.
  *
- * Not a starting bonus but a **shipwreck's cargo**, and the difference shows in
- * what is and is not in it.
+ * **No stone.** Nobody flees carrying rock. Every building past the very
+ * cheapest needs some, so the opening move of the game is to go and find a
+ * deposit — a decision on the first morning rather than a resource that was
+ * simply in the box.
  *
- * **Timber, because a wrecked ship is made of it.** The single most useful
- * thing about a hull on a beach is that it comes apart into planks, and it is
- * the reason the settlement can put up its first buildings at all.
- *
- * **No stone.** Nobody salvages rock from a boat. Every building past the very
- * cheapest needs some, so the opening move of the game is now to go and find a
- * deposit — which is a decision on the first morning rather than a resource
- * that was simply in the box.
- *
- * **Iron nobody can use yet.** Fittings and nails, off the wreck. It sits in
- * the yard doing nothing until there is a Blacksmith to work it, which is
- * deliberate: it is a promise that the settlement has somewhere to grow into.
+ * **Iron nobody can use yet.** Taken because it was valuable rather than because
+ * it was useful. It sits in the yard doing nothing until there is a Blacksmith to
+ * work it, which is deliberate: it is a promise that the settlement has somewhere
+ * to grow into.
  *
  * **Food is the grace period, and it was too short.** Ten people eat ten a day,
  * so this is simply how many days the settlers have before the settlement has
@@ -91,5 +80,25 @@ export const CAMERA_FEEL: CameraFeel = {
   minimumFlickSpeed: 6,
 };
 
-/** Fallback seed used until the main menu can offer a choice. */
-export const DEFAULT_WORLD_SEED = 20260815;
+/**
+ * The seed used when nothing else picks one — a different valley every time.
+ *
+ * `Math.random` is right here and would be wrong three directories down. The
+ * simulation must never roll its own dice, because a settlement has to be
+ * reproducible from its seed; but *choosing* that seed is not simulation, it is
+ * the one moment before a world exists. The number is then stored in the save,
+ * so the settlement it produces is as replayable as any other.
+ *
+ * Kept away from tiny values so a fresh world does not look like a debug one.
+ */
+export function randomWorldSeed(): number {
+  return Math.floor(Math.random() * 2_000_000_000) + 1;
+}
+
+/**
+ * The reference seed, used by the balance tests and by nothing else.
+ *
+ * A single pinned world is what makes "does a well-played settlement survive?" a
+ * question with a stable answer. Play uses {@link randomWorldSeed}.
+ */
+export const REFERENCE_WORLD_SEED = 20260815;

@@ -21,7 +21,6 @@ import { BuildMenu } from '@/ui/build-menu/BuildMenu';
 import { Guide } from '@/ui/guide/Guide';
 import { Roster } from '@/ui/roster/Roster';
 import { Ledger } from '@/ui/ledger/Ledger';
-import { Ending } from '@/ui/ending/Ending';
 import { StockDrawer } from '@/ui/hud/StockDrawer';
 import { SettingsMenu } from '@/ui/settings/SettingsMenu';
 import { MainMenu } from '@/ui/menu/MainMenu';
@@ -74,17 +73,9 @@ export function start(): void {
   const guide = new Guide(gameRoot, i18n);
   const roster = new Roster(gameRoot, game, i18n);
   const ledger = new Ledger(gameRoot, game, i18n);
-  // The ledger reports; the simulation acts. Its one button routes back out
-  // here rather than the sheet reaching into the settlement itself.
-  ledger.onAction = (tab) => {
-    if (tab === 'rescue') {
-      game.sendMessage();
-    }
-  };
-  const ending = new Ending(gameRoot, game, i18n);
-  // A settlement that was already rescued when it was saved must not replay its
-  // ending every time it is loaded. The player has had that page.
-  let seenLoads = game.loadVersion;
+  // The ledger reports and never acts: every tab it has is a page of figures.
+  // The hook stays because a future tab may want a button, and the panel should
+  // not have to grow one of its own to reach the settlement.
   // The drawer hangs off the top bar, so it is looked up inside #hud.
   const stockDrawer = new StockDrawer(hudRoot, game, i18n);
   const settings = new SettingsMenu({
@@ -201,15 +192,6 @@ export function start(): void {
     hud.update();
     buildMenu.update();
     stockDrawer.update();
-    // The ship lands on its own schedule, decades in. Waiting for the player to
-    // open a menu would let the one moment the campaign is about pass unmarked.
-    if (game.loadVersion !== seenLoads) {
-      seenLoads = game.loadVersion;
-      ending.markSeen();
-    }
-    if (ending.isPending) {
-      openPaused(ending);
-    }
     settings.update();
     relabelGlyphs();
     debugOverlay?.update();

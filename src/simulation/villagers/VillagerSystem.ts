@@ -33,6 +33,9 @@ import {
 import {
   FOUNDER_AGE_MAX,
   FOUNDER_AGE_MIN,
+  FOUNDING_YOUNG_AGE_MAX,
+  FOUNDING_YOUNG_AGE_MIN,
+  FOUNDING_YOUNG_SHARE,
   IMMIGRANT_AGE_MAX,
   IMMIGRANT_AGE_MIN,
 } from '@/data/population';
@@ -176,13 +179,20 @@ export class VillagerSystem {
       // composition is the one place variance buys nothing. Children and
       // newcomers are still an even coin.
       const sex: Sex = this.rollSex();
+      // **The last few of the party are young people, not grown-ups.** Taken
+      // from the end of the list rather than rolled, for the same reason the
+      // sexes alternate: how many of them there are must not be a lottery the
+      // player cannot see, because it decides when the second generation
+      // arrives. See FOUNDING_YOUNG_SHARE.
+      const young = placed >= Math.round(count * (1 - FOUNDING_YOUNG_SHARE));
       this.villagers.push(
         new Villager({
           id: this.nextId,
           name: this.makeName(sex),
           sex,
-          // A founding settlement is adults, not children.
-          age: this.randomSource.int(FOUNDER_AGE_MIN, FOUNDER_AGE_MAX + 1),
+          age: young
+            ? this.randomSource.int(FOUNDING_YOUNG_AGE_MIN, FOUNDING_YOUNG_AGE_MAX + 1)
+            : this.randomSource.int(FOUNDER_AGE_MIN, FOUNDER_AGE_MAX + 1),
           position: gridToWorld(cell),
           lifespan: rollLifespan(this.random),
         }),
@@ -545,15 +555,6 @@ export class VillagerSystem {
    */
   public onDemolished: ((buildingId: number) => void) | null = null;
 
-  /**
-   * Called when somebody reaches the tideline with the bottle.
-   *
-   * A callback for the same reason demolition is one: the villagers do not
-   * know there is a rescue, and should not have to. They were asked to walk
-   * something to the sea and they did.
-   */
-  public onMessageDelivered: (() => void) | null = null;
-
   private workRate(): number {
     return this.workRateProvider ? this.workRateProvider() : 1;
   }
@@ -616,11 +617,6 @@ export class VillagerSystem {
       }
       case 'produce':
         this.runRecipe(job);
-        break;
-      case 'carry-message':
-        // The villager's part ends at the water. What a bottle on the tide
-        // means is the simulation's business, not theirs.
-        this.onMessageDelivered?.();
         break;
       case 'haul':
       case 'move-to':

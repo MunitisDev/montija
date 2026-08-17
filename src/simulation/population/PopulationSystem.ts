@@ -39,14 +39,11 @@ import {
   LIFESPAN_MIN,
   MAX_PAIR_AGE_GAP,
 } from '@/data/population';
-import { DAYS_PER_SEASON } from '@/simulation/seasons/SeasonClock';
+import { DAYS_PER_YEAR } from '@/simulation/seasons/SeasonClock';
 import type { Building } from '@/simulation/buildings/Building';
 import type { BuildingRegistry } from '@/simulation/buildings/BuildingRegistry';
 import type { SeededRandom } from '@/shared/math/random';
 import type { Villager } from '@/simulation/villagers/Villager';
-
-/** Days in a year, for ageing. Matches the calendar rather than guessing. */
-const DAYS_PER_YEAR = DAYS_PER_SEASON * 4;
 
 export interface PopulationReport {
   readonly births: number;
@@ -590,12 +587,18 @@ function assignHomes(villagers: readonly Villager[], houses: readonly Building[]
     if (villager.homeId !== null) {
       continue;
     }
-    // A child with no parent to follow — orphaned, or a newcomer's — is housed
-    // like anybody else, but still without taking one of the adult places.
+    // **A child with nobody to follow still needs a roof.** Orphaned, or one of
+    // the young people who walked in with the founding party and has no parents
+    // here at all. They take no adult place, so the only question is which
+    // household — and the answer is the emptiest, so they spread across the
+    // settlement instead of all crowding into whichever house was built first.
     if (villager.isChild) {
-      const anywhere = houses[0];
-      if (anywhere) {
-        villager.homeId = anywhere.id;
+      const quietest = [...houses].sort((a, b) => {
+        const byResidents = residents(villagers, a.id) - residents(villagers, b.id);
+        return byResidents !== 0 ? byResidents : a.id - b.id;
+      })[0];
+      if (quietest) {
+        villager.homeId = quietest.id;
       }
       continue;
     }
@@ -621,6 +624,11 @@ function assignHomes(villagers: readonly Villager[], houses: readonly Building[]
  */
 function adultCapacityOf(house: Building): number {
   return house.definition.housing ?? 0;
+}
+
+/** Everybody under a roof, children included — for spreading orphans out. */
+function residents(villagers: readonly Villager[], houseId: number): number {
+  return villagers.filter((villager) => villager.homeId === houseId).length;
 }
 
 /**
@@ -654,14 +662,20 @@ function considerBirths(options: {
     return [];
   }
 
-  // A couple, rather than any two adults who happen to qualify. Both have to
-  // be well and both off cooldown, which is what makes a child something a
-  // particular household had rather than a number the settlement went up by.
-  const ready = (villager: Villager): boolean =>
+  // **The childbearing window is the mother's.** Both parents must be well and
+  // off cooldown, and only she has an age range — applying it to both retired a
+  // couple the moment either of them aged out, so a woman of thirty stopped
+  // having children because her husband turned forty-one.
+  const wellEnough = (villager: Villager): boolean =>
+    villager.needs.health >= BIRTH_REQUIREMENTS.minimumHealth && villager.birthCooldownDays <= 0;
+
+  const canBear = (villager: Villager): boolean =>
+    villager.sex === 'f' &&
     villager.age >= CHILDBEARING_AGE_MIN &&
     villager.age <= CHILDBEARING_AGE_MAX &&
-    villager.needs.health >= BIRTH_REQUIREMENTS.minimumHealth &&
-    villager.birthCooldownDays <= 0;
+    wellEnough(villager);
+
+  const canFather = (villager: Villager): boolean => villager.isAdult && wellEnough(villager);
 
   const byId = new Map(villagers.map((villager) => [villager.id, villager]));
 
@@ -675,21 +689,21 @@ function considerBirths(options: {
   //
   // Taken in id order so the run of random draws is fixed by the seed, which is
   // what keeps a settlement's history reproducible.
-  const couples = villagers
+  // Considered from the mother, which also means each couple is considered
+  // exactly once without needing an id comparison to deduplicate them.
+  const mothers = villagers
     .filter((villager) => {
-      if (villager.partnerId === null || villager.partnerId < villager.id) {
-        // Each couple considered once, from the lower id, so a pair cannot have
-        // two children in a day.
+      if (villager.partnerId === null || !canBear(villager)) {
         return false;
       }
       const partner = byId.get(villager.partnerId);
-      return partner !== undefined && ready(villager) && ready(partner);
+      return partner !== undefined && canFather(partner);
     })
     .sort((a, b) => a.id - b.id);
 
   const born: { home: Building; parents: readonly [number, number]; familyName: string }[] = [];
 
-  for (const mother of couples) {
+  for (const mother of mothers) {
     const partner = byId.get(mother.partnerId!)!;
 
     // A household needs a roof of its own to raise a child under. There is no
@@ -713,7 +727,7 @@ function considerBirths(options: {
     // The child carries the father's family name. A convention rather than a
     // rule of the world, chosen so a household reads as one family — and the
     // same convention as the couple moving into his house, so the two agree.
-    const father = mother.sex === 'm' ? mother : partner;
+    const father = partner;
 
     born.push({
       home,

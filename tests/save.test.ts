@@ -47,6 +47,20 @@ describe('save format', () => {
     expect(serialise(new Simulation(OPTIONS), 'now').version).toBe(SAVE_VERSION);
   });
 
+  it('still loads a save carrying a field nothing reads any more', () => {
+    // **A settlement in progress must survive a feature being removed.** The
+    // rescue arc — a School, a bottle on the tide and a ship forty years later —
+    // was taken out, and saves written before that still carry its two ticks. An
+    // unknown field is ignored rather than rejected, so those villages load
+    // exactly as they were, minus a bottle nobody is waiting on.
+    const save = {
+      ...serialise(new Simulation(OPTIONS), 'now'),
+      rescue: { messageSentTick: 500, arrivedTick: null },
+    };
+
+    expect(validateSave(JSON.parse(JSON.stringify(save))).ok).toBe(true);
+  });
+
   it('refuses a save from a future version', () => {
     const save = { ...serialise(new Simulation(OPTIONS), 'now'), version: SAVE_VERSION + 1 };
     const result = validateSave(save);

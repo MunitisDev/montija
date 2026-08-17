@@ -7,19 +7,20 @@ A mobile-first 2D medieval survival settlement builder that runs in the browser.
 **▶ Play the current build: https://munitisdev.github.io/montija/** — works on desktop, tablet and
 phone, no install required. Deployed automatically from `main` on every green build.
 
-Ten survivors of a wreck come ashore on an unforgiving coast. Keep them alive through the winters,
-and get them home.
+Ten people leave their village after something comes out of the dark one night. Nobody saw clearly
+what it was, and nobody stayed to find out. Keep them alive through the winters.
 Inspired by deep settlement simulation games, but entirely original — no assets, code, text, UI or
 balance taken from any existing commercial game.
 
-**Status: the loop is playable end to end, and it now has an ending.** Fell trees and quarry stone,
-haul them in, place buildings and watch villagers carry the materials and construct them, produce
-food and firewood, and try to survive the winter. Raise a School, send a bottle out on the tide, and
-a ship comes about forty years later. Saves survive a browser refresh.
+**Status: the loop is playable end to end.** Fell trees and quarry stone, haul them in, place
+buildings and watch villagers carry the materials and construct them, produce food and firewood,
+survive the winter, and grow a village across the generations — couples form, children are born and
+grow up, people retire and die of old age. Saves survive a browser refresh.
 
-**What is not done: balance.** Winter can kill an unprepared settlement and a stocked one survives,
-both proven in tests — but nobody has played it yet, so whether it is _enjoyable_ is unknown. The
-rescue arc has never been played at real speed either: forty years is around three hours at 1x. See
+**What is not done: balance, and the endgame.** Winter can kill an unprepared settlement, and the
+reason it kills a well-played one is now known and pinned in tests — see
+[`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md). The planned endgame is walls and a watch, to hold off
+the thing the settlers walked away from; none of that is built. See
 [`docs/ROADMAP.md`](docs/ROADMAP.md) for what is built and what is not.
 
 On a phone or tablet, install it to the home screen to play without browser chrome — the manifest
@@ -82,14 +83,14 @@ still lying in the field, and the net per day.
 The top bar carries four more ways in. The **people** button lists everyone grouped by household —
 ages, families, how each of them is doing, and a picker to post somebody to a particular workshop or
 keep them on hauling. The **ledger** counts the settlement in five tabs, including how far it has got
-towards getting off this coast. The **cog** holds the rules, saving, loading, full screen and
+and the settlement's own history. The **cog** holds the rules, saving, loading, full screen and
 language. All of them pause the game while they are open.
 
 The remaining button is the clock: one tap cycles pause, 1x, 2x and 4x.
 
-**Getting home.** Raise a **School** — the most expensive building in the game — then open the
-ledger's first tab and send word to the sea. Somebody carries the bottle down to the water, and a
-ship comes about forty years later.
+**The chronicle.** The ledger's last tab is the only page about the past: who was born here, who is
+buried here, the coldest night, the nights somebody slept without a roof. It is recorded as it
+happens, because by year thirty the settlement cannot be asked what it used to be.
 
 ## Architecture in one paragraph
 

@@ -146,7 +146,7 @@ describe('iron and tools', () => {
     expect(simulation.snapshot().lastDay.toolFraction).toBeGreaterThan(0);
   });
 
-  it('charges wear against working adults, not children', () => {
+  it('charges wear against people of working age, not children or elders', () => {
     const simulation = new Simulation(OPTIONS);
     const yard = simulation.storages.all[0];
     if (!yard) {
@@ -154,13 +154,15 @@ describe('iron and tools', () => {
     }
     yard.inventory.add('tools', 100);
 
-    const adults = simulation.villagers.all.filter((villager) => villager.isAdult).length;
+    // Fourteen to sixty. A thirteen year old and a retired villager both eat and
+    // both need a fire, and neither wears out a tool.
+    const workers = simulation.villagers.all.filter((villager) => villager.canWork).length;
     for (let tick = 1; tick <= TICKS_PER_DAY + 1; tick += 1) {
       simulation.update(tick, TICK);
     }
 
     expect(simulation.snapshot().lastDay.toolsWorn).toBeCloseTo(
-      adults * TOOLS_PER_WORKER_PER_DAY,
+      workers * TOOLS_PER_WORKER_PER_DAY,
       5,
     );
   });

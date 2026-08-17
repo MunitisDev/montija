@@ -19,7 +19,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { Simulation } from '@/simulation/Simulation';
-import { CHILDBEARING_AGE_MAX, CHILDBEARING_AGE_MIN } from '@/data/population';
+import { ADULT_AGE, CHILDBEARING_AGE_MIN, MAX_PAIR_AGE_GAP } from '@/data/population';
 import { FEMININE_NAMES, MASCULINE_NAMES } from '@/data/villagers';
 import { restore, serialise } from '@/simulation/save/serialise';
 import { TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
@@ -400,21 +400,32 @@ describe('households', () => {
     }
     step(simulation, TICKS_PER_DAY * 2);
 
-    // One villager pushed past childbearing age, so the settlement has exactly
-    // one single among its couples and the pass has somewhere wrong to put it.
+    // One villager put far out of everybody's age range, so the settlement has
+    // exactly one single among its couples and the pass has somewhere wrong to
+    // put them. Being past childbearing age is no longer enough on its own —
+    // pairing has no upper limit — so it is the six-year gap that keeps them
+    // single.
     const odd = simulation.villagers.all[0]!;
     const partner = simulation.villagers.all.find((v) => v.id === odd.partnerId);
-    odd.age = 50;
+    odd.age = 55;
+    odd.lifespan = 200;
     odd.partnerId = null;
     if (partner) {
       partner.partnerId = null;
-      partner.age = 50;
     }
     step(simulation, TICKS_PER_DAY + 1);
 
     const byId = new Map(simulation.villagers.all.map((v) => [v.id, v]));
     for (const villager of simulation.villagers.all) {
-      if (villager.homeId === null || villager.partnerId !== null || villager.parentIds !== null) {
+      // Children are not lodgers, and the packing pass says so too: a young
+      // person with no parents in the settlement has to live *somewhere*, and
+      // the only somewhere is a household that already has grown-ups in it.
+      if (
+        villager.homeId === null ||
+        villager.partnerId !== null ||
+        villager.parentIds !== null ||
+        !villager.isAdult
+      ) {
         continue;
       }
       const lodgingWithACouple = simulation.villagers.all.some(
@@ -478,10 +489,18 @@ describe('the settlement report', () => {
     expect(partners(simulation).length % 2).toBe(0);
   });
 
-  it('never pairs somebody past childbearing age', () => {
+  it('pairs only grown-ups, and only within six years of each other', () => {
+    // **Not capped at childbearing age any more.** A widow of fifty who finds
+    // somebody her own age is a household; what keeps pairings plausible is the
+    // age gap, not an upper limit. Bearing children still stops at forty.
     const simulation = raiseAFamily(2);
+    const byId = new Map(simulation.villagers.all.map((v) => [v.id, v]));
+
     for (const villager of partners(simulation)) {
-      expect(villager.age).toBeLessThanOrEqual(CHILDBEARING_AGE_MAX);
+      expect(villager.age).toBeGreaterThanOrEqual(ADULT_AGE);
+      const partner = byId.get(villager.partnerId!);
+      expect(partner).toBeDefined();
+      expect(Math.abs(partner!.age - villager.age)).toBeLessThanOrEqual(MAX_PAIR_AGE_GAP);
     }
   });
 });

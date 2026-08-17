@@ -29,8 +29,8 @@ import { recipe as findRecipe } from '@/data/recipes';
 import { WORKING_AGE } from '@/data/population';
 import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
 import type { Simulation } from '@/simulation/Simulation';
-import { DAYS_PER_YEAR } from '@/simulation/rescue/RescueSystem';
-import { SEASONAL_YIELD, TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
+import { hasColdReading } from '@/simulation/history/Chronicle';
+import { DAYS_PER_YEAR, SEASONAL_YIELD, TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
 import {
   SPIRIT_NEUTRAL,
   CLOTHING_PER_VILLAGER_PER_COLD_DAY,
@@ -43,21 +43,21 @@ import type { MessageKey } from '@/ui/i18n/messages';
 
 export type Translate = (key: MessageKey) => string;
 
-export type LedgerTabId = 'rescue' | 'people' | 'buildings' | 'production' | 'consumption';
+export type LedgerTabId = 'people' | 'buildings' | 'production' | 'consumption' | 'chronicle';
 
 /**
  * Tab order, and the default is the first.
  *
- * The rescue leads because it is the only page with something to *do* on it,
- * and because it is the question the whole game is an answer to. The other four
- * describe the settlement; this one describes leaving it.
+ * People lead because "who have I got, and are they working?" is the question a
+ * player opens this panel to answer. The chronicle sits last: it is the only page
+ * about the past, and nobody needs it in a hurry.
  */
 export const LEDGER_TABS: readonly LedgerTabId[] = [
-  'rescue',
   'people',
   'buildings',
   'production',
   'consumption',
+  'chronicle',
 ];
 
 /** One labelled figure. `detail` is the quiet second line, when there is one. */
@@ -187,62 +187,58 @@ export function totalDemand(flows: Flows, resource: ResourceId): number {
 export function buildLedger(simulation: Simulation, t: Translate): readonly LedgerTab[] {
   const flows = estimateFlows(simulation);
   return [
-    rescueTab(simulation, t),
     peopleTab(simulation, t),
     buildingsTab(simulation, t),
     productionTab(flows, t),
     consumptionTab(simulation, flows, t),
+    chronicleTab(simulation, t),
   ];
 }
 
 /**
- * How far the settlement has got towards getting off this coast.
+ * The settlement's own history.
  *
- * The only page in the ledger about the future rather than the present, and the
- * only one with a button. What it shows is deliberately the same five facts at
- * every stage — where the message is, whether the school stands, how long is
- * left — so the player learns one page rather than five.
+ * The only page in the ledger about the past, and it exists because **the
+ * present cannot be asked what the past was**: by year thirty most of the people
+ * a settlement is made of are dead and most of its winters are decades gone. A
+ * village of twelve tells you nothing about the forty who lived there.
+ *
+ * The figures are recorded as they happen — see `history/Chronicle.ts` — which
+ * is why they are saved rather than recomputed.
  */
-function rescueTab(simulation: Simulation, t: Translate): LedgerTab {
-  const rescue = simulation.rescue;
-  const schools = simulation.world.buildings.countOf('school');
-  const sentTick = simulation.rescueTicks.messageSentTick;
-
+function chronicleTab(simulation: Simulation, t: Translate): LedgerTab {
+  const chronicle = simulation.snapshot().chronicle;
   const rows: LedgerRow[] = [
-    {
-      label: t('rescue.school'),
-      value: schools > 0 ? t('rescue.schoolStanding') : t('rescue.schoolNone'),
-      ...(schools > 0 ? { tone: 'good' as const } : {}),
-    },
+    { label: t('chronicle.year'), value: String(yearOfTick(simulation.tick)) },
+    { label: t('chronicle.born'), value: String(chronicle.born) },
+    { label: t('chronicle.arrived'), value: String(chronicle.arrived) },
+    { label: t('chronicle.died'), value: String(chronicle.died) },
+    { label: t('chronicle.peak'), value: String(chronicle.peakPopulation) },
+    { label: t('chronicle.raised'), value: String(chronicle.buildingsRaised) },
+    { label: t('chronicle.foodEaten'), value: String(Math.round(chronicle.foodEaten)) },
+    { label: t('chronicle.firewoodBurned'), value: String(Math.round(chronicle.firewoodBurned)) },
   ];
 
-  if (sentTick !== null) {
-    rows.push({
-      label: t('ending.messageYear'),
-      value: String(yearOfTick(sentTick)),
-    });
+  // Only once there is a reading to report: `coldest` starts at +Infinity, and
+  // printing that would be the panel talking nonsense on the first morning.
+  if (hasColdReading(chronicle)) {
+    rows.push({ label: t('chronicle.coldest'), value: `${Math.round(chronicle.coldest)}°` });
   }
-
-  if (rescue.yearsRemaining !== null) {
+  if (chronicle.roughNights > 0) {
     rows.push({
-      label: t('rescue.remaining'),
-      // Shown in years rather than days: a four-figure day count is a number
-      // nobody can hold, and the answer to "are we close" is a year.
-      value: String(rescue.yearsRemaining),
-      ...(rescue.stage === 'sighted' ? { tone: 'good' as const } : {}),
+      label: t('chronicle.roughNights'),
+      value: String(chronicle.roughNights),
+      detail: t('chronicle.roughNights.detail'),
+      tone: 'bad' as const,
     });
   }
 
   return {
-    id: 'rescue',
-    title: t('rescue.title'),
-    note: t(`rescue.${rescue.stage}` as MessageKey),
-    ...(rescue.stage === 'ready' || rescue.stage === 'carrying'
-      ? { action: { label: t('rescue.send'), enabled: rescue.canSendMessage } }
-      : {}),
-    // No heading: this tab has one section, and repeating "Getting home"
-    // directly under the tab called "Getting home" is noise.
-    sections: [{ id: 'progress', title: '', rows }],
+    id: 'chronicle',
+    title: t('chronicle.title'),
+    note: t('chronicle.note'),
+    // No heading: one section, and repeating the tab's own name under it is noise.
+    sections: [{ id: 'history', title: '', rows }],
   };
 }
 

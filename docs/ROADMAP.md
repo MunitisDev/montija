@@ -49,15 +49,16 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 22    | Start screen and guide        | **Implemented** |
 | 23    | People, families and postings | **Implemented** |
 | 24    | Households                    | **Implemented** |
-| 25    | The shipwreck                 | **Implemented** |
+| 25    | The coast and the camp        | **Implemented** |
 | 26    | Smoke and trade props         | **Implemented** |
 | 27    | The settings cog              | **Implemented** |
 | 28    | Stores, clock and ledger      | **Implemented** |
-| 29    | Getting home                  | **Implemented** |
+| 29    | Getting home                  | **Removed**     |
 | 30    | The build menu                | **Implemented** |
 | 31    | Light and value               | **Implemented** |
 | 32    | Spirit                        | **Implemented** |
 | 33    | The silent dead ends          | **Implemented** |
+| 34    | Roads, growth and the ages    | **Implemented** |
 
 ---
 
@@ -676,16 +677,20 @@ Two existing tests had to change, and neither was retuned to hide anything:
 
 ---
 
-## Phase 25 — The shipwreck — Implemented
+## Phase 25 — The coast and the camp — Implemented
 
 The settlement finally has a reason to exist. Set out in
 [GAME_DESIGN.md](./GAME_DESIGN.md#where-they-came-from--implemented).
 
+> Built as a **shipwreck** and rewritten in Phase 34: castaways contradicted two
+> systems the game already had — newcomers walking in, and a merchant calling
+> every twelve days. The world generation below is unchanged; only the story is.
+
 - **Every map has a sea**, on one edge, chosen from the seed and cut out of the
   same elevation noise so the coast wanders.
-- The settlers **come ashore** there, and the starting yard is the wreck's cargo
-  on the beach. The camera opens on it.
-- The cargo is **timber, food and a little unusable iron - and no stone**.
+- The settlers **make camp** within sight of it, and the starting yard is what
+  they carried. The camera opens on it.
+- What they carried is **timber, food and a little unusable iron - and no stone**.
 - The Gatherer Hut costs timber only, so finding a quarry is urgent without
   being fatal.
 
@@ -773,45 +778,37 @@ overlay in the game that leaves the clock running.
 
 ---
 
-## Phase 29 - Getting home - Implemented
+## Phase 29 - Getting home - Removed
 
-The game's only **win condition**, and the other half of the shipwreck. Set out
-in [GAME_DESIGN.md](./GAME_DESIGN.md), including why forty years and why a
-school.
+The game's only **win condition**, built in this phase and **taken out again in
+Phase 34**. Recorded rather than deleted, because the reasoning is worth keeping
+and half of it survives.
 
-```text
-raise a School  ->  a message can be written
-      |
-carry it to the tideline  ->  the bottle goes out
-      |
-forty years pass  ->  a sail on the horizon
-      |
-the ship lands  ->  the chronicle
-```
+What it was: a **School** let the settlement write for help, a villager carried a
+bottle to the waterline, and about forty years later a ship came. A rescue tab led
+the ledger, and a closing page opened itself when the ship landed.
 
-- **A School**, the most expensive building in the game at 30 logs, 20 stone and
-  12 iron - which means a quarry, a mine and the logistics to keep both fed. No
-  worker slots: it is a monument, not a workshop.
-- **The bottle is carried, not clicked.** Asking for it posts a job and a
-  villager physically walks it to the waterline. Nothing is sent until somebody
-  arrives, because the project refuses to fake logistics anywhere else either.
-- **A rescue tab** leading the ledger, with the one button the ledger has. It is
-  the same five facts at every stage, so the player learns one page rather than
-  five.
-- **A closing page** that opens itself when the ship lands, pauses like every
-  other sheet, and leaves the settlement standing when it is closed.
+Why it went: it was the other half of the shipwreck, and the shipwreck went. A
+premise about castaways on an unreachable coast contradicted two systems the game
+already had — strangers walk in to join a settlement, and a merchant calls every
+twelve days. The endgame is now meant to be walls and a watch against the thing
+the settlers left, and a ship home does not belong in that story.
 
-Two things worth recording about how it is built. The rescue is stored as **two
-ticks** - bottle away, ship landed - and every stage is derived from them, so a
-save cannot restore into a stage that disagrees with its own clock. And the
-chronicle is **recorded as it happens**, because every figure on the closing
-page is about the past and a snapshot of the present cannot be asked what the
-past was.
+What survived it:
 
-**Not measured.** Nobody has played the arc at real speed - forty years is
-around three hours at 1x. It is tested to the tick and verified in a browser by
-winding the clock, and `RESCUE_YEARS` is one constant precisely so it can move
-once somebody has sat through it.
+- **The chronicle**, which was always the interesting part of that ending. It now
+  has a ledger tab of its own, last rather than first, because it is the only page
+  about the past.
+- **The School**, still buildable and currently doing nothing, kept because
+  settlements already have them standing and because a school is the right
+  building for the specialisation system that is coming. Its description says it
+  has no effect, which is better than a panel promising one it has not got.
+- The observation that **a save must survive a feature being removed**. Saves
+  written before this carry a `rescue` field nothing reads; an unknown field is
+  ignored rather than rejected, and `tests/save.test.ts` pins that.
+
+Gone with it: `RescueSystem`, the `carry-message` job, the tideline lookup, the
+closing page, and about thirty translated strings in two languages.
 
 ---
 
@@ -934,3 +931,47 @@ nothing happening at all.
 The stalled-site warning was not a simulation bug - a house cannot be built
 without stone, and what was broken is that the game knew and did not say. Set
 out in [GAME_DESIGN.md](./GAME_DESIGN.md).
+
+---
+
+## Phase 34 — Roads, growth and the ages — Implemented
+
+Three player reports from a year-six game, plus the story rewrite they made
+necessary.
+
+**"Nobody makes roads."** Paving was the only job in the game at `low` priority,
+on the theory that roads get built with the hours nobody else needed. There are no
+such hours: a running settlement always has a tree marked or a load to carry, so
+the order sat on the board for ever. Measured on a two-year-old settlement of
+nineteen people — nine roads ordered, **nought laid** in fifteen days. At `normal`
+all nine go down, and hauling being `high` keeps the rule `low` was protecting.
+
+**"The population has settled at twenty."** Measured on a kept-fed, kept-housed
+settlement over twenty years: 24 people in year four, still 24 in year twenty.
+Sixteen years flat. Three causes, each reasonable on its own — one birth roll per
+_settlement_ per day rather than per couple; a house counting _residents_ rather
+than grown-ups, so a family of four blocked every birth in the village; and one
+age doing the work of three. Same fixture after: 35 by year two, 63 by year six.
+
+**The four ages.** Working age 14, adulthood 18, retirement 60, and a lifespan
+near seventy that illness shortens — which is what a Healer's House is finally
+worth. Pairing needs both partners 18+ and within six years, matches the closest
+in age rather than whoever arrived first, and has no upper limit so a widow can
+marry again. Bearing children is the mother's window alone, 18 to 40.
+
+**The founding party is seven grown-ups and three near-adults.** Without them the
+second generation does not arrive until year eighteen and then arrives all at once.
+
+**The shipwreck went, and the rescue arc with it.** See Phase 29 above, and
+[GAME_DESIGN.md](./GAME_DESIGN.md#where-they-came-from--implemented). The world
+generation is untouched; the premise is now simply that they left a village
+something came into one night. The **starting seed is random**, so a new game is a
+new valley — `Math.random` in `app/config.ts`, which is the one place before a
+world exists and three directories away from the simulation that must never roll
+its own dice.
+
+Two balance claims had to be rewritten rather than retuned. A one-hut settlement
+no longer _dies_ on the reference seed — a village with three teenagers in it is
+smaller in its first year, and one hut nearly feeds it — so the hut ladder is now
+asserted where it is still visible: **food banked entering winter**, 5 on one hut,
+47 on two, 52 on three, averaged over 24 seeds.

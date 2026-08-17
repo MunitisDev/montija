@@ -20,6 +20,9 @@ export const TICKS_PER_DAY = 60;
 /** Days in a season. A year is 48 days, about five minutes at 1x. */
 export const DAYS_PER_SEASON = 12;
 
+/** Days in a year. Derived, so the calendar has exactly one definition of it. */
+export const DAYS_PER_YEAR = DAYS_PER_SEASON * SEASONS.length;
+
 export const TICKS_PER_SEASON = TICKS_PER_DAY * DAYS_PER_SEASON;
 export const TICKS_PER_YEAR = TICKS_PER_SEASON * SEASONS.length;
 

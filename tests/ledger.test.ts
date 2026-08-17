@@ -70,8 +70,8 @@ describe('the shape of the sheet', () => {
   });
 
   it('never repeats a tab title as its own section heading', () => {
-    // "Getting home" directly under the tab called "Getting home" is the same
-    // word twice in three lines.
+    // "Chronicle" directly under the tab called "Chronicle" is the same word
+    // twice in three lines.
     for (const tab of buildLedger(new Simulation(OPTIONS), t)) {
       for (const section of tab.sections) {
         expect(section.title).not.toBe(tab.title);
@@ -180,12 +180,14 @@ describe('what a day costs', () => {
     );
   });
 
-  it('wears tools by the adult, not by the head', () => {
+  it('wears tools by the worker, not by the head', () => {
+    // Must agree with `SurvivalSystem`, which charges fourteen-to-sixty. A ledger
+    // that forecasts a demand the settlement does not have is worse than none.
     const simulation = new Simulation(OPTIONS);
-    const adults = simulation.villagers.all.filter((villager) => villager.isAdult).length;
+    const workers = simulation.villagers.all.filter((villager) => villager.canWork).length;
 
     expect(estimateFlows(simulation).survivalDemand.get('tools')).toBeCloseTo(
-      adults * TOOLS_PER_WORKER_PER_DAY,
+      workers * TOOLS_PER_WORKER_PER_DAY,
     );
   });
 

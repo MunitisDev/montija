@@ -24,24 +24,20 @@ SaveGame
 ├── storages         cells, capacities, contents, and how well each keeps food
 ├── jobs             the whole board, verbatim
 ├── deaths           the settlement's toll
-├── rescue           when the bottle went out, and when the ship landed
-├── chronicle        lifetime tallies, for the closing page
+├── chronicle        lifetime tallies, for the settlement's own history page
 └── random           each seeded stream's position
 ```
-
-### Why the rescue is two ticks rather than a stage
-
-`rescue` stores `messageSentTick` and `arrivedTick` and nothing else. Every stage the player sees —
-ready, carrying, awaited, sighted, arrived — is derived from those two numbers against the current
-tick, so a loaded settlement cannot restore into a stage that disagrees with its own clock. Storing
-`stage: 'awaited'` would have allowed exactly that.
 
 ### Why the chronicle is stored rather than recomputed
 
 Every figure in it is about the **past**: who was born, who was buried, how many walls went up, the
 coldest night anybody stood through. A snapshot of the present cannot be asked what the past was —
-by the time the ship comes, most of the people the chronicle counts are dead. Recording it as it
-happens is the only way to have it at all.
+by year thirty most of the people the chronicle counts are dead and most of its winters are decades
+gone. Recording it as it happens is the only way to have it at all.
+
+A save written before the rescue arc was removed may still carry a `rescue` field. Nothing reads it,
+and an unknown field is ignored rather than rejected, so those settlements load exactly as they were
+apart from a bottle nobody is waiting on any more.
 
 Both are optional fields. A save written before there was a way off this coast restores as a
 settlement that never sent for anyone, with an empty history — which is the honest reading of it.

@@ -4,12 +4,12 @@
  * Data rather than code, so the shape of a population is something to tune
  * rather than something to refactor.
  *
- * Deliberately not a family simulation. There are no couples, no genders, no
- * relationships and no inheritance: the brief asks for a settlement survival
- * game, warns against implementing dozens of needs, and none of that would earn
- * its complexity yet. What is modelled is the only part the player actually
- * plays against — that people take years to become useful, eat the whole time,
- * and eventually die.
+ * A family simulation only as far as it earns its keep. There are couples,
+ * households, parents and children, because a settlement whose people are
+ * interchangeable is a settlement nobody minds losing — and because who is of an
+ * age to work, to marry and to bear children is the whole of a village's growth
+ * curve. There is no inheritance, no kinship beyond parents, and no ambition to
+ * add either.
  */
 
 /**
@@ -78,18 +78,45 @@ export const ILL_DAYS_PER_YEAR_LOST = 12;
 /**
  * Age range of the founding settlers.
  *
- * Capped at the childbearing age rather than above it. A founder rolled at 43
- * could never pair with anybody and never have a child — they were a settler
- * born too old to help found anything, which is not a decision the player made
- * or could see. The survivors of a wreck are whoever was on the ship, and a
- * ship's company is young.
+ * Capped at forty rather than above it. A founder rolled at fifty could never
+ * have a child and would retire within ten years — a settler too old to help
+ * found anything, which is not a decision the player made or could see. People
+ * who walk out of a place in the night are whoever could walk.
  */
 export const FOUNDER_AGE_MIN = 18;
 export const FOUNDER_AGE_MAX = 40;
 
-/** Years within which a villager may have a child. */
+/**
+ * How many of the founding party are young people rather than grown-ups.
+ *
+ * **The settlement needs a second generation sooner than it can grow one.** The
+ * founders pair off on the first day and have children within the year, and
+ * those children are eighteen in year eighteen — so a village's working
+ * population barely moves for a decade and a half, and then arrives all at once.
+ *
+ * A few near-adults in the party close that gap: they come of age within a year
+ * or two, pair with each other, and give the settlement a wave of households
+ * before the founders' own children are anywhere near grown. They are also the
+ * right people to be walking out of a place that was attacked — a group fleeing
+ * in the night is families, not a work detail.
+ */
+export const FOUNDING_YOUNG_SHARE = 0.3;
+
+/** Ages of those young people: close enough to adulthood to matter soon. */
+export const FOUNDING_YOUNG_AGE_MIN = 14;
+export const FOUNDING_YOUNG_AGE_MAX = 17;
+
+/**
+ * Years within which a **woman** may bear a child.
+ *
+ * The window belongs to the mother, and it is hers alone: a household needs a
+ * father who is a grown-up and nothing more of him. Applying the same range to
+ * both was simpler and wrong in a way that mattered — it retired a couple the
+ * moment *either* of them aged out, so a woman of thirty could stop having
+ * children because her husband turned forty-one.
+ */
 export const CHILDBEARING_AGE_MIN = 18;
-export const CHILDBEARING_AGE_MAX = 42;
+export const CHILDBEARING_AGE_MAX = 40;
 
 /**
  * The widest gap in years between two people who will pair up.

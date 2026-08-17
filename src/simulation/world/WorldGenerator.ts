@@ -53,8 +53,8 @@ const MOISTURE_LATTICE = 8;
 /**
  * The four coasts a map can have. One of them is always the sea.
  *
- * The settlers were shipwrecked, so there has to be somewhere they were
- * shipwrecked *from*. Leaving it to the elevation noise would give some seeds a
+ * Every map has a coast, so every settlement has one edge it cannot be attacked
+ * across and one horizon to look at. Leaving it to the elevation noise would give some seeds a
  * lake, some a puddle and some nothing at all, and the opening of the story
  * would be true on about half the maps.
  */

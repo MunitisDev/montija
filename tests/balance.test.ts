@@ -266,34 +266,38 @@ describe('the first winter', () => {
     expect(result.survivors).toBeGreaterThanOrEqual(10);
   });
 
-  it('starves a settlement that builds one hut for ten mouths', () => {
-    // One hut cannot feed ten, and since villagers took posts rather than
-    // drifting to whatever was nearest, it cannot *nearly* feed ten either:
-    // two of the ten are committed to the hut and two more to the woodcutter,
-    // and the six left over cannot gather. This is the cost the player is now
-    // able to decide about, and it bites before winter even arrives.
+  it('leaves a one-hut settlement entering winter with nothing in store', () => {
+    // **This used to assert deaths, and it no longer can.** The founding party
+    // now brings three near-adults instead of ten grown-ups, so there are fewer
+    // couples, fewer children and fewer mouths in the first year — and one hut
+    // very nearly covers a village that small. On the reference seed it now
+    // survives.
+    //
+    // What one hut still cannot do is put anything *by*. It reaches winter on
+    // nothing and lives off what autumn's last days carry in, which is the
+    // difference the player can act on: see the ladder below.
     const result = runYear(oneHut);
-    expect(result.deaths).toBeGreaterThan(0);
     expect(result.atWinter.food).toBe(0);
   });
 
-  it('is pushed back by a second hut, and only survived by a third', () => {
-    // The graded middle of the curve, and the reason the one-hut run above is
-    // allowed to be fatal: each hut buys real time, and somewhere in that
-    // sequence is the settlement that lives.
+  it('banks more food for every hut the player raises', () => {
+    // The graded middle of the curve, and the reason a one-hut settlement is
+    // still playing badly even when it survives: each hut is a real amount of
+    // food in store before the cold.
     //
-    // Asserted as an *ordering* rather than as "two huts survive". It used to
-    // say that, and the claim was true only by a couple of days' margin — any
-    // change that shifted the random streams tipped it over and the test
-    // failed for reasons that had nothing to do with the change. What the game
-    // actually promises is that more huts is monotonically better, and that a
-    // properly fed settlement lives; both of those are stable.
+    // Measured over 24 seeds — 5 food banked on one hut, 47 on two, 52 on three
+    // — and asserted as an **ordering** rather than as figures, so retuning a
+    // recipe cannot fail it for the wrong reason.
+    //
+    // It used to assert deaths, and the honest reason it cannot any more is that
+    // the founding party changed: three near-adults instead of ten grown-ups is
+    // a smaller village in the first year, and one hut nearly feeds it.
     const one = runYear(oneHut);
     const two = runYear(twoHuts);
     const three = runYear(prepared);
 
-    expect(one.deaths).toBeGreaterThan(0);
-    expect(two.firstDeathDay ?? Infinity).toBeGreaterThan(one.firstDeathDay ?? 0);
+    expect(one.atWinter.food).toBeLessThan(two.atWinter.food);
+    expect(two.atWinter.food).toBeGreaterThan(40);
     expect(three.deaths).toBe(0);
   });
 

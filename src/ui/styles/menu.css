@@ -727,12 +727,11 @@ body.is-menu-open #hud {
 }
 
 /*
- * The ledger's one button, on the rescue tab.
+ * The ledger's action button.
  *
- * Deliberately the only control on a page of figures, and styled as the
- * accented action it is: pressing it is the single most consequential thing a
- * player ever does, and it is available for about two seconds of their
- * attention before the tab goes back to being a status page.
+ * No tab uses one today — the rescue tab that did has been removed — but the
+ * panel still supports one, so the style stays with it. Styled as the accented
+ * exception it would be on a page that is otherwise all figures.
  */
 .ledger__action {
   display: block;
@@ -758,14 +757,4 @@ body.is-menu-open #hud {
   background: transparent;
   border-color: var(--colour-panel-edge);
   cursor: default;
-}
-
-/* --- The ending ---------------------------------------------------------- */
-
-.ending__body {
-  margin: 0 0 22px;
-  max-width: 52ch;
-  font-size: 0.95rem;
-  line-height: 1.6;
-  color: var(--colour-ink);
 }

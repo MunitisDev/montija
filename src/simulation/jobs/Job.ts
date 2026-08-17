@@ -32,8 +32,7 @@ export type JobType =
   | 'produce'
   | 'pave-road'
   | 'plant-tree'
-  | 'demolish'
-  | 'carry-message';
+  | 'demolish';
 
 /**
  * Which leg of a multi-stage job is being done.
@@ -116,9 +115,6 @@ export const JOB_WORK_TICKS: Readonly<Record<JobType, number>> = {
   'pave-road': 20,
   // Setting a sapling. Quick work; the waiting is done by the tree.
   'plant-tree': 15,
-  // Corking a bottle and throwing it. The work is the walk to the water, and
-  // the walk is most of the point — see `rescue/RescueSystem.ts`.
-  'carry-message': 10,
   // Pulling a building down and stacking what is worth keeping. Slower than
   // raising a wall is fast, but far quicker than building it — tearing down is
   // always easier than putting up.

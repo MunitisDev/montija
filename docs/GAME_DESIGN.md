@@ -20,29 +20,40 @@ The first objective is the MVP's: **survive the first winter**.
 
 ## Where they came from — Implemented
 
-**They were shipwrecked.** Ten survivors drag what they can out of the surf and
-start again on an empty coast.
+**They left.** One night something came out of the dark into their village.
+Nobody saw clearly what it was, and nobody stayed to find out. Ten of them walked
+out with what they could carry.
 
-That premise had to be true of every map or it would be a lie on half of them,
-so the sea is guaranteed rather than left to chance: one edge of every map is
-ocean, chosen from the seed. It is produced by subtracting a falloff from the
-same elevation noise as everything else, so the waterline still wanders into
-inlets and headlands instead of ruling a straight blue line down one side. Only
-one edge — a settlement ringed by water is a different game and a much smaller
-map.
+That is deliberately all of it. The less the game says about what came, the more
+room there is for the thing the player eventually has to build walls against —
+and a premise that explains itself has nothing left to reveal.
 
-The settlers come ashore a few paces up the beach, and **the starting yard is
-the wreck's cargo** stacked above the tideline. The camera opens on it, so the
-first thing anybody sees is their own people on the shore they washed up on.
+> **The shipwreck this replaced.** The settlers used to be castaways, and it read
+> well until the rest of the game caught up with it: strangers walk in to join a
+> settlement and a merchant calls every twelve days, neither of which happens on
+> an unreachable coast. A premise that the systems contradict is worse than a
+> plainer one they agree with. The rescue arc it existed to support — a School, a
+> bottle on the tide and a ship forty years later — went with it.
 
-What is in that cargo says the same thing again:
+Every map still has a coast: one edge is ocean, chosen from the seed and produced
+by subtracting a falloff from the same elevation noise as everything else, so the
+waterline wanders into inlets and headlands instead of ruling a straight blue line
+down one side. Only one edge — a settlement ringed by water is a different game
+and a much smaller map. It gives the settlement one side it cannot be approached
+from, which is worth having when the walls arrive.
 
-| Salvage      | Why                                                                   |
-| ------------ | --------------------------------------------------------------------- |
-| 45 logs      | A ship is made of timber, and a hull on a beach comes apart into it   |
-| 156 food     | Ship's stores — fifteen days for ten mouths, most of which rots first |
-| 8 iron       | Fittings and nails. Useless until there is a Blacksmith to work them  |
-| **no stone** | Nobody salvages rock from a boat                                      |
+The settlers make camp within sight of the water, and **the starting yard is what
+they carried**. The camera opens on it, so the first thing anybody sees is their
+own people.
+
+What is in that bundle says the same thing the premise does:
+
+| Carried      | Why                                                           |
+| ------------ | ------------------------------------------------------------- |
+| 45 logs      | Worth the weight: the first two or three buildings            |
+| 156 food     | Fifteen days for ten mouths, most of which rots first         |
+| 8 iron       | Taken because it was valuable, useless until there is a smith |
+| **no stone** | Nobody flees carrying rock                                    |
 
 **No stone is the interesting one.** It makes the first morning of the game a
 search rather than a shopping trip. It also forced a change: the Gatherer Hut
@@ -50,15 +61,21 @@ costs timber only now, because with stone in its price a settlement playing well
 starved on day 22 of three seeds out of four while hunting a deposit it could
 not eat. Wood gets you fed; stone is for everything that has to last.
 
+**Ten people, and three of them are young.** The founding party is seven grown-ups
+and three near-adults of fourteen to seventeen. That is both what a group leaving
+in the night looks like and a fix for a real problem: the founders' own children
+are not eighteen until year eighteen, so without them a village's working
+population barely moves for a decade and a half and then arrives all at once.
+
 Measured across 24 seeds, a well-played settlement comes through its first year
 without a death on only 2 of them, and most of the deaths moved from starving in
 spring to failing in winter, which is the failure this game is about. See
 [Difficulty](#why-they-die--measured-not-fixed) for what kills the rest.
 
-**The salvaged rations are fifteen days, not fifteen days of slack.** They were
+**The rations they carried are fifteen days, not fifteen days of slack.** They were
 raised from 120 to 156 to widen the opening, and the measured effect was much
-smaller than the number suggests: food rots at a tenth a day and the beach yard
-is an open yard, so the pile decays as it is eaten and is gone in about ten days
+smaller than the number suggests: food rots at a tenth a day and the camp's own
+store is an open yard, so the pile decays as it is eaten and is gone in about ten days
 whatever size it starts at. Thirty per cent more food moved the first death of a
 do-nothing settlement by **one day**, and changed the outcome of a well-played or
 half-played year on **not one seed measured**. Anything given to the opening
@@ -992,59 +1009,40 @@ ever. `tests/spirit.test.ts`.
 
 ---
 
-## Getting home — Implemented
+## The chronicle — Implemented
 
-The game's only **win condition**, and the other half of the shipwreck. The settlers came ashore with
-what they could drag up the beach; this is how they leave.
+The ledger's last tab, and the only page in the game about the past: years settled, who was born here,
+who was taken in, who is buried here, the peak population, buildings raised, meals eaten, firewood
+burned, the coldest night and the nights somebody slept in the open.
 
-```text
-raise a School  →  a message can be written
-      ↓
-carry it to the tideline  →  the bottle goes out
-      ↓
-forty years pass  →  a sail on the horizon
-      ↓
-the ship lands  →  the chronicle
-```
+Recorded as it happens rather than reconstructed, because **the present cannot be asked what the past
+was**. By year thirty most of the people a settlement is made of are dead and most of its winters are
+decades gone; a village of twelve tells you nothing about the forty who lived there. That is also why
+it is written into the save rather than derived from it.
 
-**Why a school.** Somebody has to be able to write. More to the point, a settlement that can spare
-the stone, the iron and the years to teach its children has stopped merely surviving — and that is a
-milestone the economy already knows how to express. The school is simply the most expensive thing in
-the game: **30 logs, 20 stone, 12 iron**, which means a quarry, a mine and the logistics to keep both
-fed. It has no worker slots, like the trading post. A teacher who taught nothing the simulation
-models would be a villager the settlement cannot afford, doing a job the game only pretends exists.
+The coldest reading starts at positive infinity and the row is hidden until there is a real one, so
+the panel does not talk nonsense on the first morning.
 
-**Why the bottle is carried rather than clicked.** The project refuses to fake logistics anywhere
-else — a felled tree does not become `wood += 1` — and a message must not become `sent = true`.
-Somebody walks it to the water. It also makes the sea a real constraint: the coast has to be
-reachable from the settlement.
+> **This replaced the rescue arc.** The game used to have a win condition: raise a School, carry a
+> bottle to the tideline, and a ship comes about forty years later. It went when the shipwreck did —
+> see [Where they came from](#where-they-came-from--implemented) — and the chronicle inherited its
+> figures, which were always the interesting part of that ending. The **School** is still buildable
+> and currently does nothing; it is kept because settlements already have them standing and because
+> a school is the right building for the specialisation system that is coming.
 
-**Why forty years.** Counted from the message rather than from the founding, so getting word out
-early is worth something — a settlement that reaches a school by its tenth year sails a decade before
-one that takes twenty. Forty is chosen against the two facts that bound it: a school realistically
-lands somewhere in the first ten or fifteen years, and forty more puts the ship at roughly **year
-fifty**, which is the span the game is about. In real time that is a little under an hour at 4x and
-around three at 1x. A campaign, deliberately, not a session.
+---
 
-**No ship comes for an empty settlement.** A settlement with nobody left in it is not rescued, it is
-found; the failure overlay is the right ending for that, and it already exists.
+## The endgame — Planned
 
-**The ending does not end the game.** Closing the closing page leaves the settlement standing and the
-clock running, which is why its button says "stay a while longer" rather than "close". A player who
-wants to keep the place going after the ship has been is welcome to.
+Nothing below is built.
 
-### The chronicle
+The settlers left because something came out of the dark. The intended endgame is that it finds them
+again: past some point, a settlement needs **walls** and a **watch** — villagers posted to defend
+rather than to produce — to hold off incursions. That is what makes a guaranteed coastline worth
+having, and what turns a peaceful village into a decision about how much labour to keep out of the
+fields.
 
-What the closing page reports: years ashore, who is sailing home, who was born, taken in and buried,
-the peak population, walls raised, meals eaten, firewood burned, the coldest night and the nights
-anybody slept in the open. Recorded as it happens rather than reconstructed, because all of it is
-about the past. A settlement of twelve tells you nothing about the forty who lived there.
-
-The one figure that is about the present — who is on the ship — is labelled as such.
-
-**Not measured yet.** Nobody has played the arc end to end at real speed. The forty-year span is a
-considered number, not a tested one, and it is a single constant (`RESCUE_YEARS`) precisely so it can
-move once somebody has sat through it.
+None of it exists yet: there are no walls, no guards, no attackers and no combat.
 
 ---
 
@@ -1057,6 +1055,9 @@ move once somebody has sat through it.
   designated enough work. Whether that reads as calm or as broken is a question for a real playtest.
 - **No professions.** Villagers take whatever the job board offers rather than holding a trade, so a
   "worker slot" is a post rather than a career.
-- **The rescue has never been played at real speed.** Forty years is around three hours at 1x. The
-  arc is tested to the tick and verified in a browser by winding the clock, but whether the _wait_
-  is interesting — whether a settlement at year thirty still has anything to decide — is unknown.
+- **There is no win condition.** The rescue arc was the only one and it has been removed; walls and a
+  watch are meant to replace it and are not built. A settlement that survives its first winter can be
+  played indefinitely, and nothing tells the player they have finished.
+- **A long game has never been played at real speed.** Fifty years is around three hours at 1x.
+  Growth over the generations is tested headlessly, but whether a settlement at year thirty still has
+  anything to decide is unknown.

@@ -90,8 +90,6 @@ export class Hud {
   /** The last day whose events were announced, so each is announced once. */
   private lastAnnouncedDay = -1;
   private lastRenderedSeason = '';
-  /** The rescue stage last announced, so each step is called out once. */
-  private lastRescueStage: string | null = null;
   private lastRenderedTemperature = Number.NaN;
 
   constructor(root: HTMLElement, context: GameContext, i18n: I18n) {
@@ -295,8 +293,6 @@ export class Hud {
       this.announceOnce(this.i18n.t('event.merchant'));
     }
 
-    this.announceRescue(snapshot);
-
     this.announce('event.born', population.births);
     this.announce('event.arrived', population.arrivals);
     // Sickness costs the settlement a pair of hands for over a week, and there
@@ -306,32 +302,6 @@ export class Hud {
     this.announce('event.recovered', snapshot.illness.recovered);
     this.announce('event.diedOfOldAge', population.deathsOfOldAge);
     this.announce('event.died', fromHardship);
-  }
-
-  /**
-   * Calls out the two moments of the rescue that would otherwise pass unseen.
-   *
-   * The bottle reaching the water and the sail appearing both happen out at the
-   * edge of the map, possibly off screen, on a day the player is busy doing
-   * something else. Announced on the stage changing rather than on a count,
-   * because each happens exactly once in a settlement's life.
-   *
-   * Silent on the first look, like every other notice: a settlement loaded
-   * mid-wait should not announce a bottle it sent thirty years ago.
-   */
-  private announceRescue(snapshot: SimulationSnapshot): void {
-    const stage = snapshot.rescue.stage;
-    const previous = this.lastRescueStage;
-    this.lastRescueStage = stage;
-    if (previous === null || previous === stage) {
-      return;
-    }
-
-    if (stage === 'awaited') {
-      this.announceOnce(this.i18n.t('event.messageSent'));
-    } else if (stage === 'sighted') {
-      this.announceOnce(this.i18n.t('event.sailSighted'));
-    }
   }
 
   /** Puts one already-worded line on the notice stack. */

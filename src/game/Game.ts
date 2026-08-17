@@ -12,7 +12,7 @@
 
 import {
   CAMERA_FEEL,
-  DEFAULT_WORLD_SEED,
+  randomWorldSeed,
   INITIAL_ZOOM,
   MAX_TICKS_PER_ADVANCE,
   STARTING_VILLAGERS,
@@ -195,7 +195,6 @@ export interface GameContext {
    * Returns `false` when there is no school, the bottle is already away, or
    * somebody is already carrying it — see `rescue/RescueSystem.ts`.
    */
-  sendMessage(): boolean;
 
   /** The building being placed, or `null` when not in placement mode. */
   readonly placement: PlacementState | null;
@@ -298,7 +297,10 @@ export class Game implements GameContext, InputIntentSink {
    * longer exist.
    */
   public startNewSettlement(seed?: number): void {
-    this.currentSeed = seed ?? this.currentSeed + 1;
+    // A new valley rather than the next one along: stepping the seed by one made
+    // "begin again" feel like a level select, and two adjacent seeds produce
+    // worlds no more alike than any other pair anyway.
+    this.currentSeed = seed ?? randomWorldSeed();
     this.simulation = Game.foundSettlement(this.currentSeed, this.startingVillagers);
     this.worldGeneration += 1;
 
@@ -308,9 +310,9 @@ export class Game implements GameContext, InputIntentSink {
     this.currentPlacement = null;
     this.placementChanges += 1;
     this.ticksUntilAutosave = AUTOSAVE_INTERVAL_TICKS;
-    // On the wreck camp rather than the middle of the map. The first thing the
-    // player should see is their own people on the beach they washed up on,
-    // not an empty acre of the interior with the story happening off-screen.
+    // On the camp rather than the middle of the map. The first thing the player
+    // should see is their own people, not an empty acre of the interior with
+    // nobody in it.
     this.camera.centreOn(gridToScene(this.simulation.world.landfallCell));
   }
 
@@ -329,7 +331,7 @@ export class Game implements GameContext, InputIntentSink {
   }
 
   constructor(options: GameOptions = {}) {
-    const seed = options.seed ?? DEFAULT_WORLD_SEED;
+    const seed = options.seed ?? randomWorldSeed();
     this.currentSeed = seed;
     this.startingVillagers = options.startingVillagers ?? STARTING_VILLAGERS;
 
@@ -354,7 +356,7 @@ export class Game implements GameContext, InputIntentSink {
       },
       feel: CAMERA_FEEL,
       initialZoom: INITIAL_ZOOM,
-      // The beach they washed up on, not the middle of the map.
+      // Where the settlers made camp, not the middle of the map.
       initialCentre: gridToScene(this.simulation.world.landfallCell),
     });
   }
@@ -855,10 +857,6 @@ export class Game implements GameContext, InputIntentSink {
    * a misplaced tap on a quarry is a mistake the player can simply reverse
    * rather than one they have to live with.
    */
-  public sendMessage(): boolean {
-    return this.simulation.sendMessage();
-  }
-
   public toggleSelectedDemolition(): boolean {
     const selection = this.currentSelection;
     const building = selection?.building;

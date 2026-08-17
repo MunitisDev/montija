@@ -420,29 +420,7 @@
       </div>
 
       <!--
-        The closing page.
-
-        Not a failure overlay in reverse: this is the one ending the player was
-        working towards for decades of settlement time, so it takes the screen
-        and reads like a page rather than an alert. The settlement is still
-        there behind it, and closing it leaves the game running — a player who
-        wants to keep the place going after the ship has been is welcome to.
-      -->
-      <div class="sheet" data-ui="ending" role="dialog" aria-modal="true" hidden>
-        <div class="sheet__panel sheet__panel--narrow">
-          <header class="sheet__head">
-            <h2 class="sheet__title" data-ui="ending-title"></h2>
-            <button type="button" class="sheet__close" data-ui="ending-close"></button>
-          </header>
-          <div class="sheet__body">
-            <p class="ending__body" data-ui="ending-lede"></p>
-            <div class="ending__figures" data-ui="ending-figures"></div>
-          </div>
-        </div>
-      </div>
-
-      <!--
-        The ledger: aggregate figures, in four tabs.
+        The ledger: aggregate figures, in five tabs.
 
         Deliberately not the people panel. That one is a list of individuals;
         this is the settlement counted — how many, of what, making what,

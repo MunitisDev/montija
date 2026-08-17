@@ -150,7 +150,8 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     id: 'house',
     category: 'shelter',
     name: 'House',
-    description: 'Shelter for four. Firewood only warms people who have a house.',
+    description:
+      'A home for four grown-ups and their children. Firewood only warms people who have one.',
     footprint: { width: 2, height: 2 },
     constructionCost: [
       { resource: 'logs', amount: 8 },
@@ -197,11 +198,10 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     name: 'Gatherer Hut',
     description: 'Workers forage the surrounding woods for food.',
     footprint: { width: 2, height: 2 },
-    // Timber only, and that is the shipwreck talking. The settlers come ashore
-    // with planks off the hull and no stone at all, so if the one building that
-    // feeds them needed masonry they would starve while looking for a quarry —
-    // measured, they died on day 22 of three seeds out of four. Wood gets you
-    // fed; stone is for everything that has to last.
+    // Timber only. The settlers arrive with what they could carry and no stone at
+    // all, so if the one building that feeds them needed masonry they would
+    // starve while looking for a quarry — measured, they died on day 22 of three
+    // seeds out of four. Wood gets you fed; stone is for everything that lasts.
     constructionCost: [{ resource: 'logs', amount: 12 }],
     buildTicks: 110,
     workerSlots: 2,
@@ -390,24 +390,25 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
   },
 
   /*
-   * The most expensive thing in the game, and the only building whose point is
-   * not the settlement.
+   * The most expensive thing in the game, and **currently ornamental**.
    *
-   * A school is what lets somebody write, which is what makes the rescue
-   * possible — see `simulation/rescue/RescueSystem.ts`. Its cost is the gate:
-   * stone means a quarry, iron means a mine, and both mean the logistics to
-   * keep them fed. A settlement that can spare all that has stopped merely
-   * surviving, which is exactly the milestone worth marking.
+   * It was built for the rescue arc: a school was what let somebody write for
+   * help, and that arc has been removed. It is kept rather than deleted for two
+   * reasons — settlements already have them standing, and the trade a school
+   * plausibly teaches is exactly what the coming specialisation system needs.
    *
-   * No worker slots, like the trading post. A teacher who taught nothing the
-   * simulation models would be a villager the settlement cannot afford, doing
-   * a job the game only pretends exists.
+   * Until then it does nothing mechanical, and its description says so. A
+   * building whose panel promises an effect it has not got is worse than no
+   * building at all.
+   *
+   * Its cost is still the gate it always was: stone means a quarry, iron means a
+   * mine, and both mean the logistics to keep them fed.
    */
   school: {
     id: 'school',
     category: 'settlement',
     name: 'School',
-    description: 'Teaches the settlement its letters — and lets it write for help.',
+    description: 'Somewhere for the children to learn. No effect yet.',
     footprint: { width: 3, height: 3 },
     constructionCost: [
       { resource: 'logs', amount: 30 },

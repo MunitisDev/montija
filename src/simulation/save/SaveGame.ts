@@ -155,18 +155,6 @@ export interface SaveGame {
   readonly jobs: readonly Job[];
   readonly deaths: number;
   /**
-   * When the bottle went out and when the ship landed.
-   *
-   * Two ticks rather than a stage, so a loaded settlement cannot restore into a
-   * rescue that disagrees with its own clock. Absent in saves written before
-   * there was a way off this coast, which restore as a settlement that has not
-   * sent for anyone — the correct reading of a save that predates the rescue.
-   */
-  readonly rescue?: {
-    readonly messageSentTick: number | null;
-    readonly arrivedTick: number | null;
-  };
-  /**
    * Lifetime totals.
    *
    * Saved rather than recomputed because they are about the past, and a

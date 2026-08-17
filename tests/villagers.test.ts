@@ -1,3 +1,4 @@
+import { FOUNDER_AGE_MAX, FOUNDING_YOUNG_AGE_MIN } from '@/data/population';
 import { describe, expect, it } from 'vitest';
 import { VILLAGER_WALK_SPEED } from '@/data/villagers';
 import { SeededRandom } from '@/shared/math/random';
@@ -151,15 +152,27 @@ describe('VillagerSystem', () => {
       expect(new Set(system.all.map((v) => v.id)).size).toBe(12);
     });
 
-    it('gives every villager a name and an adult age', () => {
+    it('gives every villager a name, and the party some near-adults', () => {
+      // **The founding party is not all grown-ups.** A few of them are fourteen
+      // to seventeen on purpose: the founders' own children are not eighteen
+      // until year eighteen, so without them a settlement's working population
+      // barely moves for a decade and a half. See FOUNDING_YOUNG_SHARE.
       const system = makeSystem();
       system.spawnNear({ gx: 16, gy: 16 }, 10);
 
       for (const villager of system.all) {
         expect(villager.name.length).toBeGreaterThan(0);
-        expect(villager.age).toBeGreaterThanOrEqual(18);
-        expect(villager.age).toBeLessThan(46);
+        expect(villager.age).toBeGreaterThanOrEqual(FOUNDING_YOUNG_AGE_MIN);
+        expect(villager.age).toBeLessThanOrEqual(FOUNDER_AGE_MAX);
       }
+
+      const young = system.all.filter((villager) => !villager.isAdult);
+      const grownUps = system.all.filter((villager) => villager.isAdult);
+      expect(young.length).toBeGreaterThan(0);
+      // Still mostly grown-ups: a party of children could not raise anything.
+      expect(grownUps.length).toBeGreaterThan(young.length);
+      // And every one of them can work, which is the point of fourteen.
+      expect(system.all.every((villager) => villager.canWork)).toBe(true);
     });
 
     it('spawns identically for the same seed', () => {

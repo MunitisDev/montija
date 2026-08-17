@@ -28,24 +28,8 @@ import {
   type TradeOrder,
   type TradeReport,
 } from './logistics/TradeSystem';
-import { newChronicle, type Chronicle } from './rescue/Chronicle';
+import { newChronicle, type Chronicle } from './history/Chronicle';
 
-/**
- * The reservation key for the one message there will ever be.
- *
- * The job system reserves by `type:entityId:slot`, and a bottle has no entity
- * to key off. A constant works because there is exactly one: sending a second
- * would not make the ship come sooner.
- */
-const MESSAGE_JOB_ID = 0;
-
-import {
-  NO_RESCUE,
-  hasShipLanded,
-  readRescue,
-  type RescueReport,
-  type RescueState,
-} from './rescue/RescueSystem';
 import {
   DAYS_PER_SEASON,
   SEASONAL_YIELD,
@@ -125,10 +109,10 @@ const SALVAGE_SHARE = 0.5;
 /**
  * How far the founding yard reaches from the cell it is recorded at.
  *
- * The wreck's cargo is a single point in the simulation and three cells across
- * on screen, and that discrepancy has to be agreed on by everything that cares:
- * the ground it clears, the taps it answers to, and the sprite drawn for it.
- * One radius here rather than three copies that can drift apart.
+ * The settlers' stores are a single point in the simulation and three cells
+ * across on screen, and that discrepancy has to be agreed on by everything that
+ * cares: the ground it clears, the taps it answers to, and the sprite drawn for
+ * it. One radius here rather than three copies that can drift apart.
  */
 export const FOUNDING_YARD_RADIUS = 1;
 
@@ -198,9 +182,7 @@ export interface SimulationSnapshot {
   readonly trade: TradeReport;
   /** Who is unwell, and how much of it the settlement is able to treat. */
   readonly illness: IllnessReport;
-  /** How far the settlement has got towards getting off this coast. */
-  readonly rescue: RescueReport;
-  /** Lifetime totals, for the day the ship comes. */
+  /** Lifetime totals: the settlement's own history, recorded as it happens. */
   readonly chronicle: Readonly<Chronicle>;
   readonly deaths: number;
   /** Lowest health among the living, so the HUD can warn before people die. */
@@ -275,15 +257,6 @@ export class Simulation {
   private tradeOrder: TradeOrder = AUTOMATIC_TRADE;
   private totalDeaths = 0;
 
-  /**
-   * The two ticks the rescue turns on: bottle away, and ship landed.
-   *
-   * Two numbers rather than a stage, so a save cannot restore into a state that
-   * disagrees with its own clock. Everything else is derived — see
-   * `rescue/RescueSystem.ts`.
-   */
-  private rescueState: RescueState = NO_RESCUE;
-
   /** Lifetime tallies. Recorded as they happen; the present cannot be asked. */
   private readonly chronicle: Chronicle = newChronicle();
   /**
@@ -321,7 +294,7 @@ export class Simulation {
     );
 
     this.foundStorageYard();
-    // Ashore beside their salvage, not in the middle of the map: they walked
+    // Beside their stores, not in the middle of the map: they walked
     // up this beach out of the water.
     this.villagers.spawnNear(this.world.landfallCell, options.startingVillagers);
 
@@ -342,13 +315,6 @@ export class Simulation {
     // building that was raised and then pulled down was still raised.
     this.world.buildings.onCompleted = () => {
       this.chronicle.buildingsRaised += 1;
-    };
-    // Recorded here rather than in the villagers, who do not know what a rescue
-    // is and should not have to.
-    this.villagers.onMessageDelivered = () => {
-      if (this.rescueState.messageSentTick === null) {
-        this.rescueState = { ...this.rescueState, messageSentTick: this.currentTick };
-      }
     };
   }
 
@@ -467,7 +433,6 @@ export class Simulation {
       ),
       stored: this.totalsFrom((resource) => this.storages.totalOf(resource)),
       loose: this.totalsFrom((resource) => this.world.piles.totalOf(resource)),
-      rescue: this.rescue,
       chronicle: this.chronicle,
     };
   }
@@ -590,23 +555,17 @@ export class Simulation {
    * Everything else is restored by the serialiser through the registries; this
    * is the small amount of state the Simulation itself owns.
    */
-  public restoreRescue(state: RescueState, chronicle: Readonly<Chronicle>): void {
-    this.rescueState = { ...state };
+  public restoreChronicle(chronicle: Readonly<Chronicle>): void {
     Object.assign(this.chronicle, chronicle);
-  }
-
-  /** The two ticks the rescue turns on, for the serialiser. */
-  public get rescueTicks(): RescueState {
-    return this.rescueState;
   }
 
   public restoreClock(tick: number, deaths: number): void {
     this.currentTick = tick;
     this.totalDeaths = deaths;
     this.lastDayReport = EMPTY_REPORT;
-    // Not reset here: a load restores the rescue and the chronicle explicitly,
-    // and clearing them from the clock would wipe a fifty-year history every
-    // time a settlement was reloaded.
+    // The chronicle is not reset here: a load restores it explicitly, and
+    // clearing it from the clock would wipe a whole history every time a
+    // settlement was reloaded.
     this.lastSpoilage = NO_SPOILAGE;
     this.lastPopulation = NO_POPULATION_CHANGE;
     this.lastForest = NO_FOREST_CHANGE;
@@ -817,45 +776,6 @@ export class Simulation {
     return Math.min(1, share);
   }
 
-  /** How far the settlement has got towards getting off this coast. */
-  public get rescue(): RescueReport {
-    return readRescue(this.rescueState, this.currentTick, {
-      hasSchool: this.world.buildings.countOf('school') > 0,
-      carrying: this.jobs.isTargetReserved('carry-message', MESSAGE_JOB_ID),
-    });
-  }
-
-  /**
-   * Sends somebody to the water with the bottle.
-   *
-   * Posts a job rather than setting a flag: the whole project refuses to fake
-   * logistics, and a message that teleports itself to the sea would be exactly
-   * that. Whoever is nearest and free picks it up.
-   *
-   * @returns `false` when there is no school, the bottle is already away, or
-   *   somebody is already walking it out.
-   */
-  public sendMessage(): boolean {
-    if (!this.rescue.canSendMessage) {
-      return false;
-    }
-    const slot = this.jobs.firstFreeSlot('carry-message', MESSAGE_JOB_ID, 1);
-    if (slot === null) {
-      return false;
-    }
-    this.jobs.create({
-      type: 'carry-message',
-      target: this.world.tidelineCell,
-      // The highest priority in the game, and the one time that is
-      // unambiguously right: it happens once, it takes one villager one walk,
-      // and the player has just asked for it in as many words.
-      priority: JobPriority.urgent,
-      targetEntityId: MESSAGE_JOB_ID,
-      reservationSlot: slot,
-    });
-    return true;
-  }
-
   /**
    * Eats, burns firewood, and buries whoever did not make it.
    *
@@ -910,12 +830,6 @@ export class Simulation {
     this.chronicle.firewoodBurned += this.lastDayReport.firewoodBurned;
     this.chronicle.roughNights += this.lastDayReport.sleepingRough;
     this.chronicle.coldest = Math.min(this.chronicle.coldest, this.year.temperature);
-
-    // A settlement with nobody left in it is not rescued, it is found. The
-    // failure overlay is the right ending for that, and it already has it.
-    if (hasShipLanded(this.rescueState, this.currentTick) && this.villagers.count > 0) {
-      this.rescueState = { ...this.rescueState, arrivedTick: this.currentTick };
-    }
   }
 
   /**
@@ -1667,7 +1581,7 @@ export class Simulation {
   }
 
   /**
-   * Piles the salvage above the tideline.
+   * Stacks the settlers' stores where they made camp.
    *
    * The settlement starts with one yard already standing, because resources
    * exist physically in this game and there has to be somewhere to haul to
