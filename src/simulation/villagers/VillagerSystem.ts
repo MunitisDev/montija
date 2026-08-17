@@ -465,10 +465,10 @@ export class VillagerSystem {
         return;
       }
     } else {
-      // Tools buy speed. A tick of labour counts for more than one tick's
-      // progress when the settlement is equipped, which is the single place in
-      // the game where iron actually pays for itself.
-      job.workRemaining -= this.workRate();
+      // Tools and spirit buy speed for the whole settlement; experience buys it
+      // for one person at one trade. All three multiply into the same number,
+      // which is the single place in the game where any of them pays off.
+      job.workRemaining -= this.workRate() * this.skillRate(villager, job);
       this.recordBuildProgress(job);
       if (job.workRemaining > 0) {
         return;
@@ -546,6 +546,21 @@ export class VillagerSystem {
   public workRateProvider: (() => number) | null = null;
 
   /**
+   * How much this villager's own experience is worth at the job in hand.
+   *
+   * **Split from the settlement-wide rate rather than folded into it**, because
+   * the two answer different questions: tools and spirit are facts about the
+   * village, and a master woodcutter is a fact about one person doing one kind of
+   * work. Multiplying them together is right; conflating them would have meant
+   * either everybody sharing one skill level or the whole settlement speeding up
+   * when one villager reached five years.
+   *
+   * A provider for the same reason as the other: the villagers do not know what a
+   * building definition is, and nothing here may import one.
+   */
+  public skillRateProvider: ((villager: Villager, job: Job) => number) | null = null;
+
+  /**
    * Called when a demolition job finishes.
    *
    * A callback rather than direct work, for the same reason as the production
@@ -557,6 +572,10 @@ export class VillagerSystem {
 
   private workRate(): number {
     return this.workRateProvider ? this.workRateProvider() : 1;
+  }
+
+  private skillRate(villager: Villager, job: Job): number {
+    return this.skillRateProvider ? this.skillRateProvider(villager, job) : 1;
   }
 
   private productionScale(profile: SeasonalProfile): number {

@@ -1061,3 +1061,58 @@ None of it exists yet: there are no walls, no guards, no attackers and no combat
 - **A long game has never been played at real speed.** Fifty years is around three hours at 1x.
   Growth over the generations is tested headlessly, but whether a settlement at year thirty still has
   anything to decide is unknown.
+
+---
+
+## Trades and experience — Implemented
+
+**A trade is a building.** That is already how a profession works here — a
+villager's profession _is_ the workshop they answer to, so adding a workshop adds
+a trade and nothing has to learn its name — and experience follows the same rule.
+
+| From              | Level      | Works at |
+| ----------------- | ---------- | -------- |
+| first year        | beginner   | 1.0      |
+| 1 year at a trade | apprentice | 1.1      |
+| 2 years           | expert     | 1.25     |
+| 5 years           | master     | 1.5      |
+
+Experience buys **speed at that trade and nothing else**: one number, multiplied
+into the labour a tick is worth, in the same place tools and spirit already
+multiply. Not better yields, not a wider range. Anything more would need the
+player to understand a second system before they could read the first.
+
+Four properties are deliberate, and each is tested:
+
+- **A beginner is exactly ordinary.** 1.0 is the rate every villager in this game
+  has always worked at, so a settlement that never keeps anybody in one job is not
+  punished — it is simply not collecting. The same bargain tools and spirit make.
+- **Counted in days at a post, not jobs finished.** A woodcutter who spent the day
+  walking to a distant stack still learned something about being a woodcutter.
+  Counting finished jobs would have made experience a second measure of how well
+  the settlement is laid out, which it already measures elsewhere.
+- **Nothing decays.** A master moved to a quarry keeps her woodcutting for the day
+  somebody builds another woodcutter. The cost of moving a specialist is already
+  the five years it took to make one.
+- **A yard teaches nothing.** Only a building with worker slots, so "storage-yard"
+  cannot become a profession somebody masters.
+
+**Employment hires the specialist.** A vacancy goes to the most experienced free
+hand at that trade, and among equals — which is everybody, for a village's first
+year or two — to the nearest, exactly as before. A posting the player made still
+beats both: their instruction is not the settlement's to overrule.
+
+**A master's children start as apprentices.** At working age, a child born here
+whose parent has mastered a trade begins with a year of it, having never worked a
+day — they grew up in the workshop. Only from a master, and only to a child born
+here, which is what keeps five years a milestone rather than a formality. Given at
+fourteen rather than at birth, so a parent who masters the trade while the child
+grows up still passes it on.
+
+**Not measured in play.** The bonus sizes are considered numbers, not tested ones.
+What is tested is the property that matters: a settlement that never specialises
+runs at exactly the speed it always did, for ever. `tests/skills.test.ts`.
+
+Shown in the people panel as "Woodcutter (master, 5 yrs)", best trade first, and
+only for trades actually learned — a row reading "none" would say a villager has a
+trade and then take it back.

@@ -58,6 +58,22 @@ export interface SavedVillager {
   readonly parentIds?: readonly [number, number] | null;
   /** Days of sickness left. Absent in saves from before anyone could fall ill. */
   readonly illDaysRemaining?: number;
+  /**
+   * Days spent unwell across a whole life, which shortens it.
+   *
+   * Absent in older saves and restores at zero: a villager whose sickness was
+   * never written down, honestly treated as having had none.
+   */
+  readonly illDaysLived?: number;
+  /**
+   * Days worked at each trade, as pairs.
+   *
+   * Pairs rather than an object because the keys are building ids and a plain
+   * record over them would be mostly zeroes. Absent in saves from before trades
+   * existed, which restore as a settlement of beginners — which is exactly what
+   * they were.
+   */
+  readonly experience?: readonly (readonly [string, number])[];
   readonly carrying: SavedInventory;
   /**
    * The route being walked, and where it leads.

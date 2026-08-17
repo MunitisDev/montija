@@ -6,6 +6,7 @@
  * the round-trip test in `tests/save.test.ts` exists to catch exactly that.
  */
 
+import type { BuildingId } from '@/data/buildings';
 import type { ResourceId } from '@/data/resources';
 import type { Simulation } from '@/simulation/Simulation';
 import type { Inventory } from '@/simulation/resources/Inventory';
@@ -62,6 +63,8 @@ export function serialise(simulation: Simulation, savedAt: string): SaveGame {
       sex: villager.sex,
       parentIds: villager.parentIds,
       illDaysRemaining: villager.illDaysRemaining,
+      illDaysLived: villager.illDaysLived,
+      experience: [...villager.experience],
       carrying: toRecord(villager.inventory),
       path: villager.path.map((step) => ({ gx: step.gx, gy: step.gy })),
       destination: villager.destination ? { ...villager.destination } : null,
@@ -204,6 +207,11 @@ export function restore(simulation: Simulation, save: SaveGame): void {
       villager.partnerId = saved.partnerId ?? null;
       villager.parentIds = saved.parentIds ?? null;
       villager.illDaysRemaining = saved.illDaysRemaining ?? 0;
+      villager.illDaysLived = saved.illDaysLived ?? 0;
+      villager.experience.clear();
+      for (const [trade, days] of saved.experience ?? []) {
+        villager.experience.set(trade as BuildingId, days);
+      }
       villager.needs.hunger = saved.hunger;
       villager.needs.warmth = saved.warmth;
       villager.needs.health = saved.health;

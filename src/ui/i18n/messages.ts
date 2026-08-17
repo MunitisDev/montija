@@ -362,6 +362,12 @@ export const EN = {
   'roster.parents': 'Born to',
   'roster.children': 'Children',
   'roster.carrying': 'Carrying',
+  'roster.trades': 'Trades',
+  /** The three levels of a trade. `none` is nobody's rank — it is everybody's
+   * first year, and is never shown. */
+  'skill.apprentice': 'apprentice',
+  'skill.expert': 'expert',
+  'skill.master': 'master',
   'roster.work': 'Work',
   'roster.hunger': 'Fed',
   'roster.warmth': 'Warm',
@@ -736,6 +742,10 @@ export const ES: Messages = {
   'roster.parents': 'Hija/o de',
   'roster.children': 'Hijos',
   'roster.carrying': 'Lleva',
+  'roster.trades': 'Oficios',
+  'skill.apprentice': 'aprendiz',
+  'skill.expert': 'experto',
+  'skill.master': 'maestro',
   'roster.work': 'Trabajo',
   'roster.hunger': 'Comida',
   'roster.warmth': 'Abrigo',

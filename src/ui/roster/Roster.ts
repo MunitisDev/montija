@@ -253,6 +253,20 @@ export class Roster {
       ['roster.partner', person.partner],
       ['roster.parents', person.parents],
       ['roster.children', person.children.length > 0 ? person.children.join(', ') : null],
+      // "Woodcutter (master, 6 years)". Only drawn when they have learned
+      // something: a row that says "none" says a villager has a trade and then
+      // takes it back.
+      [
+        'roster.trades',
+        person.trades.length > 0
+          ? person.trades
+              .map(
+                (entry) =>
+                  `${entry.trade} (${entry.level}, ${entry.years}\u00a0${t('roster.years')})`,
+              )
+              .join(', ')
+          : null,
+      ],
       ['roster.carrying', person.carrying],
     ];
 

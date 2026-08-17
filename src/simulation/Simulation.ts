@@ -16,6 +16,7 @@ import { STARTING_RESOURCES } from '@/app/config';
 import type { BuildingId } from '@/data/buildings';
 import { recipe as findRecipe } from '@/data/recipes';
 import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
+import { SKILL_WORK_BONUS } from '@/data/skills';
 import type { Building } from './buildings/Building';
 import type { PlacementCheck } from './buildings/BuildingRegistry';
 import { isFinished, JobPriority } from './jobs/Job';
@@ -49,6 +50,12 @@ import {
   runEmployment,
   type EmploymentReport,
 } from './population/EmploymentSystem';
+import {
+  NO_SKILL_CHANGE,
+  inheritTrades,
+  runSkillDay,
+  type SkillReport,
+} from './population/SkillSystem';
 import {
   HERBS_PER_PATIENT_PER_DAY,
   NO_ILLNESS,
@@ -182,6 +189,8 @@ export interface SimulationSnapshot {
   readonly trade: TradeReport;
   /** Who is unwell, and how much of it the settlement is able to treat. */
   readonly illness: IllnessReport;
+  /** Who reached a new level at their trade today, so the HUD can say so. */
+  readonly skills: SkillReport;
   /** Lifetime totals: the settlement's own history, recorded as it happens. */
   readonly chronicle: Readonly<Chronicle>;
   readonly deaths: number;
@@ -270,6 +279,9 @@ export class Simulation {
   /** Sickness gets its own stream, for the same reason the woods do. */
   private readonly illnessRandom: SeededRandom;
 
+  /** Who reached a new level at their trade today. */
+  private lastSkills: SkillReport = NO_SKILL_CHANGE;
+
   constructor(options: SimulationOptions) {
     this.seed = options.seed >>> 0;
     this.tickRandom = new SeededRandom(deriveSeed(this.seed, 'tick'));
@@ -310,6 +322,16 @@ export class Simulation {
     this.villagers.workRateProvider = () =>
       (1 + TOOL_WORK_BONUS * this.lastDayReport.toolFraction) *
       spiritWorkBonus(this.lastDayReport.spirit);
+    // And experience, which is one person's rather than the settlement's. A
+    // master is half again as quick **at her own trade** and exactly ordinary at
+    // everything else, which is what makes moving a specialist cost something.
+    this.villagers.skillRateProvider = (villager, job) => {
+      if (job.type !== 'produce' || job.targetEntityId === null) {
+        return 1;
+      }
+      const building = this.world.buildings.getById(job.targetEntityId);
+      return building ? SKILL_WORK_BONUS[villager.skillAt(building.definition.id)] : 1;
+    };
     this.villagers.onDemolished = (buildingId) => this.completeDemolition(buildingId);
     // Counted when the wall goes up rather than counted off the map later: a
     // building that was raised and then pulled down was still raised.
@@ -423,6 +445,7 @@ export class Simulation {
       employment: this.lastEmployment,
       trade: this.lastTrade,
       illness: this.lastIllness,
+      skills: this.lastSkills,
       deaths: this.totalDeaths,
       advice: this.adviseOn(year),
       stalledMaterial: this.stalledMaterial(),
@@ -815,6 +838,13 @@ export class Simulation {
     });
 
     this.runPopulationUpkeep();
+
+    // Trades last, after the population is settled: somebody who died today
+    // learned nothing, and somebody who turned fourteen today should collect
+    // what their parents' mastery is worth on the same day.
+    inheritTrades(this.villagers.all);
+    this.lastSkills = runSkillDay(this.villagers.all, this.world.buildings);
+
     this.recordTheDay();
   }
 

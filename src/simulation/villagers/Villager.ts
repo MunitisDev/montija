@@ -11,7 +11,9 @@
  * board offers rather than holding a trade.
  */
 
+import type { BuildingId } from '@/data/buildings';
 import { ADULT_AGE, RETIREMENT_AGE, WORKING_AGE } from '@/data/population';
+import { skillLevelOf, type SkillLevel } from '@/data/skills';
 import type { GridPoint, WorldPoint } from '@/shared/types/geometry';
 import { Inventory } from '@/simulation/resources/Inventory';
 
@@ -204,6 +206,51 @@ export class Villager {
    * from it.
    */
   public illDaysLived = 0;
+
+  /**
+   * Days worked at each trade, keyed by the building id of that trade.
+   *
+   * **A trade is a building** — that is already how a profession works in this
+   * game — so a woodcutter of six years is `{'woodcutter': 288}`. Moving her to a
+   * quarry makes her a beginner at quarrying without losing a day of her
+   * woodcutting, which is what makes a specialist worth keeping where they are.
+   *
+   * A map rather than a single "profession" field on purpose: somebody who spent
+   * three years at a hut and then four at a smithy is two things, and the second
+   * does not erase the first. Written to the save as pairs.
+   *
+   * Empty for almost everybody most of the time, which is why it is a Map rather
+   * than a record over every building id.
+   */
+  public readonly experience = new Map<BuildingId, number>();
+
+  /** Days this villager has worked at a trade. Zero for one they have not. */
+  public experienceAt(trade: BuildingId): number {
+    return this.experience.get(trade) ?? 0;
+  }
+
+  /** What this villager has made of a trade. `'none'` for their first year. */
+  public skillAt(trade: BuildingId): SkillLevel {
+    return skillLevelOf(this.experienceAt(trade));
+  }
+
+  /**
+   * The trade this villager is best at, or `null` for somebody with none.
+   *
+   * Ties break on the building id, so the answer does not depend on Map
+   * insertion order — which a loaded save would not reproduce.
+   */
+  public get bestTrade(): BuildingId | null {
+    let best: BuildingId | null = null;
+    let bestDays = 0;
+    for (const [trade, days] of [...this.experience].sort((a, b) => a[0].localeCompare(b[0]))) {
+      if (days > bestDays) {
+        best = trade;
+        bestDays = days;
+      }
+    }
+    return best;
+  }
 
   /** `true` while this villager is unwell. */
   public get isIll(): boolean {

@@ -211,19 +211,35 @@ export function runEmployment(
       short -= 1;
     }
 
-    // Then whoever is nearest — but only from those who have not been spoken
-    // for. Somebody posted to another workshop is waiting for it, and somebody
-    // kept as a labourer is kept as a labourer.
+    // **Then the specialist, and only then whoever is nearest.**
+    //
+    // A settlement that has spent five years making a master woodcutter and then
+    // hands the woodcutter's post to whoever happened to be standing closer has
+    // thrown those five years away, and the player has no way to see it happen.
+    // Experience at *this* trade wins; among equals — which is everybody, most
+    // of the time — the nearest still wins, so nothing changes for a village that
+    // has not specialised yet.
+    //
+    // Only from those who have not been spoken for: somebody posted to another
+    // workshop is waiting for it, and somebody kept as a labourer stays one.
+    const trade = building.definition.id;
     while (short > 0) {
-      const nearest = nearestFree(
-        unemployed.filter((villager) => villager.workPreference === null),
-        building,
+      const free = unemployed.filter((villager) => villager.workPreference === null);
+      const bestExperience = free.reduce(
+        (most, villager) => Math.max(most, villager.experienceAt(trade)),
+        0,
       );
-      if (!nearest) {
+      const candidates =
+        bestExperience > 0
+          ? free.filter((villager) => villager.experienceAt(trade) === bestExperience)
+          : free;
+
+      const chosen = nearestFree(candidates, building);
+      if (!chosen) {
         vacancies += short;
         break;
       }
-      take(nearest, building, list);
+      take(chosen, building, list);
       short -= 1;
     }
 

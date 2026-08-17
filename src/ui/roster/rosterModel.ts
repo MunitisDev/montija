@@ -24,6 +24,7 @@
  */
 
 import { buildingDefinition } from '@/data/buildings';
+import { skillLevelOf, skillYears } from '@/data/skills';
 import type { Simulation } from '@/simulation/Simulation';
 import type { Villager, WorkPreference } from '@/simulation/villagers/Villager';
 import type { MessageKey } from '@/ui/i18n/messages';
@@ -59,6 +60,17 @@ export interface RosterPerson {
   readonly children: readonly string[];
   /** What is on their back right now, or `null`. */
   readonly carrying: string | null;
+  /**
+   * Trades they have learned, best first, translated and levelled.
+   *
+   * Empty for almost everybody in a young settlement, which is the honest state
+   * — and the reason the row is only drawn when there is something in it.
+   */
+  readonly trades: readonly {
+    readonly trade: string;
+    readonly level: string;
+    readonly years: number;
+  }[];
   /** The picker's current value: `AUTOMATIC`, `'labourer'` or a building id. */
   readonly work: string;
 }
@@ -215,6 +227,7 @@ function describe(
       .slice()
       .sort((a, b) => b.age - a.age || a.id - b.id)
       .map((child) => child.name),
+    trades: tradesOf(villager, t),
     carrying:
       carried.length === 0
         ? null
@@ -295,4 +308,26 @@ function numberTheHouses(simulation: Simulation): Map<number, number> {
 
   houses.forEach((house, index) => numbers.set(house.id, index + 1));
   return numbers;
+}
+
+/**
+ * A villager's trades, best first, with what they have made of each.
+ *
+ * Only what they have actually learned: a beginner's first year shows nothing,
+ * because "woodcutter, none" is a row that says a villager has a trade and then
+ * takes it back. Sorted by experience so the answer to "what is this person for"
+ * is the first line.
+ */
+function tradesOf(
+  villager: Villager,
+  t: Translate,
+): readonly { trade: string; level: string; years: number }[] {
+  return [...villager.experience]
+    .filter(([, days]) => skillLevelOf(days) !== 'none')
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([trade, days]) => ({
+      trade: t(`building.${trade}` as MessageKey),
+      level: t(`skill.${skillLevelOf(days)}` as MessageKey),
+      years: skillYears(days),
+    }));
 }
