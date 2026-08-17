@@ -1042,3 +1042,26 @@ apart by outline rather than by detail because a villager is 48 pixels beside a
 children head for the school when one stands. See
 [ART_BIBLE.md](./ART_BIBLE.md#four-villagers-and-a-colour-each--implemented) and
 [GAME_DESIGN.md](./GAME_DESIGN.md#children-and-elders-seen--implemented).
+
+---
+
+## Phase 37 — The wood tends itself — Implemented
+
+Four reports in one pass, three of them about taps.
+
+**"I want the Woodcutter to fell the trees itself, and for them to grow back on
+their own after five years. Only if the player orders a tree felled does it go
+from the ground for ever — unless you put a forester nearby."** Implemented as
+written; see
+[GAME_DESIGN.md](./GAME_DESIGN.md#cropping-clearing-and-the-five-year-wood--implemented),
+including the measurement that says it is a convenience rather than a fix for the
+opening.
+
+**"Tapping a cell or a building that is already selected should show nothing."**
+It closes now, whichever cell of a building's footprint the second tap lands on.
+
+**"If you are placing a building and tap a cell without dragging, it should
+cancel the placement."** It does. A drag is still a drag.
+
+**"I would take the frame off the buttons along the bottom."** Gone: it was a
+panel wrapped around five buttons that already had their own.

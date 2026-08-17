@@ -119,7 +119,18 @@ export const NO_FOREST_CHANGE: ForestReport = { grown: 0 };
  * other daily process — a settlement replayed from its seed must grow the same
  * forest.
  */
-export function runForestRegrowth(world: World, random: SeededRandom): ForestReport {
+export function runForestRegrowth(
+  world: World,
+  random: SeededRandom,
+  /**
+   * Ground the wild spread may not take, whatever the neighbours say.
+   *
+   * The player's own clearings. A wood creeping back into the square somebody
+   * levelled for a house is the game undoing their work — see `Woodland.ts`.
+   * Optional, so the system still runs on its own in a test.
+   */
+  isCleared: (cell: GridPoint) => boolean = () => false,
+): ForestReport {
   // Checked once, up front. A map already at its ceiling does no work at all,
   // which also makes the whole system free on an old, heavily wooded save.
   const ceiling = Math.floor(world.width * world.height * WOODLAND_CAP_FRACTION);
@@ -149,7 +160,7 @@ export function runForestRegrowth(world: World, random: SeededRandom): ForestRep
     }
 
     const cell: GridPoint = { gx: tree.gx + offset[0], gy: tree.gy + offset[1] };
-    if (!world.canGrowTree(cell) || nearBuilding(world, cell)) {
+    if (!world.canGrowTree(cell) || nearBuilding(world, cell) || isCleared(cell)) {
       continue;
     }
     if (treeNeighbours(world, cell) < MIN_TREE_NEIGHBOURS) {

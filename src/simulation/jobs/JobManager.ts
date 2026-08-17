@@ -48,6 +48,8 @@ export interface CreateJobOptions {
    * job wants.
    */
   readonly reservationSlot?: number;
+  /** `true` when the player asked for it. Only felling reads it — see `Job`. */
+  readonly playerOrdered?: boolean;
 }
 
 export class JobManager {
@@ -152,6 +154,7 @@ export class JobManager {
       haulSource: options.type === 'haul' ? (options.haulSource ?? 'pile') : null,
       haulResource: options.haulResource ?? null,
       reservationSlot: slot,
+      ...(options.playerOrdered === true ? { playerOrdered: true } : {}),
     };
 
     this.nextId += 1;

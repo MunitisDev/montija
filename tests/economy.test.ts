@@ -73,19 +73,35 @@ describe('production', () => {
     expect(sawLoose).toBeGreaterThan(0);
   });
 
-  it('a woodcutter will not make firewood without logs', () => {
+  it('a woodcutter makes no firewood until logs exist', () => {
+    // **Rewritten when the woodcutter learned to fell its own timber.** The old
+    // version stripped the stores and asserted no firewood ever appeared, which
+    // stopped being true the moment the workshop could go and get wood — and it
+    // was testing the supply, not the rule. The rule is that a recipe cannot run
+    // without its inputs, and that is still exactly true: firewood may not
+    // appear before a log has.
     const simulation = new Simulation(OPTIONS);
     standingBuilding(simulation, 'woodcutter');
-    // Strip the settlers' supplies, so there is genuinely no wood anywhere.
     simulation.storages.all[0]!.inventory.clear();
     simulation.storages.markChanged();
 
+    let firstLog = Number.POSITIVE_INFINITY;
+    let firstFirewood = Number.POSITIVE_INFINITY;
     for (let tick = 1; tick <= 5000; tick += 1) {
       simulation.update(tick, TICK);
+      const snapshot = simulation.snapshot();
+      if (firstLog === Number.POSITIVE_INFINITY && snapshot.stored.logs + snapshot.loose.logs > 0) {
+        firstLog = tick;
+      }
+      if (
+        firstFirewood === Number.POSITIVE_INFINITY &&
+        snapshot.stored.firewood + snapshot.loose.firewood > 0
+      ) {
+        firstFirewood = tick;
+      }
     }
 
-    expect(simulation.snapshot().stored.firewood).toBe(0);
-    expect(simulation.snapshot().loose.firewood).toBe(0);
+    expect(firstLog).toBeLessThan(firstFirewood);
   });
 
   it('a woodcutter turns hauled logs into firewood', () => {

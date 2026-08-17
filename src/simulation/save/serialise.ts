@@ -110,6 +110,7 @@ export function serialise(simulation: Simulation, savedAt: string): SaveGame {
     wear: simulation.wearDebt.map(([resource, owed]) => [resource, owed] as const),
     chronicle: { ...simulation.snapshot().chronicle },
     necrology: simulation.necrology.all.map((record) => ({ ...record })),
+    woodland: simulation.woodland.state(),
     random: {
       villagers: simulation.villagers.randomState,
       forest: simulation.forestRandomState,
@@ -253,6 +254,7 @@ export function restore(simulation: Simulation, save: SaveGame): void {
   // Cast rather than validated: the fields are written by this same serialiser,
   // and a save from another version is already rejected by the version check.
   simulation.restoreNecrology((save.necrology ?? []) as readonly DeathRecord[]);
+  simulation.woodland.restore(save.woodland ?? {});
   simulation.restoreWearDebt(
     (save.wear ?? []).map(([resource, owed]) => [resource as ResourceId, owed] as const),
   );

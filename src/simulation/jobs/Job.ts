@@ -97,6 +97,15 @@ export interface Job {
    * slots are reserved separately so more than one villager can work it.
    */
   reservationSlot: number;
+  /**
+   * `true` when the player asked for this work rather than a building.
+   *
+   * Only felling reads it, and it decides whether the ground grows back: a tree
+   * the player marked was marked to clear ground, and cleared ground stays
+   * cleared. See `world/Woodland.ts`. Optional so an older save loads with every
+   * standing order treated as a workshop's, which is the harmless reading.
+   */
+  playerOrdered?: boolean;
 }
 
 /** How long each kind of work takes, in ticks. Balance comes later. */

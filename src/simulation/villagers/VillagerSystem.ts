@@ -598,6 +598,19 @@ export class VillagerSystem {
    */
   public onDemolished: ((buildingId: number) => void) | null = null;
 
+  /**
+   * Called the moment a tree comes down, with the cell and who ordered it.
+   *
+   * The woodland's memory is the settlement's business rather than this
+   * system's: whether that cell grows back in five years or stays cleared for
+   * good depends on a forester's lodge standing somewhere else entirely. See
+   * `world/Woodland.ts`.
+   */
+  public onTreeFelled: ((cell: GridPoint, playerOrdered: boolean) => void) | null = null;
+
+  /** Called when a forester sets a sapling, so the woodland can forget the cell. */
+  public onTreePlanted: ((cell: GridPoint) => void) | null = null;
+
   private workRate(): number {
     return this.workRateProvider ? this.workRateProvider() : 1;
   }
@@ -629,8 +642,8 @@ export class VillagerSystem {
   private finishJob(job: Job): void {
     switch (job.type) {
       case 'chop-tree':
-        if (job.targetEntityId !== null) {
-          this.world.fellTree(job.targetEntityId);
+        if (job.targetEntityId !== null && this.world.fellTree(job.targetEntityId)) {
+          this.onTreeFelled?.(job.target, job.playerOrdered === true);
         }
         break;
       case 'gather-stone':
@@ -648,11 +661,15 @@ export class VillagerSystem {
         // Shape and size come from the villagers' own stream rather than the
         // forest's: this sapling was planted by a person, and its look should
         // not shift where the wild woods spread next.
-        this.world.plantTree(
-          job.target,
-          this.randomSource.int(0, TREE_SHAPE_COUNT),
-          this.randomSource.float(0.55, 0.85),
-        );
+        if (
+          this.world.plantTree(
+            job.target,
+            this.randomSource.int(0, TREE_SHAPE_COUNT),
+            this.randomSource.float(0.55, 0.85),
+          )
+        ) {
+          this.onTreePlanted?.(job.target);
+        }
         break;
       case 'build': {
         const building =

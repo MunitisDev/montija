@@ -219,6 +219,20 @@ export interface SaveGame {
     readonly level?: string;
   }[];
   /**
+   * What the settlement did to its woodland.
+   *
+   * `stumps` are trees cropped for timber and the day each grows back; `barren`
+   * is ground the player cleared for good. Neither can be recomputed from the
+   * map — a cleared cell and a cell that never had a tree look identical — so a
+   * save without them would grow trees back through the middle of a village.
+   * Absent in older saves, which restore with every clearing forgotten and the
+   * wild spread free to creep back in, as it was before.
+   */
+  readonly woodland?: {
+    readonly stumps: readonly { readonly gx: number; readonly gy: number; readonly day: number }[];
+    readonly barren: readonly (readonly [number, number])[];
+  };
+  /**
    * Where each random stream had got to.
    *
    * Without this a loaded settlement restarts its RNG from the seed and makes

@@ -100,6 +100,34 @@ export interface BuildingDefinition {
   };
 
   /**
+   * Set for a building that fells its own timber.
+   *
+   * **The Woodcutter's answer to the one job the player was doing by hand.**
+   * Splitting logs into firewood is useless without logs, and the only way to
+   * get them was to mark trees one at a time — every winter, for ever. A
+   * workshop that cuts what it needs is a workshop; one that waits to be fed by
+   * hand is a chore.
+   *
+   * Its felling is *cropping*, not clearing: those trees grow back in five
+   * years. Only the player's own marks clear ground for good. See
+   * `simulation/world/Woodland.ts`.
+   */
+  readonly felling?: {
+    /** How far its cutters range, in cells. */
+    readonly radius: number;
+    /** Unworked orders it keeps standing. The rate the settlement can cut. */
+    readonly outstanding: number;
+    /**
+     * Logs in store above which it stops cutting.
+     *
+     * A workshop with a full yard has no business emptying the wood, and this
+     * is what stops the settlement stripping the map on its own — the thing a
+     * player would rightly hold against an automatic woodcutter.
+     */
+    readonly logTarget: number;
+  };
+
+  /**
    * Terrain this building must be dug into, if any.
    *
    * A quarry has to bite into a rock face; it cannot sit in a meadow. Checked
@@ -387,6 +415,11 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     buildTicks: 100,
     workerSlots: 2,
     recipeId: 'split-firewood',
+    // Ten cells is about the reach of the lodge, and a handful of standing
+    // orders is the same standing-order rule foresters use: top up, and post
+    // nothing more until somebody has swung an axe. Forty logs is roughly a
+    // season of splitting — enough that a stocked yard leaves the wood alone.
+    felling: { radius: 10, outstanding: 3, logTarget: 40 },
   },
 
   /*

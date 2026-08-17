@@ -76,6 +76,7 @@ import { VillagerSystem } from './villagers/VillagerSystem';
 import type { WorkPreference } from './villagers/Villager';
 import { World } from './world/World';
 import { NO_FOREST_CHANGE, runForestRegrowth, type ForestReport } from './world/ForestSystem';
+import { Woodland } from './world/Woodland';
 import type { TreeInstance } from './world/WorldGenerator';
 
 /**
@@ -270,6 +271,14 @@ export class Simulation {
   private tradeOrder: TradeOrder = AUTOMATIC_TRADE;
   private totalDeaths = 0;
 
+  /**
+   * What was felled where, and whether it grows back.
+   *
+   * Public because the renderer has nothing to draw from it but the ledger has:
+   * a settlement's cleared ground is part of its state and goes in the save.
+   */
+  public readonly woodland = new Woodland();
+
   /** Lifetime tallies. Recorded as they happen; the present cannot be asked. */
   private readonly chronicle: Chronicle = newChronicle();
   /**
@@ -354,6 +363,10 @@ export class Simulation {
       return building ? SKILL_WORK_BONUS[villager.skillAt(building.definition.id)] : 1;
     };
     this.villagers.onDemolished = (buildingId) => this.completeDemolition(buildingId);
+    this.villagers.onTreeFelled = (cell, playerOrdered) => this.recordFelling(cell, playerOrdered);
+    // A lodge planting on ground the player cleared reclaims it: the last thing
+    // done to a cell is what it remembers.
+    this.villagers.onTreePlanted = (cell) => this.woodland.planted(cell);
     // Counted when the wall goes up rather than counted off the map later: a
     // building that was raised and then pulled down was still raised.
     this.world.buildings.onCompleted = () => {
@@ -407,6 +420,9 @@ export class Simulation {
       target: { gx: tree.gx, gy: tree.gy },
       priority: JobPriority.normal,
       targetEntityId: tree.id,
+      // The player is clearing ground, not cropping a coppice. What that costs
+      // the woodland is decided when the axe actually falls — see `onFelled`.
+      playerOrdered: true,
     });
 
     return job !== null;
@@ -875,8 +891,15 @@ export class Simulation {
     // or cold today is what decides whether they fall ill today.
     this.lastIllness = this.runSickness();
 
+    // Stumps first: a tree the settlement cropped five years ago is owed, and
+    // owing it before the wild spread runs means the returning wood counts
+    // towards the ceiling rather than competing with it.
+    this.runRegrowth();
+
     // The woods creep back. Slowly, and never over the settlement itself.
-    this.lastForest = runForestRegrowth(this.world, this.forestRandom);
+    this.lastForest = runForestRegrowth(this.world, this.forestRandom, (cell) =>
+      this.woodland.isBarren(cell),
+    );
 
     // And a merchant may be at the post. Last, so a day's trade is done with
     // what survived the day's eating and rotting rather than with a stock the
@@ -1061,8 +1084,21 @@ export class Simulation {
     }
 
     for (const building of this.world.buildings.all) {
+      if (!building.isComplete) {
+        continue;
+      }
+
+      // A woodcutter crops its own timber. Nothing else about the economy has
+      // to know: the trees it marks go through the same fell → logs → haul
+      // pipeline the player's own marks do, and the ground grows back because
+      // nobody said otherwise — see `recordFelling`.
+      const felling = building.definition.felling;
+      if (felling && this.storages.totalOf('logs') < felling.logTarget) {
+        this.cropTimber(building.accessCell, felling.radius, felling.outstanding);
+      }
+
       const forestry = building.definition.forestry;
-      if (!forestry || !building.isComplete) {
+      if (!forestry) {
         continue;
       }
 
@@ -1091,6 +1127,46 @@ export class Simulation {
         priority: JobPriority.normal,
         targetEntityId: building.id,
         reservationSlot: slot,
+      });
+    }
+  }
+
+  /**
+   * Keeps a few felling orders standing near a workshop that cuts its own wood.
+   *
+   * The same standing-order shape a lodge uses, and for the same reason: capping
+   * the *backlog* rather than the rate is what stops a workshop in a dense wood
+   * burying the map in crosses nobody can work through.
+   *
+   * Nearest first, so the settlement works outwards from the workshop rather
+   * than sending somebody across the valley for whatever the scan found first.
+   */
+  private cropTimber(centre: GridPoint, radius: number, outstanding: number): void {
+    const standing = this.treesWithin(centre, radius);
+
+    let live = 0;
+    const free: TreeInstance[] = [];
+    for (const tree of standing) {
+      if (this.jobs.isTargetReserved('chop-tree', tree.id)) {
+        live += 1;
+      } else {
+        free.push(tree);
+      }
+    }
+    if (live >= outstanding) {
+      return;
+    }
+
+    const distance = (tree: TreeInstance): number =>
+      Math.abs(tree.gx - centre.gx) + Math.abs(tree.gy - centre.gy);
+    free.sort((a, b) => distance(a) - distance(b));
+
+    for (const tree of free.slice(0, outstanding - live)) {
+      this.jobs.create({
+        type: 'chop-tree',
+        target: { gx: tree.gx, gy: tree.gy },
+        priority: JobPriority.normal,
+        targetEntityId: tree.id,
       });
     }
   }
@@ -1399,6 +1475,68 @@ export class Simulation {
   }
 
   /** Pulls a finished building down and leaves salvage on the plot. */
+  /**
+   * Decides what the ground does after a tree comes off it.
+   *
+   * The whole rule, in one place:
+   *
+   * ```text
+   * a workshop's own felling        ──▶ stump, back in five years
+   * the player's felling            ──▶ cleared for good
+   *   …with a forester within reach ──▶ stump, back in five years
+   * ```
+   *
+   * The player marks trees to make room; ground they cleared should stay
+   * cleared, or a sapling turns up where they meant to put a house. A lodge
+   * changes that for everything in its range, which is what a lodge is for.
+   */
+  private recordFelling(cell: GridPoint, playerOrdered: boolean): void {
+    const today = Math.floor(this.currentTick / TICKS_PER_DAY);
+    if (!playerOrdered || this.foresterWatches(cell)) {
+      this.woodland.stump(cell, today);
+      return;
+    }
+    this.woodland.clear(cell);
+  }
+
+  /** `true` when a finished forester's lodge has this cell inside its range. */
+  private foresterWatches(cell: GridPoint): boolean {
+    for (const building of this.world.buildings.all) {
+      const forestry = building.definition.forestry;
+      if (!forestry || !building.isComplete) {
+        continue;
+      }
+      const centre = building.accessCell;
+      if (
+        Math.abs(centre.gx - cell.gx) <= forestry.radius &&
+        Math.abs(centre.gy - cell.gy) <= forestry.radius
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Grows back everything whose five years are up.
+   *
+   * Run once a day with the rest of the slow world. A stump on ground that has
+   * since been built on, roaded or cleared for good simply misses its turn and
+   * is forgotten — the settlement moved on, and the tree does not get to argue.
+   */
+  private runRegrowth(): void {
+    const today = Math.floor(this.currentTick / TICKS_PER_DAY);
+    for (const stump of this.woodland.due(today)) {
+      const cell = { gx: stump.gx, gy: stump.gy };
+      if (this.woodland.isBarren(cell)) {
+        continue;
+      }
+      // From the forest's own stream, like the wild spread: a tree coming back
+      // is the woodland's business, not a villager's.
+      this.world.plantTree(cell, this.forestRandom.int(0, 6), this.forestRandom.float(0.6, 0.9));
+    }
+  }
+
   private completeDemolition(buildingId: number): void {
     const building = this.world.buildings.getById(buildingId);
     if (!building) {

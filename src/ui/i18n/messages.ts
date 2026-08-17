@@ -108,9 +108,11 @@ export const EN = {
   'building.gatherer-hut': 'Gatherer Hut',
   'building.gatherer-hut.description': 'Workers forage the woods for food. Your only food source.',
   'building.woodcutter': 'Woodcutter',
-  'building.woodcutter.description': 'Splits logs into firewood, which keeps houses warm.',
+  'building.woodcutter.description':
+    'Fells its own timber and splits it into firewood. What it crops grows back.',
   'building.forester': "Forester's Lodge",
-  'building.forester.description': 'Plants and fells nearby, so the wood never runs out.',
+  'building.forester.description':
+    'Plants and fells nearby, and the woods within its reach recover from anything — even ground you cleared.',
   'building.quarry': 'Quarry',
   'building.quarry.description': 'Cuts stone from a rock face for as long as it stands.',
   'building.mine': 'Mine',
@@ -345,7 +347,8 @@ export const EN = {
   'guide.loop.body':
     'You never order a villager about directly. You mark what needs doing and raise the buildings; they find the work themselves. Resources are real things in real places — a felled tree becomes logs on the ground, and those logs are worth nothing until somebody has carried them to a store.',
   'guide.loop.designate': 'Mark it',
-  'guide.loop.designate.detail': 'Tap a tree or a stone deposit and choose to fell or mine it.',
+  'guide.loop.designate.detail':
+    'Tap a tree or a stone deposit and choose to fell or mine it. Ground you clear this way stays clear; a Woodcutter crops its own wood, and that grows back.',
   'guide.loop.work': 'Somebody goes',
   'guide.loop.work.detail': 'An idle villager takes the nearest job and walks to it.',
   'guide.loop.haul': 'It is carried',
@@ -537,9 +540,11 @@ export const ES: Messages = {
   'building.gatherer-hut.description':
     'Los trabajadores recolectan comida del bosque. Tu única fuente de comida.',
   'building.woodcutter': 'Leñador',
-  'building.woodcutter.description': 'Parte troncos en leña, que da calor a las casas.',
+  'building.woodcutter.description':
+    'Tala su propia madera y la parte en leña. Lo que corta vuelve a crecer.',
   'building.forester': 'Casa del guarda',
-  'building.forester.description': 'Planta y tala cerca, para que el bosque no se agote.',
+  'building.forester.description':
+    'Planta y tala cerca, y el bosque a su alcance se recupera de todo, incluso del suelo que despejaste.',
   'building.quarry': 'Cantera',
   'building.quarry.description': 'Saca piedra de una pared de roca mientras siga en pie.',
   'building.mine': 'Mina',
@@ -758,7 +763,7 @@ export const ES: Messages = {
     'Nunca das órdenes a un aldeano concreto. Tú marcas lo que hay que hacer y levantas los edificios; ellos buscan el trabajo solos. Los recursos son cosas reales en lugares reales: un árbol talado deja troncos en el suelo, y esos troncos no valen nada hasta que alguien los lleva a un almacén.',
   'guide.loop.designate': 'Márcalo',
   'guide.loop.designate.detail':
-    'Toca un árbol o un yacimiento de piedra y elige talarlo o picarlo.',
+    'Toca un árbol o un yacimiento de piedra y elige talarlo o picarlo. El suelo que despejas así queda despejado; el Leñador corta su propia madera, y esa vuelve a crecer.',
   'guide.loop.work': 'Alguien va',
   'guide.loop.work.detail': 'Un aldeano sin tarea coge el trabajo más cercano y camina hasta él.',
   'guide.loop.haul': 'Alguien lo lleva',

@@ -1344,3 +1344,54 @@ settlement without one consumes the numbers it always did, so no seed was
 re-rolled and no balance figure measured on one became a lie.
 `tests/childhood.test.ts` pins the villagers' RNG cursor after six days of the
 reference settlement for exactly that reason.
+
+---
+
+## Cropping, clearing, and the five-year wood — Implemented
+
+Every felled tree used to be the same felled tree. That made the two things a
+player fells for indistinguishable — **clearing a site** and **cutting timber** —
+and it left them marking trees one at a time, every winter, to keep a Woodcutter
+fed. Three rules replace it:
+
+| Who felled it                         | What the ground does           |
+| ------------------------------------- | ------------------------------ |
+| A workshop, under its own orders      | Stump; a tree again in 5 years |
+| The player, marking a tree            | Cleared for good               |
+| The player, inside a forester's range | Stump; a tree again in 5 years |
+
+**The Woodcutter now fells its own timber.** It keeps three orders standing
+within ten cells while the yard holds fewer than forty logs, and stops when it
+does not — a workshop with a full yard has no business emptying the wood, and
+that cap is what stops an automatic woodcutter stripping the map. Its felling is
+cropping, so what it takes comes back.
+
+**Ground the player clears stays cleared**, and refuses the wild spread as well as
+its own stump. Marking a tree is how you make room to build, and a sapling
+appearing where you meant to put a house is the game undoing your work. A
+**forester's lodge overrides all of it**: anything felled inside its range leaves a
+stump, and a lodge planting on ground somebody cleared reclaims it. That is the
+same asymmetry the rest of the forestry has — the wilderness gives back only so
+much, and anything more is something you did on purpose.
+
+Both the stumps and the cleared cells are saved; neither can be recomputed,
+because a cleared cell and a cell that never had a tree look identical.
+
+### What it did to the opening — measured
+
+The disciplined opening, 24 seeds, a year each:
+
+| Line played                                      | Deaths | Seeds with none | Firewood at winter |
+| ------------------------------------------------ | ------ | --------------- | ------------------ |
+| Marking trees by hand, as before                 | 222    | 2/24            | 0 on all 24        |
+| Leaving the felling to the Woodcutter            | 210    | 3/24            | 0 on all 24        |
+| …and a Woodcutter costing no stone (not shipped) | 202    | 4/24            | 20, on one seed    |
+
+**It is a convenience, not a fix.** Letting the workshop do the felling is worth
+about a dozen lives over 24 settlements, and every one of them still enters winter
+with no firewood at all — because the Woodcutter is 4 stone and
+[the stone still does not arrive](#why-they-die--measured-not-fixed). The third row is
+a measurement, not a change: dropping the stone cost gets firewood onto exactly
+one seed, which is not enough to ship a balance change for.
+
+`tests/woodland.test.ts`.
