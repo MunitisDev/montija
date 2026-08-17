@@ -50,11 +50,10 @@ costs timber only now, because with stone in its price a settlement playing well
 starved on day 22 of three seeds out of four while hunting a deposit it could
 not eat. Wood gets you fed; stone is for everything that has to last.
 
-Measured across eight seeds, a well-played settlement survives its first year on
-4 of them, and most of the deaths moved from starving in spring to failing in
-winter, which is the failure this game is about. See
-[Difficulty](#why-the-other-four-die--measured-not-fixed) for what kills the
-other four.
+Measured across 24 seeds, a well-played settlement comes through its first year
+without a death on only 2 of them, and most of the deaths moved from starving in
+spring to failing in winter, which is the failure this game is about. See
+[Difficulty](#why-they-die--measured-not-fixed) for what kills the rest.
 
 **The salvaged rations are fifteen days, not fifteen days of slack.** They were
 raised from 120 to 156 to widen the opening, and the measured effect was much
@@ -62,7 +61,7 @@ smaller than the number suggests: food rots at a tenth a day and the beach yard
 is an open yard, so the pile decays as it is eaten and is gone in about ten days
 whatever size it starts at. Thirty per cent more food moved the first death of a
 do-nothing settlement by **one day**, and changed the outcome of a well-played or
-half-played year on **none** of the eight seeds. Anything given to the opening
+half-played year on **not one seed measured**. Anything given to the opening
 has to survive the night before it can help, which is a point about the Food
 Storage rather than about generosity.
 
@@ -684,19 +683,21 @@ The intended shape is that a prepared settlement survives its first winter _narr
 measured run above, the well-played settlement ends winter with six food in store and its firewood
 already gone.
 
-**That table is one seed.** Running the same well-played script across eight seeds, the settlement
-survives its first year on **four of them**. The table above is not wrong — it is what that seed does
-— but it describes a scenario on a knife edge, and the balance suite being pinned to a single seed
-makes it fragile in both directions: a change that alters the founding party at all can flip which
-seed lives without changing the difficulty at all.
+**That table is one seed.** Running the same well-played script across **24 seeds**, the settlement
+comes through its first year without a single death on **2 of them**, and buries 220 of its 240
+villagers. The table above is not wrong — it is what that seed does — but it describes a scenario on
+a knife edge, and the balance suite being pinned to a single seed makes it fragile in both
+directions: a change that alters anything at all can flip which seed lives without changing the
+difficulty.
 
-> This figure said **1 of 8** for a long while and was simply out of date — it predated the
-> entombment fix, employment and the clothing line. Re-measured, it is 4 of 8. Recorded here as a
-> caution: a measured number in a document decays, and this one had drifted a long way.
+> **Sample size, the hard way.** This figure was measured at 8 seeds and reported as 4 of 8. Widened
+> to 24 it is 2 of 24 — the first eight were small round numbers and happened to be kind. The 8-seed
+> figure was not wrong so much as meaningless, and both it and the **1 of 8** it replaced are best
+> read as noise. Difficulty claims in this project need 24 seeds; 8 is a smoke test.
 
-### Why the other four die — measured, not fixed
+### Why they die — measured, not fixed
 
-All four fail the same way, and **not** the way it looks from outside. They reach the first freezing
+They fail the same way, and **not** the way it looks from outside. They reach the first freezing
 day of autumn with two hundred logs in the yard, a full larder, and _nothing built_: no house, no
 woodcutter, no Food Storage. Every site is waiting for stone. With no house standing, no firewood is
 burned for anybody — warmth has nowhere to be spent — so all ten freeze to death in midwinter beside
@@ -715,9 +716,31 @@ limiting the diversion (a priority rung below hauling, then a cap of three gathe
 same three seeds starving. The economy has no spare labour, so anything taken out of hauling comes
 straight off the settlement's food.
 
-So the finding stands and the fix does not: the opening is harder than the table implies, and the
-reason is now known rather than guessed. It belongs to a difficulty pass, and that pass has not been
-done.
+### Things tried on the opening that did not work
+
+Three attempts, all measured, none shipped. Recorded so they are not tried again blind — and because
+they agree on one thing: **the opening is not short of food, it is short of shelter.**
+
+| Attempt                                  | Result                                                                 |
+| ---------------------------------------- | ---------------------------------------------------------------------- |
+| +30% starting food (120 → 156) — shipped | Idle settlement dies 1 day later. No played year changed on any seed.  |
+| Stalled gathering outranks felling       | Backed out. Survival flat; three seeds starved in summer instead.      |
+| Food Storage for timber only (no stone)  | Backed out. Food banked 63 → 120, survival flat, reference seed worse. |
+
+The last one is the most instructive, because it worked exactly as designed and still did not help.
+Dropping the 2 stone means the wreck's timber buys a larder on the first morning, and the settlers'
+rations stop rotting — food banked entering winter **nearly doubled**, 63 to 120 averaged over 24
+seeds. Survival did not move (2 of 24 became 1 of 24; 220 deaths became 222), and on the reference
+seed the well-played settlement went from losing nobody to losing two, which would have meant
+weakening the suite's central claim in exchange for nothing.
+
+That is the whole finding in one line: **more food, and better-kept food, do not save a settlement
+that freezes.** Until the stone reaches the building sites there is no house; with no house no
+firewood is burned for anybody; and the settlement dies of cold with a full larder. Every lever on
+the food side is pushing on the wrong end of the chain.
+
+So the finding stands and the fix does not. The reason the opening is hard is now known rather than
+guessed, and it belongs to a difficulty pass that has not been done.
 
 ---
 
