@@ -230,24 +230,51 @@ function drawStoneBase(
   ]);
 
   const depth = groundY - sillY;
+
+  // **Joints, not tiles.** The first version drew each stone as a pale quad from
+  // `t` to `t + 0.2` — which runs off the corner for any block near the end of a
+  // course, and whose lower row reached below the ground line. It also read as
+  // loose tiles stuck on the wall rather than as a wall built of stone, because
+  // pale shapes with gaps between them are what a tile is.
+  //
+  // Drawing the *mortar* instead fixes both at once. Beds run the whole course
+  // and perpends are cut by them, so nothing can leave the face by construction,
+  // and the eye reads a continuous wall with courses in it.
+  const beds = [1 / 3, 2 / 3];
+  const perpends: readonly (readonly number[])[] = [
+    [0.32, 0.66],
+    [0.18, 0.5, 0.82],
+    [0.32, 0.66],
+  ];
+
   for (const side of [-1, 1] as Side[]) {
-    // Two courses, the upper one offset half a block, like coursed masonry.
-    for (const [course, blocks] of [
-      [0.62, [0.08, 0.36, 0.64, 0.92]],
-      [0.2, [0.22, 0.5, 0.78]],
-    ] as const) {
-      graphics.fillStyle(shade(STONE, side === -1 ? 1.12 : 0.64), 1);
-      for (const t of blocks) {
-        const a = wallPoint(cx, halfW, halfH, side, t, sillY + depth * (1 - course));
-        const b = wallPoint(cx, halfW, halfH, side, t + 0.2, sillY + depth * (1 - course));
-        polygon(graphics, [
-          a,
-          b,
-          { x: b.x, y: b.y + depth * 0.3 },
-          { x: a.x, y: a.y + depth * 0.3 },
-        ]);
-      }
+    const at = (t: number, y: number): Point => wallPoint(cx, halfW, halfH, side, t, y);
+    const mortar = shade(STONE, side === -1 ? 0.74 : 0.58);
+
+    // One block picked out per face, bounded by the joints around it so it can
+    // never overhang: enough to say the stones are not all the same.
+    graphics.fillStyle(shade(STONE, side === -1 ? 1.14 : 0.7), 1);
+    const blockTop = sillY + depth * beds[0]!;
+    const blockBottom = sillY + depth * beds[1]!;
+    polygon(graphics, [
+      at(0.18, blockTop),
+      at(0.5, blockTop),
+      at(0.5, blockBottom),
+      at(0.18, blockBottom),
+    ]);
+
+    graphics.fillStyle(mortar, 1);
+    for (const bed of beds) {
+      const y = sillY + depth * bed;
+      polygon(graphics, strip(at(0.01, y), at(0.99, y), 1.2));
     }
+    perpends.forEach((course, band) => {
+      const top = sillY + depth * (band / perpends.length);
+      const bottom = sillY + depth * ((band + 1) / perpends.length);
+      for (const t of course) {
+        polygon(graphics, strip(at(t, top), at(t, bottom), 1.2));
+      }
+    });
   }
 
   // A lit arris along the top of the base, where the timber sits on it.
