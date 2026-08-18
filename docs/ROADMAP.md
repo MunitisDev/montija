@@ -1274,3 +1274,44 @@ Named out of its own valley, then. See
   every villager after four years of a growing settlement has a given name from the
   right pool and a family name that appears in the table verbatim. Without it a
   house of Valdivielso could quietly become a house of "de".
+
+---
+
+## Phase 43 — Built off the ground — Implemented
+
+"For the beginning we could make the materials appear on the ground so they can pick
+them up and use them to build — that nothing has to come out of a store, so whoever
+wants to do a piece of work is able to take it off the ground. And also let us start
+with ten stone. The opening is sometimes a bit easier that way."
+
+- **A site is supplied from whatever is nearest, shelf or ground.** It used to be
+  yards only, which meant a felled tree twenty paces away had to be carried _past_
+  the site into a store and then carried back out — two journeys where one would do.
+  Piles and yards are now judged on distance alone, because to the villager carrying
+  it they are the same errand, and a pile across the river is not a source at all.
+- **The settlers set their bundles down where they stop.** Food into the camp store,
+  because people eat out of one; timber, stone and iron on the ground beside it, in
+  bundles, ready to build from. It is also what ten tired people would actually do.
+- **Ten stone in the bundle** — one each. And it did what nothing else had managed:
+  measured over twelve seeds of the reference opening, **firewood exists at the first
+  freezing day for the first time**, 91 units against zero on every seed before. The
+  deaths barely move, because seven days of firewood is not a winter, but the chain
+  that was broken at its first link now starts.
+- A latent id collision went with it: a site's "next load of stone" reservation was
+  `siteId * 100 + resource`, which collides with a pile's own id once a settlement
+  has felled a hundred trees — at which point one of the two silently stops being
+  posted. Material reservations now live at 250,000 and up.
+
+Nine tests changed their premises, all of them about the starting state rather than
+about the rules — a settlement's first morning now has half a dozen hauls on the
+board and its logs on the ground rather than on a shelf. Two of the rewrites are
+findings rather than bookkeeping:
+
+- **the Food Storage is no longer worth its cost.** With the bundle, the doubled
+  load and a 2000-capacity founding yard that takes food, a larder saves about one
+  per cent of a year's spoilage: the loss is in the field, not in the stores. The
+  test now records that and is written to fail when it is fixed; see
+  [GAME_DESIGN.md](./GAME_DESIGN.md#fields-and-orchards--implemented).
+- **a job's `targetEntityId` is a shared namespace**, and the demolition test that
+  swept it by id alone was matching a pile of the settlers' own timber that happened
+  to be pile number 1 while the site was building number 1.

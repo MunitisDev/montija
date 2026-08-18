@@ -167,13 +167,15 @@ describe('the random stream', () => {
  * the balance figures in `docs/GAME_DESIGN.md` were measured on a different game
  * and have to be measured again.
  *
- * **It moved once, deliberately.** The sea became a river, which re-cut every map
- * from every seed: different trees, different rock, a different camp, and so a
- * different sequence of decisions for the villagers to draw dice for. The balance
- * figures were re-measured against the new map at the same time — that is what
- * this number is for.
+ * **It has moved twice, both times deliberately.** First the sea became a river,
+ * which re-cut every map from every seed: different trees, different rock, a
+ * different camp. Then the settlers began setting their bundles down on the ground
+ * rather than into a store, which gives a fresh settlement half a dozen hauls to do
+ * on its first morning — so the villagers make different decisions from the first
+ * tick, and draw different dice making them. The balance figures were re-measured
+ * against each change; that is what this number is for.
  */
-const NO_SCHOOL_CURSOR = 2513513699;
+const NO_SCHOOL_CURSOR = 3905067433;
 
 function run(simulation: Simulation, ticks: number): void {
   for (let tick = 0; tick < ticks; tick += 1) {

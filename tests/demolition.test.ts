@@ -68,7 +68,13 @@ describe('cancelling a site', () => {
     const live = simulation.jobs.all.filter(
       (job) => job.state !== 'complete' && job.state !== 'cancelled',
     );
-    expect(live.some((job) => job.targetEntityId === site.id)).toBe(false);
+    // By type as well as by id: `targetEntityId` is a shared namespace, and a
+    // pile of the settlers' own timber can quite legitimately be pile number 1
+    // while the site is building number 1.
+    const aimedAtBuildings = new Set(['build', 'produce', 'demolish', 'plant-tree']);
+    expect(
+      live.some((job) => job.targetEntityId === site.id && aimedAtBuildings.has(job.type)),
+    ).toBe(false);
     expect(
       live.some(
         (job) =>
@@ -144,6 +150,10 @@ describe('once it is down', () => {
     if (!hut) {
       return;
     }
+    // The settlers' own bundles are on the ground at the start and get carried in
+    // while this runs, which would swamp the figure. Taken away so what lands on
+    // the plot can only be salvage.
+    clearBundles(simulation);
     const before = simulation.world.piles.totalOf('logs');
 
     tearDown(simulation, hut);
@@ -199,6 +209,7 @@ describe('once it is down', () => {
     }
     const storage = yard.storageId === null ? null : simulation.storages.getById(yard.storageId);
     expect(storage).not.toBeNull();
+    clearBundles(simulation);
     storage?.inventory.add('stone', 17);
     const loose = simulation.world.piles.totalOf('stone');
 
@@ -229,6 +240,13 @@ describe('once it is down', () => {
 });
 
 // --- helpers ---------------------------------------------------------------
+
+/** Takes the settlers' bundles off the ground, so pile counts mean one thing. */
+function clearBundles(simulation: Simulation): void {
+  for (const pile of [...simulation.world.piles.all]) {
+    simulation.world.piles.remove(pile.id);
+  }
+}
 
 function place(simulation: Simulation, id: BuildingId): Building | null {
   for (let gy = 0; gy < simulation.world.height; gy += 1) {

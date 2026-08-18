@@ -278,12 +278,18 @@ describe('what a day makes', () => {
   it('follows the season down to nothing', () => {
     // A field yields nothing under snow, and a sheet promising a winter harvest
     // would send the player into January believing they were covered.
+    //
+    // Run to the first day of **winter** rather than to the first freezing day:
+    // the last days of autumn can freeze, and an autumn field is still yielding
+    // 1.9 — so the old version of this was asserting a winter figure on an autumn
+    // settlement and passing only by luck of the timing.
     const simulation = new Simulation(OPTIONS);
     raise(simulation, 'crop-field');
     run(simulation, TICKS_PER_DAY * 2);
     expect(staffAt(simulation, 'crop-field')).toBeGreaterThan(0);
 
-    toWinter(simulation);
+    toWinterProper(simulation);
+    expect(simulation.snapshot().season).toBe('winter');
     const winterField = [...simulation.world.buildings.all].find(
       (building) => building.definition.id === 'crop-field',
     );
@@ -375,6 +381,17 @@ function run(simulation: Simulation, ticks: number): void {
 }
 
 /** Runs the clock forward until the settlement is in a freezing winter. */
+/** Runs to the first day of winter itself, which late autumn can pre-empt. */
+function toWinterProper(simulation: Simulation): void {
+  const limit = TICKS_PER_DAY * DAYS_PER_SEASON * 4;
+  for (let tick = 0; tick < limit && simulation.year.season !== 'winter'; tick += 1) {
+    simulation.update(simulation.tick + 1, TICK);
+    if (simulation.tick % TICKS_PER_DAY === 0) {
+      feed(simulation);
+    }
+  }
+}
+
 function toWinter(simulation: Simulation, eachDay?: () => void): void {
   const limit = TICKS_PER_DAY * DAYS_PER_SEASON * 4;
   for (let tick = 0; tick < limit && !simulation.year.isFreezing; tick += 1) {

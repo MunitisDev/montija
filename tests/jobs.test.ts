@@ -375,7 +375,10 @@ describe('Simulation job integration', () => {
     }
 
     expect(simulation.world.trees.getById(treeId)).toBeNull();
-    expect(simulation.snapshot().jobsCompleted).toBe(1);
+    // At least the felling. The settlers set their bundles down on the ground
+    // when they arrive, so a settlement's first minute also finishes the hauls
+    // that tidy those away — this stopped being a board with one job on it.
+    expect(simulation.snapshot().jobsCompleted).toBeGreaterThan(0);
   });
 
   it('clears the ground where a tree stood, so it can be built on', () => {
@@ -454,7 +457,7 @@ describe('Simulation job integration', () => {
     expect(run()).toBe(run());
   });
 
-  it('frees villagers when their designation is cancelled', () => {
+  it('frees the villager whose designation is cancelled', () => {
     const simulation = new Simulation(options);
     const cell = firstTreeCell(simulation);
     simulation.designateTreeForFelling(cell);
@@ -462,10 +465,22 @@ describe('Simulation job integration', () => {
     for (let tick = 1; tick <= 40; tick += 1) {
       simulation.update(tick, TICK);
     }
+    const felling = simulation.jobs.all.find((job) => job.type === 'chop-tree');
+    const cutter = felling?.assignedVillager ?? null;
     simulation.cancelTreeDesignation(cell);
 
+    // Whoever was cutting is free. It used to be everybody, because a fresh
+    // settlement had exactly one job on the board; now it also has its own
+    // bundles to carry in, and those villagers are working — which is the point
+    // of the test only insofar as the *cancelled* one is not.
+    if (cutter !== null) {
+      const villager = simulation.villagers.all.find((one) => one.id === cutter);
+      expect(villager?.currentJobId ?? null).toBeNull();
+    }
     for (const villager of simulation.villagers.all) {
-      expect(villager.currentJobId).toBeNull();
+      const job =
+        villager.currentJobId === null ? null : simulation.jobs.get(villager.currentJobId);
+      expect(job?.type ?? 'none').not.toBe('chop-tree');
     }
   });
 });

@@ -131,11 +131,27 @@ What is in that bundle says the same thing the premise does:
 | ------------ | ------------------------------------------------------------- |
 | 45 logs      | Worth the weight: the first two or three buildings            |
 | 156 food     | Fifteen days for ten mouths, most of which rots first         |
+| **10 stone** | One each. Enough for the first building that needs any        |
 | 8 iron       | Taken because it was valuable, useless until there is a smith |
-| **no stone** | Nobody flees carrying rock                                    |
 
-**No stone is the interesting one.** It makes the first morning of the game a
-search rather than a shopping trip. It also forced a change: the Gatherer Hut
+**What they carried is set down where they stop.** The food goes into the camp
+store, because that is what a store is for and because people eat out of one;
+everything else is stacked on the ground beside it in bundles. That is both what
+ten tired people do and a perfectly good place to build from — a site takes its
+materials from the nearest source it can walk to, shelf or ground alike, so nothing
+has to be tidied away first.
+
+**The stone is the interesting one, and it used to be none at all.** No stone made
+the first morning a search rather than a shopping trip, which was the right
+instinct and turned out to be the single thing every settlement died of: the
+Woodcutter costs four stone, no stone arrived, no firewood was made, and winter
+took everybody. Measured with ten in the bundle, **firewood exists at winter for
+the first time** — 91 units across twelve seeds of the reference opening, against
+zero on every seed before. It is not a rescue: the deaths barely move, because
+seven days of firewood is not a winter. But the chain now starts.
+
+Ten is deliberately not enough for a second building, so the search is still the
+opening move. It also forced a change: the Gatherer Hut
 costs timber only now, because with stone in its price a settlement playing well
 starved on day 22 of three seeds out of four while hunting a deposit it could
 not eat. Wood gets you fed; stone is for everything that has to last.
@@ -523,6 +539,20 @@ two together are the first time the game asks _where_ rather than _whether_.
 A settlement that lives on foraging survives hand to mouth. One that farms has to
 store what it brings in and make it last — which is the lesson winter teaches,
 arriving a season early.
+
+> **And the Food Storage is currently not worth its cost, which is a defect.**
+> Measured over twelve seeds: 661 food banked by winter with a larder against 690
+> without it, 201 left at the end of winter against 190, **4751 food spoiled over
+> the year against 4804** — one per cent — and 100 deaths against 103. It costs 6
+> logs, 2 stone and four hundred ticks of labour to build.
+>
+> The reason is that the loss is **in the field, not in the stores**: gatherers
+> out-run haulers, so most of what rots is lying where it was picked, at a rate no
+> building changes. Two answers are available and neither is taken yet — stop the
+> open founding yard accepting food at all, which is the settlement's own "each
+> thing in its own building" rule applied honestly, or raise hauling throughput so
+> the field empties. Pinned in `tests/balance.test.ts`, written to fail when it is
+> fixed.
 
 ---
 
@@ -959,8 +989,14 @@ Two fixes were measured and backed out, because neither touches it:
   few free hands off hauling onto stale orders, and the food stops moving.
 
 The lever that does work today is the **labour panel**: take a gatherer off a hut and the stone
-arrives. That the player has to know to do it by hand is the real defect, and it is the next thing to
-fix in the opening.
+arrives. That the player has to know to do it by hand is the real defect.
+
+**And the cheapest answer turned out to be the bundle.** The settlers now carry ten stone — one each —
+which is not a fix for any of the above but does buy the _first_ building that needs stone. Measured
+over twelve seeds of the reference opening, that is the difference between **no firewood on any seed**
+and 91 units of it standing at the first freezing day. The mechanism above is untouched and still
+kills settlements; what is gone is the settlement that stood at a half-built Woodcutter on day three
+with nothing it could do.
 
 ### Things tried on the opening that did not work
 

@@ -163,8 +163,25 @@ function options(seed: number) {
 }
 
 /** Stone in the yards after ten days, with a given number of trees also marked. */
+/**
+ * Stone **mined and carried in** over ten days, and nothing else.
+ *
+ * The settlers walk in with ten stone of their own, set down on the ground beside
+ * the camp, and it is in the yard within the first minute. Counting the stores
+ * would therefore report ten on every seed and call the bottleneck fixed — so what
+ * they brought is taken away before the clock starts, and this figure is what came
+ * out of the ground.
+ */
 function stoneDelivered(seed: number, work: { trees: number }): number {
   const simulation = new Simulation(options(seed));
+  for (const pile of [...simulation.world.piles.all]) {
+    simulation.world.piles.remove(pile.id);
+  }
+  for (const storage of simulation.storages.all) {
+    storage.inventory.remove('stone', storage.inventory.count('stone'));
+  }
+  simulation.storages.markChanged();
+
   designateNearbyStone(simulation, DEPOSITS);
   if (work.trees > 0) {
     designateNearbyTrees(simulation, work.trees);

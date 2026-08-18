@@ -109,6 +109,12 @@ describe('the warning before it is too late', () => {
     // it really does take both.
     const simulation = new Simulation(OPTIONS);
     raise(simulation, 'food-storage');
+    // And the settlers' bundles taken off the ground first: a full yard *and* a
+    // pile with nowhere to go is a different, worse condition — "your stores are
+    // full" — and it rightly outranks "your stores are filling up".
+    for (const pile of [...simulation.world.piles.all]) {
+      simulation.world.piles.remove(pile.id);
+    }
     const yard = simulation.storages.all[0]!;
     yard.inventory.add('stone', yard.inventory.freeSpace);
     simulation.storages.markChanged();

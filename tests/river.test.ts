@@ -23,6 +23,17 @@ import { generateWorld, type RiverAxis } from '@/simulation/world/WorldGenerator
 const OPTIONS = { seed: 20260815, worldWidth: 96, worldHeight: 96, startingVillagers: 10 };
 const SEEDS = [1, 7, 42, 991, 2024, 20261, 44444, 123456, 20260815];
 
+/** How much of a resource is lying in the settlement's bundles. */
+function onTheGround(simulation: Simulation, resource: 'stone' | 'logs' | 'iron'): number {
+  let total = 0;
+  for (const pile of simulation.world.piles.all) {
+    if (pile.resource === resource) {
+      total += pile.amount;
+    }
+  }
+  return total;
+}
+
 function world(seed: number) {
   return generateWorld({ width: OPTIONS.worldWidth, height: OPTIONS.worldHeight, seed });
 }
@@ -157,20 +168,49 @@ describe('what they brought', () => {
     expect(STARTING_RESOURCES.food).toBeGreaterThan(0);
   });
 
-  it('contains no stone at all', () => {
-    // Nobody carries rock across country, and the first morning of the game is
-    // about going to find some.
-    expect(Object.keys(STARTING_RESOURCES)).not.toContain('stone');
-
+  it('contains a little stone, and not enough of it', () => {
+    // **It was none at all for a long time**, so that the first morning was a
+    // search rather than a shopping trip. Measured, that search turned out to be
+    // the single thing every settlement died of, and ten stone — one each, a
+    // wall's worth between them — buys the first building that needs any and not
+    // the second. The search is still there; the standing about is not.
     const simulation = new Simulation(OPTIONS);
-    expect(simulation.storages.totalOf('stone')).toBe(0);
+    const carried = STARTING_RESOURCES.stone;
+
+    expect(carried).toBeGreaterThan(0);
+    expect(carried).toBeLessThan(
+      buildingDefinition('woodcutter').constructionCost.reduce(
+        (total, cost) => total + (cost.resource === 'stone' ? cost.amount : 0),
+        0,
+      ) * 3,
+    );
+    expect(onTheGround(simulation, 'stone')).toBe(carried);
   });
 
   it('contains iron nobody can use yet', () => {
-    // It sits in the yard doing nothing until there is a Blacksmith, which is
+    // It sits in the bundle doing nothing until there is a Blacksmith, which is
     // the promise that there is somewhere to grow into.
     const simulation = new Simulation(OPTIONS);
-    expect(simulation.storages.totalOf('iron')).toBeGreaterThan(0);
+    expect(onTheGround(simulation, 'iron')).toBeGreaterThan(0);
+  });
+
+  it('is set down on the ground, except the food', () => {
+    // What ten tired people do, and a perfectly good place to build from: a site
+    // takes its materials from the nearest source it can walk to, ground or shelf.
+    // The food goes in the store, because people eat out of one.
+    const simulation = new Simulation(OPTIONS);
+
+    expect(simulation.storages.totalOf('food')).toBe(STARTING_RESOURCES.food);
+    expect(simulation.storages.totalOf('logs')).toBe(0);
+    expect(onTheGround(simulation, 'logs')).toBe(STARTING_RESOURCES.logs);
+
+    // And within a few paces of the camp, not scattered across the map.
+    const camp = simulation.world.landfallCell;
+    for (const pile of simulation.world.piles.all) {
+      expect(
+        Math.max(Math.abs(pile.cell.gx - camp.gx), Math.abs(pile.cell.gy - camp.gy)),
+      ).toBeLessThan(5);
+    }
   });
 
   it('still leaves them able to feed themselves before they find a quarry', () => {

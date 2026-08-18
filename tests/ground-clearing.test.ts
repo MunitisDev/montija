@@ -15,6 +15,7 @@
 
 import { describe, expect, it } from 'vitest';
 
+import { STARTING_RESOURCES } from '@/app/config';
 import type { BuildingId } from '@/data/buildings';
 import type { GridPoint } from '@/shared/types/geometry';
 import { FOUNDING_YARD_RADIUS, Simulation } from '@/simulation/Simulation';
@@ -54,18 +55,25 @@ describe('the founding camp', () => {
 
   it('salvages nothing from what it cleared', () => {
     // Deliberately not `fellTree`: the settlers pushed the scrub aside dragging
-    // their cargo up the beach, they did not spend the first hour stacking
-    // timber. Free logs at the landfall would also quietly change the opening.
+    // their bundles in, they did not spend the first hour stacking timber. Free
+    // logs at the camp would also quietly change the opening.
+    //
+    // There *are* logs on the ground at the camp — the ones they carried, set down
+    // where they stopped — so the claim is about the amount: exactly what they
+    // brought, and not a stick more.
     const simulation = new Simulation(OPTIONS);
     const centre = simulation.world.landfallCell;
-    const looseLogsAtCamp = [...simulation.world.piles.all].filter(
-      (pile) =>
-        pile.resource === 'logs' &&
-        Math.abs(pile.cell.gx - centre.gx) <= FOUNDING_YARD_RADIUS &&
-        Math.abs(pile.cell.gy - centre.gy) <= FOUNDING_YARD_RADIUS,
-    );
+    const atCamp = [...simulation.world.piles.all]
+      .filter(
+        (pile) =>
+          pile.resource === 'logs' &&
+          Math.abs(pile.cell.gx - centre.gx) <= FOUNDING_YARD_RADIUS + 2 &&
+          Math.abs(pile.cell.gy - centre.gy) <= FOUNDING_YARD_RADIUS + 2,
+      )
+      .reduce((total, pile) => total + pile.amount, 0);
 
-    expect(looseLogsAtCamp).toEqual([]);
+    expect(atCamp).toBe(STARTING_RESOURCES.logs);
+    expect(simulation.world.piles.totalOf('logs')).toBe(STARTING_RESOURCES.logs);
   });
 
   it('leaves the wood outside the camp alone', () => {

@@ -105,7 +105,16 @@ describe('a villager standing where a wall appears', () => {
     simulation.world.buildings.complete(simulation.world, site);
     simulation.update(simulation.tick + 1, TICK);
 
-    expect(simulation.jobs.get(jobId)?.assignedVillager ?? null).toBeNull();
+    // **The invariant is that nobody holds a job from inside a wall**, not that
+    // the job stays on the board: the rescue hands it back, and a villager who is
+    // now standing on open ground may perfectly well take the same job again a
+    // tick later — which is what happens since a fresh settlement has its own
+    // bundles to carry and more work within reach.
+    expect(simulation.world.isWalkable(worker.cell)).toBe(true);
+    const holder = simulation.villagers.all.find((candidate) => candidate.currentJobId === jobId);
+    if (holder) {
+      expect(simulation.world.isWalkable(holder.cell)).toBe(true);
+    }
   });
 
   it('does not appear to slide out of the wall', () => {

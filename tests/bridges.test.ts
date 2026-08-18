@@ -172,7 +172,7 @@ describe('building one, in play', () => {
     // the bank, and a villager standing on dry land laying boards over water.
     const simulation = new Simulation(OPTIONS);
     const cell = nearBank(simulation);
-    const before = simulation.storages.totalOf('logs');
+    const before = timber(simulation);
     const bridge = simulation.placeBuilding('bridge', cell);
     expect(bridge).not.toBeNull();
 
@@ -182,10 +182,18 @@ describe('building one, in play', () => {
 
     expect(bridge!.isComplete).toBe(true);
     expect(simulation.world.isWalkable(cell)).toBe(true);
-    // Five logs really left the yard: the timber was carried, not conjured.
-    expect(simulation.storages.totalOf('logs')).toBeLessThanOrEqual(before - 5);
+    // Five logs really left the settlement: the timber was carried, not conjured.
+    // Counted across the store and the ground both, because the settlers set their
+    // bundles down on the ground and a site takes whichever is nearer.
+    expect(timber(simulation)).toBeLessThanOrEqual(before - 5);
   });
 });
+
+/** Every log the settlement has, on a shelf or on the ground. */
+function timber(simulation: Simulation): number {
+  const snapshot = simulation.snapshot();
+  return snapshot.stored.logs + snapshot.loose.logs;
+}
 
 /** A river cell with the settlement's own bank on one side of it. */
 function nearBank(simulation: Simulation): GridPoint {

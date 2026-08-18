@@ -122,18 +122,28 @@ describe('production', () => {
   });
 
   it('consumes the logs it splits', () => {
+    // Counted across the store and the ground together: the settlers' own bundles
+    // are on the ground at the start and get carried in while this runs, so the
+    // store's figure rises and falls for reasons that have nothing to do with the
+    // woodcutter. What must hold is that the settlement is poorer in timber by
+    // whatever the firewood was made of.
     const simulation = new Simulation(OPTIONS);
     standingBuilding(simulation, 'woodcutter');
     simulation.storages.all[0]!.inventory.add('logs', 60);
     simulation.storages.markChanged();
-    const before = simulation.snapshot().stored.logs;
+    const logs = (): number => {
+      const snapshot = simulation.snapshot();
+      return snapshot.stored.logs + snapshot.loose.logs;
+    };
+    const before = logs();
 
     for (let tick = 1; tick <= 30000; tick += 1) {
       simulation.update(tick, TICK);
       if (simulation.snapshot().stored.firewood > 0) break;
     }
 
-    expect(simulation.snapshot().stored.logs).toBeLessThan(before);
+    expect(simulation.snapshot().stored.firewood).toBeGreaterThan(0);
+    expect(logs()).toBeLessThan(before);
   });
 
   it('exposes worker slots from the building definition', () => {

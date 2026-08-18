@@ -92,6 +92,16 @@ export interface Job {
   /** Which resource a storage-sourced haul should take. */
   haulResource: ResourceId | null;
   /**
+   * Which pile a haul is drawing from, when that is not the job's own target.
+   *
+   * An ordinary haul reserves the pile it is emptying, so the pile's id *is* the
+   * target id. A delivery to a building site reserves "this site's next load of
+   * stone" instead — one run per material at a time — and so needs somewhere else
+   * to record which pile on the ground it is fetching. Optional, so a save
+   * written before sites could be built out of the ground still loads.
+   */
+  haulPileId?: number;
+  /**
    * Which of the target's exclusive posts this job holds.
    *
    * Almost always 0. A workshop with several worker slots is the exception: its

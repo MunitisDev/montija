@@ -38,10 +38,18 @@ export const STARTING_VILLAGERS = 10;
  * **Timber, because it is worth the weight.** Enough to raise the first two or
  * three buildings, which is the difference between a camp and a settlement.
  *
- * **No stone.** Nobody flees carrying rock. Every building past the very
- * cheapest needs some, so the opening move of the game is to go and find a
- * deposit — a decision on the first morning rather than a resource that was
- * simply in the box.
+ * **A little stone, and only a little.** Nobody flees carrying rock, but ten of
+ * them carrying one stone each is a wall's worth between them, and it buys the
+ * first building that needs any — a Woodcutter is four, a House four. It does not
+ * buy the second, so the opening move of the game is still to go and find a
+ * deposit; what it stops is the settlement standing at a half-built site on day
+ * three with nothing to do about it.
+ *
+ * It was **no stone at all** for a long time, deliberately, so that the first
+ * morning was a search rather than a shopping trip. Measured, that search turned
+ * out to be the single thing every settlement died of — see the stone bottleneck
+ * in `docs/GAME_DESIGN.md` — and starting with a handful is the mildest of the
+ * available answers.
  *
  * **Iron nobody can use yet.** Taken because it was valuable rather than because
  * it was useful. It sits in the yard doing nothing until there is a Blacksmith to
@@ -63,6 +71,7 @@ export const STARTING_VILLAGERS = 10;
 export const STARTING_RESOURCES = {
   food: 156,
   logs: 45,
+  stone: 10,
   iron: 8,
 } as const;
 

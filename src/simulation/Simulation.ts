@@ -265,6 +265,21 @@ export interface SimulationOptions {
   readonly startingVillagers: number;
 }
 
+/**
+ * The reservation id for "this site's next load of a material".
+ *
+ * Offset well clear of the pile ids, which are small integers counted from one.
+ * They share the `haul` reservation namespace, and a settlement that had felled a
+ * hundred trees would have a pile whose id collided with a site's stone
+ * reservation — at which point one of the two silently stops being posted, which
+ * is a bug that looks like a stalled building.
+ */
+const MATERIAL_RESERVATION_BASE = 250_000;
+
+function materialReservation(siteId: number, resource: ResourceId): number {
+  return MATERIAL_RESERVATION_BASE + siteId * 100 + RESOURCE_IDS.indexOf(resource);
+}
+
 export class Simulation {
   public readonly world: World;
   public readonly villagers: VillagerSystem;
@@ -1114,27 +1129,33 @@ export class Simulation {
   }
 
   /**
-   * Posts haul jobs that move stored materials to a site.
+   * Posts haul jobs that bring a site the materials it still owes.
    *
-   * Sourced from a yard that actually holds the material: a site cannot be
-   * built out of resources the settlement does not have, which is what makes
-   * gathering matter.
+   * **Whatever is nearest, off a shelf or off the ground.** A site used to be
+   * suppliable only from a yard, which meant a felled tree lying twenty paces
+   * away had to be carried *past* the site into a store and then carried back out
+   * again — two journeys where one would do, and the settlers' own bundle could
+   * not be touched until somebody had tidied it away. Anything the settlement
+   * physically has and can walk to is fair game; the nearest source wins, which is
+   * what a person would do.
+   *
+   * A site still cannot be built out of resources the settlement does not have,
+   * which is what makes gathering matter.
+   *
+   * One delivery run per material at a time: the next is posted after this one
+   * lands, which keeps the board short and the reservation simple.
    */
   private requestMaterialsFor(site: Building): void {
     for (const cost of site.definition.constructionCost) {
       if (site.stillNeeds(cost.resource) <= 0) {
         continue;
       }
-      // One delivery run per material at a time; the next is posted after this
-      // one lands, which keeps the board short and the reservation simple.
-      const reservationId = site.id * 100 + RESOURCE_IDS.indexOf(cost.resource);
+      const reservationId = materialReservation(site.id, cost.resource);
       if (this.jobs.isTargetReserved('haul', reservationId)) {
         continue;
       }
 
-      const source = this.storages.all.find(
-        (storage) => storage.inventory.count(cost.resource) > 0,
-      );
+      const source = this.nearestMaterial(site.accessCell, cost.resource);
       if (!source) {
         continue;
       }
@@ -1145,10 +1166,52 @@ export class Simulation {
         deliverTo: site.accessCell,
         priority: JobPriority.high,
         targetEntityId: reservationId,
-        haulSource: 'storage',
+        haulSource: source.pileId === null ? 'storage' : 'pile',
         haulResource: cost.resource,
+        ...(source.pileId === null ? {} : { haulPileId: source.pileId }),
       });
     }
+  }
+
+  /**
+   * The closest place a material can actually be fetched from.
+   *
+   * Piles and yards are considered together and judged only on distance, because
+   * to the villager carrying it they are the same errand. Reachability is checked
+   * here rather than left to the pathfinder: a pile on the far bank of the river
+   * is not a source, and posting a job for it would have somebody claim it, fail
+   * to route, and hand it back for ever.
+   */
+  private nearestMaterial(
+    to: GridPoint,
+    resource: ResourceId,
+  ): { cell: GridPoint; pileId: number | null } | null {
+    let best: { cell: GridPoint; pileId: number | null } | null = null;
+    let bestDistance = Infinity;
+
+    const consider = (cell: GridPoint, pileId: number | null): void => {
+      if (!this.world.navigation.connects(to, cell)) {
+        return;
+      }
+      const distance = Math.hypot(cell.gx - to.gx, cell.gy - to.gy);
+      if (distance < bestDistance) {
+        best = { cell, pileId };
+        bestDistance = distance;
+      }
+    };
+
+    for (const storage of this.storages.all) {
+      if (storage.inventory.count(resource) > 0) {
+        consider(storage.cell, null);
+      }
+    }
+    for (const pile of this.world.piles.all) {
+      if (pile.resource === resource && !pile.isEmpty) {
+        consider(pile.cell, pile.id);
+      }
+    }
+
+    return best;
   }
 
   /**
@@ -1937,10 +2000,23 @@ export class Simulation {
 
     const yard = this.storages.add({ cell, capacity: 2000 });
 
-    // Everything they could carry up the beach. Timber, no stone, and iron
-    // they cannot use yet — see STARTING_RESOURCES for why each of those.
+    // **What they carried is set down where they stopped.**
+    //
+    // The food goes into the camp store, because that is what a store is for and
+    // because people eat out of one. Everything else — the timber, the stone, the
+    // iron nobody can use yet — is stacked on the ground beside it, in bundles,
+    // which is both what ten tired people actually do and now a perfectly good
+    // place to build from: a site takes its materials from the nearest source it
+    // can walk to, shelf or ground alike. Nothing has to be tidied away first.
+    //
+    // Spilled across neighbouring cells where a stack will not hold it all, so
+    // none of it is quietly lost. See `World.dropNear`.
     for (const [resource, amount] of Object.entries(STARTING_RESOURCES)) {
-      yard.inventory.add(resource as ResourceId, amount);
+      if (resource === 'food') {
+        yard.inventory.add(resource as ResourceId, amount);
+        continue;
+      }
+      this.world.dropNear(cell, resource as ResourceId, amount);
     }
   }
 

@@ -32,8 +32,14 @@ const OPTIONS = { seed: 20260815, worldWidth: 64, worldHeight: 64, startingVilla
 
 describe('a site waiting for a material nobody has', () => {
   it('says so, and names the material', () => {
-    // A house needs stone, and a wrecked settlement comes ashore with none.
+    // A house needs stone, and this settlement has none: the ten they walked in
+    // with are taken away here, along with the bundles on the ground, because a
+    // site is now supplied from either and "nobody has any" has to mean both.
     const simulation = new Simulation(OPTIONS);
+    emptyHanded(simulation);
+    // Timber back, stone not: the point is a site short of one particular thing,
+    // and a settlement short of everything reports whichever it misses first.
+    stock(simulation, 'logs', 20);
     expect(simulation.snapshot().stored.stone).toBe(0);
     place(simulation, 'house');
     run(simulation, TICKS_PER_DAY);
@@ -62,6 +68,8 @@ describe('a site waiting for a material nobody has', () => {
 
   it('clears the moment the material arrives', () => {
     const simulation = new Simulation(OPTIONS);
+    emptyHanded(simulation);
+    stock(simulation, 'logs', 20);
     place(simulation, 'house');
     run(simulation, TICKS_PER_DAY);
     expect(simulation.stalledMaterial()).toBe('stone');
@@ -75,10 +83,7 @@ describe('a site waiting for a material nobody has', () => {
     // people die is a settlement being told the wrong thing.
     const simulation = new Simulation(OPTIONS);
     place(simulation, 'house');
-    for (const storage of simulation.storages.all) {
-      storage.inventory.clear();
-    }
-    simulation.storages.markChanged();
+    emptyHanded(simulation);
     for (const villager of simulation.villagers.all) {
       villager.needs.hunger = 0;
     }
@@ -157,12 +162,19 @@ describe('full yards do not stop the timber', () => {
 
     // Kept full every tick, so the yard never frees up and the fallback is the
     // only route the timber has.
+    let delivered = 0;
     for (let tick = 0; tick < TICKS_PER_DAY * 3; tick += 1) {
       fillYards(simulation);
       simulation.update(simulation.tick + 1, TICK);
+      delivered = Math.max(delivered, site!.materials.count('logs'));
     }
 
-    expect(site!.materials.count('logs')).toBeGreaterThan(0);
+    // The high-water mark rather than the final figure. The house now *finishes*
+    // inside those three days — the settlers walk in with ten stone and their
+    // bundles are on the ground where a site can take them — so its materials
+    // inventory is empty again by the end, which is the load having landed rather
+    // than not.
+    expect(delivered).toBeGreaterThan(0);
   });
 
   it('posts the job at all, which a full settlement never used to', () => {
@@ -223,7 +235,10 @@ describe('a pile with nowhere to go', () => {
   });
 
   it('says nothing about an empty pile', () => {
+    // The settlers' own bundles are on the ground at the start, so "there is no
+    // pile" has to be arranged rather than assumed.
     const simulation = new Simulation(OPTIONS);
+    emptyHanded(simulation);
     fillYards(simulation);
 
     expect(simulation.snapshot().advice).not.toBe('storageFull');
@@ -248,6 +263,24 @@ function toAutumn(simulation: Simulation): void {
       }
     }
     simulation.update(simulation.tick + 1, TICK);
+  }
+}
+
+/**
+ * A settlement with nothing at all: empty shelves and bare ground.
+ *
+ * Both halves matter since the settlers began setting their bundles down where
+ * they stop and a site began taking materials from whichever is nearer. "Nobody
+ * has any stone" used to be true of a new settlement by default; now it has to be
+ * arranged.
+ */
+function emptyHanded(simulation: Simulation): void {
+  for (const storage of simulation.storages.all) {
+    storage.inventory.clear();
+  }
+  simulation.storages.markChanged();
+  for (const pile of [...simulation.world.piles.all]) {
+    simulation.world.piles.remove(pile.id);
   }
 }
 

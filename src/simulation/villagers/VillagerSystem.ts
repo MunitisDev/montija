@@ -743,15 +743,34 @@ export class VillagerSystem {
     return true;
   }
 
-  /** Loads from a pile on the ground. Returns `false` when there was nothing. */
+  /**
+   * Loads from a pile on the ground. Returns `false` when there was nothing.
+   *
+   * Which pile is usually the job's own target — an ordinary haul reserves the
+   * pile it is emptying. A delivery to a building site reserves "this site's next
+   * load of stone" instead, and records the pile separately; see `Job.haulPileId`.
+   */
   private loadFromPile(villager: Villager, job: Job): boolean {
-    const pile = job.targetEntityId === null ? null : this.world.piles.getById(job.targetEntityId);
+    const pileId = job.haulPileId ?? job.targetEntityId;
+    const pile = pileId === null ? null : this.world.piles.getById(pileId);
     if (!pile || pile.isEmpty) {
       return false;
     }
 
     const carryLimit = resourceDefinition(pile.resource).carryLimit;
-    const room = Math.min(carryLimit, villager.inventory.freeSpace);
+    let room = Math.min(carryLimit, villager.inventory.freeSpace);
+
+    // A material delivery takes only what the site still owes, so a builder does
+    // not shoulder twenty logs for a hut that needs three and then carry the rest
+    // back. An ordinary haul into a yard has no such limit: the point of it is to
+    // clear the ground.
+    if (job.haulResource !== null && job.deliverTo !== null) {
+      room = Math.min(room, this.amountNeededAt(job.deliverTo, job.haulResource));
+    }
+    if (room <= 0) {
+      return false;
+    }
+
     pile.inventory.transfer(villager.inventory, pile.resource, room);
     this.world.piles.removeIfEmpty(pile.id);
 

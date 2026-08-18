@@ -39,6 +39,8 @@ export interface CreateJobOptions {
   readonly workTicks?: number;
   readonly haulSource?: HaulSource;
   readonly haulResource?: ResourceId;
+  /** The pile a haul draws from, when the job's target is not that pile. */
+  readonly haulPileId?: number;
   /**
    * Which of the target's exclusive posts this job occupies.
    *
@@ -153,6 +155,7 @@ export class JobManager {
       deliverTo: options.deliverTo ?? null,
       haulSource: options.type === 'haul' ? (options.haulSource ?? 'pile') : null,
       haulResource: options.haulResource ?? null,
+      ...(options.haulPileId === undefined ? {} : { haulPileId: options.haulPileId }),
       reservationSlot: slot,
       ...(options.playerOrdered === true ? { playerOrdered: true } : {}),
     };

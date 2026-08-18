@@ -47,6 +47,21 @@ function plotNear(simulation: Simulation, size = 4): GridPoint {
   return origin;
 }
 
+/** Everything the settlement has, on shelves and on the ground alike. */
+function logsEverywhere(simulation: Simulation): number {
+  const snapshot = simulation.snapshot();
+  return snapshot.stored.logs + snapshot.loose.logs;
+}
+
+/** Empties the store and clears the ground: a settlement with nothing at all. */
+function strip(simulation: Simulation): void {
+  simulation.storages.all[0]!.inventory.clear();
+  simulation.storages.markChanged();
+  for (const pile of [...simulation.world.piles.all]) {
+    simulation.world.piles.remove(pile.id);
+  }
+}
+
 function stock(simulation: Simulation, resource: 'logs' | 'stone', amount: number) {
   simulation.storages.all[0]!.inventory.add(resource, amount);
   simulation.storages.markChanged();
@@ -152,9 +167,10 @@ describe('construction', () => {
   it('will not build without materials, however long it waits', () => {
     const simulation = new Simulation(OPTIONS);
     const origin = plotNear(simulation);
-    // Strip the settlers' supplies: the settlement genuinely has nothing.
-    simulation.storages.all[0]!.inventory.clear();
-    simulation.storages.markChanged();
+    // Strip the settlers' supplies — the store *and* the bundles they set down on
+    // the ground, since a site is built from either. The settlement genuinely has
+    // nothing.
+    strip(simulation);
     const site = simulation.placeBuilding('house', origin)!;
 
     for (let tick = 1; tick <= 3000; tick += 1) {
@@ -194,19 +210,70 @@ describe('construction', () => {
     expect(simulation.snapshot().housingCapacity).toBe(buildingDefinition('house').housing);
   });
 
-  it('takes the materials out of storage, not out of nowhere', () => {
+  it('takes the materials out of the settlement, not out of nowhere', () => {
+    // Counted across the store *and* the ground, because a site now draws from
+    // whichever is nearer. What must be true either way is that the timber came
+    // from somewhere real: the settlement is poorer by what the walls are made of.
     const simulation = new Simulation(OPTIONS);
     const origin = plotNear(simulation, 8);
     stock(simulation, 'logs', 40);
     stock(simulation, 'stone', 20);
-    const before = simulation.snapshot().stored.logs;
+    const before = logsEverywhere(simulation);
     const site = simulation.placeBuilding('house', { gx: origin.gx + 2, gy: origin.gy + 2 })!;
 
     for (let tick = 1; tick <= 30000 && !site.isComplete; tick += 1) {
       simulation.update(tick, TICK);
     }
 
-    expect(simulation.snapshot().stored.logs).toBeLessThan(before);
+    expect(site.isComplete).toBe(true);
+    expect(logsEverywhere(simulation)).toBeLessThan(before);
+  });
+
+  it('builds out of a pile on the ground, with nothing in any store', () => {
+    // **What the settlers' own bundles made necessary.** A site used to be
+    // suppliable only from a yard, so timber lying twenty paces away had to be
+    // carried *past* the site into a store and then carried back out again — and
+    // the bundle the settlers set down could not be touched until somebody had
+    // tidied it away. Anything the settlement physically has and can walk to is
+    // now fair game.
+    const simulation = new Simulation(OPTIONS);
+    const origin = plotNear(simulation, 8);
+    strip(simulation);
+
+    const cost = buildingDefinition('house').constructionCost;
+    for (const entry of cost) {
+      simulation.world.dropNear(origin, entry.resource, entry.amount);
+    }
+    expect(simulation.storages.totalOf('logs')).toBe(0);
+
+    const site = simulation.placeBuilding('house', { gx: origin.gx + 2, gy: origin.gy + 2 })!;
+    for (let tick = 1; tick <= 30000 && !site.isComplete; tick += 1) {
+      simulation.update(tick, TICK);
+    }
+
+    expect(site.isComplete).toBe(true);
+  });
+
+  it('does not walk past a pile at its feet to fetch from a yard', () => {
+    const simulation = new Simulation(OPTIONS);
+    const origin = plotNear(simulation, 8);
+    stock(simulation, 'logs', 40);
+    stock(simulation, 'stone', 20);
+
+    const plot = { gx: origin.gx + 2, gy: origin.gy + 2 };
+    const site = simulation.placeBuilding('house', plot)!;
+    simulation.world.dropNear(site.accessCell, 'logs', 20);
+    simulation.update(1, TICK);
+
+    const delivery = simulation.jobs.all.find(
+      (job) =>
+        job.type === 'haul' &&
+        job.haulResource === 'logs' &&
+        job.deliverTo?.gx === site.accessCell.gx &&
+        job.deliverTo?.gy === site.accessCell.gy,
+    );
+
+    expect(delivery?.haulSource).toBe('pile');
   });
 
   it('reports footprint cells correctly', () => {
