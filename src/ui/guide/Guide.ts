@@ -117,6 +117,15 @@ function renderSection(section: GuideSection): HTMLElement {
       term.append(meta);
     }
 
+    // Its own line under the cost, and a shade brighter: what a building makes
+    // is the reason to build it, and it should not read as more small print.
+    if (entry.output) {
+      const output = document.createElement('span');
+      output.className = 'guide__meta guide__meta--output';
+      output.textContent = entry.output;
+      term.append(output);
+    }
+
     const detail = document.createElement('dd');
     detail.className = 'guide__detail';
     detail.textContent = entry.detail;

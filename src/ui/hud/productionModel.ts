@@ -22,7 +22,12 @@
 import { buildingDefinition, type BuildingId } from '@/data/buildings';
 import type { ResourceId } from '@/data/resources';
 import { recipe as findRecipe } from '@/data/recipes';
-import { SEASONAL_YIELD, TICKS_PER_DAY, type Season } from '@/simulation/seasons/SeasonClock';
+import {
+  DAYS_PER_SEASON,
+  SEASONAL_YIELD,
+  TICKS_PER_DAY,
+  type Season,
+} from '@/simulation/seasons/SeasonClock';
 
 export interface ProductionRate {
   readonly resource: ResourceId;
@@ -103,4 +108,77 @@ function bestSeason(curve: Readonly<Record<Season, number>>): Season {
     }
   }
   return best;
+}
+
+/** Units in and out over one whole year, at full staff. */
+export interface AnnualRate {
+  readonly resource: ResourceId;
+  readonly perYear: number;
+}
+
+export interface AnnualProduction {
+  readonly outputs: readonly AnnualRate[];
+  readonly inputs: readonly AnnualRate[];
+}
+
+export const NO_ANNUAL_PRODUCTION: AnnualProduction = { outputs: [], inputs: [] };
+
+/**
+ * What a building turns out over a whole year, at full staff.
+ *
+ * **A different question from {@link productionSummary}, and the one a player
+ * planning a settlement actually asks.** The per-day figure is a peak: it
+ * compares two buildings well and says nothing about whether a settlement will
+ * get through the winter. "Forty-eight food a year" does, because a year is the
+ * unit the game is played in and eating is measured in the same one.
+ *
+ * The four seasons are summed rather than averaged, so a Gatherer Hut's dead
+ * winter is in the figure and an Orchard's single good autumn is not flattered
+ * by it. Everything else is deliberately left out: no tools, no experience, no
+ * walking distance, nobody ill. It is the rate an ordinary, fully staffed
+ * building manages in an ordinary year — the baseline every modifier moves from.
+ */
+export function annualProduction(buildingId: BuildingId): AnnualProduction {
+  const definition = buildingDefinition(buildingId);
+  const recipe = definition.recipeId ? findRecipe(definition.recipeId) : null;
+  if (!recipe || definition.workerSlots <= 0) {
+    return NO_ANNUAL_PRODUCTION;
+  }
+
+  const runsPerDay = (TICKS_PER_DAY / recipe.workTicks) * definition.workerSlots;
+  const runsPerSeason = runsPerDay * DAYS_PER_SEASON;
+  const curve = SEASONAL_YIELD[recipe.seasonal];
+  const seasons: readonly Season[] = ['spring', 'summer', 'autumn', 'winter'];
+  const scaled = recipe.seasonal !== 'none';
+
+  // Rounded per run exactly as the simulation rounds it, then summed season by
+  // season. Averaging the curve first and rounding once would invent output the
+  // settlement never sees: a batch of 4 scaled to 0.4 delivers nothing at all,
+  // and no yearly average recovers that.
+  const perRun = (amount: number, season: Season): number =>
+    scaled ? Math.round(amount * curve[season]) : amount;
+
+  // A season the building makes nothing in is a season it eats nothing in
+  // either: nobody splits logs at a Woodcutter that has stopped working. Read
+  // off the outputs rather than assumed, so a recipe with several outputs is
+  // idle only when all of them come to nothing.
+  const works = (season: Season): boolean =>
+    recipe.outputs.some((output) => perRun(output.amount, season) > 0);
+
+  return {
+    outputs: recipe.outputs.map((output) => ({
+      resource: output.resource,
+      perYear: seasons.reduce(
+        (total, season) => total + perRun(output.amount, season) * runsPerSeason,
+        0,
+      ),
+    })),
+    inputs: recipe.inputs.map((input) => ({
+      resource: input.resource,
+      perYear: seasons.reduce(
+        (total, season) => total + (works(season) ? input.amount * runsPerSeason : 0),
+        0,
+      ),
+    })),
+  };
 }

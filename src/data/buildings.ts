@@ -437,7 +437,9 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     id: 'forester',
     category: 'materials',
     name: "Forester's Lodge",
-    description: 'Workers plant and fell nearby, so the wood never runs out.',
+    // Not shown to a player — the guide and the build menu read the translated
+    // string. Kept as the one-line summary of what the building is for.
+    description: 'Plants where the wood is thin and fells where it is thick.',
     footprint: { width: 2, height: 2 },
     constructionCost: [
       { resource: 'logs', amount: 12 },

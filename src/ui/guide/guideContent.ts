@@ -18,8 +18,14 @@
  * building.
  */
 
-import { BUILDING_IDS, buildingDefinition, type BuildingDefinition } from '@/data/buildings';
+import {
+  BUILDING_IDS,
+  buildingDefinition,
+  type BuildingDefinition,
+  type BuildingId,
+} from '@/data/buildings';
 import { RESOURCE_IDS } from '@/data/resources';
+import { annualProduction } from '@/ui/hud/productionModel';
 import { SEASONS } from '@/simulation/seasons/SeasonClock';
 import type { MessageKey } from '@/ui/i18n/messages';
 
@@ -36,6 +42,17 @@ export interface GuideEntry {
    * instead of emitting a blank line.
    */
   readonly meta: string | null;
+  /**
+   * What a building makes in a year, when there is anything to say.
+   *
+   * A second line rather than more of {@link meta}, because it answers a
+   * different question. The cost and the staffing are what a building *is*; the
+   * yearly figure is what it is *for*, and it is the number a player planning a
+   * winter needs to be able to find without doing arithmetic.
+   *
+   * `null` for a house, a yard, a cemetery — anything that produces nothing.
+   */
+  readonly output: string | null;
 }
 
 export interface GuideSection {
@@ -98,6 +115,7 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
         term: t(`guide.loop.${step}` as MessageKey),
         detail: t(`guide.loop.${step}.detail` as MessageKey),
         meta: null,
+        output: null,
       })),
     }),
     section('controls', t, {
@@ -105,6 +123,7 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
         term: t(`guide.control.${control}` as MessageKey),
         detail: t(`guide.control.${control}.detail` as MessageKey),
         meta: null,
+        output: null,
       })),
     }),
     section('land', t, {
@@ -113,6 +132,7 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
         term: t(`guide.land.${feature}` as MessageKey),
         detail: t(`guide.land.${feature}.detail` as MessageKey),
         meta: null,
+        output: null,
       })),
     }),
     section('seasons', t, {
@@ -120,6 +140,7 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
         term: t(`season.${season}` as MessageKey),
         detail: t(`guide.season.${season}` as MessageKey),
         meta: null,
+        output: null,
       })),
     }),
     section('needs', t, {
@@ -127,6 +148,7 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
         term: t(`need.${need}` as MessageKey),
         detail: t(`guide.need.${need}` as MessageKey),
         meta: null,
+        output: null,
       })),
     }),
     section('hardship', t, {
@@ -134,6 +156,7 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
         term: t(`guide.hardship.${cause}` as MessageKey),
         detail: t(`guide.hardship.${cause}.detail` as MessageKey),
         meta: null,
+        output: null,
       })),
     }),
     section('resources', t, {
@@ -141,9 +164,13 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
         term: t(`hud.${resource}` as MessageKey),
         detail: t(`resource.${resource}.purpose` as MessageKey),
         meta: null,
+        output: null,
       })),
     }),
     section('buildings', t, {
+      // Said once, here, rather than on every line: the yearly figures below are
+      // the plain ones — full staff, no tools, no experience.
+      body: t('guide.buildings.body'),
       // In build-menu order, so reading the guide and scanning the toolbar are
       // the same act. A guide sorted its own way makes the player translate
       // between two orderings for no gain.
@@ -153,6 +180,7 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
           term: t(`building.${id}` as MessageKey),
           detail: t(`building.${id}.description` as MessageKey),
           meta: describeBuilding(definition, t),
+          output: describeYearlyOutput(id, t),
         };
       }),
     }),
@@ -193,7 +221,56 @@ function describeBuilding(definition: BuildingDefinition, t: Translate): string 
     parts.push(`${t('guide.houses')} ${definition.housing}`);
   }
 
+  // **The two buildings that produce timber without a recipe.** A Forester's
+  // Lodge and a Woodcutter both put logs on the ground by felling trees, which no
+  // yearly figure can reach: it depends on how much wood is standing near them.
+  // Saying so is the difference between a building whose purpose is legible and
+  // one a player has to guess at — and "what did the lodge actually do?" was
+  // asked, which is the proof it was not legible.
+  if (definition.forestry) {
+    parts.push(`${t('guide.tendsWithin')} ${definition.forestry.radius} ${t('guide.cells')}`);
+    parts.push(`${definition.forestry.targetTrees} ${t('guide.treesKept')}`);
+  }
+  if (definition.felling) {
+    parts.push(t('guide.fellsOwn'));
+  }
+
   return parts.join(' · ');
+}
+
+/**
+ * What a building makes in an ordinary year, and what it eats to do it.
+ *
+ * **Asked for by a player who could not tell what a building was worth.** The
+ * build menu shows a cost and a number of workers, and neither of those says
+ * whether a Woodcutter feeds a settlement through a winter. A yearly figure does,
+ * because a year is the unit this game is played in.
+ *
+ * Deliberately the plain figure: fully staffed, no tools, no experience, nobody
+ * walking a long way and nobody ill. Every one of those moves it, most of them
+ * upwards, and a baseline that quietly included them would be unusable for
+ * comparing one building against another. The section's opening paragraph says
+ * so, once, rather than every line repeating the caveat.
+ *
+ * @returns `null` for anything that produces nothing, so the renderer can leave
+ *   the line out rather than print an empty one.
+ */
+function describeYearlyOutput(id: BuildingId, t: Translate): string | null {
+  const { outputs, inputs } = annualProduction(id);
+  if (outputs.length === 0) {
+    return null;
+  }
+
+  const list = (entries: readonly { resource: string; perYear: number }[]): string =>
+    entries
+      .map(
+        (entry) =>
+          `${Math.round(entry.perYear)} ${t(`hud.${entry.resource}` as MessageKey).toLocaleLowerCase()}`,
+      )
+      .join(', ');
+
+  const made = `${list(outputs)} ${t('guide.aYear')}`;
+  return inputs.length === 0 ? made : `${made}, ${t('guide.using')} ${list(inputs)}`;
 }
 
 function describeCost(definition: BuildingDefinition, t: Translate): string {

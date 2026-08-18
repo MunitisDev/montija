@@ -13,7 +13,8 @@ import { describe, expect, it } from 'vitest';
 import { BUILDING_IDS, buildingDefinition } from '@/data/buildings';
 import { recipe as findRecipe } from '@/data/recipes';
 import { TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
-import { NO_PRODUCTION, productionSummary } from '@/ui/hud/productionModel';
+import { annualProduction, NO_PRODUCTION, productionSummary } from '@/ui/hud/productionModel';
+import { DAYS_PER_SEASON, SEASONAL_YIELD } from '@/simulation/seasons/SeasonClock';
 
 describe('a building that produces something', () => {
   it('counts every post, because every worker runs the recipe', () => {
@@ -97,6 +98,64 @@ describe('the figures track the data', () => {
         expect(rate.perDay).toBeGreaterThan(0);
         expect(Number.isFinite(rate.perDay)).toBe(true);
       }
+    }
+  });
+});
+
+/**
+ * What a building makes in a year.
+ *
+ * A different question from the per-day peak, and the one a player planning a
+ * winter actually asks — asked for in as many words, because the build menu shows
+ * a cost and a number of workers and neither says whether a Woodcutter will see a
+ * settlement through the cold.
+ */
+describe('a whole year of a building', () => {
+  it('sums the four seasons rather than averaging them', () => {
+    // A Gatherer Hut's dead winter has to be *in* the figure. Averaging the curve
+    // and rounding once would invent output the settlement never sees: a batch
+    // scaled to nothing delivers nothing, and no average recovers that.
+    const hut = buildingDefinition('gatherer-hut');
+    const recipe = findRecipe(hut.recipeId!)!;
+    const runsPerSeason = (TICKS_PER_DAY / recipe.workTicks) * hut.workerSlots * DAYS_PER_SEASON;
+    const curve = SEASONAL_YIELD[recipe.seasonal];
+    const expected = (['spring', 'summer', 'autumn', 'winter'] as const).reduce(
+      (sum, season) => sum + Math.round(recipe.outputs[0]!.amount * curve[season]) * runsPerSeason,
+      0,
+    );
+
+    expect(annualProduction('gatherer-hut').outputs[0]!.perYear).toBeCloseTo(expected, 5);
+  });
+
+  it('charges a workshop for its inputs all year, because it works all year', () => {
+    const cutter = annualProduction('woodcutter');
+    const recipe = findRecipe(buildingDefinition('woodcutter').recipeId!)!;
+    const ratio = recipe.outputs[0]!.amount / recipe.inputs[0]!.amount;
+
+    expect(cutter.inputs[0]!.resource).toBe('logs');
+    expect(cutter.outputs[0]!.perYear).toBeCloseTo(cutter.inputs[0]!.perYear * ratio, 5);
+  });
+
+  it('charges a gatherer nothing for the season it does not work', () => {
+    // A hut that forages nothing in winter consumes nothing either. It has no
+    // inputs at all, so the honest figure is an empty list rather than a zero.
+    expect(annualProduction('gatherer-hut').inputs).toEqual([]);
+  });
+
+  it('says nothing at all about a building that produces nothing', () => {
+    expect(annualProduction('house').outputs).toEqual([]);
+    expect(annualProduction('storage-yard').outputs).toEqual([]);
+    // A Forester's Lodge has posts and no recipe: what it produces is logs on the
+    // ground, by felling, at a rate that depends on how much wood is standing near
+    // it. No yearly figure can honestly be quoted, so none is.
+    expect(annualProduction('forester').outputs).toEqual([]);
+  });
+
+  it('agrees with the daily peak about which buildings produce', () => {
+    for (const id of BUILDING_IDS) {
+      expect(annualProduction(id).outputs.length > 0).toBe(
+        productionSummary(id).outputs.length > 0,
+      );
     }
   });
 });

@@ -20,6 +20,7 @@ import { RESOURCE_IDS } from '@/data/resources';
 import { SEASONS } from '@/simulation/seasons/SeasonClock';
 import { EN, ES, type MessageKey } from '@/ui/i18n/messages';
 import { SECTION_IDS, buildGuide, type Translate } from '@/ui/guide/guideContent';
+import { annualProduction } from '@/ui/hud/productionModel';
 
 const CATALOGUES = { en: EN, es: ES } as const;
 const LANGUAGES = ['en', 'es'] as const;
@@ -140,6 +141,49 @@ describe('what the guide says about a building', () => {
     const yard = entryFor('buildings', EN['building.storage-yard']);
     expect(buildingDefinition('storage-yard').workerSlots).toBe(0);
     expect(yard.meta).toContain(EN['guide.noWorkers']);
+  });
+
+  it('says what a workshop makes in a year, and what it eats to do it', () => {
+    // Asked for in as many words: a cost and a number of workers do not tell a
+    // player whether a Woodcutter will see them through a winter, and a year is
+    // the unit this game is played in.
+    const cutter = entryFor('buildings', EN['building.woodcutter']);
+    const yearly = annualProduction('woodcutter');
+
+    expect(cutter.output).not.toBeNull();
+    expect(cutter.output).toContain(String(Math.round(yearly.outputs[0]!.perYear)));
+    expect(cutter.output).toContain(String(Math.round(yearly.inputs[0]!.perYear)));
+    expect(cutter.output).toContain(EN['guide.aYear']);
+    expect(cutter.output).toContain(EN['guide.using']);
+  });
+
+  it('leaves the line out for anything that produces nothing', () => {
+    // `null` rather than an empty string, so the renderer omits the element
+    // instead of drawing a blank line under a House.
+    expect(entryFor('buildings', EN['building.house']).output).toBeNull();
+    expect(entryFor('buildings', EN['building.storage-yard']).output).toBeNull();
+  });
+
+  it("describes a Forester's Lodge by what it tends, since it makes nothing", () => {
+    // The question that prompted this: "what did the lodge actually do?" It has
+    // posts and no recipe, so no yearly figure can be quoted — what it produces is
+    // logs on the ground and a wood that does not run out, and the facts that make
+    // that legible are its reach and the count it holds the trees at.
+    const lodge = entryFor('buildings', EN['building.forester']);
+    const forestry = buildingDefinition('forester').forestry!;
+
+    expect(lodge.output).toBeNull();
+    expect(lodge.meta).toContain(String(forestry.radius));
+    expect(lodge.meta).toContain(String(forestry.targetTrees));
+  });
+
+  it('says a Woodcutter fells its own timber when the stores run short', () => {
+    // The other half of the same question. A Woodcutter is not only a workshop:
+    // below its log target it posts felling of its own, which is why it keeps
+    // working in a settlement that has stopped marking trees.
+    const cutter = entryFor('buildings', EN['building.woodcutter']);
+    expect(buildingDefinition('woodcutter').felling).toBeDefined();
+    expect(cutter.meta).toContain(EN['guide.fellsOwn']);
   });
 
   it('costs match every definition, not just the ones spelled out above', () => {
