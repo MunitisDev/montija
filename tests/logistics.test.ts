@@ -224,20 +224,20 @@ describe('the full logistics loop', () => {
     }
   }
 
-  it("starts with the settlers' food in a store and their bundles on the ground", () => {
-    // **What ten tired people actually do**, and now a perfectly good place to
-    // build from: a site takes its materials from the nearest source it can walk
-    // to, shelf or ground alike, so nothing has to be tidied away first. The food
-    // goes in the store, because that is what a store is for and because people
-    // eat out of one.
+  it("starts with everything the settlers carried on the camp's shelves", () => {
+    // One store, holding all of it, and nothing on the ground. It was bundles on
+    // the ground for a while — see `river.test.ts` — and the reason it went back
+    // is that a settlement whose opening move is tidying up reads as a mess
+    // rather than as a camp.
     const simulation = new Simulation(OPTIONS);
     const snapshot = simulation.snapshot();
 
     expect(simulation.storages.count).toBe(1);
     expect(snapshot.stored.food).toBe(STARTING_RESOURCES.food);
-    expect(snapshot.stored.logs).toBe(0);
-    expect(snapshot.loose.logs).toBe(STARTING_RESOURCES.logs);
-    expect(snapshot.loose.stone).toBe(STARTING_RESOURCES.stone);
+    expect(snapshot.stored.logs).toBe(STARTING_RESOURCES.logs);
+    expect(snapshot.stored.stone).toBe(STARTING_RESOURCES.stone);
+    expect(snapshot.loose.logs).toBe(0);
+    expect(snapshot.loose.stone).toBe(0);
   });
 
   it('drops physical logs where a tree stood, not into a counter', () => {
@@ -245,12 +245,15 @@ describe('the full logistics loop', () => {
     const cell = firstTreeCell(simulation);
     const treeId = simulation.world.trees.getAt(cell)!.id;
 
+    const stored = simulation.snapshot().stored.logs;
     simulation.world.fellTree(treeId);
 
     // The logs exist on the ground...
     expect(simulation.world.piles.getAt(cell, 'logs')?.amount).toBe(LOGS_PER_TREE);
-    // ...and nothing has reached a store, because nobody carried them.
-    expect(simulation.snapshot().stored.logs).toBe(0);
+    // ...and the store has not moved, because nobody carried them. Measured as a
+    // difference rather than as zero: the settlers arrive with timber on the
+    // shelves, and the point of this test is the tree, not the total.
+    expect(simulation.snapshot().stored.logs).toBe(stored);
   });
 
   it('hauls logs from the ground into storage', () => {
@@ -377,11 +380,14 @@ describe('the full logistics loop', () => {
     const cell = firstTreeCell(simulation);
     simulation.world.fellTree(simulation.world.trees.getAt(cell)!.id);
 
+    // The two figures are genuinely different numbers about the same resource:
+    // the tree's logs are on the ground and the settlers' are on a shelf, and a
+    // HUD that added them together would tell a player they had timber to build
+    // with when half of it was still lying in the wood.
     const snapshot = simulation.snapshot();
-    expect(snapshot.loose.logs).toBe(LOGS_PER_TREE + STARTING_RESOURCES.logs);
-    expect(snapshot.stored.logs).toBe(0);
-    // The tree's own pile, plus the bundles the settlers set down.
-    expect(snapshot.pileCount).toBeGreaterThan(1);
+    expect(snapshot.loose.logs).toBe(LOGS_PER_TREE);
+    expect(snapshot.stored.logs).toBe(STARTING_RESOURCES.logs);
+    expect(snapshot.pileCount).toBe(1);
   });
 
   it('exposes a total for every resource, even at zero', () => {

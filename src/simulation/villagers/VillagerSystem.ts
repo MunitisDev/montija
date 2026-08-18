@@ -104,6 +104,14 @@ const IDLE_TICKS_MAX = 60;
 /** Give up choosing a wander target after this many failed guesses. */
 const WANDER_ATTEMPTS = 8;
 
+/**
+ * How far out a founder or a newcomer will look for a spot to stand.
+ *
+ * Wide enough to clear the camp's own footprint and the wood around it, narrow
+ * enough that arriving is arriving *here* rather than somewhere over the hill.
+ */
+const SPAWN_SEARCH = 12;
+
 /** Neighbours checked when looking for somewhere to stand next to a job. */
 const ADJACENT: readonly (readonly [number, number])[] = [
   [0, -1],
@@ -1213,19 +1221,33 @@ export class VillagerSystem {
 
   private findSpawnCell(origin: GridPoint): GridPoint | null {
     // Try a scattered spot first so the founders do not stand in one stack.
+    //
+    // **Four cells, and on the settlement's own side of the water.** It was six
+    // and unchecked, and both parts were wrong: the party arrived spread over a
+    // thirteen-cell square with their stores in the middle of it, and — because
+    // the river runs right past the camp — sometimes with two or three of them on
+    // the far bank, cut off from the settlement and from everything in it on the
+    // first frame of the game. They would stand there until somebody built a
+    // bridge nobody knew was needed.
     for (let attempt = 0; attempt < 32; attempt += 1) {
       const candidate: GridPoint = {
-        gx: origin.gx + this.randomSource.int(-6, 7),
-        gy: origin.gy + this.randomSource.int(-6, 7),
+        gx: origin.gx + this.randomSource.int(-4, 5),
+        gy: origin.gy + this.randomSource.int(-4, 5),
       };
-      if (this.world.isWalkable(candidate)) {
+      if (this.world.isWalkable(candidate) && this.world.reaches(candidate)) {
         return candidate;
       }
     }
 
     // Fall back to a deterministic outward search so spawning cannot fail
-    // merely because the random attempts were unlucky.
-    return this.world.navigation.nearestWalkable(origin);
+    // merely because the random attempts were unlucky. Still on the settlement's
+    // ground where there is any: only a world with nobody and nothing in it
+    // — which is the world generator's own tests — falls through to any walkable
+    // cell at all.
+    return (
+      this.world.nearestReachable(origin, SPAWN_SEARCH) ??
+      this.world.navigation.nearestWalkable(origin)
+    );
   }
 
   private makeName(sex: Sex): string {

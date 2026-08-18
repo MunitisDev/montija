@@ -58,22 +58,13 @@ describe('the founding camp', () => {
     // their bundles in, they did not spend the first hour stacking timber. Free
     // logs at the camp would also quietly change the opening.
     //
-    // There *are* logs on the ground at the camp — the ones they carried, set down
-    // where they stopped — so the claim is about the amount: exactly what they
-    // brought, and not a stick more.
+    // Nothing is on the ground at all at the start — what they carried went onto
+    // the camp's shelves — so the claim is simply that the clearing produced no
+    // salvage. The store holds exactly what they brought, and not a stick more.
     const simulation = new Simulation(OPTIONS);
-    const centre = simulation.world.landfallCell;
-    const atCamp = [...simulation.world.piles.all]
-      .filter(
-        (pile) =>
-          pile.resource === 'logs' &&
-          Math.abs(pile.cell.gx - centre.gx) <= FOUNDING_YARD_RADIUS + 2 &&
-          Math.abs(pile.cell.gy - centre.gy) <= FOUNDING_YARD_RADIUS + 2,
-      )
-      .reduce((total, pile) => total + pile.amount, 0);
 
-    expect(atCamp).toBe(STARTING_RESOURCES.logs);
-    expect(simulation.world.piles.totalOf('logs')).toBe(STARTING_RESOURCES.logs);
+    expect(simulation.world.piles.totalOf('logs')).toBe(0);
+    expect(simulation.storages.totalOf('logs')).toBe(STARTING_RESOURCES.logs);
   });
 
   it('leaves the wood outside the camp alone', () => {

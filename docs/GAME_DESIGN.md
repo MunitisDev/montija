@@ -607,20 +607,32 @@ Every job carries a priority, and a villager takes the highest-priority job they
 are allowed to do, breaking ties on distance and then on job id so a settlement
 replayed from its seed behaves identically.
 
-| Priority   | Work                                                                   |
-| ---------- | ---------------------------------------------------------------------- |
-| **urgent** | producing at a workshop — employees only                               |
-| **high**   | building; hauling goods **in** from the field                          |
-| **normal** | felling, mining, planting, paving; hauling materials **out** to a site |
-| **low**    | demolition                                                             |
+| Priority   | Work                                                                     |
+| ---------- | ------------------------------------------------------------------------ |
+| **urgent** | producing at a workshop — employees only                                 |
+| **high**   | building; hauling goods the settlement still wants; delivering to a site |
+| **normal** | felling, mining, planting, paving                                        |
+| **low**    | demolition; hauling more of something the settlement has plenty of       |
 
-Two asymmetries in that table are deliberate and were each put there to fix
+Three asymmetries in that table are deliberate and were each put there to fix
 something measured.
 
 **Hauling in outranks cutting more down.** At equal priority the nearest job
 won, so a marked stand of trees buried the hauling and a settlement starved with
 fifty food lying in piles beside the hut, because nobody would stop chopping
 long enough to carry it in.
+
+**A haul is worth what the settlement lacks, not what it is carrying.** Every
+haul used to be worth the same, so a hundred and seventy logs in the yard bought
+exactly as much attention as the harvest rotting beside the hut — and since the
+log piles stood nearer, the log piles won. A third of the settlement's waking
+hours went on carrying timber it already had, all year, while people starved a
+hundred paces away. Above what the settlement wants of a good — `wantedPerVillager`
+in `data/resources.ts`, so it grows with the population — carrying more of it
+drops to the bottom of the board. Measured over twelve settlements playing the
+`prepared` line for a year: **120 deaths before, 80 after**, and food banked at
+the first frost up by a fifth. It is not the goods that are worthless, it is that
+particular trip, and the hands it frees go to the harvest and to the rock.
 
 **Demolition sits below everything.** Tearing something down is never more urgent
 than feeding the people who live there.
@@ -1003,12 +1015,68 @@ with nothing it could do.
 Four attempts, all measured, one shipped. Recorded so they are not tried again blind — and because
 they agree on one thing: **the opening is not short of food, it is short of firewood.**
 
-| Attempt                                    | Result                                                                 |
-| ------------------------------------------ | ---------------------------------------------------------------------- |
-| +30% starting food (120 → 156) — shipped   | Idle settlement dies 1 day later. No played year changed on any seed.  |
-| Stalled gathering outranks felling         | Backed out. Survival flat; three seeds starved in summer instead.      |
-| Food Storage for timber only (no stone)    | Backed out. Food banked 63 → 120, survival flat, reference seed worse. |
-| Playing better — the `disciplined` opening | No change. 222 deaths against 220 over 24 seeds.                       |
+| Attempt                                         | Result                                                                     |
+| ----------------------------------------------- | -------------------------------------------------------------------------- |
+| +30% starting food (120 → 156) — shipped        | Idle settlement dies 1 day later. No played year changed on any seed.      |
+| Stalled gathering outranks felling              | Backed out. Survival flat; three seeds starved in summer instead.          |
+| Food Storage for timber only (no stone)         | Backed out. Food banked 63 → 120, survival flat, reference seed worse.     |
+| Playing better — the `disciplined` opening      | No change. 222 deaths against 220 over 24 seeds.                           |
+| **The founding yard's doorway** — shipped       | **Two real defects, not balance.** See below.                              |
+| **Hauling priced by what is lacking** — shipped | **120 deaths → 80** over twelve seeds. See "How work is chosen".           |
+| Mining above felling                            | Backed out. 121 deaths against 100; felling then stopped entirely instead. |
+| Felling below mining when timber is plentiful   | Backed out. 93 deaths, and almost no food banked before the frost.         |
+| Three standing orders of each kind at a time    | Backed out. 100 deaths at three, 110 at six — but **163 firewood**.        |
+| A House costing no stone at all                 | Backed out. 97 deaths. Houses are not the binding constraint.              |
+
+### The founding yard's doorway — the one that was a defect
+
+Worth separating from the balance attempts, because it was not a balance question at all and it had
+been quietly wrecking every settlement.
+
+A store is fetched from at exactly one cell. A building's yard uses the building's own doorway, and
+the registry already re-finds that when a neighbour is raised over it — but **the founding yard's
+doorway is the bare patch of ground the settlers stopped on, and nothing stopped the player putting
+their first house squarely on top of it.** The moment that happened, every question of the form "can
+somebody fetch logs from here?" answered no.
+
+What made it invisible is that goods still went _in_: a hauler delivers from the next cell over. So
+the HUD showed a yard filling steadily to a hundred and seventy logs while every building site and
+every workshop starved beside it. On the reference settlement a Woodcutter ordered on day 8 was still
+half-built on day 24, the settlement made no firewood in the entire year, and all ten froze — and the
+whole diagnosis looked like a balance problem with stone.
+
+Three things came out of it. A store whose doorway is walled in now moves it to reachable ground once
+a tick, the same reconciliation a building's doorway already gets. A delivery now prefers a source that
+can fill the whole trip: the old rule was nearest-first and nothing else, so a pile holding _one_ log
+three cells away beat a shelf holding a hundred and seventy ten cells away, and a site costing eight
+logs took a trip per log.
+
+And the rehousing itself had to learn one rule, because the first version of it introduced a worse bug
+than the one it fixed: **a store's doorway may never be another building's doorway.** Deliveries are
+routed by cell and a building answers for its own doorstep before any yard does, so a founding yard
+rehoused onto a House's doorway had every basket carried to it disappear into that house's own
+store-cupboard, where nothing could eat it. That settlement starved from day twelve with a hundred and
+twenty-five food lying in the field and its shelves reading nought — the same symptom as the original
+bug, by an entirely different route.
+
+Together the three are worth more than every balance lever tried before them put together: over twelve
+settlements playing the `prepared` line for a year, **120 deaths became 63**, firewood on the shelves
+at the year's end went from 0 to 57, food banked at the first frost from 701 to 1219, and five of the
+twelve now come through their first winter without a single grave. Time lost to standing idle fell from
+22% of the settlement's waking hours to 14%.
+
+### What is left, and it is a scheduler
+
+The remaining wall is that **felling and mining cannot both progress**, and no ordering of the two
+fixes it — the table above records three attempts, and each one simply reversed which of them starved.
+At equal priority the nearest job wins, and a player who marks forty trees and twenty deposits has put
+four hundred cells of woodland on the board against twenty of rock. Villagers were measured spending
+13% of a year walking to trees and **0% cutting stone**.
+
+The answer is a scheduler that shares hands between _kinds_ of work rather than any ranking of them.
+The standing-order experiment is the strongest hint about its shape: holding each queue down to three
+live orders put real firewood on the shelves for the first time — 163 units across twelve seeds against
+10 — while costing lives elsewhere, which says the mechanism is right and the tuning is not.
 
 The last one is not a code change at all: it is the best opening anybody has found, played by a script
 that marks stone first, gets a larder up on day four, roofs everybody before the cold and adds a
@@ -1038,6 +1106,13 @@ no stone reaches the yard
 and every lever tried so far pushes on the wrong end of it. A well-played settlement enters winter
 with **zero firewood on every seed but one**, and that one is the seed whose rock is a single cell
 from the camp.
+
+**The MVP's headline goal — survive the first winter — is met on some worlds and not on most.** It was
+believed to be met outright for a while, because the balance suite asserted survival on the reference
+seed alone and that one settlement scraped through by a single villager's worth of firewood. Played
+across a dozen worlds, a well-played settlement now comes through cleanly on five of them and loses
+everybody on the rest. The suite judges the aggregate as well as the reference seed and says so out
+loud; see `tests/balance.test.ts`.
 
 So the finding stands and the fix does not. The reason the opening is hard is now known rather than
 guessed, and it belongs to a difficulty pass that has not been done.

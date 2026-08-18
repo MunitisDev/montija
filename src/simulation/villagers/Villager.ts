@@ -18,7 +18,7 @@ import type { GridPoint, WorldPoint } from '@/shared/types/geometry';
 import { Inventory } from '@/simulation/resources/Inventory';
 
 /** How many units a villager can carry at once, across all resources. */
-const CARRY_CAPACITY = 20;
+export const CARRY_CAPACITY = 20;
 
 /** What a villager is doing, as far as the renderer needs to know. */
 export type VillagerActivity = 'idle' | 'walking' | 'working' | 'hauling' | 'ill';

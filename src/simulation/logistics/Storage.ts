@@ -41,8 +41,17 @@ export interface StorageOptions {
 
 export class Storage {
   public readonly id: number;
-  /** The cell haulers walk to. */
-  public readonly cell: GridPoint;
+  /**
+   * The cell haulers walk to, and fetch from.
+   *
+   * **Not readonly, because a doorway can be built over.** A yard belonging to a
+   * building takes the building's own doorway, which moves when a neighbour is
+   * raised on it; the founding yard's is a bare patch of ground at the camp, and
+   * nothing stops the player putting a house there. Either way, a store whose
+   * doorway is inside a wall is a store nobody can take anything out of — see
+   * `Simulation.refreshStorageDoorways` for what that cost.
+   */
+  public cell: GridPoint;
   public readonly inventory: Inventory;
   /** Multiplier on how fast perishable goods spoil here. */
   public readonly preservation: number;

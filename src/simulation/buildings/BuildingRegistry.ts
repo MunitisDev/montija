@@ -45,6 +45,22 @@ export class BuildingRegistry {
     return this.changeVersion;
   }
 
+  /**
+   * `true` when some building's work happens at this cell.
+   *
+   * Deliveries are routed by cell and a building answers for its own doorway
+   * before any yard does, so anything else that wants to *own* a cell has to ask
+   * first. See `Simulation.refreshStorageDoorways`.
+   */
+  public anyAccessAt(cell: GridPoint): boolean {
+    for (const building of this.byId.values()) {
+      if (building.accessCell.gx === cell.gx && building.accessCell.gy === cell.gy) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   public getById(id: number): Building | null {
     return this.byId.get(id) ?? null;
   }
@@ -145,11 +161,10 @@ export class BuildingRegistry {
     origin: GridPoint,
     footprint: { width: number; height: number },
   ): boolean {
-    const heart = world.heartCell;
     for (let dy = -1; dy <= footprint.height; dy += 1) {
       for (let dx = -1; dx <= footprint.width; dx += 1) {
         const cell = { gx: origin.gx + dx, gy: origin.gy + dy };
-        if (world.navigation.connects(heart, cell)) {
+        if (world.reaches(cell)) {
           return true;
         }
       }
@@ -265,7 +280,6 @@ export class BuildingRegistry {
    * place anybody could stand.
    */
   private clearPlot(world: World, building: Building): void {
-    const heart = world.heartCell;
     const origin = building.origin;
     const { footprint } = building.definition;
 
@@ -279,7 +293,7 @@ export class BuildingRegistry {
         pile.cell.gx < origin.gx + footprint.width + REACH &&
         pile.cell.gy >= origin.gy - REACH &&
         pile.cell.gy < origin.gy + footprint.height + REACH;
-      return near && !world.navigation.connects(heart, pile.cell);
+      return near && !world.reaches(pile.cell);
     });
 
     for (const pile of stranded) {
@@ -303,9 +317,8 @@ export class BuildingRegistry {
    * has tens of buildings, not thousands.
    */
   private refreshAccessCells(world: World): void {
-    const heart = world.heartCell;
     for (const building of this.byId.values()) {
-      if (!world.navigation.connects(heart, building.accessCell)) {
+      if (!world.reaches(building.accessCell)) {
         building.accessCell = findAccessCell(world, building);
       }
     }
@@ -430,7 +443,6 @@ const DOORWAY_SEARCH = 4;
 export function findAccessCell(world: World, building: Building): GridPoint {
   const { footprint } = building.definition;
   const { gx, gy } = building.origin;
-  const heart = world.heartCell;
 
   let stranded: GridPoint | null = null;
 
@@ -449,7 +461,7 @@ export function findAccessCell(world: World, building: Building): GridPoint {
         }
 
         const cell = { gx: x, gy: y };
-        if (!world.navigation.connects(heart, cell)) {
+        if (!world.reaches(cell)) {
           stranded ??= cell;
           continue;
         }

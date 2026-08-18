@@ -31,6 +31,14 @@ import type { Villager } from '@/simulation/villagers/Villager';
 
 const OPTIONS = { seed: 20260816, worldWidth: 64, worldHeight: 64, startingVillagers: 10 };
 
+/**
+ * How far from their own front door a toddler is allowed to get.
+ *
+ * The wander radius, plus the width of the house they set out from, plus room
+ * for a path going round a tree.
+ */
+const TODDLER_REACH = 9;
+
 describe('the people with no work to do', () => {
   it('sends children and elders walking rather than leaving them standing', () => {
     const simulation = new Simulation(OPTIONS);
@@ -72,21 +80,39 @@ describe('a toddler', () => {
     const toddler = simulation.villagers.all.find((villager) => villager.homeId === house.id);
     expect(toddler).toBeDefined();
     toddler!.age = 3;
-    // Two days to finish whatever walk the grown-up they used to be had already
-    // set out on. The test is about where they choose to go next, not about
-    // teleporting them home the moment their age changes.
-    run(simulation, TICKS_PER_DAY * 2);
+    // **Walked home first, however long that takes.** The test is about where a
+    // toddler chooses to go next, not about teleporting them home the moment
+    // their age changes — and the grown-up they used to be may have been most of
+    // the way across the valley when it happened. A fixed settling period was
+    // measured as too short the first time the villagers' RNG shifted under it,
+    // which made the test read as a regression in child behaviour when nothing
+    // about child behaviour had changed.
+    for (let tick = 0; tick < TICKS_PER_DAY * 12; tick += 1) {
+      simulation.update(simulation.tick + 1, 0.1);
+      if (distance(toddler!.cell, house.accessCell) <= TODDLER_REACH) {
+        break;
+      }
+    }
+    expect(distance(toddler!.cell, house.accessCell)).toBeLessThanOrEqual(TODDLER_REACH);
 
+    // **Where they choose to go, not every cell they pass through.** Measuring
+    // position was tried and is the wrong measurement: a toddler standing eight
+    // cells from home on the far side of a wood walks a route home that swings
+    // fifteen cells wide, and that figure is a fact about the terrain rather than
+    // about the child. What the rule promises is that a toddler never *sets out*
+    // for anywhere but their own doorstep.
     let furthest = 0;
     for (let tick = 0; tick < TICKS_PER_DAY * 8; tick += 1) {
       simulation.update(simulation.tick + 1, 0.1);
-      furthest = Math.max(furthest, distance(toddler!.cell, house.accessCell));
+      if (toddler!.destination) {
+        furthest = Math.max(furthest, distance(toddler!.destination, house.accessCell));
+      }
     }
 
-    // The radius plus the width of the house they set out from, with room for
-    // the path going round a tree — not "never leaves the doorstep", which
-    // would be a different and wronger picture.
-    expect(furthest).toBeLessThan(9);
+    // The radius plus the width of the house they set out from — not "never
+    // leaves the doorstep", which would be a different and wronger picture.
+    expect(furthest).toBeGreaterThan(0);
+    expect(furthest).toBeLessThan(TODDLER_REACH);
   });
 
   it('goes as far as anybody once they are grown enough', () => {
@@ -167,15 +193,17 @@ describe('the random stream', () => {
  * the balance figures in `docs/GAME_DESIGN.md` were measured on a different game
  * and have to be measured again.
  *
- * **It has moved twice, both times deliberately.** First the sea became a river,
- * which re-cut every map from every seed: different trees, different rock, a
- * different camp. Then the settlers began setting their bundles down on the ground
- * rather than into a store, which gives a fresh settlement half a dozen hauls to do
- * on its first morning — so the villagers make different decisions from the first
- * tick, and draw different dice making them. The balance figures were re-measured
- * against each change; that is what this number is for.
+ * **It has moved three times, every time deliberately.** First the sea became a
+ * river, which re-cut every map from every seed: different trees, different rock,
+ * a different camp. Then the settlers began setting their bundles down on the
+ * ground rather than into a store, and a fresh settlement had half a dozen hauls
+ * to do on its first morning. Then that was put back — everything starts on the
+ * shelves again — *and* the founders began arriving in a tighter circle, on the
+ * settlement's own bank of the river, which is a different number of draws in
+ * the spawn search itself. The balance figures were re-measured against each
+ * change; that is what this number is for.
  */
-const NO_SCHOOL_CURSOR = 3905067433;
+const NO_SCHOOL_CURSOR = 3585361448;
 
 function run(simulation: Simulation, ticks: number): void {
   for (let tick = 0; tick < ticks; tick += 1) {

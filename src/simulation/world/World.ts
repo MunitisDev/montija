@@ -112,8 +112,100 @@ export class World {
     return this.navigation.nearestWalkable(camp) ?? camp;
   }
 
+  /**
+   * The nearest cell to this one the settlement can actually walk to.
+   *
+   * `nearestWalkable` is not enough on its own: a cell can be perfectly walkable
+   * and be inside a sealed pocket, or on the far bank of the river, and something
+   * standing on it is as unreachable as something inside a wall.
+   */
+  public nearestReachable(
+    cell: GridPoint,
+    maxRadius = 8,
+    /** An extra condition on the cell, for callers that need more than reach. */
+    accept?: (candidate: GridPoint) => boolean,
+  ): GridPoint | null {
+    for (let radius = 0; radius <= maxRadius; radius += 1) {
+      for (let dy = -radius; dy <= radius; dy += 1) {
+        for (let dx = -radius; dx <= radius; dx += 1) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) {
+            continue;
+          }
+          const near = { gx: cell.gx + dx, gy: cell.gy + dy };
+          if (!this.isWalkable(near) || !this.reaches(near)) {
+            continue;
+          }
+          if (accept && !accept(near)) {
+            continue;
+          }
+          return near;
+        }
+      }
+    }
+    return null;
+  }
+
+  /** `true` when somebody in the settlement could walk to this cell. */
+  public reaches(cell: GridPoint): boolean {
+    const region = this.navigation.regionAt(cell.gx, cell.gy);
+    return region >= 0 && this.settlementRegions().has(region);
+  }
+
+  private settlementRegions(): Set<number> {
+    const version = this.navigation.structureVersion;
+    if (this.reach && this.reach.version === version) {
+      return this.reach.regions;
+    }
+
+    const regions = new Set<number>();
+    for (const anchor of this.anchors()) {
+      const region = this.navigation.regionAt(anchor.gx, anchor.gy);
+      if (region >= 0) {
+        regions.add(region);
+      }
+    }
+    // Nobody left to ask, or nobody standing anywhere walkable. The camp is the
+    // fallback rather than "everywhere", because a settlement of no one should
+    // not quietly make the whole map reachable.
+    if (regions.size === 0) {
+      const heart = this.navigation.regionAt(this.heartCell.gx, this.heartCell.gy);
+      if (heart >= 0) {
+        regions.add(heart);
+      }
+    }
+
+    this.reach = { version, regions };
+    return regions;
+  }
+
+  /**
+   * Where the settlement actually is, for asking what it can walk to.
+   *
+   * Set by the Simulation to its villagers and its stores. It defaults to the
+   * camp because a World can be built without a settlement in it — the world
+   * generator's own tests do exactly that — but in play the honest answer to
+   * "can anybody get there?" is asked of the people, not of a cell.
+   *
+   * **This replaced a single anchor cell, and the bug it fixes is a whole map
+   * going unbuildable.** Five buildings raised in a ring around the camp can seal
+   * the one cell everything was measured from; from that moment every plot on the
+   * map answered "unreachable", including the ground the villagers were standing
+   * on. Measured on a probe settlement: 991 refusals, one legal plot left.
+   */
+  public anchors: () => Iterable<GridPoint> = () => [this.heartCell];
+
   /** Worked out once: the map does not move, and the answer is a search. */
   private camp: GridPoint | null = null;
+
+  /**
+   * The settlement's regions, held against the shape of the walkable ground.
+   *
+   * Safe to cache on that version alone: a villager can only ever walk about
+   * inside their own region, so the set of regions the settlement occupies
+   * cannot change until a wall, a bridge or a channel changes what connects to
+   * what — which is precisely when the version moves.
+   */
+  private reach: { version: number; regions: Set<number> } | null = null;
 
   private findLandfall(): GridPoint {
     const course = this.river.middle;
@@ -413,7 +505,7 @@ export class World {
           // sealed pocket is as lost as one set down inside a wall, and this is
           // the same mistake that once had a hut piling its harvest where no
           // hauler could ever reach it.
-          if (!this.isWalkable(beside) || !this.navigation.connects(this.heartCell, beside)) {
+          if (!this.isWalkable(beside) || !this.reaches(beside)) {
             continue;
           }
           left -= this.piles.drop(beside, resource, left);

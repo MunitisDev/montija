@@ -15,7 +15,7 @@ import { SeededRandom, deriveSeed, type RandomSource } from '@/shared/math/rando
 import { STARTING_RESOURCES } from '@/app/config';
 import type { BuildingId } from '@/data/buildings';
 import { recipe as findRecipe } from '@/data/recipes';
-import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
+import { RESOURCE_IDS, resourceDefinition, type ResourceId } from '@/data/resources';
 import { SKILL_WORK_BONUS } from '@/data/skills';
 import type { Building } from './buildings/Building';
 import type { PlacementCheck } from './buildings/BuildingRegistry';
@@ -73,7 +73,7 @@ import {
   type DailyReport,
 } from './seasons/SurvivalSystem';
 import { VillagerSystem } from './villagers/VillagerSystem';
-import type { WorkPreference } from './villagers/Villager';
+import { CARRY_CAPACITY, type WorkPreference } from './villagers/Villager';
 import { World } from './world/World';
 import { NO_FOREST_CHANGE, runForestRegrowth, type ForestReport } from './world/ForestSystem';
 import { Woodland } from './world/Woodland';
@@ -276,6 +276,16 @@ export interface SimulationOptions {
  */
 const MATERIAL_RESERVATION_BASE = 250_000;
 
+/**
+ * How far from a walled-in store to look for a new doorway.
+ *
+ * Generous, because the alternative is a store nobody can fetch from: a camp
+ * boxed in on every side by the player's own first three buildings still has open
+ * ground a few cells further out, and reaching it around the outside of them is a
+ * short walk rather than an impossibility.
+ */
+const DOORWAY_RESCUE = 8;
+
 function materialReservation(siteId: number, resource: ResourceId): number {
   return MATERIAL_RESERVATION_BASE + siteId * 100 + RESOURCE_IDS.indexOf(resource);
 }
@@ -370,9 +380,13 @@ export class Simulation {
       new SeededRandom(deriveSeed(this.seed, 'villagers')),
     );
 
+    // **What "reachable" is measured from.** The people and their stores, rather
+    // than one cell at the camp — see `World.anchors` for the bug that taught it.
+    this.world.anchors = () => this.reachAnchors();
+
     this.foundStorageYard();
-    // Beside their stores, not in the middle of the map: they walked
-    // up this beach out of the water.
+    // Beside their stores, not in the middle of the map: they set their bundles
+    // down where they stopped walking, and then camped around them.
     this.villagers.spawnNear(this.world.landfallCell, options.startingVillagers);
 
     // Everything that comes out of the ground follows the calendar, and the
@@ -428,6 +442,7 @@ export class Simulation {
     }
 
     this.openFinishedStorages();
+    this.refreshStorageDoorways();
     this.reconcileEmployment();
     this.createConstructionJobs();
     this.createProductionJobs();
@@ -1155,7 +1170,11 @@ export class Simulation {
         continue;
       }
 
-      const source = this.nearestMaterial(site.accessCell, cost.resource);
+      const source = this.nearestMaterial(
+        site.accessCell,
+        cost.resource,
+        site.stillNeeds(cost.resource),
+      );
       if (!source) {
         continue;
       }
@@ -1174,40 +1193,69 @@ export class Simulation {
   }
 
   /**
-   * The closest place a material can actually be fetched from.
+   * Where to fetch a material from, for one trip.
    *
-   * Piles and yards are considered together and judged only on distance, because
-   * to the villager carrying it they are the same errand. Reachability is checked
-   * here rather than left to the pathfinder: a pile on the far bank of the river
-   * is not a source, and posting a job for it would have somebody claim it, fail
-   * to route, and hand it back for ever.
+   * Piles and yards are considered together, because to the villager carrying it
+   * they are the same errand: a shelf and a heap on the ground are both somewhere
+   * to pick logs up. Reachability is checked here rather than left to the
+   * pathfinder — a pile on the far bank of the river is not a source, and posting
+   * a job for it would have somebody claim it, fail to route, and hand it back
+   * for ever.
+   *
+   * **A full load beats a near one, and getting that wrong broke the whole game.**
+   * This was nearest-first and nothing else, which sounds harmless and is not: a
+   * pile holding *one* log three cells away won against a yard holding a hundred
+   * and seventy ten cells away, and only one errand per site and material is on
+   * the board at a time. So a Woodcutter costing eight logs took a trip per log,
+   * with a season's timber on the shelf the whole while. Measured on the
+   * reference settlement: the site was ordered on day 8 and still stood
+   * half-finished on day 24, the settlement made no firewood at all, and everyone
+   * froze in the first winter.
+   *
+   * The rule is therefore in two tiers. A source that can fill the trip settles
+   * it, and among those the nearest wins; a source that cannot is used only when
+   * nothing better exists, which is what keeps "build straight off the ground"
+   * working when the stores are empty. Both walks cost the same — the difference
+   * is whether the errand ends.
+   *
+   * @param wanted how much this trip is for. Capped at a load, because that is
+   *   all one person can carry however much is needed.
    */
   private nearestMaterial(
     to: GridPoint,
     resource: ResourceId,
+    wanted: number,
   ): { cell: GridPoint; pileId: number | null } | null {
+    const load = Math.max(1, Math.min(wanted, resourceDefinition(resource).carryLimit));
     let best: { cell: GridPoint; pileId: number | null } | null = null;
     let bestDistance = Infinity;
+    let bestFills = false;
 
-    const consider = (cell: GridPoint, pileId: number | null): void => {
+    const consider = (cell: GridPoint, pileId: number | null, available: number): void => {
       if (!this.world.navigation.connects(to, cell)) {
         return;
       }
+      const fills = available >= load;
+      if (bestFills && !fills) {
+        return;
+      }
       const distance = Math.hypot(cell.gx - to.gx, cell.gy - to.gy);
-      if (distance < bestDistance) {
+      if ((fills && !bestFills) || distance < bestDistance) {
         best = { cell, pileId };
         bestDistance = distance;
+        bestFills = fills;
       }
     };
 
     for (const storage of this.storages.all) {
-      if (storage.inventory.count(resource) > 0) {
-        consider(storage.cell, null);
+      const held = storage.inventory.count(resource);
+      if (held > 0) {
+        consider(storage.cell, null, held);
       }
     }
     for (const pile of this.world.piles.all) {
       if (pile.resource === resource && !pile.isEmpty) {
-        consider(pile.cell, pile.id);
+        consider(pile.cell, pile.id, pile.amount);
       }
     }
 
@@ -1864,6 +1912,64 @@ export class Simulation {
   }
 
   /**
+   * Keeps every store's doorway somewhere a villager can stand.
+   *
+   * **This is the bug that killed every settlement, and it hid for a long time
+   * behind a symptom that pointed somewhere else.** A store is fetched from at
+   * one cell. A building's yard uses the building's doorway, which the registry
+   * already re-finds when a neighbour is raised on it — but the founding yard's
+   * is the bare patch of ground the settlers stopped on, and nothing stops the
+   * player putting their first house squarely on top of it.
+   *
+   * The moment that happened, the camp's cell stopped being walkable, and every
+   * question of the form "can somebody fetch logs from here?" answered no. Goods
+   * still went *in* — a hauler delivers from the next cell over — so the HUD
+   * showed a yard filling steadily with a hundred and seventy logs while every
+   * building site and every workshop starved beside it. Measured on the reference
+   * settlement: a Woodcutter ordered on day 8 was still half-built on day 24, the
+   * settlement made no firewood in the whole year, and all ten froze.
+   *
+   * Reconciled once a tick rather than hooked onto the moment a wall goes up,
+   * for the same reason {@link openFinishedStorages} is: a doorway can be lost by
+   * more than one route — a building finished, a bridge cut, a save restored —
+   * and one that only recovers down one of them is a store that silently rots.
+   * A settlement has tens of stores, not thousands.
+   */
+  private refreshStorageDoorways(): void {
+    for (const storage of this.storages.all) {
+      if (this.world.reaches(storage.cell)) {
+        continue;
+      }
+
+      const owner =
+        storage.ownerBuildingId === null
+          ? null
+          : this.world.buildings.getById(storage.ownerBuildingId);
+      // The building's own doorway first, since the registry keeps that honest;
+      // failing that, any ground near the store that the settlement can reach.
+      const moved = owner && this.world.reaches(owner.accessCell) ? owner.accessCell : null;
+      // **Never onto somebody else's doorstep.** A delivery is routed by cell, and
+      // a building standing at that cell answers for it before any yard does — so
+      // a founding yard rehoused onto a House's doorway had every basket of food
+      // carried to it disappear into that house's own store-cupboard, where
+      // nothing could ever eat it. Measured: the settlement starved from day
+      // twelve with a hundred and twenty-five food lying in the field and its
+      // shelves reading nought.
+      const doorway =
+        moved ??
+        this.world.nearestReachable(
+          storage.cell,
+          DOORWAY_RESCUE,
+          (candidate) => !this.world.buildings.anyAccessAt(candidate),
+        );
+      if (doorway) {
+        storage.cell = doorway;
+        this.storages.markChanged();
+      }
+    }
+  }
+
+  /**
    * Opens the yard of any finished building that has one and has not opened it.
    *
    * Reconciled here, once a tick, rather than hooked onto the moment a builder
@@ -1891,7 +1997,26 @@ export class Simulation {
     }
   }
 
-  /** Hauls recipe inputs from storage to a workshop. */
+  /**
+   * Fetches a workshop's raw material, from wherever it actually is.
+   *
+   * **Found by playing: two Woodcutters, timber in the yard, and no firewood.**
+   * The errand existed the whole time and simply never got run, for two reasons
+   * that compounded.
+   *
+   * It looked only in the stores, so a settlement whose felled timber was still
+   * lying in the wood — which is most settlements, most of the time — had a
+   * Woodcutter reporting an empty shelf with forty logs on the ground within
+   * sight of it. It now takes the nearest of the two, exactly as a building site
+   * does: to the person carrying them, a shelf and a pile are the same errand.
+   *
+   * And it was posted at ordinary priority, which put it level with felling and
+   * below every other haul on the board. A settlement always has a hauling
+   * backlog, so the one errand that unblocks a whole workshop sat at the bottom
+   * of it. It is now {@link JobPriority.high}, like a delivery to a building
+   * site — because that is what it is. The workshop cannot do anything at all
+   * until it arrives, whereas the load it is queued behind is merely tidying.
+   */
   private requestInputsFor(
     buildingId: number,
     destination: GridPoint,
@@ -1905,7 +2030,7 @@ export class Simulation {
         continue;
       }
 
-      const source = this.storages.all.find((storage) => storage.inventory.count(resource) > 0);
+      const source = this.nearestMaterial(destination, resource, CARRY_CAPACITY);
       if (!source) {
         continue;
       }
@@ -1914,11 +2039,81 @@ export class Simulation {
         type: 'haul',
         target: source.cell,
         deliverTo: destination,
-        priority: JobPriority.normal,
+        priority: JobPriority.high,
         targetEntityId: reservationId,
-        haulSource: 'storage',
+        haulSource: source.pileId === null ? 'storage' : 'pile',
         haulResource: resource,
+        ...(source.pileId === null ? {} : { haulPileId: source.pileId }),
       });
+    }
+  }
+
+  /**
+   * The goods the settlement already has enough of, on its own shelves.
+   *
+   * Recomputed once a tick and handed to the pricing below, rather than asked
+   * per job: a settlement can have three hundred piles on the ground and nine
+   * resources, and the answer is the same for all of them.
+   */
+  private plentiful(): ReadonlySet<ResourceId> {
+    const people = Math.max(1, this.villagers.all.length);
+    const enough = new Set<ResourceId>();
+    for (const resource of RESOURCE_IDS) {
+      const wanted = resourceDefinition(resource).wantedPerVillager * people;
+      if (this.storages.totalOf(resource) >= wanted) {
+        enough.add(resource);
+      }
+    }
+    return enough;
+  }
+
+  /**
+   * What carrying a load of this into a store is worth, right now.
+   *
+   * **The fix for a settlement that starved with two hundred food in the field.**
+   * Every haul used to be worth the same, so a hundred and seventy logs in the
+   * yard bought exactly as much attention as the harvest rotting beside the hut —
+   * and since the log piles were nearer, the log piles won. A third of the
+   * settlement's waking hours went on carrying timber it already had, all year,
+   * while people starved a hundred paces away.
+   *
+   * Above what the settlement wants of a good, carrying more of it is the least
+   * valuable thing anybody could be doing — below felling, below mining, below
+   * everything. That is not the goods being worthless; it is *this trip* being
+   * worthless, and the hands it frees go to the harvest and to the rock.
+   */
+  private haulWorth(resource: ResourceId, plentiful: ReadonlySet<ResourceId>): number {
+    return plentiful.has(resource) ? JobPriority.low : JobPriority.high;
+  }
+
+  /**
+   * Re-prices standing haul work as the stores fill and empty.
+   *
+   * Pricing only at the moment a job is posted is not enough: a pile of logs
+   * marked for carrying when the yard was empty is still on the board an hour
+   * later when it is full, and it would keep its old claim on somebody's day.
+   *
+   * Deliveries are left alone. A load bound for a building site or a workshop is
+   * not stocking up — it is the one errand standing between that building and
+   * doing anything at all — so it keeps its priority however full the yards are.
+   */
+  private repriceHauls(plentiful: ReadonlySet<ResourceId>): void {
+    // **Only hauling is priced this way, and pricing the harvest the same way was
+    // tried and measured worse.** Dropping felling below mining when the yard was
+    // full of timber sounds like the same idea and is not: the settlement then
+    // stopped cutting entirely at eighty logs, the Woodcutter ate through them,
+    // and there was nothing to build the next hut with. 93 deaths against 80, and
+    // barely any food banked before the cold. A player's felling order is an
+    // order; what the settlement is free to deprioritise is *carrying more of
+    // what it already has*.
+    for (const job of this.jobs.all) {
+      if (job.type !== 'haul' || job.state !== 'available' || !job.haulResource) {
+        continue;
+      }
+      if (job.targetEntityId !== null && job.targetEntityId >= MATERIAL_RESERVATION_BASE) {
+        continue;
+      }
+      job.priority = this.haulWorth(job.haulResource, plentiful);
     }
   }
 
@@ -1931,6 +2126,9 @@ export class Simulation {
    * appears means piles left over from a cancelled haul get picked up again.
    */
   private createHaulJobs(): void {
+    const plentiful = this.plentiful();
+    this.repriceHauls(plentiful);
+
     for (const pile of this.world.piles.all) {
       if (pile.isEmpty || this.jobs.isTargetReserved('haul', pile.id)) {
         continue;
@@ -1960,11 +2158,12 @@ export class Simulation {
         type: 'haul',
         target: pile.cell,
         deliverTo: destination,
-        // Carrying goods in outranks cutting more down. At equal priority the
-        // nearest job won, so a marked stand of trees buried the hauling: the
-        // settlement starved with fifty food lying in piles beside the hut,
-        // because nobody would stop chopping long enough to carry it in.
-        priority: JobPriority.high,
+        // Carrying goods in outranks cutting more down — while the settlement
+        // wants the goods. At equal priority the nearest job won, so a marked
+        // stand of trees buried the hauling and the settlement starved with fifty
+        // food in piles beside the hut. Once the shelves hold enough of
+        // something, carrying more of it drops below both. See {@link haulWorth}.
+        priority: this.haulWorth(pile.resource, plentiful),
         targetEntityId: pile.id,
       });
     }
@@ -1975,9 +2174,9 @@ export class Simulation {
    *
    * The settlement starts with one yard already standing, because resources
    * exist physically in this game and there has to be somewhere to haul to
-   * before anything can be built. What that yard *is*, though, is the wreck's
-   * cargo stacked on the beach — so it sits at the landfall rather than in the
-   * middle of the map, and the sea is in shot from the first frame.
+   * before anything can be built. What that yard *is*, though, is what the
+   * settlers carried in — so it sits where they stopped walking, on the river
+   * bank, and the water is in shot from the first frame.
    */
   private foundStorageYard(): void {
     const cell = this.world.landfallCell;
@@ -2000,23 +2199,38 @@ export class Simulation {
 
     const yard = this.storages.add({ cell, capacity: 2000 });
 
-    // **What they carried is set down where they stopped.**
+    // **What they carried goes onto the shelves.**
     //
-    // The food goes into the camp store, because that is what a store is for and
-    // because people eat out of one. Everything else — the timber, the stone, the
-    // iron nobody can use yet — is stacked on the ground beside it, in bundles,
-    // which is both what ten tired people actually do and now a perfectly good
-    // place to build from: a site takes its materials from the nearest source it
-    // can walk to, shelf or ground alike. Nothing has to be tidied away first.
+    // It was stacked on the ground for a while, in bundles, which is what ten
+    // tired people would actually do — and it read as a mess rather than as a
+    // camp. A settlement that opens with its own stores full is the clearer
+    // picture and the clearer opening move: the numbers on the HUD are the
+    // numbers the settlement has, and the first thing the player does is spend
+    // them rather than tidy them away.
     //
-    // Spilled across neighbouring cells where a stack will not hold it all, so
-    // none of it is quietly lost. See `World.dropNear`.
+    // Nothing was lost in the change. A building site takes its materials from
+    // the nearest source it can walk to, shelf or pile alike, so building
+    // straight off the ground still works — it is simply no longer the state the
+    // game starts in.
     for (const [resource, amount] of Object.entries(STARTING_RESOURCES)) {
-      if (resource === 'food') {
-        yard.inventory.add(resource as ResourceId, amount);
-        continue;
-      }
-      this.world.dropNear(cell, resource as ResourceId, amount);
+      yard.inventory.add(resource as ResourceId, amount);
+    }
+  }
+
+  /**
+   * Everywhere the settlement stands, for reachability questions.
+   *
+   * Villagers first and stores after: a person is standing on ground by
+   * definition, whereas a store's cell can be built over. Both are wanted,
+   * because a settlement can quite legitimately be split across a river with a
+   * bridge between — and then both banks are "the settlement".
+   */
+  private *reachAnchors(): Iterable<GridPoint> {
+    for (const villager of this.villagers.all) {
+      yield villager.cell;
+    }
+    for (const storage of this.storages.all) {
+      yield storage.cell;
     }
   }
 

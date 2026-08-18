@@ -31,6 +31,20 @@ export interface ResourceDefinition {
    * than a decision.
    */
   readonly spoilsPerDay: number;
+  /**
+   * How much of this the settlement wants on its shelves, per villager.
+   *
+   * **Not a cap and not a target the player is shown — a price on labour.** A
+   * settlement with a hundred and seventy logs in the yard and no food in the
+   * larder was measured spending a third of its waking hours carrying more logs
+   * in, because every haul on the board was worth exactly as much as every other
+   * one. Above this figure a haul of this good drops to the bottom of the board,
+   * which frees the hands that were doing worthless work.
+   *
+   * Read per person so it grows with the settlement: eight logs each is a modest
+   * timber reserve for ten and a modest one for eighty.
+   */
+  readonly wantedPerVillager: number;
 }
 
 export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
@@ -41,6 +55,7 @@ export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
     maxStack: 20,
     carryLimit: 5,
     spoilsPerDay: 0,
+    wantedPerVillager: 8,
   },
   firewood: {
     id: 'firewood',
@@ -49,6 +64,7 @@ export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
     maxStack: 40,
     carryLimit: 10,
     spoilsPerDay: 0,
+    wantedPerVillager: 15,
   },
   stone: {
     id: 'stone',
@@ -57,6 +73,7 @@ export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
     maxStack: 20,
     carryLimit: 4,
     spoilsPerDay: 0,
+    wantedPerVillager: 5,
   },
   iron: {
     id: 'iron',
@@ -67,6 +84,7 @@ export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
     maxStack: 15,
     carryLimit: 3,
     spoilsPerDay: 0,
+    wantedPerVillager: 3,
   },
   tools: {
     id: 'tools',
@@ -78,6 +96,7 @@ export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
     // charged daily against the people doing the work, which is a different
     // thing from spoilage and lives in the survival system.
     spoilsPerDay: 0,
+    wantedPerVillager: 2,
   },
   hides: {
     id: 'hides',
@@ -86,6 +105,7 @@ export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
     maxStack: 20,
     carryLimit: 6,
     spoilsPerDay: 0,
+    wantedPerVillager: 3,
   },
   clothing: {
     id: 'clothing',
@@ -96,6 +116,7 @@ export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
     // Wears out on people's backs through a cold winter, not in a yard. Like
     // tools, that wear is charged daily and lives in the survival system.
     spoilsPerDay: 0,
+    wantedPerVillager: 2,
   },
   herbs: {
     id: 'herbs',
@@ -106,6 +127,7 @@ export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
     // Dried and hung, not eaten fresh. They keep, which is the only reason a
     // settlement can gather them in summer against a winter of illness.
     spoilsPerDay: 0,
+    wantedPerVillager: 2,
   },
   food: {
     id: 'food',
@@ -117,6 +139,7 @@ export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
     // of food in a general yard will not survive a winter, and not so much
     // that the settlement cannot live hand to mouth in summer without a larder.
     spoilsPerDay: 0.1,
+    wantedPerVillager: 25,
   },
 };
 

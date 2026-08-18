@@ -156,7 +156,24 @@ describe('making camp', () => {
       const landfall = simulation.world.landfallCell;
       for (const villager of simulation.villagers.all) {
         const distance = Math.hypot(villager.cell.gx - landfall.gx, villager.cell.gy - landfall.gy);
-        expect(distance, `seed ${seed} ${villager.name}`).toBeLessThan(12);
+        expect(distance, `seed ${seed} ${villager.name}`).toBeLessThan(9);
+      }
+    }
+  });
+
+  it('never leaves one of them on the far bank', () => {
+    // **The river runs right past the camp, and the spawn search did not care.**
+    // Two or three settlers could start across the water, cut off from the
+    // settlement and from everything in it on the very first frame, and they would
+    // stand there until somebody built a bridge nobody knew was needed.
+    for (const seed of SEEDS) {
+      const simulation = new Simulation({ ...OPTIONS, seed });
+      const camp = simulation.storages.all[0]!.cell;
+      for (const villager of simulation.villagers.all) {
+        expect(
+          simulation.world.navigation.connects(villager.cell, camp),
+          `seed ${seed} ${villager.name} cannot reach the camp`,
+        ).toBe(true);
       }
     }
   });
@@ -184,33 +201,31 @@ describe('what they brought', () => {
         0,
       ) * 3,
     );
-    expect(onTheGround(simulation, 'stone')).toBe(carried);
+    expect(simulation.storages.totalOf('stone')).toBe(carried);
   });
 
   it('contains iron nobody can use yet', () => {
-    // It sits in the bundle doing nothing until there is a Blacksmith, which is
+    // It sits on the shelf doing nothing until there is a Blacksmith, which is
     // the promise that there is somewhere to grow into.
     const simulation = new Simulation(OPTIONS);
-    expect(onTheGround(simulation, 'iron')).toBeGreaterThan(0);
+    expect(simulation.storages.totalOf('iron')).toBeGreaterThan(0);
   });
 
-  it('is set down on the ground, except the food', () => {
-    // What ten tired people do, and a perfectly good place to build from: a site
-    // takes its materials from the nearest source it can walk to, ground or shelf.
-    // The food goes in the store, because people eat out of one.
+  it('is on the shelves, and the ground is clear', () => {
+    // **It was stacked on the ground in bundles for a while**, on the reasoning
+    // that it is what ten tired people would actually do. It read as a mess
+    // rather than as a camp, and it made the opening move "tidy up" instead of
+    // "build". Everything starts stored.
+    //
+    // Nothing was lost by putting it back: a site takes its materials from the
+    // nearest source it can walk to, shelf or pile alike, so building straight
+    // off the ground still works when there is anything lying there.
     const simulation = new Simulation(OPTIONS);
 
     expect(simulation.storages.totalOf('food')).toBe(STARTING_RESOURCES.food);
-    expect(simulation.storages.totalOf('logs')).toBe(0);
-    expect(onTheGround(simulation, 'logs')).toBe(STARTING_RESOURCES.logs);
-
-    // And within a few paces of the camp, not scattered across the map.
-    const camp = simulation.world.landfallCell;
-    for (const pile of simulation.world.piles.all) {
-      expect(
-        Math.max(Math.abs(pile.cell.gx - camp.gx), Math.abs(pile.cell.gy - camp.gy)),
-      ).toBeLessThan(5);
-    }
+    expect(simulation.storages.totalOf('logs')).toBe(STARTING_RESOURCES.logs);
+    expect(onTheGround(simulation, 'logs')).toBe(0);
+    expect([...simulation.world.piles.all]).toEqual([]);
   });
 
   it('still leaves them able to feed themselves before they find a quarry', () => {

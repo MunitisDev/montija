@@ -170,8 +170,11 @@ describe('an ill villager, in play', () => {
     expect(worker.currentJobId).toBeNull();
     expect(worker.activity).toBe('ill');
     expect(worker.path).toEqual([]);
-    // Handed back, not destroyed: somebody else can pick the work up today.
-    expect(simulation.jobs.get(jobId)?.assignedVillager ?? null).toBeNull();
+    // Handed back, not destroyed — and often picked straight back up: on a busy
+    // board somebody else claims it inside the same tick, which is the whole
+    // point of handing it back. So the claim is that the *ill* villager is not
+    // holding it, not that nobody is.
+    expect(simulation.jobs.get(jobId)?.assignedVillager ?? null).not.toBe(worker.id);
   });
 
   it('stays put', () => {

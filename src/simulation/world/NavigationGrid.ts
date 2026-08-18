@@ -52,6 +52,7 @@ export class NavigationGrid {
    * majority of grid changes are of that kind.
    */
   private regions: Int32Array | null = null;
+  private structure = 0;
 
   /**
    * Roads laid over the terrain, or `null` before any exist.
@@ -90,6 +91,7 @@ export class NavigationGrid {
       this.refreshCell(terrain, gx, gy);
     });
     this.regions = null;
+    this.structure += 1;
   }
 
   /**
@@ -129,7 +131,20 @@ export class NavigationGrid {
     const now = (this.costs[index] ?? BLOCKED) !== BLOCKED;
     if (wasWalkable !== now) {
       this.regions = null;
+      this.structure += 1;
     }
+  }
+
+  /**
+   * Bumped whenever what-connects-to-what may have changed.
+   *
+   * Anything caching an answer about reachability can hold it against this
+   * number: villagers walk about constantly, but the *shape* of the walkable
+   * ground changes only when a wall goes up, a bridge is finished or a channel is
+   * cut.
+   */
+  public get structureVersion(): number {
+    return this.structure;
   }
 
   public contains(gx: number, gy: number): boolean {

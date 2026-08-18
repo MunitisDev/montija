@@ -75,8 +75,21 @@ describe('mining, once the player marks trees', () => {
     const contested = SEEDS.map((seed) => stoneDelivered(seed, { trees: 40 }));
     const starved = contested.filter((amount) => amount === 0);
 
-    // Five of eight brought home nothing at all.
-    expect(starved.length).toBeGreaterThanOrEqual(4);
+    // **Five of eight brought home nothing at all when this was written. Two do
+    // now, and the improvement is real rather than a shifted seed.**
+    //
+    // Three logistics defects around the camp's own store were found and fixed —
+    // see `docs/GAME_DESIGN.md`, "The founding yard's doorway" — and one of them
+    // was that a store whose doorway had been built over could be delivered to
+    // and never fetched from. A hauler carrying stone in still worked; a builder
+    // trying to take it out again did not, so the stone arrived and then sat
+    // there. Some of what looked like "mining stops" was mining working and the
+    // stone being unreachable afterwards.
+    //
+    // The mechanism this file is about survives it: the collapse in the test above
+    // is unchanged, and mining still loses to felling on the seeds where the rock
+    // is further out than the trees.
+    expect(starved.length).toBeGreaterThanOrEqual(2);
   });
 
   it('escapes only where the rock is closer than the trees', () => {
@@ -125,15 +138,23 @@ describe('why it happens', () => {
   it('leaves the mining orders standing, unclaimed', () => {
     // The orders are not lost or cancelled — they sit on the board being passed
     // over, which is why the settlement looks busy while nothing arrives.
-    const simulation = new Simulation(options(SEEDS[1]!));
-    designateNearbyStone(simulation, DEPOSITS);
-    designateNearbyTrees(simulation, 40);
-    advance(simulation, TICKS_PER_DAY * DAYS);
+    //
+    // **Asked of the seed where it still happens.** It used to be true of the
+    // second seed too; hauling stopped carrying goods the settlement already had
+    // plenty of, which freed enough hands that those particular orders now get
+    // claimed. The defect is narrower than it was and it is not gone: a settlement
+    // whose rock lies further out than its trees still never reaches it.
+    const stranded = SEEDS.filter((seed) => {
+      const simulation = new Simulation(options(seed));
+      designateNearbyStone(simulation, DEPOSITS);
+      designateNearbyTrees(simulation, 40);
+      advance(simulation, TICKS_PER_DAY * DAYS);
+      return simulation.jobs.all.some(
+        (job) => job.type === 'gather-stone' && job.state === 'available',
+      );
+    });
 
-    const unclaimed = simulation.jobs.all.filter(
-      (job) => job.type === 'gather-stone' && job.state === 'available',
-    );
-    expect(unclaimed.length).toBeGreaterThan(0);
+    expect(stranded.length).toBeGreaterThan(0);
   });
 });
 
