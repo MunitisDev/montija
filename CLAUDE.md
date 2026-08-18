@@ -873,6 +873,11 @@ Prefer explicit types for simulation state. Avoid `any` unless unavoidable and d
 
 The GitHub repository is the source of truth.
 
+**Always push finished work to `main`.** GitHub Pages deploys from `main` only, so work
+that sits on a side branch is work the player cannot play — and a report of "the game
+does not do X" against a change that only exists on a branch costs an afternoon to
+diagnose. Merge and push; do not leave a branch waiting for permission.
+
 Before making changes:
 
 1. inspect existing files;
