@@ -272,7 +272,7 @@ describe('the first winter', () => {
     // ten grown-ups became a smaller village, so one hut nearly fed it and nobody
     // died. It then asserted a *bare* larder — nothing at all in store — and that
     // went the day a villager's load doubled: hauling improved enough that one hut
-    // now banks about 78 on the reference seed.
+    // now banks about 43 on the reference seed.
     //
     // What is left is still the difference the player can act on, and the ladder
     // below is where it is measured properly. A settlement on one hut reaches the
@@ -295,7 +295,7 @@ describe('the first winter', () => {
     // distances and its own wood, so a single year's figure swings wildly for the
     // same script; over twenty-four seeds the shape is clear.
     //
-    // Measured: **806 food banked on one hut, 1981 on two, 1763 on three.** The
+    // Measured: **643 food banked on one hut, 1799 on two, 1685 on three.** The
     // second hut is worth two and a half times the first. The third is *not* worth
     // more than the second, and that is not noise being generous — `prepared`
     // raises its third hut on day 16 and its larder on day 20, where `twoHuts` has

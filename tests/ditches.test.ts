@@ -200,81 +200,57 @@ describe('an orchard and its water', () => {
 });
 
 describe('an orchard and its larder', () => {
-  it('keeps its harvest where it falls, if a larder is beside it', () => {
-    // **The rule that replaced doubling the yield.** An orchard beside a larder
-    // does not grow more fruit; it *loses* none. What used to happen is that the
-    // best crop in the game sat in a pile going off at an open yard's rate while
-    // it waited for a hauler, so a share of every basket never reached a shelf.
-    const simulation = new Simulation(OPTIONS);
-    const origin = clearing(simulation, 24);
-    const orchard = raise(simulation, 'orchard', { gx: origin.gx + 1, gy: origin.gy + 1 });
+  it('gets its crop home when the larder is next door, and loses it when it is not', () => {
+    // **What replaced two rules that were built and taken out again** — first
+    // doubling the orchard's yield beside a larder, then having the larder
+    // preserve whatever lay within six cells of its door. Both were favours
+    // granted by proximity, invisible on the map and impossible to point at.
+    //
+    // This is the same lesson with nothing invented: the crop is picked at the
+    // orchard and has to be carried, so a larder next door means a short walk
+    // repeated all autumn, and a larder across the settlement means a long one.
+    // Nothing preserves anything; the haul simply keeps up or does not.
+    const near = harvestAutumn(4);
+    const far = harvestAutumn(18);
 
-    const harvest = orchard.accessCell;
-    expect(simulation.storages.shelterAt(harvest, 'food')).toBe(1);
-
-    raise(simulation, 'food-storage', { gx: origin.gx + 1, gy: origin.gy + 5 });
-
-    expect(simulation.storages.shelterAt(harvest, 'food')).toBe(
-      buildingDefinition('food-storage').storage!.preservation,
-    );
-  });
-
-  it('gets no such favour from a larder across the settlement', () => {
-    const simulation = new Simulation(OPTIONS);
-    const origin = clearing(simulation, 30);
-    const orchard = raise(simulation, 'orchard', { gx: origin.gx + 1, gy: origin.gy + 1 });
-    const reach = buildingDefinition('food-storage').storage!.shelters!;
-
-    raise(simulation, 'food-storage', {
-      gx: origin.gx + 1,
-      gy: origin.gy + reach + 6,
-    });
-
-    expect(simulation.storages.shelterAt(orchard.accessCell, 'food')).toBe(1);
-  });
-
-  it('gets nothing from an open yard, however close it stands', () => {
-    // The founding yard takes food and keeps it as badly as the ground does. The
-    // question this mechanic poses is "did you build a larder?", and an answer of
-    // "there is a shed over there" is not the same answer.
-    const simulation = new Simulation(OPTIONS);
-    const yard = simulation.storages.all[0]!;
-    expect(yard.isFor('food')).toBe(true);
-    expect(simulation.storages.shelterAt(yard.cell, 'food')).toBe(1);
-  });
-
-  it('is no use once the larder is full', () => {
-    // A full larder is not keeping anything for anybody, and a settlement whose
-    // food was preserved by a store with no room in it would be told a comforting
-    // lie about a harvest it is about to lose.
-    const simulation = new Simulation(OPTIONS);
-    const origin = clearing(simulation, 24);
-    const larder = raise(simulation, 'food-storage', { gx: origin.gx + 1, gy: origin.gy + 1 });
-    const beside = { gx: larder.origin.gx + 4, gy: larder.origin.gy };
-
-    expect(simulation.storages.shelterAt(beside, 'food')).toBeLessThan(1);
-
-    const store = simulation.storages.all.find((one) => one.ownerBuildingId === larder.id)!;
-    store.inventory.add('food', store.inventory.freeSpace);
-
-    expect(simulation.storages.shelterAt(beside, 'food')).toBe(1);
-  });
-
-  it('is a rule about the store, so a field beside one keeps too', () => {
-    // Written as a fact about the larder rather than about the orchard, because
-    // there is nothing special about fruit: anything perishable lying within
-    // reach of a store built to keep it, keeps.
-    const simulation = new Simulation(OPTIONS);
-    const origin = clearing(simulation, 24);
-    raise(simulation, 'food-storage', { gx: origin.gx + 1, gy: origin.gy + 1 });
-
-    expect(
-      simulation.storages.shelterAt({ gx: origin.gx + 4, gy: origin.gy + 2 }, 'food'),
-    ).toBeLessThan(1);
-    // And only for what the store would take: its shade does no good to timber.
-    expect(simulation.storages.shelterAt({ gx: origin.gx + 4, gy: origin.gy + 2 }, 'logs')).toBe(1);
+    expect(near.stored).toBeGreaterThan(far.stored);
+    expect(near.lying).toBeLessThan(far.lying);
   });
 });
+
+/**
+ * An autumn of one orchard, with the larder `distance` cells away.
+ *
+ * @returns how much food reached a store, and how much is still in the field
+ */
+function harvestAutumn(distance: number): { stored: number; lying: number } {
+  const simulation = new Simulation(OPTIONS);
+  const origin = clearing(simulation, 30);
+  raise(simulation, 'orchard', { gx: origin.gx + 1, gy: origin.gy + 1 });
+  raise(simulation, 'food-storage', { gx: origin.gx + 1, gy: origin.gy + distance });
+
+  // Fed by hand until the fruit is ready, so this measures an orchard rather than
+  // a settlement starving before its trees come in.
+  const yard = simulation.storages.all[0]!;
+  while (simulation.snapshot().season !== 'autumn') {
+    yard.inventory.add('food', 20);
+    simulation.storages.markChanged();
+    run(simulation, TICKS_PER_DAY);
+  }
+  yard.inventory.remove('food', yard.inventory.count('food'));
+  simulation.storages.markChanged();
+
+  const before = simulation.snapshot().stored.food;
+  run(simulation, TICKS_PER_DAY * 10);
+  const snapshot = simulation.snapshot();
+  return { stored: snapshot.stored.food - before, lying: snapshot.loose.food };
+}
+
+function run(simulation: Simulation, ticks: number): void {
+  for (let tick = 0; tick < ticks; tick += 1) {
+    simulation.update(simulation.tick + 1, 0.1);
+  }
+}
 
 /**
  * A patch of clear ground beside the settlement, with one cell of water in it.

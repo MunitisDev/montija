@@ -400,33 +400,75 @@ export class BuildingRegistry {
 /** How far around a new building its builders will shift a stranded load. */
 const REACH = 2;
 
+/**
+ * How far from a building a doorway may be found.
+ *
+ * One ring is the ordinary answer and the one almost every building gets. The
+ * rings beyond it exist for the building that has been walled in on every side by
+ * its neighbours: rather than have it stand there with a delivery point inside a
+ * wall — which is how a settlement ends up starving beside a hut that is working
+ * perfectly — it takes the nearest free ground it can and the haulers walk the
+ * last few paces.
+ */
+const DOORWAY_SEARCH = 4;
+
+/**
+ * The cell haulers and builders walk to for a building.
+ *
+ * **Any free ground touching it will do**, and a road touching it is better: a
+ * road is where the traffic already goes, and a doorway on one is a delivery that
+ * arrives at road speed. Beyond that the rule is simply nearest-first, and the
+ * only hard requirement is that the settlement can actually walk there — a
+ * doorway opening onto a sealed pocket is worse than no doorway at all, because
+ * everything set down on it is lost in plain sight.
+ *
+ * Falls back to the middle of the footprint when a building has no reachable
+ * ground anywhere near it, which is a settlement that has built itself into a
+ * knot. Even then the goods are not destroyed: `World.dropNear` spills them onto
+ * whatever ground it can find.
+ */
 export function findAccessCell(world: World, building: Building): GridPoint {
   const { footprint } = building.definition;
   const { gx, gy } = building.origin;
   const heart = world.heartCell;
 
-  let fallback: GridPoint | null = null;
-  for (let x = gx - 1; x <= gx + footprint.width; x += 1) {
-    for (let y = gy - 1; y <= gy + footprint.height; y += 1) {
-      const insideFootprint =
-        x >= gx && x < gx + footprint.width && y >= gy && y < gy + footprint.height;
-      if (insideFootprint || !world.navigation.isWalkable(x, y)) {
-        continue;
+  let stranded: GridPoint | null = null;
+
+  for (let ring = 1; ring <= DOORWAY_SEARCH; ring += 1) {
+    let free: GridPoint | null = null;
+
+    for (let x = gx - ring; x < gx + footprint.width + ring; x += 1) {
+      for (let y = gy - ring; y < gy + footprint.height + ring; y += 1) {
+        const inner =
+          x >= gx - ring + 1 &&
+          x < gx + footprint.width + ring - 1 &&
+          y >= gy - ring + 1 &&
+          y < gy + footprint.height + ring - 1;
+        if (inner || !world.navigation.isWalkable(x, y)) {
+          continue;
+        }
+
+        const cell = { gx: x, gy: y };
+        if (!world.navigation.connects(heart, cell)) {
+          stranded ??= cell;
+          continue;
+        }
+        // A road beats bare ground at the same distance, and beats it enough to
+        // stop looking: the whole point of laying one is that goods travel it.
+        if (world.roads.hasAt(cell)) {
+          return cell;
+        }
+        free ??= cell;
       }
-      // **A doorway the settlement can actually walk to.** Any walkable
-      // neighbour used to do, and a building packed between two others can
-      // easily have one side opening onto a sealed pocket of two cells. Its
-      // harvest was then piled somewhere nobody could ever reach — the food was
-      // there, the gatherers were working, and the settlement starved.
-      if (world.navigation.connects(heart, { gx: x, gy: y })) {
-        return { gx: x, gy: y };
-      }
-      fallback ??= { gx: x, gy: y };
+    }
+
+    if (free) {
+      return free;
     }
   }
 
   return (
-    fallback ?? {
+    stranded ?? {
       gx: gx + Math.floor(footprint.width / 2),
       gy: gy + Math.floor(footprint.height / 2),
     }

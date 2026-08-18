@@ -29,8 +29,6 @@ export interface StorageOptions {
    * there is room for it, but only keeps *well* somewhere built for it.
    */
   readonly preservation?: number;
-  /** How far this store's care reaches beyond its walls, in cells. */
-  readonly shelters?: number;
   /**
    * The building that opened this yard, or `null` for the founding one.
    *
@@ -48,14 +46,6 @@ export class Storage {
   public readonly inventory: Inventory;
   /** Multiplier on how fast perishable goods spoil here. */
   public readonly preservation: number;
-  /**
-   * How far its care reaches beyond its walls, in cells.
-   *
-   * A larder keeps what is lying beside it almost as well as what is inside it:
-   * the shade of the store, its awning, the shelf by its door. `0` for a store
-   * that has no such reach, which is every open yard.
-   */
-  public readonly shelters: number;
   /** The building this yard belongs to, or `null` for the founding one. */
   public readonly ownerBuildingId: number | null;
   private readonly accepted: ReadonlySet<ResourceId> | null;
@@ -65,7 +55,6 @@ export class Storage {
     this.cell = options.cell;
     this.inventory = new Inventory(options.capacity);
     this.preservation = options.preservation ?? 1;
-    this.shelters = options.shelters ?? 0;
     this.ownerBuildingId = options.ownerBuildingId ?? null;
     this.accepted = options.accepts && options.accepts.length > 0 ? new Set(options.accepts) : null;
   }
@@ -119,37 +108,6 @@ export class StorageRegistry {
 
   public markChanged(): void {
     this.changeVersion += 1;
-  }
-
-  /**
-   * How fast a perishable good lying on a cell will turn, as a multiplier.
-   *
-   * **The answer to "what happens to a harvest before anybody carries it in".**
-   * On open ground it is 1, the same as an ordinary yard: a pile is where goods
-   * sit for the hour it takes somebody to fetch them, and taxing the settlement
-   * for the distance between its hut and its shed was never the point. Within a
-   * larder's reach it is the larder's own figure — the shade of the store, its
-   * awning, the shelf by its door — which is what lets an orchard beside one
-   * deliver its whole crop instead of most of it.
-   *
-   * Only stores that could actually take the good count, room included: a full
-   * larder is not keeping anything for anybody.
-   */
-  public shelterAt(cell: GridPoint, resource: ResourceId): number {
-    let best = 1;
-    for (const storage of this.storages) {
-      if (storage.shelters <= 0 || storage.preservation >= best || !storage.accepts(resource)) {
-        continue;
-      }
-      const distance = Math.max(
-        Math.abs(storage.cell.gx - cell.gx),
-        Math.abs(storage.cell.gy - cell.gy),
-      );
-      if (distance <= storage.shelters) {
-        best = storage.preservation;
-      }
-    }
-    return best;
   }
 
   /** `true` once a purpose-built food store stands, as against the open yard. */

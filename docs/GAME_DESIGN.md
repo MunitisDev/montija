@@ -81,19 +81,20 @@ An orchard has to stand on water: the river, or a channel dug from it. It is the
 one building whose place on the map is a real decision rather than "anywhere there
 is room".
 
-**And a larder beside it keeps the whole crop.** Fruit is the one harvest that will
-not wait: baskets standing in an autumn field were spoiling at an open yard's rate
-while they waited for a hauler, so a share of every picking never reached a shelf.
-A Food Storage now looks after what is lying **within six cells of its door** as
-well as it looks after what is inside — its shade, its awning, the shelf by the
-step.
+**And the larder wants to be next to it.** Fruit is the one harvest that will not
+wait and the heaviest to shift: an Orchard in autumn makes about fifty food a day,
+which is more than the pickers' own hut can absorb, so the crop stands in the field
+while haulers walk it in. A Food Storage next door is a short walk repeated all
+autumn; one across the settlement is a long one, and the difference is most of the
+harvest.
 
-> **This replaced doubling the orchard's yield.** The first version made an
-> orchard beside a larder produce twice the fruit, which was the wrong shape: the
-> settlement did not need more fruit conjured out of proximity, it needed the fruit
-> it had already grown to arrive. Losing nothing is a better reward than being
-> given more, and it is a rule about the _store_ rather than about the orchard —
-> anything perishable lying within reach of a building made to keep it, keeps.
+> **Two versions of this were built and taken out again.** The first doubled the
+> orchard's yield when a larder stood within ten cells. The second had the larder
+> preserve whatever was lying within six cells of its door. Both were favours
+> granted by proximity — invisible on the map, impossible to point at, and needing
+> to be explained before a player could use them. What is left is the plain thing:
+> goods keep where they are stored, they are carried by people, and a shorter walk
+> means more of them arrive. Each thing in its own building.
 
 The ditch is what turns the water requirement into a decision. A cell of open
 ground next to water can be dug into a channel — labour, no materials, like a road
@@ -501,10 +502,9 @@ planting one is a bet on a later autumn rather than a purchase.
 | Field    | 0.25   | 0.8    | 1.9    | 0      |
 | Orchard  | 0      | 0.7    | 2.4    | 0      |
 
-An orchard also has to **stand on water** — the river, or a ditch dug out to it — and wants a **Food
-Storage within six cells**, which is what stops its crop spoiling in the field while it waits for a
-hauler. Fruit is the one harvest that will not wait, and those two rules together are the first time
-the game asks _where_ rather than _whether_.
+An orchard also has to **stand on water** — the river, or a ditch dug out to it — and wants its larder
+built beside it, because fifty food a day is more than a hauler can walk across a settlement. Those
+two together are the first time the game asks _where_ rather than _whether_.
 
 A settlement that lives on foraging survives hand to mouth. One that farms has to
 store what it brings in and make it last — which is the lesson winter teaches,
@@ -851,16 +851,17 @@ a second, so retuning a number is a measurement rather than a five-minute stare 
 **One Gatherer Hut now feeds exactly ten villagers, and does not fill a store.** Measured at 10.00
 food a day eaten through the summer against 10 needed — which is a hut that keeps a settlement alive
 and leaves it nothing to spend on a winter. What the second hut buys is the margin: over 24 seeds a
-settlement on one hut banks 806 food by winter and a settlement on two banks 1981.
+settlement on one hut banks 643 food by winter and a settlement on two banks 1799.
 
 > **That changed when a villager's load doubled** (Phase 40: ten units to twenty). Before it, one hut
-> could not feed ten and the same sweep banked 487. Nothing about foraging moved; the hauling did.
+> could not feed ten, and twelve seeds of the reference opening banked 461 against 857 after. Nothing
+> about foraging moved; the hauling did.
 > Every economic problem in this game has turned out to be a hauling problem, and the load is the one
 > lever on it that costs the settlement nothing at all — the same twenty-four seeds bury the same
 > hundred villagers either way, because what kills them is cold.
 >
 > A **third** hut is not worth a second larder-day: `prepared` raises its third hut on day 16 and its
-> larder on day 20, banks 1763, and is beaten by the two-hut line that has its larder up on day 14.
+> larder on day 20, banks 1685, and is beaten by the two-hut line that has its larder up on day 14.
 
 The intended shape is that a prepared settlement survives its first winter _narrowly_: in the
 measured run above, the well-played settlement ends winter with six food in store and its firewood

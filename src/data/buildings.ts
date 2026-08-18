@@ -93,21 +93,6 @@ export interface BuildingDefinition {
     readonly accepts?: readonly ResourceId[];
     /** Multiplier on spoilage here; 1 is an open yard, lower keeps food better. */
     readonly preservation?: number;
-    /**
-     * How far this store's care reaches beyond its own walls, in cells.
-     *
-     * **What a larder does for a harvest that has not been carried in yet.**
-     * Goods lying on the ground keep as badly as goods in an open yard, which
-     * for the best crop in the game meant losing a share of every basket to the
-     * hours between picking it and somebody coming for it. Within this reach
-     * they keep exactly as well as they would inside — the shade of the store,
-     * its awning, the shelf by its door — so a settlement that puts its larder
-     * beside its orchard gets the whole crop rather than most of it.
-     *
-     * Only worth setting on a store that keeps things well: an open yard
-     * preserves nothing, so its reach would change nothing either.
-     */
-    readonly shelters?: number;
   };
   /** How many villagers can live here. */
   readonly housing?: number;
@@ -266,8 +251,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     id: 'food-storage',
     category: 'shelter',
     name: 'Food Storage',
-    description:
-      'Keeps food from spoiling — inside it, and within a few paces of its door. Food left in an open yard rots.',
+    description: 'Keeps food from spoiling. Food left in an open yard rots.',
     footprint: { width: 2, height: 2 },
     constructionCost: [
       { resource: 'logs', amount: 6 },
@@ -278,10 +262,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     // A tenth of the spoilage of an open yard. This is the whole reason the
     // building exists: food will sit anywhere, but only keeps through a winter
     // in here.
-    // `shelters`: what a larder does for the basket that has not been carried in
-    // yet. Six cells is "beside it" — an orchard or a field next door is
-    // covered, one across the settlement is not.
-    storage: { capacity: 800, accepts: ['food'], preservation: 0.1, shelters: 6 },
+    storage: { capacity: 800, accepts: ['food'], preservation: 0.1 },
   },
   'gatherer-hut': {
     id: 'gatherer-hut',
@@ -351,7 +332,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     category: 'food',
     name: 'Orchard',
     description:
-      'Fruit trees, on a bank or a ditch. Years to establish, and the best harvest there is — put a larder beside it or the crop rots where it is picked.',
+      'Fruit trees, on a bank or a ditch. Years to establish, and then the best harvest there is — build the larder near it, or the pickers out-run the haulers.',
     footprint: { width: 3, height: 3 },
     constructionCost: [
       { resource: 'logs', amount: 10 },

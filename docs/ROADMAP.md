@@ -22,49 +22,50 @@ count is claimed**: nothing has yet pushed the renderer hard enough to find one.
 
 Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 
-| Phase | Name                          | Status          |
-| ----- | ----------------------------- | --------------- |
-| 0     | Repository inspection         | **Implemented** |
-| 1     | Browser foundation            | **Implemented** |
-| 2     | Isometric world               | **Implemented** |
-| 3     | Villagers                     | **Implemented** |
-| 4     | Job system                    | **Implemented** |
-| 5     | Resource logistics            | **Implemented** |
-| 6     | Construction                  | **Implemented** |
-| 7     | Economy                       | **Implemented** |
-| 8     | Seasons and survival          | **Implemented** |
-| 9     | Save / load                   | **Implemented** |
-| 10    | Mobile UX                     | **Implemented** |
-| 11    | Performance                   | **Implemented** |
-| 12    | Homes and population          | **Implemented** |
-| 13    | Seasons on screen             | **Implemented** |
-| 14    | Roads                         | **Implemented** |
-| 15    | Art pass                      | **Implemented** |
-| 16    | Land use                      | **Implemented** |
-| 17    | Professions                   | **Implemented** |
-| 18    | Clothing                      | **Implemented** |
-| 19    | Trade                         | **Implemented** |
-| 20    | Demolition                    | **Implemented** |
-| 21    | Health                        | **Implemented** |
-| 22    | Start screen and guide        | **Implemented** |
-| 23    | People, families and postings | **Implemented** |
-| 24    | Households                    | **Implemented** |
-| 25    | The coast and the camp        | **Implemented** |
-| 26    | Smoke and trade props         | **Implemented** |
-| 27    | The settings cog              | **Implemented** |
-| 28    | Stores, clock and ledger      | **Implemented** |
-| 29    | Getting home                  | **Removed**     |
-| 30    | The build menu                | **Implemented** |
-| 31    | Light and value               | **Implemented** |
-| 32    | Spirit                        | **Implemented** |
-| 33    | The silent dead ends          | **Implemented** |
-| 34    | Roads, growth and the ages    | **Implemented** |
-| 35    | Whole numbers and a last page | **Implemented** |
-| 36    | The labour panel              | **Implemented** |
-| 37    | The wood tends itself         | **Implemented** |
-| 38    | Room left in the sheds        | **Implemented** |
-| 39    | The river                     | **Implemented** |
-| 40    | The harvest that arrives      | **Implemented** |
+| Phase | Name                           | Status          |
+| ----- | ------------------------------ | --------------- |
+| 0     | Repository inspection          | **Implemented** |
+| 1     | Browser foundation             | **Implemented** |
+| 2     | Isometric world                | **Implemented** |
+| 3     | Villagers                      | **Implemented** |
+| 4     | Job system                     | **Implemented** |
+| 5     | Resource logistics             | **Implemented** |
+| 6     | Construction                   | **Implemented** |
+| 7     | Economy                        | **Implemented** |
+| 8     | Seasons and survival           | **Implemented** |
+| 9     | Save / load                    | **Implemented** |
+| 10    | Mobile UX                      | **Implemented** |
+| 11    | Performance                    | **Implemented** |
+| 12    | Homes and population           | **Implemented** |
+| 13    | Seasons on screen              | **Implemented** |
+| 14    | Roads                          | **Implemented** |
+| 15    | Art pass                       | **Implemented** |
+| 16    | Land use                       | **Implemented** |
+| 17    | Professions                    | **Implemented** |
+| 18    | Clothing                       | **Implemented** |
+| 19    | Trade                          | **Implemented** |
+| 20    | Demolition                     | **Implemented** |
+| 21    | Health                         | **Implemented** |
+| 22    | Start screen and guide         | **Implemented** |
+| 23    | People, families and postings  | **Implemented** |
+| 24    | Households                     | **Implemented** |
+| 25    | The coast and the camp         | **Implemented** |
+| 26    | Smoke and trade props          | **Implemented** |
+| 27    | The settings cog               | **Implemented** |
+| 28    | Stores, clock and ledger       | **Implemented** |
+| 29    | Getting home                   | **Removed**     |
+| 30    | The build menu                 | **Implemented** |
+| 31    | Light and value                | **Implemented** |
+| 32    | Spirit                         | **Implemented** |
+| 33    | The silent dead ends           | **Implemented** |
+| 34    | Roads, growth and the ages     | **Implemented** |
+| 35    | Whole numbers and a last page  | **Implemented** |
+| 36    | The labour panel               | **Implemented** |
+| 37    | The wood tends itself          | **Implemented** |
+| 38    | Room left in the sheds         | **Implemented** |
+| 39    | The river                      | **Implemented** |
+| 40    | The harvest that arrives       | **Implemented** |
+| 41    | Each thing in its own building | **Implemented** |
 
 ---
 
@@ -1179,9 +1180,9 @@ Exactly right, and the previous phase had it the wrong way round.
   the store rather than about the orchard: anything perishable within reach of a
   building made to keep it, keeps. Measured over ten days of a basket waiting for
   a hauler: 90% of it left, against under 70% out in the open.
-- **A villager carries twenty units instead of ten.** Measured over twenty-four
-  seeds of the reference opening: food banked by winter went from 487 to 901, with
-  no change to who lived or died. It is the one lever on hauling that costs the
+- **A villager carries twenty units instead of ten.** Measured over twelve seeds of
+  the reference opening: food banked by winter went from 461 to 857, with no change
+  to who lived or died. It is the one lever on hauling that costs the
   settlement nothing, and hauling is what every economic problem in this game turns
   out to be.
 - **Produce spills onto the next cell instead of evaporating.** A pile holds one
@@ -1199,14 +1200,48 @@ food side genuinely improved:
 
 - **one hut now feeds exactly ten** — 10.00 food a day eaten against 10 needed —
   where it used to fall short. It still banks almost nothing, which is what the
-  second hut is for: 806 food across the sweep against 1981.
+  second hut is for: 643 food across the sweep against 1799.
 - **a one-hut settlement no longer reaches winter on literally nothing**, so that
   assertion became a ceiling rather than a zero.
-- **a third hut is not worth a second larder-day.** `prepared` banks 1763 with
-  three huts and a day-20 larder; `twoHuts` banks 1981 with two and a day-14 one.
+- **a third hut is not worth a second larder-day.** `prepared` banks 1685 with
+  three huts and a day-20 larder; `twoHuts` banks 1799 with two and a day-14 one.
 - **the disciplined line is now measurably worse**, 230 deaths against 200, and the
   reason is the employment trap recorded in Phase 39: every extra workshop post
   takes a pair of hands out of the labour pool, and an employed villager's own
   workshop always has an urgent job — so the mining orders that would buy a
   Woodcutter are never claimed. Playing "better" employs the people who were going
   to fetch the stone.
+
+---
+
+## Phase 41 — Each thing in its own building — Implemented
+
+"Any road or free gap touching a building should serve as an entrance or somewhere
+to pile things; if it cannot go where it should, let it go somewhere else. And take
+out the nearness-to-larders thing. Things have to go to the larder, or stay where
+they were made — but things being looked after because a store is within some
+radius, I do not like. Each thing in its own building."
+
+Both halves right, and the second one is a correction of Phase 40.
+
+- **The larder's reach is gone.** A store looks after what is inside it and
+  nothing else. Two attempts at making an orchard's crop survive by being _near_
+  something — doubling the yield, then preserving what lay outside the door — were
+  both favours granted by proximity: invisible on the map, impossible to point at,
+  and needing to be explained before a player could use them. What is left is the
+  plain thing, and it is still a real reason to site a larder next to an orchard:
+  a shorter walk means more of the crop arrives. Measured over ten autumn days,
+  a larder four cells from the trees gets far more of the harvest into store than
+  one eighteen cells away.
+- **Any free ground touching a building is a doorway**, and a road touching it is
+  better — a road is where the traffic already goes, so goods arrive at road speed.
+  If the whole edge has been built over, the search widens by a ring at a time
+  rather than giving up and pointing at a wall, and the only hard requirement is
+  that the settlement can walk there: a doorway onto a sealed pocket is worse than
+  none, because everything set down on it is lost in plain sight.
+- **A spilled load lands where a hauler can reach it**, for the same reason.
+
+What survives from Phase 40, because it earned its place by measurement rather than
+by being a favour: **a villager carries twenty units** (food banked over 12 seeds:
+461 → 857), **produce spills onto the next cell instead of evaporating** when the
+doorstep pile is full, and the two earthworks — ditch and bridge — take real work.

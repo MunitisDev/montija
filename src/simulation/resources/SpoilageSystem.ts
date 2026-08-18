@@ -16,15 +16,18 @@
  * Where food sits decides how fast it turns:
  *
  * ```text
- * on the ground             ─▶ ordinary spoilage
- * on the ground by a larder ─▶ the larder's own figure
- * an open yard              ─▶ ordinary spoilage
- * a Food Storage            ─▶ a tenth of it, which is what carries a winter
+ * on the ground   ─▶ ordinary spoilage
+ * an open yard    ─▶ ordinary spoilage
+ * a Food Storage  ─▶ a tenth of it, which is what carries a winter
  * ```
  *
- * That second line is what makes an orchard worth siting rather than merely
- * building. Its crop is the best in the game and the one that will not wait, and
- * a larder beside it means the whole harvest reaches the shelves.
+ * **A store looks after what is inside it and nothing else.** A version of this
+ * where a larder also preserved whatever happened to be lying within six cells of
+ * its door was built and taken out again: goods belong to the building that holds
+ * them, and a rule that quietly cares for a pile in a field because a shed is
+ * within some radius is a rule the player cannot see, cannot point at, and would
+ * have to be told about. What a larder near an orchard actually buys is a shorter
+ * walk, which is visible on the map and needs no explaining.
  */
 
 import { RESOURCES, type ResourceId } from '@/data/resources';
@@ -40,9 +43,6 @@ import type { StorageRegistry } from '@/simulation/logistics/Storage';
  * the settlement for the distance between its hut and its yard. The choice
  * this mechanic exists to pose is "did you build a larder?", so that is the
  * only choice it charges for.
- *
- * A pile within a larder's reach does better than this; see
- * {@link StorageRegistry.shelterAt}.
  */
 export const GROUND_SPOILAGE_MULTIPLIER = 1;
 
@@ -93,11 +93,7 @@ export function runSpoilage(
   }
 
   for (const pile of [...piles.all]) {
-    // What is looking after this pile: the open sky, or a larder a few paces
-    // away. Nothing has to be carried anywhere for the second to be true, which
-    // is the whole point — the crop keeps while it waits for a hauler.
-    const rate =
-      RESOURCES[pile.resource].spoilsPerDay * storages.shelterAt(pile.cell, pile.resource);
+    const rate = RESOURCES[pile.resource].spoilsPerDay * GROUND_SPOILAGE_MULTIPLIER;
     spoil(pile.resource, pile.amount, rate, (n) => pile.inventory.remove(pile.resource, n));
     piles.removeIfEmpty(pile.id);
   }

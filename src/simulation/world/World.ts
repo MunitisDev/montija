@@ -409,7 +409,11 @@ export class World {
             continue;
           }
           const beside = { gx: cell.gx + dx, gy: cell.gy + dy };
-          if (!this.isWalkable(beside)) {
+          // Walkable *and* on the settlement's own ground: a load set down in a
+          // sealed pocket is as lost as one set down inside a wall, and this is
+          // the same mistake that once had a hut piling its harvest where no
+          // hauler could ever reach it.
+          if (!this.isWalkable(beside) || !this.navigation.connects(this.heartCell, beside)) {
             continue;
           }
           left -= this.piles.drop(beside, resource, left);
