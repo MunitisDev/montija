@@ -20,7 +20,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Simulation } from '@/simulation/Simulation';
 import { ADULT_AGE, CHILDBEARING_AGE_MIN, MAX_PAIR_AGE_GAP } from '@/data/population';
-import { FEMININE_NAMES, MASCULINE_NAMES } from '@/data/villagers';
+import { FAMILY_NAMES, FEMININE_NAMES, MASCULINE_NAMES } from '@/data/villagers';
 import { restore, serialise } from '@/simulation/save/serialise';
 import { TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
 import type { Building } from '@/simulation/buildings/Building';
@@ -260,6 +260,24 @@ describe('names', () => {
     for (const child of simulation.villagers.all.filter((v) => v.parentIds !== null)) {
       expect(child.name.split(' ').length).toBeGreaterThanOrEqual(2);
       expect(child.name.split(' ')[0]!.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('names everybody out of the valley, surname and all', () => {
+    // **The test that keeps a multi-word surname whole.** Half the family names
+    // are toponymics — `de Valdivielso`, `de Sotoscueva` — and a child inherits
+    // "everything after the given name", so a naming convention that split on the
+    // wrong space would quietly turn a family into the house of Valdivielso and
+    // its cousins the de-somethings. Asserted against the tables rather than
+    // against a list of strings, so adding a name to the valley cannot fail it.
+    const simulation = raiseAFamily(240);
+    expect(simulation.villagers.all.length).toBeGreaterThan(10);
+
+    for (const villager of simulation.villagers.all) {
+      const [given, ...rest] = villager.name.split(' ');
+      const pool = villager.sex === 'f' ? FEMININE_NAMES : MASCULINE_NAMES;
+      expect(pool, villager.name).toContain(given);
+      expect(FAMILY_NAMES, villager.name).toContain(rest.join(' '));
     }
   });
 

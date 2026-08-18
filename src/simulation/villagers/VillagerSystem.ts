@@ -1210,7 +1210,7 @@ export class VillagerSystem {
   }
 
   private makeName(sex: Sex): string {
-    const family = this.randomSource.pick(FAMILY_NAMES) ?? 'Of the Vale';
+    const family = this.randomSource.pick(FAMILY_NAMES) ?? 'del Valle';
     return `${this.givenName(sex)} ${family}`;
   }
 

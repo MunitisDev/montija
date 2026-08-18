@@ -66,6 +66,7 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 39    | The river                      | **Implemented** |
 | 40    | The harvest that arrives       | **Implemented** |
 | 41    | Each thing in its own building | **Implemented** |
+| 42    | Castilian names                | **Implemented** |
 
 ---
 
@@ -1245,3 +1246,31 @@ What survives from Phase 40, because it earned its place by measurement rather t
 by being a favour: **a villager carries twenty units** (food banked over 12 seeds:
 461 → 857), **produce spills onto the next cell instead of evaporating** when the
 doorstep pile is full, and the two earthworks — ditch and bridge — take real work.
+
+---
+
+## Phase 42 — Castilian names — Implemented
+
+"Can you make the inhabitants' names Castilian, both given names and Spanish
+surnames? Of another Castile if possible, but above all Spanish. I think it places
+it better, since the game is called Montija, which is an area in Las Merindades,
+north of Burgos, Castilian territory."
+
+Named out of its own valley, then. See
+[GAME_DESIGN.md](./GAME_DESIGN.md#where-they-came-from--implemented).
+
+- **Given names Castile actually used** in these centuries — Sancho, Jimena, Nuño,
+  Urraca, Fernán, Mencía — rather than modern Spanish ones, which would read as a
+  village of tourists.
+- **Family names half patronymic** (Fernández, Gutiérrez, Sáinz, Díez, Ruiz) and
+  **half toponymic from the Merindades** (de Espinosa, de Sotoscueva, de
+  Valdivielso, de Losa, de Mena, de Frías, de Bercedo) — which is how people were
+  told apart before surnames settled: by their father, or by where they came down
+  from.
+- The lists are the same lengths as the ones they replaced, so the founding party
+  is no more lopsided than it was and the seeded stream draws exactly what it drew.
+- **A surname may now contain a space**, which the inheritance convention already
+  handled ("given name, then everything else") and which is now pinned by a test:
+  every villager after four years of a growing settlement has a given name from the
+  right pool and a family name that appears in the table verbatim. Without it a
+  house of Valdivielso could quietly become a house of "de".

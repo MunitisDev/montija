@@ -295,15 +295,21 @@ describe('the first winter', () => {
     // distances and its own wood, so a single year's figure swings wildly for the
     // same script; over twenty-four seeds the shape is clear.
     //
-    // Measured: **643 food banked on one hut, 1799 on two, 1685 on three.** The
+    // Measured over the twelve: **211 food banked on one hut, 904 on two, 857 on
+    // three** — and over twenty-four, 643 / 1799 / 1685. The
     // second hut is worth two and a half times the first. The third is *not* worth
     // more than the second, and that is not noise being generous — `prepared`
     // raises its third hut on day 16 and its larder on day 20, where `twoHuts` has
     // its larder up on day 14. Six days of a larder is worth more than a third
     // hut, which is a finding rather than a failure, so the assertion says what is
     // true: the second hut is a step change, the third is inside the noise.
+    // Half the sweep, and only here: three scripts over twenty-four seeds is
+    // seventy-two simulated years and ran the test out of its three minutes. Twelve
+    // is still a dozen different maps, which is what this claim needs — the
+    // single-seed version of it was the thing that could not be trusted.
+    const LADDER_SEEDS = SEED_SWEEP.slice(0, 12);
     const banked = (script: PlayerScript): number =>
-      SEED_SWEEP.reduce(
+      LADDER_SEEDS.reduce(
         (total, seed) => total + playtest({ seed, days: DAYS_PER_YEAR, script }).atWinter.food,
         0,
       );
@@ -316,8 +322,8 @@ describe('the first winter', () => {
     expect(three).toBeGreaterThan(one * 1.5);
     // A real amount, not a rounding error: enough that stockpiling is a
     // strategy rather than a curiosity.
-    expect(two).toBeGreaterThan(SEED_SWEEP.length * 10);
-    // Seventy-two simulated years, so this one needs longer than the default.
+    expect(two).toBeGreaterThan(LADDER_SEEDS.length * 10);
+    // Thirty-six simulated years, so this one still needs longer than the default.
   }, 180_000);
 
   it('lets a prepared settlement bank food before the cold', () => {

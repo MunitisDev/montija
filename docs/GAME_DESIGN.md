@@ -28,6 +28,20 @@ That is deliberately all of it. The less the game says about what came, the more
 room there is for the thing the player eventually has to build walls against —
 and a premise that explains itself has nothing left to reveal.
 
+**And they are Castilians.** The game is named after Montija, a valley in Las
+Merindades north of Burgos, so the people are named out of the same hills: given
+names Castile actually used in these centuries — Sancho, Jimena, Nuño, Urraca,
+Fernán, Mencía — and family names that are half patronymics (Fernández, Gutiérrez,
+Sáinz) and half toponymics from the valleys next door (de Espinosa, de Sotoscueva,
+de Valdivielso, de Losa, de Mena). Velasco and Salazar are in the table too, which
+were the two great houses of the Merindades and are a quiet joke in a village of
+ten. Generic-medieval names put the settlement nowhere; these put it somewhere the
+rest of the game already agrees with — beech and oak, high pasture, hard winters.
+
+The naming convention is "given name, then everything else", so a surname with a
+space in it is inherited whole: a child of Domingo de Valdivielso is a
+Valdivielso.
+
 > **The shipwreck this replaced.** The settlers used to be castaways, and it read
 > well until the rest of the game caught up with it: strangers walk in to join a
 > settlement and a merchant calls every twelve days, neither of which happens on
