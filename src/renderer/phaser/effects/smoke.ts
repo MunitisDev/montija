@@ -49,8 +49,16 @@ export const WIND_X = 7;
 /** How long a puff lasts, before its own variation. */
 const BASE_LIFE = 3.4;
 
-/** Puffs per second from one chimney, before the season has its say. */
-const BASE_RATE = 2.6;
+/**
+ * Puffs per second from one chimney, before the season has its say.
+ *
+ * **Twice what it was, at half the size.** A plume is made of many small puffs
+ * fraying apart; at two and a half a second, growing fast, it came out as three
+ * or four grey balls stacked over the roof — which reads as a bug rather than as
+ * smoke. More and smaller costs nothing worth measuring: a puff is one filled
+ * circle, and the whole settlement is still capped by {@link MAX_PARTICLES}.
+ */
+const BASE_RATE = 4;
 
 /**
  * How hard each season's fires are burning.
@@ -69,12 +77,16 @@ const SEASON_RATE: Readonly<Record<Season, number>> = {
 /**
  * The most puffs allowed alive at once, across the whole settlement.
  *
- * A hard ceiling rather than a target. Thirty houses each emitting freely is a
- * few hundred filled circles a frame, which is affordable — but the count has
- * to be bounded by something other than optimism, because the number of houses
- * is not.
+ * A hard ceiling rather than a target. Thirty houses each emitting freely is
+ * several hundred filled circles a frame, which is affordable — but the count has
+ * to be bounded by something other than optimism, because the number of houses is
+ * not.
+ *
+ * Raised from 420 when the puffs got smaller and more numerous. The figure to
+ * keep it above is *houses × the size a winter plume settles at*, or the cap
+ * starts cutting plumes short in ordinary play, which looks like fires going out.
  */
-export const MAX_PARTICLES = 420;
+export const MAX_PARTICLES = 900;
 
 /** Seconds between puffs from one chimney in a given season. */
 export function emissionInterval(season: Season): number {
@@ -96,7 +108,7 @@ export function emit(x: number, y: number, random: () => number): SmokeParticle 
     // instead of rising as a rigid string of beads.
     drift: WIND_X * (0.6 + random() * 0.8),
     rise: 13 + random() * 8,
-    size: 3.2 + random() * 2.2,
+    size: 1.7 + random() * 1.5,
   };
 }
 
@@ -148,5 +160,5 @@ export function puffAlpha(particle: SmokeParticle): number {
 
 /** How wide a puff is now. Smoke expands as it cools. */
 export function puffRadius(particle: SmokeParticle): number {
-  return particle.size * (1 + particle.age * 0.85);
+  return particle.size * (1 + particle.age * 0.55);
 }

@@ -36,7 +36,7 @@ import type Phaser from 'phaser';
 
 import { BUILDINGS, type BuildingId } from '@/data/buildings';
 import { TILE_HEIGHT, TILE_WIDTH } from '@/shared/math/isometric';
-import { HOUSE_LOOKS, drawHouse } from './houseArt';
+import { HOUSE_LOOK, drawHouse } from './houseArt';
 import {
   SHADOW_SPREAD,
   SUN_OFFSET,
@@ -540,10 +540,7 @@ export function artVariants(id: BuildingId): number {
   if (MASS[id].yard === true) {
     return YARD_FILL_LEVELS;
   }
-  // A house is drawn in one of three constructions — see `houseArt.ts`. Which
-  // one a given house gets is the renderer's business; the loader's job is only
-  // to have all three ready.
-  return id === 'house' ? HOUSE_LOOKS.length : 1;
+  return 1;
 }
 
 /**
@@ -616,13 +613,9 @@ export function drawBuilding(
   // people actually look at, so it gets three constructions and a level of
   // detail none of the generic machinery below would give it.
   if (id === 'house') {
-    const look = HOUSE_LOOKS[Math.min(variant, HOUSE_LOOKS.length - 1)] ?? HOUSE_LOOKS[0]!;
     contactShadow(graphics, { x: cx, y: groundY }, halfW * SHADOW_FIT, halfH * SHADOW_FIT);
-    drawHouse(graphics, look, { cx, groundY, halfW, halfH });
-    if (mass.fence) {
-      drawFence(graphics, { palette, cx, groundY, halfW: plotW, halfH: plotH, side: 'near' });
-    }
-    const hearth = chimneyOffset(id, variant);
+    drawHouse(graphics, HOUSE_LOOK, { cx, groundY, halfW, halfH });
+    const hearth = chimneyOffset(id);
     if (hearth) {
       drawChimney(graphics, cx + hearth.dx, groundY + hearth.dy);
     }
@@ -1159,30 +1152,28 @@ const CHIMNEY_HEIGHT = 18.5;
  *
  * `null` for the buildings with no hearth, which is most of them.
  */
-export function chimneyOffset(
-  id: BuildingId,
-  /** Which variant, for buildings drawn more than one way. */
-  variant = 0,
-): { dx: number; dy: number } | null {
+export function chimneyOffset(id: BuildingId): { dx: number; dy: number } | null {
   const mass = MASS[id];
   if (mass.chimney !== true) {
     return null;
   }
 
-  // A house carries its own wall and roof heights per construction, so the roof
-  // plane the stack has to sit on is not the one the generic mass describes.
+  // A house carries its own proportions, in shares of the footprint's diagonal,
+  // so the roof plane the stack has to stand on is not the one the generic mass
+  // describes. See `houseArt.ts`.
   if (id === 'house') {
-    const look = HOUSE_LOOKS[Math.min(variant, HOUSE_LOOKS.length - 1)] ?? HOUSE_LOOKS[0]!;
-    const houseHalfW =
-      (baseSize(BUILDINGS[id].footprint).width / 2 - FOOTPRINT_INSET) * (mass.inset ?? 1);
-    const wallTop = -(look.plinth + look.wallHeight);
-    const apex = wallTop - look.roofHeight;
+    const base = baseSize(BUILDINGS[id].footprint);
+    const houseHalfW = (base.width / 2 - FOOTPRINT_INSET) * (mass.inset ?? 1);
+    const houseHalfH = (base.height / 2 - FOOTPRINT_INSET / 2) * (mass.inset ?? 1);
+    const unit = houseHalfH * 2;
+    const wallTop = -(HOUSE_LOOK.plinth + HOUSE_LOOK.wallHeight) * unit;
+    const eaves = HOUSE_LOOK.eaves * unit;
     return onNearPitch({
-      apex,
-      eaveX: -houseHalfW - look.eaves,
-      eaveY: wallTop + look.eaves / 2,
-      frontY: wallTop + look.eaves / 2,
+      apex: wallTop - HOUSE_LOOK.roofHeight * unit,
+      eaveX: -houseHalfW - eaves,
+      eaveY: wallTop,
       frontX: 0,
+      frontY: wallTop + houseHalfH + eaves / 2,
     });
   }
 

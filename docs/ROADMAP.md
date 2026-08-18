@@ -70,6 +70,7 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 43    | Built off the ground           | **Implemented** |
 | 44    | The store nobody could reach   | **Implemented** |
 | 45    | Buildings that sit on plots    | **Implemented** |
+| 46    | The house, from a recipe       | **Implemented** |
 
 ---
 
@@ -1435,3 +1436,46 @@ first year as an empty platform.
 surviving in the corners, a path from the gate to the door, a fence with a gap where the gate is, and
 a lean-to over the door on two posts. The detail is the detail people put on a house raised in a hurry
 out of eight logs and four stone — see the art bible on what a poor building should look like.
+
+---
+
+## Phase 46 — The house, from a vector recipe — Implemented
+
+"Te paso fórmulas generadas por Claude para que las puedas usar. Usa la segunda con el techo
+amarillo por favor como imagen de las viviendas. Mira el humo si puedes ponerlo en la chimenea."
+
+Three house constructions were drawn and compared on the preview board first, and the reports on the
+first one were all correct and all worth chasing:
+
+- **the chimney was flying.** Two causes. Its offset still measured from the plot rather than from
+  the inset building, and it was placed by interpolating from the apex straight down the left hip —
+  the silhouette edge, where half a stack overlaps the near pitch and half sticks out into the sky
+  over the far one. It stands _in_ the pitch now, which fixes every chimney in the game.
+- **the walls looked see-through and the door looked stuck on.** One sign error: **near the camera is
+  low on screen**, and the wall parametrisation had it the other way round, so every post, plank and
+  door was hanging off the face it belonged to. Invisible as a symptom, obvious as a diagram.
+- **too many accessories.** The fence went — it also has to be split by _depth_ rather than by edge,
+  or its near rails cross the front of the building — and so did the lean-to. The effort went into
+  how the walls are built instead.
+
+The chosen house is the **boarded cottage with an offset porch gable**, from the recipe, in
+`houseArt.ts`. Its proportions were adjusted once after looking at it: the recipe's wall of 0.48
+against a roof of 0.68 let the roof swallow the house, and the boarding, the door and the window all
+happen on the wall.
+
+Two things in it are worth keeping in mind for every other building:
+
+- **a hipped roof with a real ridge, not a pyramid.** Four planes meeting at a point has no
+  direction, so a house, a workshop and a store all read as the same lozenge.
+- **one architectural feature, off centre**, and a projecting gable rather than a flat hood, because
+  its whole job is the silhouette.
+
+**And the smoke.** It was already there and already leaving the chimney's own mouth — the report was
+about how it looked. At two and a half puffs a second, each growing fast, a plume came out as three
+or four grey balls stacked over the roof. It is twice as many at half the size now, and the ceiling
+went with it: the cap has to stay above _houses × the size a winter plume settles at_, or it starts
+cutting plumes short in ordinary play, which looks like fires going out.
+
+The test for that was measuring the wrong thing — a bare threshold that needed re-tuning the moment
+the rate changed. It now measures the plume twice, a thousand frames apart, and asks it to have
+stopped growing, which is the claim that was always meant.

@@ -118,14 +118,34 @@ describe('a plume', () => {
       advanceSmoke(particles, delta);
     }
 
-    // One chimney at winter's rate settles at a handful of live puffs.
-    expect(particles.length).toBeLessThan(20);
+    // **Settled, not merely small.** The claim is that a plume reaches a steady
+    // size and stays there, and a bare threshold tests that only by accident —
+    // it needed re-tuning the first time the emission rate changed, which is a
+    // test measuring the wrong thing. So the plume is measured twice, a
+    // thousand frames apart, and asked to have stopped growing.
+    const settled = particles.length;
+    for (let step = 0; step < 1000; step += 1) {
+      const delta = 1 / 60;
+      sinceLast += delta;
+      if (sinceLast >= interval) {
+        sinceLast = 0;
+        particles.push(emit(0, 0, steady(0.9)));
+      }
+      advanceSmoke(particles, delta);
+    }
+
+    expect(particles.length).toBe(settled);
+    // And a plume is a plume rather than a cloud: one chimney's worth of smoke
+    // has to leave room for a settlement of them inside MAX_PARTICLES.
+    expect(settled).toBeLessThan(MAX_PARTICLES / 30);
   });
 
   it('leaves room for a whole settlement inside the ceiling', () => {
     // Thirty chimneys should fit comfortably; the cap is a backstop against a
-    // settlement nobody has imagined yet, not a limit on ordinary play.
-    expect(MAX_PARTICLES).toBeGreaterThan(30 * 12);
+    // settlement nobody has imagined yet, not a limit on ordinary play. A winter
+    // plume settles at about twenty-two puffs, so thirty of them is the number
+    // the ceiling has to clear.
+    expect(MAX_PARTICLES).toBeGreaterThan(30 * 25);
   });
 
   it('frays rather than rising as a string of beads', () => {

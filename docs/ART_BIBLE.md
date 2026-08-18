@@ -339,7 +339,33 @@ left, so a shadow still reaches the plot's down-right edge and falls short of th
 The one exception is **eaves**, which are declared per building and which the texture is widened for.
 A roof may oversail. Nothing else may.
 
-### The house, and what a poor building looks like
+### The house: a boarded cottage with an offset porch gable
+
+Drawn from a vector recipe, in `houseArt.ts`. Three constructions were drawn and compared on the
+preview board — an oak frame with limewashed daub, boarded planks under thatch, and log courses on a
+deep drystone base — and the boarded one was chosen. The other two are not kept as dead code; the
+recipes they came from are the record.
+
+Heights are **shares of the footprint's screen diagonal**, not pixels, so the house keeps its
+proportions if the tile size ever changes. The recipe's own proportions were adjusted once after
+looking at it: at a wall of 0.48 against a roof of 0.68 the roof swallowed the house, and the
+boarding, the door and the window all happen on the wall.
+
+**A hipped roof with a real ridge, not a pyramid.** Four planes meeting at a point has no direction,
+so a house, a workshop and a store all read as the same lozenge. A ridge running back to front gives
+the house an axis, and the eye reads an axis as architecture.
+
+**One architectural feature, set off centre.** A porch in the middle of a symmetrical elevation makes
+a house look machined; these are cottages people put up themselves. It is a projecting gable rather
+than a flat hood because its whole job is the silhouette — at this zoom a hood against the roof
+disappears and a ridge sticking out of it does not.
+
+The density rule the recipe gives, and it is a good one: **at gameplay zoom a house reads from its
+silhouette, its roof colour, its wall construction and one feature.** Three roof seams, five plank
+seams a face, one window, one door, one chimney, one porch. Nothing else survives being forty pixels
+tall, and more costs the low-poly look.
+
+### What a poor building looks like
 
 A House is eight logs and four stone. It should not look joined and turned, and it should not look
 like a shed either — so the detail it gets is the detail people put on a house they raised in a hurry:
@@ -349,10 +375,14 @@ like a shed either — so the detail it gets is the detail people put on a house
   corners, and the ground is what has been walked on.
 - **a path from the gate to the door**, which says a house is lived in more cheaply than any amount
   of detail on the walls does.
-- **a fence with a gap at the near corner.** Drawn in two halves — far rails before the building and
-  near rails after — because a fence drawn all at once is a fence the house stands on top of.
-- **a lean-to over the door on two posts**, and the shade it throws on the wall behind it, which is
-  what stops it reading as a plank glued to a flat surface.
+- **the shade every attachment throws on the wall behind it**, which is what stops a porch reading as
+  a plank glued to a flat surface.
+
+A fence round the plot was tried and taken out again. It has to be split **by depth** rather than by
+edge — the near half of a plot's rim is not the same set of rails as the near half of its edges — and
+drawn whole it puts rails across the front of the building. More to the point it was one accessory
+too many: the report was that the house itself looked vague, and the answer to that is never another
+thing beside it.
 
 ---
 

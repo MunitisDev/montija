@@ -1,104 +1,84 @@
 /**
- * Houses, in three constructions.
+ * The house: a boarded cottage with an offset porch gable.
  *
  * **Split out of `buildingArt.ts` because a house is where the detail goes.**
- * Every other building in this settlement is a mass and a colour and one prop,
- * and that is enough: a Quarry is read at a glance and then ignored. A house is
- * looked at. It is also the thing there are most of, so it is the thing that
- * decides whether a settlement reads as a village or as a row of boxes.
+ * Every other building here is a mass, a colour and one prop, and that is
+ * enough — a Quarry is read at a glance and then ignored. A house is looked at,
+ * it is the building there are most of, and it is what decides whether a
+ * settlement reads as a village or as a row of boxes.
  *
- * The first attempt was one house with things added round it — a fence, a
- * garden, a porch — and it was reported, correctly, as fussy and vague: the
- * chimney hung in the air, a bevel on the front corner read as a white stripe,
- * and the door looked stuck on. The lesson is the usual one. **Detail on the
- * building beats accessories around it.**
+ * Three constructions were drawn and compared side by side on the preview board
+ * (see `preview.html`); this is the one that was chosen. The other two — an oak
+ * frame with limewashed daub, and log courses on a deep drystone base — are
+ * recorded in the recipes they came from rather than kept as dead code here.
  *
- * So there are three, and they differ in *how they are built* rather than in
- * what is parked beside them:
+ * The rules it obeys, all from `buildingArt.ts`:
  *
- * - **framed** — oak posts, rails and braces with limewashed daub between them;
- * - **boarded** — walls of vertical planks under thatch, with no frame at all;
- * - **stone** — a drystone base carrying log courses, under a turf roof.
+ * - the anchor is the footprint's centre, on the ground line;
+ * - nothing is drawn outside the plot, which `tests/building-art.test.ts` checks;
+ * - the key light comes from the upper left;
+ * - **near the camera is low on screen.** A wall's top edge runs from `(cx, y +
+ *   halfH)` at the front corner *up* to `(cx ± halfW, y)` at the side one. The
+ *   first version of this file had that sign backwards, which hung every post and
+ *   plank off the face it belonged to.
  *
- * All three obey the rules in `buildingArt.ts`: the anchor is the footprint's
- * centre on the ground line, nothing is drawn outside the plot, and the light
- * comes from the upper left.
+ * And one rule of its own, from the recipe: **at gameplay zoom a house reads from
+ * its silhouette, its roof colour, its wall construction and one architectural
+ * feature.** So there are three roof seams, five plank seams a face, one window,
+ * one door, one chimney and one porch. Nothing else. More detail than that does
+ * not survive being forty pixels tall, and it costs the low-poly look.
  */
 
 import type Phaser from 'phaser';
 
 import { bevel, occlude, polygon, shade, type Point } from './shading';
 
-/** Which way a house is put together. */
-export type HouseStyle = 'framed' | 'boarded' | 'stone';
-
+/** Boarded timber, ochre thatch, and the oak that trims both. */
 export interface HouseLook {
-  readonly style: HouseStyle;
-  /** Height of the walls above the plinth, in pixels. */
+  /** Height of the walls above the plinth, as a share of the full diagonal. */
   readonly wallHeight: number;
   readonly roofHeight: number;
   readonly eaves: number;
-  /** Stone footing under the walls. The stone house stands on a deep one. */
   readonly plinth: number;
-  /** Wall, roof and timber. Kept per style: these are different materials. */
   readonly wall: number;
   readonly roof: number;
   readonly timber: number;
-  /** `true` where the door is set in a frame, rather than cut in the wall. */
-  readonly framedDoor: boolean;
 }
 
 /**
- * The three, in the order they are offered.
+ * The one house, in the proportions the recipe gives.
  *
- * Values are deliberately close in *silhouette* — a village of three unrelated
- * shapes reads as three unrelated games — and far apart in surface. What tells
- * them apart is the material, which is the honest difference between a house
- * somebody framed in oak and a house somebody nailed together out of boards.
+ * Heights are shares of the footprint's full screen diagonal (`2 * halfH`), so a
+ * house keeps its proportions whatever the tile size becomes. The colours are the
+ * ochre-roof family that was picked: warm boarded timber under straw.
  */
-export const HOUSE_LOOKS: readonly HouseLook[] = [
-  {
-    style: 'framed',
-    wallHeight: 26,
-    roofHeight: 40,
-    eaves: 5,
-    plinth: 5,
-    wall: 0xa79c85,
-    roof: 0x7b4a33,
-    timber: 0x4a3c2c,
-    framedDoor: true,
-  },
-  {
-    style: 'boarded',
-    wallHeight: 24,
-    roofHeight: 44,
-    eaves: 7,
-    plinth: 3,
-    wall: 0x8a6f4c,
-    roof: 0x9a8654,
-    timber: 0x5d4830,
-    framedDoor: false,
-  },
-  {
-    style: 'stone',
-    wallHeight: 27,
-    roofHeight: 36,
-    eaves: 5,
-    plinth: 12,
-    wall: 0x8d7f66,
-    roof: 0x6a7247,
-    timber: 0x50412e,
-    framedDoor: true,
-  },
-];
+export const HOUSE_LOOK: HouseLook = {
+  plinth: 0.07,
+  // **Taller walls and a lower roof than the recipe asks for.** At 0.48 and 0.68
+  // the roof swallowed the house: the boarding, the door and the window all
+  // happen on the wall, and a wall a third the height of its own roof has nowhere
+  // to put them. This is the same cottage with somewhere to look at.
+  wallHeight: 0.6,
+  roofHeight: 0.5,
+  eaves: 0.09,
+  wall: 0x8a6f4c,
+  roof: 0x9a8654,
+  timber: 0x5d4830,
+};
 
-/** The four corners of a rhombus centred on `cx`, at height `y`. */
-interface Rhombus {
-  readonly back: Point;
-  readonly right: Point;
-  readonly front: Point;
-  readonly left: Point;
-}
+/** How much of the back-to-front diagonal the ridge runs along. */
+const RIDGE_RUN = 0.72;
+/** Where the porch stands on the right wall, and how wide it is. */
+const PORCH_AT = 0.34;
+const PORCH_HALF = 0.19;
+/** Plank seams down one wall face. */
+const BOARD_SEAMS: readonly number[] = [0.16, 0.32, 0.48, 0.64, 0.8];
+/** Rubble, shared with every other footing in the settlement. */
+const STONE = 0x6a675e;
+/** Where blocks are picked out along the footing. Fixed: nothing here is rolled. */
+const STONE_BLOCKS: readonly number[] = [0.06, 0.3, 0.54, 0.78];
+/** The charcoal blue of an unglazed opening. */
+const WINDOW_DARK = 0x283039;
 
 export interface HouseOptions {
   readonly cx: number;
@@ -109,12 +89,12 @@ export interface HouseOptions {
 }
 
 /**
- * Draws one house, in one of the three constructions.
+ * Draws the house.
  *
- * Order is painter's order and matters: plinth, walls, wall surface, roof, then
- * the openings cut in it. The roof goes on before the door so its shadow falls
- * across the wall the door is in, which is the difference between a building and
- * two stickers on the same plane.
+ * Painter's order, and it matters: footing, walls, boarding, roof, then the porch
+ * and the openings under it. The roof goes on before the door so its shade falls
+ * across the wall the door is cut in, which is the difference between a building
+ * and two stickers on the same plane.
  */
 export function drawHouse(
   graphics: Phaser.GameObjects.Graphics,
@@ -122,408 +102,449 @@ export function drawHouse(
   options: HouseOptions,
 ): void {
   const { cx, groundY, halfW, halfH } = options;
+  /** Heights are shares of the full screen diagonal. */
+  const unit = halfH * 2;
 
-  const rhombus = (y: number): Rhombus => ({
-    back: { x: cx, y: y - halfH },
-    right: { x: cx + halfW, y },
-    front: { x: cx, y: y + halfH },
-    left: { x: cx - halfW, y },
+  const plinth = look.plinth * unit;
+  const wallHeight = look.wallHeight * unit;
+  const roofHeight = look.roofHeight * unit;
+  const eaves = look.eaves * unit;
+
+  const sillY = groundY - plinth;
+  const topY = sillY - wallHeight;
+
+  /** A corner of the footprint rhombus at some height. */
+  const corner = (which: 'back' | 'right' | 'front' | 'left', y: number): Point => {
+    switch (which) {
+      case 'back':
+        return { x: cx, y: y - halfH };
+      case 'right':
+        return { x: cx + halfW, y };
+      case 'front':
+        return { x: cx, y: y + halfH };
+      default:
+        return { x: cx - halfW, y };
+    }
+  };
+
+  /**
+   * A point on a wall face. `t` runs 0 at the front corner to 1 at the side one,
+   * and `lift` raises it off that face's foot.
+   */
+  const face = (side: -1 | 1, t: number, y: number, lift = 0): Point => ({
+    x: cx + side * halfW * t,
+    y: y + halfH * (1 - t) - lift,
   });
 
-  const ground = rhombus(groundY);
-  const sillY = groundY - look.plinth;
-  const topY = groundY - look.plinth - look.wallHeight;
-  const sill = rhombus(sillY);
-  const top = rhombus(topY);
+  drawFooting(graphics, { face, groundY, sillY, corner });
 
-  drawPlinth(graphics, { look, ground, sill, cx, halfW, halfH, groundY });
-
-  // The two walls the camera can see. Left catches the light; right is in shade,
-  // because the key light comes from the upper left throughout this game.
+  // The two walls the camera can see. Left catches the light, right is in shade.
   graphics.fillStyle(look.wall, 1);
-  polygon(graphics, [top.left, top.front, sill.front, sill.left]);
+  polygon(graphics, [
+    corner('left', topY),
+    corner('front', topY),
+    corner('front', sillY),
+    corner('left', sillY),
+  ]);
   graphics.fillStyle(shade(look.wall, 0.78), 1);
-  polygon(graphics, [top.front, top.right, sill.right, sill.front]);
+  polygon(graphics, [
+    corner('front', topY),
+    corner('right', topY),
+    corner('right', sillY),
+    corner('front', sillY),
+  ]);
 
-  drawWallSurface(graphics, { look, cx, halfW, halfH, sillY, topY });
+  drawBoarding(graphics, look, { face, sillY, topY, wallHeight });
 
-  // Gloom where the walls meet the ground: the single strongest cue that a
+  // Gloom where the walls meet the ground: the strongest single cue that a
   // building is standing in the scene rather than pasted onto it.
-  const gloom = Math.max(2.5, look.wallHeight * 0.15);
-  occlude(
-    graphics,
-    { x: sill.left.x, y: sill.left.y - gloom },
-    { x: sill.front.x, y: sill.front.y - gloom },
-    gloom,
-    0.16,
-  );
-  occlude(
-    graphics,
-    { x: sill.front.x, y: sill.front.y - gloom },
-    { x: sill.right.x, y: sill.right.y - gloom },
-    gloom,
-    0.2,
-  );
+  const gloom = Math.max(2.5, wallHeight * 0.15);
+  for (const [from, to, strength] of [
+    ['left', 'front', 0.16],
+    ['front', 'right', 0.2],
+  ] as const) {
+    occlude(
+      graphics,
+      { x: corner(from, sillY).x, y: corner(from, sillY).y - gloom },
+      { x: corner(to, sillY).x, y: corner(to, sillY).y - gloom },
+      gloom,
+      strength,
+    );
+  }
 
-  drawRoof(graphics, look, { top, cx, apexY: topY - look.roofHeight, halfH });
+  drawRoof(graphics, look, { cx, topY, halfW, halfH, roofHeight, eaves, corner });
 
-  // The roof's shadow on the wall it sits on, started half an eave below the
-  // wall head because the eaves oversail the wall the shadow lands on.
-  const eaveDrop = look.eaves / 2;
-  const eaveGloom = Math.max(2, look.wallHeight * 0.1);
-  occlude(
-    graphics,
-    { x: top.left.x, y: top.left.y + eaveDrop },
-    { x: top.front.x, y: top.front.y + eaveDrop },
-    eaveGloom,
-    0.16,
-  );
-  occlude(
-    graphics,
-    { x: top.front.x, y: top.front.y + eaveDrop },
-    { x: top.right.x, y: top.right.y + eaveDrop },
-    eaveGloom,
-    0.2,
-  );
+  // The roof's shade on the wall it sits on, started half an eave down because
+  // the eaves oversail the wall the shadow actually lands on.
+  const eaveGloom = Math.max(2, wallHeight * 0.1);
+  for (const [from, to, strength] of [
+    ['left', 'front', 0.16],
+    ['front', 'right', 0.2],
+  ] as const) {
+    occlude(
+      graphics,
+      { x: corner(from, topY).x, y: corner(from, topY).y + eaves / 2 },
+      { x: corner(to, topY).x, y: corner(to, topY).y + eaves / 2 },
+      eaveGloom,
+      strength,
+    );
+  }
 
-  drawDoor(graphics, look, { cx, halfW, halfH, sillY });
-  drawWindow(graphics, look, { cx, halfW, halfH, sillY });
+  drawWindow(graphics, look, { face, topY, wallHeight });
+  drawPorch(graphics, look, { face, cx, halfW, halfH, sillY, topY, wallHeight, eaves });
 }
 
 /**
- * The footing. Rubble, not dressed masonry — this is a frontier settlement.
+ * A low stone footing: one course, four blocks a face.
  *
- * The stone house's is deep enough to be the lower half of the building, which
- * is what makes it a different house rather than a differently painted one.
+ * **Large blocks, not rubble.** A scatter of tiny masonry marks turns to noise at
+ * gameplay zoom and reads as dirt on the wall; four picked-out stones a side read
+ * as stone from across the map.
  */
-function drawPlinth(
+function drawFooting(
   graphics: Phaser.GameObjects.Graphics,
   options: {
-    look: HouseLook;
-    ground: Rhombus;
-    sill: Rhombus;
-    cx: number;
-    halfW: number;
-    halfH: number;
+    face: (side: -1 | 1, t: number, y: number, lift?: number) => Point;
     groundY: number;
+    sillY: number;
+    corner: (which: 'back' | 'right' | 'front' | 'left', y: number) => Point;
   },
 ): void {
-  const { look, ground, sill, cx, halfW, halfH, groundY } = options;
-  if (look.plinth <= 0) {
+  const { face, groundY, sillY, corner } = options;
+  if (sillY >= groundY) {
     return;
   }
 
   graphics.fillStyle(STONE, 1);
-  polygon(graphics, [sill.left, sill.front, ground.front, ground.left]);
+  polygon(graphics, [
+    corner('left', sillY),
+    corner('front', sillY),
+    corner('front', groundY),
+    corner('left', groundY),
+  ]);
   graphics.fillStyle(shade(STONE, 0.76), 1);
-  polygon(graphics, [sill.front, sill.right, ground.right, ground.front]);
+  polygon(graphics, [
+    corner('front', sillY),
+    corner('right', sillY),
+    corner('right', groundY),
+    corner('front', groundY),
+  ]);
 
-  // Individual stones, picked out along both faces at fixed places. On a deep
-  // footing this is most of what the eye reads, so it gets two courses.
-  const courses = look.plinth > 8 ? [0.3, 0.68] : [0.5];
-  for (const [index, up] of courses.entries()) {
-    graphics.fillStyle(shade(STONE, index === 0 ? 1.16 : 1.05), 1);
-    for (const t of STONE_COURSE) {
-      const y = groundY + halfH * (t - 0.5) * 0.92 - look.plinth * up;
-      graphics.fillRect(cx - halfW + halfW * t, y, 7, 3);
-    }
-    graphics.fillStyle(shade(STONE, index === 0 ? 0.62 : 0.7), 1);
-    for (const t of STONE_COURSE) {
-      const y = groundY - halfH * (t - 0.5) * 0.92 - look.plinth * up;
-      graphics.fillRect(cx + halfW * t - 7, y, 7, 3);
+  // Blocks picked out along the course, drawn *on* the face rather than as
+  // rectangles laid over it — an axis-aligned box on a sloping face is the
+  // easiest way in this whole renderer to make stone look like litter.
+  const depth = groundY - sillY;
+  for (const side of [-1, 1] as const) {
+    graphics.fillStyle(shade(STONE, side === -1 ? 1.14 : 0.66), 1);
+    for (const t of STONE_BLOCKS) {
+      const a = face(side, t, sillY, -depth * 0.22);
+      const b = face(side, t + 0.16, sillY, -depth * 0.22);
+      polygon(graphics, [a, b, { x: b.x, y: b.y + depth * 0.5 }, { x: a.x, y: a.y + depth * 0.5 }]);
     }
   }
 }
 
 /**
- * What the walls are made of, which is the whole point of having three houses.
+ * Vertical boards, and the rail that ties them.
  *
- * Every one of these is drawn *on* the two wall faces already filled behind it,
- * following the same slope the face does, so nothing here has to know about
- * isometric projection beyond "y rises with x on the left, falls on the right".
+ * Five seams a face rather than a plank every two pixels: fewer and wider is what
+ * keeps this legible when the house is forty pixels tall, and alternating the
+ * strength of the seams gives the wall a rhythm without giving it stripes.
  */
-function drawWallSurface(
+function drawBoarding(
   graphics: Phaser.GameObjects.Graphics,
+  look: HouseLook,
   options: {
-    look: HouseLook;
+    face: (side: -1 | 1, t: number, y: number, lift?: number) => Point;
+    sillY: number;
+    topY: number;
+    wallHeight: number;
+  },
+): void {
+  const { face, sillY, topY, wallHeight } = options;
+
+  for (const side of [-1, 1] as const) {
+    const dark = shade(look.wall, side === -1 ? 0.74 : 0.6);
+    BOARD_SEAMS.forEach((t, index) => {
+      const head = face(side, t, topY);
+      const foot = face(side, t, sillY);
+      graphics.fillStyle(dark, index % 2 === 0 ? 0.55 : 0.28);
+      polygon(graphics, [
+        { x: head.x - 0.9, y: head.y },
+        { x: head.x + 0.9, y: head.y },
+        { x: foot.x + 0.9, y: foot.y },
+        { x: foot.x - 0.9, y: foot.y },
+      ]);
+    });
+
+    // One rail across, low down, where a boarded wall is actually braced.
+    const lift = wallHeight * 0.22;
+    const a = face(side, 0.02, sillY, lift);
+    const b = face(side, 0.98, sillY, lift);
+    graphics.fillStyle(shade(look.timber, side === -1 ? 1.15 : 0.9), 1);
+    polygon(graphics, [a, b, { x: b.x, y: b.y + 2.2 }, { x: a.x, y: a.y + 2.2 }]);
+  }
+}
+
+/**
+ * A hipped roof with a real ridge, rather than a pyramid.
+ *
+ * The pyramid was the single thing that made every building in this settlement
+ * look like the same building: four planes meeting at a point has no direction,
+ * so a house, a workshop and a store all read as the same lozenge. A ridge
+ * running back to front gives the house an axis, and the eye reads an axis as
+ * architecture.
+ */
+function drawRoof(
+  graphics: Phaser.GameObjects.Graphics,
+  look: HouseLook,
+  options: {
+    cx: number;
+    topY: number;
+    halfW: number;
+    halfH: number;
+    roofHeight: number;
+    eaves: number;
+    corner: (which: 'back' | 'right' | 'front' | 'left', y: number) => Point;
+  },
+): void {
+  const { cx, topY, halfH, roofHeight, eaves, corner } = options;
+
+  const ridgeY = topY - roofHeight;
+  const ridgeBack = { x: cx, y: ridgeY - halfH * RIDGE_RUN };
+  const ridgeFront = { x: cx, y: ridgeY + halfH * RIDGE_RUN };
+
+  const eaveBack = { x: corner('back', topY).x, y: corner('back', topY).y - eaves / 2 };
+  const eaveFront = { x: corner('front', topY).x, y: corner('front', topY).y + eaves / 2 };
+  const eaveLeft = { x: corner('left', topY).x - eaves, y: corner('left', topY).y };
+  const eaveRight = { x: corner('right', topY).x + eaves, y: corner('right', topY).y };
+
+  // The far half first, so its silhouette shows above the ridge without being
+  // drawn over the near slopes.
+  graphics.fillStyle(shade(look.roof, 0.86), 1);
+  polygon(graphics, [ridgeBack, eaveBack, eaveLeft, ridgeBack]);
+  polygon(graphics, [ridgeBack, eaveBack, eaveRight, ridgeBack]);
+
+  // Left slope, catching the light; right slope in shade.
+  graphics.fillStyle(look.roof, 1);
+  polygon(graphics, [ridgeBack, eaveLeft, eaveFront, ridgeFront]);
+  graphics.fillStyle(shade(look.roof, 0.74), 1);
+  polygon(graphics, [ridgeBack, eaveRight, eaveFront, ridgeFront]);
+
+  // Three courses a slope, and no more: this is thatch read from forty pixels.
+  for (const t of [0.27, 0.52, 0.77]) {
+    const along = (from: Point, to: Point): Point => ({
+      x: from.x + (to.x - from.x) * t,
+      y: from.y + (to.y - from.y) * t,
+    });
+    graphics.fillStyle(shade(look.roof, 0.82), 0.55);
+    for (const eave of [eaveLeft, eaveRight]) {
+      const a = along(ridgeBack, eave);
+      const b = along(ridgeFront, eave);
+      polygon(graphics, [a, b, { x: b.x, y: b.y + 1.4 }, { x: a.x, y: a.y + 1.4 }]);
+    }
+  }
+
+  // The sawn edge of the eaves, which is what gives the roof thickness.
+  graphics.fillStyle(shade(look.roof, 0.54), 1);
+  for (const eave of [eaveLeft, eaveRight]) {
+    polygon(graphics, [
+      eave,
+      eaveFront,
+      { x: eaveFront.x, y: eaveFront.y + 3 },
+      { x: eave.x, y: eave.y + 3 },
+    ]);
+  }
+
+  // The ridge cap, and the light along the two near hips.
+  graphics.fillStyle(shade(look.roof, 1.1), 1);
+  polygon(graphics, [
+    { x: ridgeBack.x - 1.8, y: ridgeBack.y },
+    { x: ridgeBack.x + 1.8, y: ridgeBack.y },
+    { x: ridgeFront.x + 1.8, y: ridgeFront.y },
+    { x: ridgeFront.x - 1.8, y: ridgeFront.y },
+  ]);
+  bevel(graphics, ridgeFront, eaveLeft, shade(look.roof, 1.2), 1.3);
+  bevel(graphics, ridgeFront, eaveRight, shade(look.roof, 0.95), 1.3);
+}
+
+/** One window, on the wall the porch is not on. Glass was for churches. */
+function drawWindow(
+  graphics: Phaser.GameObjects.Graphics,
+  look: HouseLook,
+  options: {
+    face: (side: -1 | 1, t: number, y: number, lift?: number) => Point;
+    topY: number;
+    wallHeight: number;
+  },
+): void {
+  const { face, topY, wallHeight } = options;
+  const head = wallHeight * 0.34;
+  const sill = wallHeight * 0.68;
+
+  const at = (t: number, lift: number): Point => face(-1, t, topY, -lift);
+  const frame = [at(0.3, head - 3), at(0.56, head - 3), at(0.56, sill + 3), at(0.3, sill + 3)];
+  graphics.fillStyle(shade(look.timber, 1.3), 1);
+  polygon(graphics, frame);
+
+  graphics.fillStyle(WINDOW_DARK, 1);
+  polygon(graphics, [at(0.33, head), at(0.53, head), at(0.53, sill), at(0.33, sill)]);
+
+  // One mullion, upright. Two would be a church window.
+  graphics.fillStyle(shade(look.timber, 1.3), 1);
+  polygon(graphics, [at(0.425, head), at(0.445, head), at(0.445, sill), at(0.425, sill)]);
+
+  // The reveal along the head, in shadow: the wall's own thickness, and what
+  // says "an opening in something" rather than "a dark shape painted on".
+  graphics.fillStyle(0x000000, 0.35);
+  polygon(graphics, [at(0.33, head), at(0.53, head), at(0.53, head - 2.4), at(0.33, head - 2.4)]);
+}
+
+/**
+ * The porch, and the door under it — the house's one architectural feature.
+ *
+ * Set off centre on purpose. A porch in the middle of a symmetrical elevation
+ * makes the whole house look machined, and these are cottages people put up
+ * themselves; the offset is what says somebody decided where the door went.
+ */
+function drawPorch(
+  graphics: Phaser.GameObjects.Graphics,
+  look: HouseLook,
+  options: {
+    face: (side: -1 | 1, t: number, y: number, lift?: number) => Point;
     cx: number;
     halfW: number;
     halfH: number;
     sillY: number;
     topY: number;
+    wallHeight: number;
+    eaves: number;
   },
 ): void {
-  const { look, cx, halfW, halfH, sillY, topY } = options;
+  const { face, sillY, wallHeight, eaves } = options;
+  const doorHeight = wallHeight * 0.72;
+  const left = PORCH_AT - PORCH_HALF;
+  const right = PORCH_AT + PORCH_HALF;
 
-  /**
-   * A point on a wall face. `t` runs 0 at the front corner to 1 at the far one.
-   *
-   * **The near corner is the low one.** A wall's top edge runs from `(cx, y +
-   * halfH)` at the front corner up to `(cx ± halfW, y)` at the side corner, so
-   * screen height *falls* as `t` rises. Getting that backwards — and it was
-   * backwards, in this file and in the generic framing it was modelled on — hangs
-   * every post, plank and door off the face it is supposed to be drawn on, which
-   * is what made the house look see-through and the door look stuck on crooked.
-   */
-  const on = (side: -1 | 1, t: number, y: number): Point => ({
-    x: cx + side * halfW * t,
-    y: y + halfH * (1 - t),
-  });
+  // The doorway first: a hole cut straight in the boarding, no frame. That is
+  // what a boarded wall gives you, and it is the difference between this house
+  // and the framed one it was chosen over.
+  const at = (t: number, lift: number): Point => face(1, t, sillY, lift);
+  graphics.fillStyle(shade(look.wall, 0.42), 1);
+  polygon(graphics, [
+    at(left + 0.03, doorHeight),
+    at(right - 0.03, doorHeight),
+    at(right - 0.03, 0),
+    at(left + 0.03, 0),
+  ]);
 
-  const lit = (colour: number, side: -1 | 1): number => shade(colour, side === -1 ? 1 : 0.78);
-
-  for (const side of [-1, 1] as const) {
-    if (look.style === 'framed') {
-      // Oak posts at the corners and the third points, a rail across the middle
-      // and a brace under it. Four uprights read as a timber building instantly;
-      // a full cruck frame at this size turns into noise.
-      graphics.fillStyle(lit(look.timber, side), 1);
-      for (const t of [0.03, 0.35, 0.67, 0.97]) {
-        const head = on(side, t, topY);
-        const foot = on(side, t, sillY);
-        polygon(graphics, [
-          { x: head.x - 1.7, y: head.y },
-          { x: head.x + 1.7, y: head.y },
-          { x: foot.x + 1.7, y: foot.y },
-          { x: foot.x - 1.7, y: foot.y },
-        ]);
-      }
-
-      // The mid rail, following the wall's slope.
-      const railY = (topY + sillY) / 2;
-      const a = on(side, 0.03, railY);
-      const b = on(side, 0.97, railY);
-      polygon(graphics, [a, b, { x: b.x, y: b.y + 2.4 }, { x: a.x, y: a.y + 2.4 }]);
-
-      // And one brace per face, which is what says *carpentry* rather than
-      // *stripes*: a diagonal from the foot of a post to the head of the next.
-      const braceFoot = on(side, 0.35, sillY);
-      const braceHead = on(side, 0.67, railY);
-      polygon(graphics, [
-        { x: braceFoot.x, y: braceFoot.y },
-        { x: braceFoot.x + side * 2.4, y: braceFoot.y + 1.2 },
-        { x: braceHead.x + side * 2.4, y: braceHead.y + 1.2 },
-        { x: braceHead.x, y: braceHead.y },
-      ]);
-      continue;
-    }
-
-    if (look.style === 'boarded') {
-      // Vertical boards, seam by seam, with a lighter batten every fourth one.
-      for (let index = 1; index < BOARDS; index += 1) {
-        const t = index / BOARDS;
-        const head = on(side, t, topY);
-        const foot = on(side, t, sillY);
-        const batten = index % 4 === 0;
-        graphics.fillStyle(
-          lit(batten ? shade(look.wall, 1.16) : shade(look.wall, 0.84), side),
-          batten ? 1 : 0.85,
-        );
-        const width = batten ? 2.2 : 1.1;
-        polygon(graphics, [
-          { x: head.x - width / 2, y: head.y },
-          { x: head.x + width / 2, y: head.y },
-          { x: foot.x + width / 2, y: foot.y },
-          { x: foot.x - width / 2, y: foot.y },
-        ]);
-      }
-      continue;
-    }
-
-    // Stone: horizontal log courses above the footing, round-ended, so the wall
-    // reads as timber laid on stone rather than as one material in two colours.
-    for (let course = 0; course < LOG_COURSES; course += 1) {
-      const y = sillY - ((course + 0.5) * (sillY - topY)) / LOG_COURSES;
-      const a = on(side, 0.02, y);
-      const b = on(side, 0.98, y);
-      const thickness = (sillY - topY) / LOG_COURSES;
-      graphics.fillStyle(lit(shade(look.wall, 1.06), side), 1);
-      polygon(graphics, [
-        { x: a.x, y: a.y - thickness * 0.34 },
-        { x: b.x, y: b.y - thickness * 0.34 },
-        { x: b.x, y: b.y + thickness * 0.2 },
-        { x: a.x, y: a.y + thickness * 0.2 },
-      ]);
-      graphics.fillStyle(lit(shade(look.wall, 0.72), side), 1);
-      polygon(graphics, [
-        { x: a.x, y: a.y + thickness * 0.2 },
-        { x: b.x, y: b.y + thickness * 0.2 },
-        { x: b.x, y: b.y + thickness * 0.34 },
-        { x: a.x, y: a.y + thickness * 0.34 },
-      ]);
-    }
+  // The leaf, hung in it: boards, one iron strap across, and a latch.
+  graphics.fillStyle(shade(look.wall, 0.66), 1);
+  polygon(graphics, [
+    at(left + 0.05, doorHeight - 1.5),
+    at(right - 0.05, doorHeight - 1.5),
+    at(right - 0.05, 0),
+    at(left + 0.05, 0),
+  ]);
+  graphics.fillStyle(shade(look.wall, 0.5), 1);
+  for (const t of [left + 0.11, left + 0.19]) {
+    polygon(graphics, [
+      at(t + 0.012, doorHeight - 2),
+      at(t, doorHeight - 2),
+      at(t, 0),
+      at(t + 0.012, 0),
+    ]);
   }
-}
+  const strapY = doorHeight * 0.62;
+  graphics.fillStyle(shade(look.timber, 0.8), 1);
+  polygon(graphics, [
+    at(left + 0.05, strapY),
+    at(right - 0.05, strapY),
+    at(right - 0.05, strapY - 1.7),
+    at(left + 0.05, strapY - 1.7),
+  ]);
+  graphics.fillStyle(0x201b16, 1);
+  polygon(graphics, [
+    at(right - 0.08, strapY + 3),
+    at(right - 0.055, strapY + 3),
+    at(right - 0.055, strapY + 1),
+    at(right - 0.08, strapY + 1),
+  ]);
 
-/** The roof: thatch, shingles or turf, and the ridge along the top of it. */
-function drawRoof(
-  graphics: Phaser.GameObjects.Graphics,
-  look: HouseLook,
-  options: { top: Rhombus; cx: number; apexY: number; halfH: number },
-): void {
-  const { top, cx, apexY } = options;
-  const eaves = look.eaves;
+  // A stone step, worn into the ground at the threshold.
+  graphics.fillStyle(shade(STONE, 1.05), 1);
+  const stepOut = 0.055;
+  polygon(graphics, [
+    at(left + 0.02, -1),
+    at(right - 0.02, -1),
+    { x: at(right - 0.02, -1).x + stepOut * options.halfW, y: at(right - 0.02, -1).y + 3.4 },
+    { x: at(left + 0.02, -1).x + stepOut * options.halfW, y: at(left + 0.02, -1).y + 3.4 },
+  ]);
 
-  const eL = { x: top.left.x - eaves, y: top.left.y + eaves / 2 };
-  const eR = { x: top.right.x + eaves, y: top.right.y + eaves / 2 };
-  const eF = { x: top.front.x, y: top.front.y + eaves / 2 };
-  const eB = { x: top.back.x, y: top.back.y - eaves / 2 };
-  const apex = { x: cx, y: apexY };
+  // Two posts standing off the wall, carrying the hood.
+  const stand = eaves * 1.7;
+  const headLift = doorHeight + wallHeight * 0.12;
+  const outward = (p: Point): Point => ({ x: p.x + stand, y: p.y + stand / 2 });
+  const wallA = at(left - 0.015, headLift);
+  const wallB = at(right + 0.015, headLift);
+  const outA = outward(wallA);
+  const outB = outward(wallB);
 
-  // Far pitches first, so their silhouette shows above the ridge without being
-  // drawn over the near ones.
-  graphics.fillStyle(shade(look.roof, 0.86), 1);
-  polygon(graphics, [apex, eB, eL]);
-  polygon(graphics, [apex, eB, eR]);
+  for (const [head, foot] of [
+    [outA, outward(at(left - 0.015, 0))],
+    [outB, outward(at(right + 0.015, 0))],
+  ] as const) {
+    graphics.fillStyle(shade(look.timber, 1.05), 1);
+    polygon(graphics, [
+      { x: head.x - 1.8, y: head.y },
+      { x: head.x + 1.8, y: head.y },
+      { x: foot.x + 1.8, y: foot.y },
+      { x: foot.x - 1.8, y: foot.y },
+    ]);
+    graphics.fillStyle(shade(look.timber, 1.35), 1);
+    polygon(graphics, [
+      { x: head.x - 1.8, y: head.y },
+      { x: head.x - 0.6, y: head.y },
+      { x: foot.x - 0.6, y: foot.y },
+      { x: foot.x - 1.8, y: foot.y },
+    ]);
+  }
+
+  // A little gable projecting from the wall: a ridge from the wall out over the
+  // door, two flaps falling from it, and the boarded triangle facing out.
+  //
+  // A gable rather than a lean-to because its whole job is the **silhouette**.
+  // At the zoom this game is played at, a hood flat against the roof disappears;
+  // a ridge sticking out of it is the one thing that says a house has a front.
+  const rise = wallHeight * 0.2;
+  const wallRidge = at(PORCH_AT, headLift + rise);
+  const outRidge = outward(at(PORCH_AT, headLift + rise * 0.72));
 
   graphics.fillStyle(look.roof, 1);
-  polygon(graphics, [apex, eL, eF]);
+  polygon(graphics, [wallRidge, outRidge, outA, wallA]);
   graphics.fillStyle(shade(look.roof, 0.74), 1);
-  polygon(graphics, [apex, eF, eR]);
+  polygon(graphics, [wallRidge, outRidge, outB, wallB]);
 
-  // The covering. Courses that follow the pitch, so the eye reads a surface
-  // rather than a flat triangle — and a different number of them per material,
-  // because thatch is laid in deep bundles and shingles in shallow rows.
-  const rows = look.style === 'boarded' ? 3 : look.style === 'stone' ? 2 : 5;
-  for (let row = 1; row <= rows; row += 1) {
-    const t = row / (rows + 1);
-    const along = (from: Point, to: Point): Point => ({
-      x: from.x + (to.x - from.x) * t,
-      y: from.y + (to.y - from.y) * t,
-    });
-    graphics.fillStyle(shade(look.roof, 0.9), 0.55);
-    const l = along(apex, eL);
-    const f = along(apex, eF);
-    const r = along(apex, eR);
-    polygon(graphics, [l, f, { x: f.x, y: f.y + 1.6 }, { x: l.x, y: l.y + 1.6 }]);
-    polygon(graphics, [f, r, { x: r.x, y: r.y + 1.6 }, { x: f.x, y: f.y + 1.6 }]);
-  }
+  // The boarded triangle under the ridge, facing the way the door does.
+  graphics.fillStyle(shade(look.wall, 0.88), 1);
+  polygon(graphics, [outA, outRidge, outB]);
 
-  // The sawn edge of the eaves, which is what gives the roof thickness.
-  graphics.fillStyle(shade(look.roof, 0.56), 1);
-  polygon(graphics, [eL, eF, { x: eF.x, y: eF.y + 3 }, { x: eL.x, y: eL.y + 3 }]);
-  polygon(graphics, [eF, eR, { x: eR.x, y: eR.y + 3 }, { x: eF.x, y: eF.y + 3 }]);
+  // The sawn edges of the two flaps, and the light along the ridge.
+  graphics.fillStyle(shade(look.roof, 0.52), 1);
+  polygon(graphics, [
+    outA,
+    outRidge,
+    { x: outRidge.x, y: outRidge.y + 2.2 },
+    { x: outA.x, y: outA.y + 2.2 },
+  ]);
+  polygon(graphics, [
+    outRidge,
+    outB,
+    { x: outB.x, y: outB.y + 2.2 },
+    { x: outRidge.x, y: outRidge.y + 2.2 },
+  ]);
+  bevel(graphics, wallRidge, outRidge, shade(look.roof, 1.22), 1.3);
 
-  // A ridge along the near hips, catching the light.
-  bevel(graphics, apex, eL, shade(look.roof, 1.22), 1.3);
-  bevel(graphics, apex, eF, shade(look.roof, 1.14), 1.3);
+  // And the shade the hood throws on the wall behind it.
+  occlude(graphics, wallA, wallB, 4, 0.2);
 }
-
-/**
- * A door on the left wall, which faces the camera.
- *
- * **The reported defect was here.** A pale leaf inside a pale frame on a pale
- * wall is three values of the same colour and reads as a smudge — "a strange
- * white patch" was the report, and it was right. The leaf is boarded timber now,
- * dark against a limewashed wall and light against a boarded one, and the frame
- * only exists on the houses that have one.
- */
-function drawDoor(
-  graphics: Phaser.GameObjects.Graphics,
-  look: HouseLook,
-  options: { cx: number; halfW: number; halfH: number; sillY: number },
-): void {
-  const { cx, halfW, halfH, sillY } = options;
-  const height = Math.min(look.wallHeight - 4, 17);
-  if (height <= 6) {
-    return;
-  }
-
-  // Measured from the front corner along the left wall, on the same rule the
-  // wall surface uses: near the camera is low on screen.
-  const at = (t: number, lift: number): Point => ({
-    x: cx - halfW * t,
-    y: sillY + halfH * (1 - t) - lift,
-  });
-
-  if (look.framedDoor) {
-    // Posts and a lintel, in the same oak the rest of the house is framed in.
-    graphics.fillStyle(look.timber, 1);
-    polygon(graphics, [at(0.68, height + 3), at(0.28, height + 3), at(0.28, 0), at(0.68, 0)]);
-  }
-
-  // The leaf: vertical boards, dark enough to be a hole in a pale wall and light
-  // enough to be a door in a dark one.
-  const leaf = look.style === 'framed' ? shade(look.timber, 1.5) : shade(look.timber, 1.15);
-  graphics.fillStyle(leaf, 1);
-  polygon(graphics, [at(0.64, height), at(0.32, height), at(0.32, 0), at(0.64, 0)]);
-
-  // Two plank seams down it, and a ledger across.
-  graphics.fillStyle(shade(leaf, 0.72), 1);
-  for (const t of [0.42, 0.53]) {
-    polygon(graphics, [at(t + 0.012, height), at(t, height), at(t, 0), at(t + 0.012, 0)]);
-  }
-  polygon(graphics, [
-    at(0.64, height * 0.58),
-    at(0.32, height * 0.58),
-    at(0.32, height * 0.58 - 1.6),
-    at(0.64, height * 0.58 - 1.6),
-  ]);
-
-  // The head of the opening, in shadow. This is what says "set back in a wall
-  // with thickness" rather than "painted on a flat surface".
-  graphics.fillStyle(0x000000, 0.34);
-  polygon(graphics, [
-    at(0.64, height),
-    at(0.32, height),
-    at(0.32, height - 2.2),
-    at(0.64, height - 2.2),
-  ]);
-}
-
-/** One window on the right wall, shuttered. Glass was for churches. */
-function drawWindow(
-  graphics: Phaser.GameObjects.Graphics,
-  look: HouseLook,
-  options: { cx: number; halfW: number; halfH: number; sillY: number },
-): void {
-  const { cx, halfW, halfH, sillY } = options;
-  const t = 0.46;
-  const y = sillY + halfH * (1 - t) - look.wallHeight * 0.6;
-  const x = cx + halfW * t;
-
-  graphics.fillStyle(shade(look.timber, 1.35), 1);
-  polygon(graphics, [
-    { x: x - 7, y: y - 3.6 },
-    { x: x + 2, y: y + 0.9 },
-    { x: x + 2, y: y + 9.6 },
-    { x: x - 7, y: y + 6.2 },
-  ]);
-
-  graphics.fillStyle(WINDOW_DARK, 1);
-  polygon(graphics, [
-    { x: x - 5.4, y: y - 2 },
-    { x: x + 0.9, y: y + 1.1 },
-    { x: x + 0.9, y: y + 8 },
-    { x: x - 5.4, y: y + 5 },
-  ]);
-
-  // A shutter, folded back against the wall on the near side of the opening.
-  graphics.fillStyle(shade(look.timber, 1.15), 1);
-  polygon(graphics, [
-    { x: x - 8.6, y: y - 4.4 },
-    { x: x - 6.6, y: y - 3.4 },
-    { x: x - 6.6, y: y + 5.4 },
-    { x: x - 8.6, y: y + 4.4 },
-  ]);
-
-  // The reveal along the head, in shadow.
-  graphics.fillStyle(0x000000, 0.35);
-  polygon(graphics, [
-    { x: x - 5.4, y: y - 2 },
-    { x: x + 0.9, y: y + 1.1 },
-    { x: x + 0.9, y: y + 2.7 },
-    { x: x - 5.4, y: y - 0.4 },
-  ]);
-}
-
-/** Rubble, shared by every footing in the settlement. */
-const STONE = 0x6a675e;
-/** Where stones are picked out along a course. Fixed: nothing here is rolled. */
-const STONE_COURSE: readonly number[] = [0.22, 0.54, 0.82];
-/** Boards across one wall face of a boarded house. */
-const BOARDS = 13;
-/** Log courses above the footing of a stone house. */
-const LOG_COURSES = 4;
-/** The dark of an unglazed opening. */
-const WINDOW_DARK = 0x201b16;
