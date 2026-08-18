@@ -230,26 +230,27 @@ export class CameraController {
   }
 
   /**
-   * Keeps the visible rectangle inside the scene bounds.
+   * Keeps the *centre* of the view inside the scene bounds.
    *
-   * When the world is narrower than the viewport on an axis, the camera centres
-   * on it instead of clamping, which would otherwise push it against one edge.
+   * **It used to keep the whole visible rectangle inside them, and that made the
+   * edge of the map unbuildable.** Building is done by moving the ghost, and the
+   * ghost sits at the centre of the view — so wherever the camera centre cannot
+   * go, nothing can be built. Holding the viewport inside the world meant the
+   * centre could never come within half a screen of an edge, and the corners of
+   * the map were simply not places a player could put a house.
+   *
+   * The cost is a margin of empty ground around the world when the player pans
+   * right out to a corner, which is the correct trade: emptiness past the edge of
+   * the map is honest — there is nothing there — whereas a corner you can see and
+   * cannot use is not.
+   *
+   * There is no small-world special case any more. A world narrower than the
+   * viewport clamps on the same rule as any other, and it lands in the same
+   * place: the centre stays over the scene.
    */
   private clampCentre(): void {
-    const halfWidth = this.viewport.width / 2 / this.currentZoom;
-    const halfHeight = this.viewport.height / 2 / this.currentZoom;
     const { minX, minY, maxX, maxY } = this.limits.bounds;
-
-    if (maxX - minX <= halfWidth * 2) {
-      this.centreX = (minX + maxX) / 2;
-    } else {
-      this.centreX = clamp(this.centreX, minX + halfWidth, maxX - halfWidth);
-    }
-
-    if (maxY - minY <= halfHeight * 2) {
-      this.centreY = (minY + maxY) / 2;
-    } else {
-      this.centreY = clamp(this.centreY, minY + halfHeight, maxY - halfHeight);
-    }
+    this.centreX = clamp(this.centreX, minX, maxX);
+    this.centreY = clamp(this.centreY, minY, maxY);
   }
 }

@@ -317,7 +317,9 @@ export class Game implements GameContext, InputIntentSink {
     this.simulation = Game.foundSettlement(this.currentSeed, this.startingVillagers);
     this.worldGeneration += 1;
 
-    this.clock.restore(0, 1);
+    // Paused, like the opening of any settlement: the player looks at the valley
+    // they have been given before the clock starts taking days off them.
+    this.clock.restore(0, 0);
     this.currentSelection = null;
     this.selectionChanges += 1;
     this.currentPlacement = null;

@@ -12,6 +12,10 @@
  * build bar, the speed controls and the contextual panels are the game; the
  * rest is housekeeping.
  *
+ * The one exception to "housekeeping only" is beginning again, which is here
+ * because there is nowhere else for it: a player who wants a different valley
+ * should not have to lose this one first, and the main menu is behind a refresh.
+ *
  * Audio will land here when there is any. Deliberately no control for it yet:
  * a volume slider that adjusts nothing is worse than no slider at all.
  */
@@ -32,6 +36,8 @@ export class SettingsMenu {
   private readonly displayHeading: HTMLElement;
   private readonly guideButton: HTMLButtonElement;
   private readonly languageButton: HTMLButtonElement;
+  private readonly restartButton: HTMLButtonElement;
+  private readonly restartNote: HTMLElement;
   private readonly closeButton: HTMLButtonElement;
   private readonly saveButton: HTMLButtonElement;
   private readonly loadButton: HTMLButtonElement;
@@ -39,6 +45,8 @@ export class SettingsMenu {
   private readonly fullscreenButton: HTMLButtonElement | null;
 
   private renderedLanguageVersion = -1;
+  /** `true` once the restart button has been pressed and is asking. */
+  private restartArmed = false;
   private renderedSaveVersion = -1;
   private isFullscreen = false;
   private onClose: (() => void) | null = null;
@@ -67,6 +75,8 @@ export class SettingsMenu {
       root,
       '[data-ui="settings-language"]',
     ) as HTMLButtonElement;
+    this.restartButton = requireElement(root, '[data-ui="settings-restart"]') as HTMLButtonElement;
+    this.restartNote = requireElement(root, '[data-ui="settings-restart-note"]');
     this.closeButton = requireElement(root, '[data-ui="settings-close"]') as HTMLButtonElement;
     this.saveButton = requireElement(root, '[data-hud="save"]') as HTMLButtonElement;
     this.loadButton = requireElement(root, '[data-hud="load"]') as HTMLButtonElement;
@@ -86,6 +96,23 @@ export class SettingsMenu {
           this.render();
         },
       });
+    });
+
+    // **Asks once, in place.** Beginning again throws away a settlement somebody
+    // has spent an hour on, and a single tap next to "Full screen" is too cheap
+    // for that. The button becomes the question and the second press answers it,
+    // which needs no dialog, no extra sheet and no blocking browser prompt — and
+    // closing the sheet forgets it was ever asked.
+    this.restartButton.addEventListener('click', () => {
+      if (!this.restartArmed) {
+        this.restartArmed = true;
+        this.labelRestart();
+        return;
+      }
+      this.restartArmed = false;
+      // A new seed, so it is a new valley rather than this one again.
+      this.context.startNewSettlement();
+      this.close();
     });
 
     this.languageButton.addEventListener('click', () => {
@@ -124,6 +151,7 @@ export class SettingsMenu {
 
   public open(options: { readonly onClose: () => void }): void {
     this.onClose = options.onClose;
+    this.restartArmed = false;
     this.render();
     this.root.hidden = false;
     this.closeButton.focus();
@@ -134,6 +162,7 @@ export class SettingsMenu {
       return;
     }
     this.root.hidden = true;
+    this.restartArmed = false;
     const callback = this.onClose;
     this.onClose = null;
     callback?.();
@@ -180,7 +209,18 @@ export class SettingsMenu {
     this.saveButton.textContent = this.i18n.t('action.save');
     this.loadButton.textContent = this.i18n.t('action.load');
     this.languageButton.textContent = `${this.i18n.t('settings.language')}: ${this.i18n.language.toUpperCase()}`;
+    this.restartNote.textContent = this.i18n.t('settings.restartNote');
+    this.labelRestart();
     this.labelFullscreen();
+  }
+
+  private labelRestart(): void {
+    const key = this.restartArmed ? 'settings.restartConfirm' : 'settings.restart';
+    const label = this.i18n.t(key);
+    if (this.restartButton.textContent !== label) {
+      this.restartButton.textContent = label;
+    }
+    this.restartButton.dataset.armed = this.restartArmed ? 'true' : 'false';
   }
 
   private labelFullscreen(): void {

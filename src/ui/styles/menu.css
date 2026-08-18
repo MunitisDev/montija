@@ -291,6 +291,11 @@ body.is-menu-open #hud {
   color: var(--colour-ink-dim);
 }
 
+/* What it produces, which is the line most worth finding. */
+.guide__meta--output {
+  color: var(--colour-thrive);
+}
+
 .guide__detail {
   margin: 0;
   font-size: 0.88rem;
@@ -697,6 +702,24 @@ body.is-menu-open #hud {
 
 .settings__button[hidden] {
   display: none;
+}
+
+/*
+ * The one button here that throws a settlement away.
+ *
+ * Deliberately not styled as a warning until it is armed: a red button sitting
+ * in a settings sheet reads as a threat every time the sheet is opened. It goes
+ * red only on the second press, when it genuinely is one.
+ */
+.settings__button--grave:hover:not(:disabled) {
+  background: rgba(180, 85, 58, 0.16);
+  border-color: rgba(180, 85, 58, 0.5);
+}
+
+.settings__button--grave[data-armed='true'] {
+  color: var(--colour-alarm);
+  border-color: rgba(180, 85, 58, 0.65);
+  background: rgba(180, 85, 58, 0.12);
 }
 
 .settings__status {

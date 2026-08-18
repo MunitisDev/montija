@@ -46,17 +46,22 @@ describe('CameraController', () => {
       expect(camera.view.centreX).toBe(400);
     });
 
-    it('keeps the view inside the scene bounds', () => {
+    it('stops with the corner of the scene at the centre of the view', () => {
+      // **The centre is what is clamped, not the visible rectangle.** Building
+      // is done by moving the ghost, and the ghost sits at the centre of the
+      // view — so the far corner of the map has to be a place the centre can
+      // reach, or it is a corner the player can see and cannot use.
       const camera = makeCamera();
 
       camera.panByScreenDelta(10_000, 10_000);
 
-      // Half a 400x300 viewport at zoom 1 is 200x150 of margin.
-      expect(camera.view.centreX).toBe(200);
-      expect(camera.view.centreY).toBe(150);
+      expect(camera.view.centreX).toBe(0);
+      expect(camera.view.centreY).toBe(0);
     });
 
-    it('centres on the scene when it is smaller than the viewport', () => {
+    it('lets a small world sit against the edge of the screen', () => {
+      // No special case for a world smaller than the viewport: it clamps on the
+      // same rule, and the rule already allows empty ground past the edge.
       const camera = new CameraController({
         limits: LIMITS,
         viewport: { width: 4000, height: 4000 },
@@ -64,8 +69,8 @@ describe('CameraController', () => {
 
       camera.panByScreenDelta(-9999, -9999);
 
-      expect(camera.view.centreX).toBe(500);
-      expect(camera.view.centreY).toBe(500);
+      expect(camera.view.centreX).toBe(1000);
+      expect(camera.view.centreY).toBe(1000);
     });
   });
 
@@ -169,8 +174,8 @@ describe('CameraController', () => {
         camera.update(1 / 60);
       }
 
-      expect(camera.view.centreX).toBeLessThanOrEqual(1000 - VIEWPORT.width / 2);
-      expect(camera.view.centreY).toBeLessThanOrEqual(1000 - VIEWPORT.height / 2);
+      expect(camera.view.centreX).toBeGreaterThanOrEqual(0);
+      expect(camera.view.centreY).toBeGreaterThanOrEqual(0);
     });
   });
 
@@ -204,13 +209,16 @@ describe('CameraController', () => {
     });
   });
 
-  it('re-clamps the camera after a viewport resize', () => {
+  it('holds the camera over the scene across a viewport resize', () => {
+    // A resize no longer moves the camera, because the clamp no longer depends
+    // on how big the window is — only on where the scene is. Turning a tablet on
+    // its side used to shove the view half a screen inland.
     const camera = makeCamera();
     camera.centreOn({ px: 950, py: 950 });
 
     camera.setViewportSize({ width: 1200, height: 900 });
 
-    expect(camera.view.centreX).toBe(500);
-    expect(camera.view.centreY).toBe(550);
+    expect(camera.view.centreX).toBe(950);
+    expect(camera.view.centreY).toBe(950);
   });
 });

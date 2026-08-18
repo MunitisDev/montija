@@ -116,7 +116,7 @@ export const EN = {
     'Fells its own timber and splits it into firewood. What it crops grows back.',
   'building.forester': "Forester's Lodge",
   'building.forester.description':
-    'Plants and fells nearby, and the woods within its reach recover from anything — even ground you cleared.',
+    'Keeps a working wood around it: plants where the trees are thin, marks the surplus for felling where they are thick. It makes no goods of its own — what it produces is logs on the ground and a wood that never runs out.',
   'building.quarry': 'Quarry',
   'building.quarry.description': 'Cuts stone from a rock face for as long as it stands.',
   'building.mine': 'Mine',
@@ -275,6 +275,9 @@ export const EN = {
   'settings.game': 'Game',
   'settings.display': 'Display',
   'settings.language': 'Language',
+  'settings.restart': 'Begin again',
+  'settings.restartConfirm': 'Abandon this settlement?',
+  'settings.restartNote': 'A new valley, from a new seed. Anything unsaved is lost.',
 
   'hud.stores': 'Stores',
   'stock.loose': 'in the field',
@@ -431,10 +434,18 @@ export const EN = {
     'Villagers grow old and die. Houses let families raise children, which is the only way the settlement lasts.',
   'guide.resources': 'Resources',
   'guide.buildings': 'Buildings',
+  'guide.buildings.body':
+    'The yearly figures are the plain ones: every post filled, no tools, nobody experienced, nobody ill and nothing walked a long way. Tools and a practised worker raise them; a bad site, a long haul and a hard winter lower them. Gathering follows the year, so its total already has an empty winter in it.',
   'guide.workerSlots': 'workers',
   'guide.noWorkers': 'nobody works here',
   'guide.houses': 'houses',
   'guide.free': 'costs nothing',
+  'guide.aYear': 'a year',
+  'guide.using': 'using',
+  'guide.tendsWithin': 'tends the wood within',
+  'guide.cells': 'cells',
+  'guide.treesKept': 'trees kept standing',
+  'guide.fellsOwn': 'fells its own logs when the stores run low',
 
   'resource.logs.purpose':
     'Felled trees. Almost everything is built from them, and firewood is split from them.',
@@ -586,7 +597,7 @@ export const ES: Messages = {
     'Tala su propia madera y la parte en leña. Lo que corta vuelve a crecer.',
   'building.forester': 'Casa del guarda',
   'building.forester.description':
-    'Planta y tala cerca, y el bosque a su alcance se recupera de todo, incluso del suelo que despejaste.',
+    'Mantiene un bosque de trabajo a su alrededor: planta donde los árboles escasean y marca para talar donde sobran. No fabrica nada propio: lo que produce son troncos en el suelo y un bosque que no se agota.',
   'building.quarry': 'Cantera',
   'building.quarry.description': 'Saca piedra de una pared de roca mientras siga en pie.',
   'building.mine': 'Mina',
@@ -728,6 +739,10 @@ export const ES: Messages = {
   'settings.game': 'Partida',
   'settings.display': 'Pantalla',
   'settings.language': 'Idioma',
+  'settings.restart': 'Empezar de nuevo',
+  'settings.restartConfirm': '¿Abandonar este asentamiento?',
+  'settings.restartNote':
+    'Un valle nuevo, con una semilla nueva. Se pierde lo que no esté guardado.',
 
   'hud.stores': 'Almacén',
   'stock.loose': 'en el campo',
@@ -884,10 +899,18 @@ export const ES: Messages = {
     'Los aldeanos envejecen y mueren. Las casas permiten criar hijos, que es lo único que hace durar al asentamiento.',
   'guide.resources': 'Recursos',
   'guide.buildings': 'Edificios',
+  'guide.buildings.body':
+    'Las cifras anuales son las simples: todos los puestos ocupados, sin herramientas, sin experiencia, nadie enfermo y nada acarreado desde lejos. Las herramientas y un trabajador veterano las suben; un mal sitio, un acarreo largo y un invierno duro las bajan. La recolección sigue el año, así que su total ya lleva dentro un invierno vacío.',
   'guide.workerSlots': 'trabajadores',
   'guide.noWorkers': 'aquí no trabaja nadie',
   'guide.houses': 'aloja a',
   'guide.free': 'no cuesta nada',
+  'guide.aYear': 'al año',
+  'guide.using': 'consumiendo',
+  'guide.tendsWithin': 'cuida el bosque en',
+  'guide.cells': 'casillas',
+  'guide.treesKept': 'árboles en pie',
+  'guide.fellsOwn': 'tala sus propios troncos cuando faltan en los almacenes',
 
   'resource.logs.purpose':
     'Árboles talados. Casi todo se construye con ellos, y de ellos se parte la leña.',

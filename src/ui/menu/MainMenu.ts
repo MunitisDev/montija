@@ -11,8 +11,10 @@
  * - **The world is already there behind it.** The menu is an overlay over a
  *   founded settlement rather than a separate screen, so choosing to play costs
  *   no load and the first thing anyone sees is the game rather than a colour.
- * - **The clock is paused while it is open.** A settlement quietly starving
- *   behind a title card would be a cruel way to start.
+ * - **The clock is paused while it is open, and stays paused after it.** A
+ *   settlement quietly starving behind a title card would be a cruel way to
+ *   start; and once the card is gone, the player gets as long as they like to
+ *   look at the valley before the year begins running.
  * - **"New settlement" does not found a new one.** The world behind the menu is
  *   already new, and re-founding would throw it away to generate an identical
  *   replacement. Beginning again after a settlement dies is the failure
@@ -107,10 +109,18 @@ export class MainMenu {
       });
   }
 
+  /**
+   * Puts the player in the world, with the clock still stopped.
+   *
+   * **Deliberately not `resume()`.** A settlement begins paused: the first thing
+   * to do in this game is read the ground — where the river runs, where the rock
+   * is, which way the wood lies — and deciding that against a running clock means
+   * deciding it badly. The speed buttons are the first thing on the HUD and
+   * pressing one is how the year starts.
+   */
   private startPlaying(): void {
     this.root.hidden = true;
     document.body.classList.remove('is-menu-open');
-    this.context.clock.resume();
   }
 
   private render(): void {
