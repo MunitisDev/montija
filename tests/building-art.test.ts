@@ -26,6 +26,7 @@ import { BUILDING_IDS, buildingDefinition } from '@/data/buildings';
 import { TILE_HEIGHT, TILE_WIDTH } from '@/shared/math/isometric';
 import {
   BUILDING_COLOURS,
+  artVariants,
   buildingTextureSpec,
   drawBuilding,
 } from '@/renderer/phaser/terrain/buildingArt';
@@ -91,9 +92,14 @@ interface Drawn {
   readonly height: number;
 }
 
-function draw(id: (typeof BUILDING_IDS)[number]): Drawn {
+function draw(id: (typeof BUILDING_IDS)[number], variant = 0): Drawn {
   const bounds = new Recorder();
-  drawBuilding(bounds as unknown as Parameters<typeof drawBuilding>[0], id, BUILDING_COLOURS[id]);
+  drawBuilding(
+    bounds as unknown as Parameters<typeof drawBuilding>[0],
+    id,
+    BUILDING_COLOURS[id],
+    variant,
+  );
 
   const spec = buildingTextureSpec(id);
   const { footprint } = buildingDefinition(id);
@@ -120,10 +126,15 @@ const SLACK = 2;
  * nothing about the four other buildings breaking the same rule.
  */
 function offenders(check: (art: Drawn) => string | null): string[] {
-  return BUILDING_IDS.map((id) => {
-    const complaint = check(draw(id));
-    return complaint === null ? null : `${id}: ${complaint}`;
-  }).filter((entry): entry is string => entry !== null);
+  // **Every variant, not only the first.** A building drawn several ways — a
+  // yard's stocked-ness, a house's construction — has a texture per variant, and
+  // any one of them can be the one that oversails.
+  return BUILDING_IDS.flatMap((id) =>
+    Array.from({ length: artVariants(id) }, (_, variant) => {
+      const complaint = check(draw(id, variant));
+      return complaint === null ? null : `${id}/${variant}: ${complaint}`;
+    }),
+  ).filter((entry): entry is string => entry !== null);
 }
 
 describe('every building stays on its own plot', () => {

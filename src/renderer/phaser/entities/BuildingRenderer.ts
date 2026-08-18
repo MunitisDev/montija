@@ -205,7 +205,7 @@ export class BuildingRenderer {
     );
 
     const texture = building.isComplete
-      ? TextureKeys.building(building.definition.id)
+      ? TextureKeys.building(building.definition.id, styleFor(building))
       : TextureKeys.site;
 
     const body = this.scene.add
@@ -272,4 +272,23 @@ export function footprintCentre(building: Building) {
     wx: building.origin.gx + footprint.width / 2,
     wy: building.origin.gy + footprint.height / 2,
   });
+}
+
+/**
+ * Which of a building's looks this one gets.
+ *
+ * **From its own id, so a village is not a row of identical houses** — and so
+ * the same house is the same house after a reload, which a roll would not be.
+ * The simulation is not consulted and nothing is stored: a building's id is
+ * already saved, and this is a pure function of it.
+ *
+ * Yards are the exception: their variant is how full they are, and that is
+ * chosen by `syncYardFills` from the store rather than here.
+ */
+function styleFor(building: Building): number {
+  const looks = artVariants(building.definition.id);
+  if (looks <= 1 || building.definition.storage) {
+    return 0;
+  }
+  return building.id % looks;
 }

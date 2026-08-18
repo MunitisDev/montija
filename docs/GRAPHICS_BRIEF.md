@@ -91,6 +91,13 @@ new anchor convention, or a sprite that spills onto its neighbour's plot.
 
 Three constraints on that work, and all three are load-bearing:
 
+**Near the camera is low on screen, and getting that backwards is invisible until it is
+catastrophic.** A wall's top edge runs from `(cx, y + halfH)` at the _front_ corner up to
+`(cx ± halfW, y)` at the side corner, so screen height falls as you walk away from the camera. The
+first framing code in this project had the sign the other way round, which hung every post, plank
+and door off the face it was supposed to be drawn on — and it read as "the house looks see-through
+and the door looks stuck on", which is not a description anybody would trace back to a sign error.
+
 **The anchor is the footprint's centre, on the ground line.** `buildingTextureSpec` returns a
 `groundLine` fraction and `BuildingRenderer` uses the same one. Whatever you draw, the ground
 line must still be where the building meets its plot, and the texture must still contain the
@@ -105,6 +112,25 @@ things sort wrongly, the fix is in the sorting rule or in the anchor, never a ma
 buildings dominate and villagers small, which the art bible asks for. Growing _sideways_ past
 the base rhombus plus `eaves` puts painted wall over ground the simulation says is walkable,
 and a player will try to build there.
+
+## Looking at art without running the game
+
+`preview.html` at the repo root is a drawing board, served by Vite in development
+and **not part of the production bundle** — nothing in `src/` imports it and the build
+has one entry, `index.html`.
+
+```bash
+npm run dev
+# then open http://localhost:5173/preview.html?id=house&scale=3
+```
+
+It draws the **real** art: the building code talks to a handful of methods on a Phaser
+`Graphics`, so a stand-in that forwards the same calls to a plain 2D canvas renders it exactly,
+with no game, no scene and no WebGL. Every variant of the building is laid out side by side, which
+is what makes it possible to compare three proposals before wiring any of them into anything.
+
+The same trick is what `tests/building-art.test.ts` uses to measure the art headlessly. If you add a
+drawing primitive, add it to both stand-ins.
 
 ## Seasons, weather and light are already wired
 

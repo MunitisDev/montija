@@ -36,6 +36,7 @@ import type Phaser from 'phaser';
 
 import { BUILDINGS, type BuildingId } from '@/data/buildings';
 import { TILE_HEIGHT, TILE_WIDTH } from '@/shared/math/isometric';
+import { HOUSE_LOOKS, drawHouse } from './houseArt';
 import {
   SHADOW_SPREAD,
   SUN_OFFSET,
@@ -156,10 +157,12 @@ const MASS: Readonly<Record<BuildingId, BuildingMass>> = {
     plinth: 5,
     chimney: true,
     windows: 2,
-    inset: 0.56,
+    // **Fewer things round it, more definition on it.** The first pass had a
+    // fence and a lean-to and a garden, and the report was that the house itself
+    // looked vague — so the accessories are gone and the effort went into how the
+    // walls are built. See `houseArt.ts`.
+    inset: 0.66,
     ground: 'garden',
-    fence: true,
-    porch: true,
   },
   // **A deck, not a box.** It was a low flat slab with three rectangles on it —
   // the least built-looking thing in the settlement, and the first thing every
@@ -534,7 +537,13 @@ export function yardFillVariant(total: number): number {
  * stacked on it.
  */
 export function artVariants(id: BuildingId): number {
-  return MASS[id].yard === true ? YARD_FILL_LEVELS : 1;
+  if (MASS[id].yard === true) {
+    return YARD_FILL_LEVELS;
+  }
+  // A house is drawn in one of three constructions — see `houseArt.ts`. Which
+  // one a given house gets is the renderer's business; the loader's job is only
+  // to have all three ready.
+  return id === 'house' ? HOUSE_LOOKS.length : 1;
 }
 
 /**
@@ -601,6 +610,23 @@ export function drawBuilding(
   }
   if (mass.fence) {
     drawFence(graphics, { palette, cx, groundY, halfW: plotW, halfH: plotH, side: 'far' });
+  }
+
+  // A house is its own module. It is the building there are most of and the one
+  // people actually look at, so it gets three constructions and a level of
+  // detail none of the generic machinery below would give it.
+  if (id === 'house') {
+    const look = HOUSE_LOOKS[Math.min(variant, HOUSE_LOOKS.length - 1)] ?? HOUSE_LOOKS[0]!;
+    contactShadow(graphics, { x: cx, y: groundY }, halfW * SHADOW_FIT, halfH * SHADOW_FIT);
+    drawHouse(graphics, look, { cx, groundY, halfW, halfH });
+    if (mass.fence) {
+      drawFence(graphics, { palette, cx, groundY, halfW: plotW, halfH: plotH, side: 'near' });
+    }
+    const hearth = chimneyOffset(id, variant);
+    if (hearth) {
+      drawChimney(graphics, cx + hearth.dx, groundY + hearth.dy);
+    }
+    return;
   }
 
   const plinthHeight = mass.plinth ?? 0;
@@ -1112,6 +1138,14 @@ function drawProp(
 /** How far up the roof pitch the stack sits, from apex to eaves. */
 const CHIMNEY_ALONG = 0.34;
 
+/**
+ * And how far across it, toward the front corner.
+ *
+ * Nought would put the stack on the hip, which is what made it look like it was
+ * hanging in the air beside the roof rather than standing on it.
+ */
+const CHIMNEY_ACROSS = 0.2;
+
 /** Height of the stack itself, including its cap. */
 const CHIMNEY_HEIGHT = 18.5;
 
@@ -1125,14 +1159,39 @@ const CHIMNEY_HEIGHT = 18.5;
  *
  * `null` for the buildings with no hearth, which is most of them.
  */
-export function chimneyOffset(id: BuildingId): { dx: number; dy: number } | null {
+export function chimneyOffset(
+  id: BuildingId,
+  /** Which variant, for buildings drawn more than one way. */
+  variant = 0,
+): { dx: number; dy: number } | null {
   const mass = MASS[id];
   if (mass.chimney !== true) {
     return null;
   }
 
+  // A house carries its own wall and roof heights per construction, so the roof
+  // plane the stack has to sit on is not the one the generic mass describes.
+  if (id === 'house') {
+    const look = HOUSE_LOOKS[Math.min(variant, HOUSE_LOOKS.length - 1)] ?? HOUSE_LOOKS[0]!;
+    const houseHalfW =
+      (baseSize(BUILDINGS[id].footprint).width / 2 - FOOTPRINT_INSET) * (mass.inset ?? 1);
+    const wallTop = -(look.plinth + look.wallHeight);
+    const apex = wallTop - look.roofHeight;
+    return onNearPitch({
+      apex,
+      eaveX: -houseHalfW - look.eaves,
+      eaveY: wallTop + look.eaves / 2,
+      frontY: wallTop + look.eaves / 2,
+      frontX: 0,
+    });
+  }
+
   const base = baseSize(BUILDINGS[id].footprint);
-  const halfW = base.width / 2 - FOOTPRINT_INSET;
+  // **The building's half-width, not the plot's.** A house drawn inset is smaller
+  // than the ground it stands on, and measuring the roof from the plot put the
+  // stack out where the eaves would have been if the house filled its cells —
+  // hanging in the air beside the roof, which is exactly how it was reported.
+  const halfW = (base.width / 2 - FOOTPRINT_INSET) * (mass.inset ?? 1);
 
   // Placed *on* the roof plane, by interpolating along the left pitch from the
   // apex to the eaves. Guessing a height instead put the stack below the roof
@@ -1141,9 +1200,33 @@ export function chimneyOffset(id: BuildingId): { dx: number; dy: number } | null
   const eaveX = -halfW - mass.eaves;
   const eaveY = -mass.wallHeight + mass.eaves / 2;
 
+  return onNearPitch({ apex: apexY, eaveX, eaveY, frontX: 0, frontY: eaveY });
+}
+
+/**
+ * A point standing *in* the near-left pitch, rather than on the hip above it.
+ *
+ * **Reported as "the chimney is flying", and it was.** Interpolating from the
+ * apex straight down the left hip puts the stack on the silhouette edge, where
+ * half of it overlaps the near pitch and half of it sticks out into the sky over
+ * the far one — which reads as a stack hanging beside the roof rather than
+ * coming out of it.
+ *
+ * A weighted point between the apex and the two near corners lands it on the
+ * surface, with roof on every side of it.
+ */
+function onNearPitch(roof: {
+  apex: number;
+  eaveX: number;
+  eaveY: number;
+  frontX: number;
+  frontY: number;
+}): { dx: number; dy: number } {
+  const toEave = CHIMNEY_ALONG;
+  const toFront = CHIMNEY_ACROSS;
   return {
-    dx: eaveX * CHIMNEY_ALONG,
-    dy: apexY + (eaveY - apexY) * CHIMNEY_ALONG,
+    dx: roof.eaveX * toEave + roof.frontX * toFront,
+    dy: roof.apex * (1 - toEave - toFront) + roof.eaveY * toEave + roof.frontY * toFront,
   };
 }
 
