@@ -339,7 +339,32 @@ left, so a shadow still reaches the plot's down-right edge and falls short of th
 The one exception is **eaves**, which are declared per building and which the texture is widened for.
 A roof may oversail. Nothing else may.
 
-### The house: a boarded cottage with an offset porch gable
+### The house: a cross-gabled cottage on a stone base
+
+Two gables crossing, meeting at the corner nearest the camera, with the valley between them running
+straight down to it. That silhouette is most of what the eye actually reads, and it is the thing a
+single-apex roof cannot give you: a pyramid is the same lozenge whatever it sits on, so a house, a
+workshop and a store all read as one object.
+
+The pieces that earn their place at forty pixels tall, and nothing else does:
+
+- **a stone base**, two courses of large blocks. What stops a timber house looking like it is
+  resting on the grass. Large blocks, not rubble — small masonry marks turn to noise and read as
+  dirt on the wall.
+- **corner posts, a mid post and a head beam**, with faint boarding in the panels between them. The
+  frame is what makes it a _timber_ house rather than a brown box; three posts a face is the whole
+  of it, and a full cruck frame at this size is noise.
+- **rafters and a king post on each gable**, which is how a gable is actually built.
+- **beam ends** — squared-off blocks where the rafters carry past the barge. Four of them, and they
+  are most of what makes a roof look built rather than folded.
+- **four-pane windows**, two a face, and a plank door with straps under the gable, with stone steps.
+
+**Two ordering traps, both of which were fallen into.** The gable walls stand _in front of_ the
+valley behind them and _behind_ the barge boards that cap them — there is no order that works if
+they are painted before the roof or after it, so the roof function sequences them itself. And the
+valley planes are easy to forget entirely, which leaves a hole through the middle of the roof.
+
+#### An earlier pass: the boarded cottage with an offset porch gable
 
 Drawn from a vector recipe, in `houseArt.ts`. Three constructions were drawn and compared on the
 preview board — an oak frame with limewashed daub, boarded planks under thatch, and log courses on a

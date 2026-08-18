@@ -36,7 +36,12 @@ import type Phaser from 'phaser';
 
 import { BUILDINGS, type BuildingId } from '@/data/buildings';
 import { TILE_HEIGHT, TILE_WIDTH } from '@/shared/math/isometric';
-import { HOUSE_LOOK, drawHouse } from './houseArt';
+import {
+  HOUSE_CHIMNEY_HEIGHT,
+  HOUSE_LOOK,
+  drawOchreBoardedHouse,
+  houseChimneyBase,
+} from './houseArt';
 import {
   SHADOW_SPREAD,
   SUN_OFFSET,
@@ -130,6 +135,9 @@ interface BuildingMass {
   readonly porch?: boolean;
 }
 
+/** Room above a house's ridge for the stack standing on it, and its cap. */
+const CHIMNEY_CLEARANCE = 22;
+
 /**
  * Roof heights are large on purpose.
  *
@@ -150,11 +158,15 @@ const MASS: Readonly<Record<BuildingId, BuildingMass>> = {
   // to be drawn at, which leaves ground for a garden, a fence with a gap at the
   // gate and a lean-to over the door — and reads as *larger*, because a building
   // with somewhere to stand looks like a building rather than a block.
+  // Only three of these fields are still read for a house: `chimney`, so the
+  // smoke knows it has a hearth, `inset` and `ground`. Everything about its
+  // shape lives in `houseArt.ts`, and the heights here exist so
+  // `buildingTextureSpec` sizes a texture the house fits inside.
   house: {
-    wallHeight: 24,
-    roofHeight: 44,
-    eaves: 5,
-    plinth: 5,
+    wallHeight: HOUSE_LOOK.plinth + HOUSE_LOOK.wallHeight,
+    roofHeight: HOUSE_LOOK.roofHeight + CHIMNEY_CLEARANCE,
+    eaves: HOUSE_LOOK.eaves,
+    plinth: 0,
     chimney: true,
     windows: 2,
     // **Fewer things round it, more definition on it.** The first pass had a
@@ -612,13 +624,13 @@ export function drawBuilding(
   // A house is its own module. It is the building there are most of and the one
   // people actually look at, so it gets three constructions and a level of
   // detail none of the generic machinery below would give it.
+  // The house draws itself, chimney included — see `houseArt.ts`. None of the
+  // wall, plinth and roof machinery below is used for it, and in particular not
+  // the single-apex roof: a pyramid has no direction, so a house, a workshop and
+  // a store all read as the same lozenge.
   if (id === 'house') {
     contactShadow(graphics, { x: cx, y: groundY }, halfW * SHADOW_FIT, halfH * SHADOW_FIT);
-    drawHouse(graphics, HOUSE_LOOK, { cx, groundY, halfW, halfH });
-    const hearth = chimneyOffset(id);
-    if (hearth) {
-      drawChimney(graphics, cx + hearth.dx, groundY + hearth.dy);
-    }
+    drawOchreBoardedHouse(graphics, { cx, groundY, halfW, halfH });
     return;
   }
 
@@ -1158,30 +1170,24 @@ export function chimneyOffset(id: BuildingId): { dx: number; dy: number } | null
     return null;
   }
 
-  // A house carries its own proportions, in shares of the footprint's diagonal,
-  // so the roof plane the stack has to stand on is not the one the generic mass
-  // describes. See `houseArt.ts`.
+  // A house places its own stack, so the smoke has to ask the house where it is
+  // rather than working it out from a mass the house does not use.
   if (id === 'house') {
     const base = baseSize(BUILDINGS[id].footprint);
-    const houseHalfW = (base.width / 2 - FOOTPRINT_INSET) * (mass.inset ?? 1);
-    const houseHalfH = (base.height / 2 - FOOTPRINT_INSET / 2) * (mass.inset ?? 1);
-    const unit = houseHalfH * 2;
-    const wallTop = -(HOUSE_LOOK.plinth + HOUSE_LOOK.wallHeight) * unit;
-    const eaves = HOUSE_LOOK.eaves * unit;
-    return onNearPitch({
-      apex: wallTop - HOUSE_LOOK.roofHeight * unit,
-      eaveX: -houseHalfW - eaves,
-      eaveY: wallTop,
-      frontX: 0,
-      frontY: wallTop + houseHalfH + eaves / 2,
+    const inset = mass.inset ?? 1;
+    const stack = houseChimneyBase({
+      cx: 0,
+      groundY: 0,
+      halfW: (base.width / 2 - FOOTPRINT_INSET) * inset,
+      halfH: (base.height / 2 - FOOTPRINT_INSET / 2) * inset,
     });
+    return { dx: stack.x, dy: stack.y };
   }
 
   const base = baseSize(BUILDINGS[id].footprint);
-  // **The building's half-width, not the plot's.** A house drawn inset is smaller
-  // than the ground it stands on, and measuring the roof from the plot put the
-  // stack out where the eaves would have been if the house filled its cells —
-  // hanging in the air beside the roof, which is exactly how it was reported.
+  // **The building's half-width, not the plot's.** A building drawn inset is
+  // smaller than the ground it stands on, and measuring the roof from the plot
+  // put the stack out where the eaves would have been if it filled its cells.
   const halfW = (base.width / 2 - FOOTPRINT_INSET) * (mass.inset ?? 1);
 
   // Placed *on* the roof plane, by interpolating along the left pitch from the
@@ -1224,7 +1230,11 @@ function onNearPitch(roof: {
 /** The lip of the stack, where smoke actually leaves the building. */
 export function chimneyMouth(id: BuildingId): { dx: number; dy: number } | null {
   const stack = chimneyOffset(id);
-  return stack ? { dx: stack.dx, dy: stack.dy - CHIMNEY_HEIGHT } : null;
+  if (!stack) {
+    return null;
+  }
+  const height = id === 'house' ? HOUSE_CHIMNEY_HEIGHT : CHIMNEY_HEIGHT;
+  return { dx: stack.dx, dy: stack.dy - height };
 }
 
 /** Four uprights, so a wall reads as a timber frame rather than as a slab. */
