@@ -247,6 +247,59 @@ construction — the simulation cannot import the renderer.
 
 ---
 
+## Structures that are platforms — Implemented
+
+The generic building routine can draw one thing: a box on a plot, optionally with a roof, a stone
+footing and a prop beside it. That covers a house, a workshop and a shed, and it does not cover the
+storage yard, which is a **deck** — and it showed. The yard was a flat lozenge with three
+axis-aligned rectangles lying on it, and since the founding camp borrows this art it was the first
+structure every player ever saw.
+
+So the yard has its own routine, and it establishes four conventions for anything else that turns out
+not to be a box:
+
+- **A platform stands off the ground, and you can see under it.** The strip of shadow between the
+  boards and the soil is what makes it a built thing standing in the world rather than a shape lying
+  on it. Nine pixels of visible gap: at four it read as a thick rug.
+- **Boards are drawn as boards.** The deck is filled dark and each plank drawn inside that fill, so
+  the line between two of them is a real gap. Three tones in a repeating run, because two alternating
+  shades read as a stripe pattern and three read as timber. The planks run along one footprint axis,
+  so their sawn ends show on one near edge and the long side of the last board on the other — and
+  those are drawn as different things, because they are.
+- **A raised deck's shadow belongs under it.** The standard contact shadow spreads to 1.24× the
+  footprint, which reached right across the apron and turned the path into a smudge. Platforms use a
+  tighter one.
+- **If it leaves the ground, show the way up.** Two boards from the path to the near corner. Six
+  polygons, and it answers the question the eye asks the moment a deck is not on the soil.
+
+### Ground outside the plot — the apron
+
+A working yard wears a path into the grass around itself, and a path that stops dead at the plot
+boundary reads as a rug. `BuildingMass.apron` is the **one sanctioned way for a building's art to
+reach past its own footprint**: it widens the texture on every side and is counted into the ground
+line with it, so the anchor stays exactly on the footprint's centre.
+
+Nothing about the simulation changes — the footprint is still the footprint, and still what blocks
+navigation and validates placement. Growing a footprint to make room for art would change all three.
+
+### Goods are solids
+
+Crates, barrels, sacks and cut timber on the deck are flat-shaded isometric prisms, not billboards:
+three faces each, lit from the upper left like everything else, each with its own small shadow on the
+boards, drawn back to front so they overlap the way objects do. A barrel is a ten-sided prism whose
+facets take their tone from how far each turns from the light — the settlement has no gradients, so a
+curve is assembled from flats.
+
+Their arrangement is fixed and deliberately uneven. Goods on a grid read as an inventory screen; a
+yard is stacked by people putting things down where there is room.
+
+**One texture, not ten.** The obvious next step is a yard whose goods reflect what is actually stored
+in it, which needs several textures and a rule in the renderer for choosing between them from a
+figure it reads off the simulation. That is a renderer change and not a simulation one, and it is not
+done yet.
+
+---
+
 ## Animation
 
 Restrained and weighty. People in this world are tired and cold, not springy.

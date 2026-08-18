@@ -82,6 +82,26 @@ interface BuildingMass {
    * the ground in front rather than on the walls so it survives being small.
    */
   readonly prop?: 'logpile' | 'forge' | 'racks' | 'cart' | 'spoil';
+  /**
+   * Set for the open storage yard: a plank deck on posts, with goods on it.
+   *
+   * Its own drawing routine rather than a flag on the generic path, because it
+   * is the one structure in the settlement that is a *platform* rather than a
+   * box — and the generic path can only make boxes.
+   */
+  readonly yard?: boolean;
+  /**
+   * Ground drawn *outside* the footprint, in pixels, and the room to draw it in.
+   *
+   * The one sanctioned way for a building's art to reach past its own plot.
+   * Nothing about the simulation changes — the footprint is still the footprint —
+   * but a working yard wears a path into the grass around itself, and a path that
+   * stops dead at the plot boundary reads as a rug rather than as ground.
+   *
+   * Counted into the texture on every side, and into the ground line with it, so
+   * the anchor stays exactly on the footprint's centre.
+   */
+  readonly apron?: number;
 }
 
 /**
@@ -101,9 +121,23 @@ const MASS: Readonly<Record<BuildingId, BuildingMass>> = {
   // the only one with smoke coming out of it, which is most of what makes a
   // settlement look inhabited rather than built.
   house: { wallHeight: 24, roofHeight: 48, eaves: 6, plinth: 5, chimney: true, windows: 2 },
-  // An open yard. Low walls, no roof, so the player can see it is a place for
-  // things rather than a place for people.
-  'storage-yard': { wallHeight: 13, roofHeight: 0, eaves: 0, open: true },
+  // **A deck, not a box.** It was a low flat slab with three rectangles on it —
+  // the least built-looking thing in the settlement, and the first thing every
+  // player sees, since the founding camp borrows this art. It is now a plank
+  // floor standing clear of the ground on posts, framed with a rail, with a
+  // trodden path worn round it and goods stacked on the boards.
+  //
+  // `wallHeight` here is not a wall: nothing about a yard is a wall. It is the
+  // headroom the tallest thing on the deck needs, which is what the texture is
+  // sized from. See `drawStorageYard`.
+  'storage-yard': {
+    wallHeight: 30,
+    roofHeight: 0,
+    eaves: 0,
+    apron: 16,
+    open: true,
+    yard: true,
+  },
   // A granary: shut tight, because its whole purpose is keeping weather out.
   // No windows for the same reason, and a stone footing to keep damp off grain.
   'food-storage': { wallHeight: 20, roofHeight: 40, eaves: 7, plinth: 6 },
@@ -237,6 +271,97 @@ const TOP_MARGIN = 4;
 /** Rubble footing and chimney stone. Cold and grey against the warm timber. */
 const STONE_FOOTING = 0x6a675e;
 
+/**
+ * The storage yard, in pixels. See {@link drawStorageYard}.
+ *
+ * `stand` minus `slab` is the gap you can see under the boards, and it is the
+ * number that decides whether the deck reads as raised at all: at four pixels it
+ * looked like a thick rug, at nine it looks like a platform.
+ */
+const YARD = {
+  /** Height of the deck surface above the ground. */
+  stand: 13,
+  /** How thick the deck reads from the side. */
+  slab: 4,
+  /** Boards across the deck. Odd, so the middle of the yard is a board. */
+  planks: 11,
+  /** Height of the rail posts above the deck. */
+  post: 15,
+} as const;
+
+/** Ground worn bare around a yard people walk to all day. */
+const YARD_APRON = 0x776449;
+
+/**
+ * The shadowed space under the boards.
+ *
+ * Not black. A void that dark swallowed the posts standing in it, and the posts
+ * are the whole point of the gap being there.
+ */
+const UNDER_DECK = 0x241d15;
+
+/** Sawn timber, weathered unevenly. Three tones read as boards; two as stripes. */
+const PLANK_TONES: readonly number[] = [1, 0.9, 0.96, 0.84, 1.04, 0.92];
+
+/** Where the posts under the deck stand, along the two near edges. */
+const YARD_POSTS: readonly (readonly [number, number])[] = [
+  [0, 1],
+  [0.5, 1],
+  [1, 1],
+  [1, 0.5],
+  [1, 0],
+];
+
+/** The rail stands on the two far corners and the back, framing the goods. */
+const YARD_RAIL_POSTS: readonly (readonly [number, number])[] = [
+  [0, 0],
+  [0, 1],
+  [1, 0],
+];
+
+/** Turns round the apron where a rut or a stone shows. Fixed, never rolled. */
+const APRON_SCUFFS: readonly number[] = [0.06, 0.19, 0.33, 0.47, 0.61, 0.78, 0.91];
+const APRON_STONES: readonly number[] = [0.12, 0.29, 0.55, 0.7, 0.86];
+
+/** What is stacked on the boards, and where. */
+interface YardGood {
+  readonly u: number;
+  readonly v: number;
+  /** Size across, as a fraction of the deck's half-width. */
+  readonly size: number;
+  readonly kind: 'crate' | 'barrel' | 'sacks' | 'logs';
+  /** A second, smaller crate on top of this one. */
+  readonly stacked?: boolean;
+}
+
+/**
+ * A fixed arrangement, and deliberately an uneven one.
+ *
+ * Goods laid out on a grid read as a warehouse inventory screen. A yard is
+ * stacked by people carrying things in and putting them down where there is
+ * room, so the pile that looks right is the one that looks slightly untidy.
+ */
+const YARD_GOODS: readonly YardGood[] = [
+  { u: 0.24, v: 0.24, size: 0.28, kind: 'crate', stacked: true },
+  { u: 0.56, v: 0.18, size: 0.23, kind: 'barrel' },
+  { u: 0.8, v: 0.28, size: 0.24, kind: 'crate' },
+  { u: 0.24, v: 0.58, size: 0.28, kind: 'logs' },
+  { u: 0.56, v: 0.48, size: 0.24, kind: 'sacks' },
+  { u: 0.82, v: 0.66, size: 0.25, kind: 'barrel' },
+  { u: 0.44, v: 0.8, size: 0.21, kind: 'crate' },
+];
+
+/** Sawn deal, still pale. Crates are the newest timber in the settlement. */
+const CRATE = 0x8a6b45;
+/** Oak, darkened by whatever has been kept in it, under iron hoops. */
+const BARREL = 0x6b5334;
+const BARREL_HOOP = 0x4e4a44;
+/** Coarse linen, the one pale thing on the deck. */
+const SACK = 0x9c8f6f;
+/** Bark, and the pale round of a fresh cut. */
+const LOG_BARK = 0x5a4a34;
+const LOG_END = 0xa08a63;
+
 /** A window opening. Dark, because glass was for churches. */
 const WINDOW_DARK = 0x2a2620;
 
@@ -275,12 +400,17 @@ export function buildingTextureSpec(id: BuildingId): BuildingTextureSpec {
   const base = baseSize(BUILDINGS[id].footprint);
   const mass = MASS[id];
 
+  // Ground drawn outside the plot, where a building has any. A rhombus grows
+  // twice as fast across as it does down, so the apron adds `apron` to the
+  // half-width and half of it to the half-height — and both ends of the texture
+  // have to grow, or the near corner of the path is clipped off.
+  const apron = mass.apron ?? 0;
   // Room for the roof's overhang on both sides.
-  const width = Math.ceil(base.width + mass.eaves * 2);
+  const width = Math.ceil(base.width + mass.eaves * 2 + apron * 2);
   // Everything above the anchor, plus the half-rhombus that falls in front of
   // it. Forgetting that half is exactly what clipped every building's front.
-  const above = base.height / 2 + mass.wallHeight + mass.roofHeight + TOP_MARGIN;
-  const below = base.height / 2;
+  const above = base.height / 2 + mass.wallHeight + mass.roofHeight + TOP_MARGIN + apron / 2;
+  const below = base.height / 2 + apron / 2;
 
   return {
     width,
@@ -319,6 +449,21 @@ export function drawBuilding(
   });
 
   const ground = rhombus(groundY);
+
+  // A yard is a platform rather than a box, and none of the wall, plinth and
+  // roof machinery below applies to it.
+  if (mass.yard) {
+    drawStorageYard(graphics, {
+      palette,
+      cx,
+      groundY,
+      halfW,
+      halfH,
+      apron: mass.apron ?? 0,
+    });
+    return;
+  }
+
   const plinthHeight = mass.plinth ?? 0;
   const sill = rhombus(groundY - plinthHeight);
   const top = rhombus(groundY - mass.wallHeight);
@@ -963,6 +1108,499 @@ function drawRoof(
 }
 
 /** Crates and sacks, so a storage yard reads as holding something. */
+/**
+ * The storage yard: a plank deck on posts, with the settlement's goods on it.
+ *
+ * **The most-looked-at object in the game, and it was a brown slab.** The
+ * founding camp borrows this art, so it is the first structure every player ever
+ * sees — and what they saw was a flat lozenge with three axis-aligned rectangles
+ * lying on it, which read as a rug with boxes drawn on rather than as a place
+ * anybody had built.
+ *
+ * What it is now, from the ground up:
+ *
+ * ```text
+ *        ▄▟█▙▄   ▟▙        goods, drawn as isometric solids
+ *      ┌─────────────┐     rail, framing the far two sides
+ *      ╱═══════════╱       plank deck, board by board
+ *      ╲___________╱       the sawn ends of those boards
+ *       │ │  │  │ │        posts, standing the deck clear of the damp
+ *     ░░░░░░░░░░░░░░░      the path worn round a yard people use
+ * ```
+ *
+ * Four things do the work, and each is worth its polygons:
+ *
+ * **It stands off the ground.** Timber laid on soil rots, so a real yard is
+ * decked on posts — and the strip of shadow under the boards is what makes it a
+ * built thing standing in the world rather than a shape lying on it.
+ *
+ * **It is made of boards.** The deck is filled dark and then each plank is drawn
+ * inside that fill, so the line between two boards is a real gap rather than a
+ * drawn stripe. Their sawn ends show along the near right edge, which is the
+ * detail that says *sawn* rather than *moulded*.
+ *
+ * **The path is part of the building.** Ground worn bare, reaching a little past
+ * the plot, with ruts across it. See {@link BuildingMass.apron}.
+ *
+ * **The goods are solids, not stickers.** Crates, barrels, sacks and cut timber,
+ * every one of them a flat-shaded isometric prism lit from the upper left like
+ * everything else in the settlement, each with its own small shadow on the
+ * boards, drawn back to front so they overlap the way objects do.
+ *
+ * Nothing here is per-frame work: the whole thing is drawn once into a texture at
+ * load and then used as a sprite, exactly as the flat version was.
+ */
+function drawStorageYard(
+  graphics: Phaser.GameObjects.Graphics,
+  options: {
+    palette: BuildingPalette;
+    cx: number;
+    groundY: number;
+    halfW: number;
+    halfH: number;
+    apron: number;
+  },
+): void {
+  const { palette, cx, groundY, halfW, halfH, apron } = options;
+
+  const deckY = groundY - YARD.stand;
+  /** Underside of the deck slab: where the posts start. */
+  const slabY = deckY + YARD.slab;
+
+  /**
+   * A point on the deck plane, in footprint coordinates.
+   *
+   * `u` runs from the back corner to the right corner, `v` from the back corner
+   * to the left. So `u = 1` traces the near-right edge and `v = 1` the near-left
+   * one, which is what lets a plank be a band of constant `v`.
+   */
+  const at = (u: number, v: number, y: number): Point => ({
+    x: cx + (u - v) * halfW,
+    y: y + (u + v - 1) * halfH,
+  });
+
+  // --- the path worn round it ------------------------------------------------
+  if (apron > 0) {
+    const aw = halfW + apron;
+    const ah = halfH + apron / 2;
+    graphics.fillStyle(YARD_APRON, 1);
+    polygon(graphics, [
+      { x: cx, y: groundY - ah },
+      { x: cx + aw, y: groundY },
+      { x: cx, y: groundY + ah },
+      { x: cx - aw, y: groundY },
+    ]);
+    // Ruts and scuffs, at fixed angles: this texture is drawn once and has to
+    // come out the same on every run, so nothing here may be rolled.
+    graphics.fillStyle(shade(YARD_APRON, 0.82), 1);
+    for (const turn of APRON_SCUFFS) {
+      const angle = Math.PI * 2 * turn;
+      const x = cx + Math.cos(angle) * (halfW + apron * 0.45);
+      const y = groundY + Math.sin(angle) * (halfH + apron * 0.45);
+      graphics.fillRect(x - 3.5, y - 1, 7, 2);
+    }
+    graphics.fillStyle(shade(YARD_APRON, 1.14), 1);
+    for (const turn of APRON_STONES) {
+      const angle = Math.PI * 2 * turn;
+      const x = cx + Math.cos(angle) * (halfW + apron * 0.7);
+      const y = groundY + Math.sin(angle) * (halfH + apron * 0.7);
+      graphics.fillRect(x - 1.5, y - 1, 3, 2);
+    }
+  }
+
+  // Tighter than a building's, and for a reason worth recording: the default
+  // spreads to 1.24x the footprint, which reached right across the apron and
+  // turned the path into a smudge. A raised deck's shadow belongs *under* it.
+  contactShadow(graphics, { x: cx, y: groundY }, halfW * 0.88, halfH * 0.88);
+
+  // --- the dark under the boards, and the posts holding them up -------------
+  //
+  // Only the two near faces of that space are ever visible, which is the whole
+  // reason a deck reads as raised: a gap you can see under.
+  graphics.fillStyle(UNDER_DECK, 1);
+  polygon(graphics, [at(0, 1, slabY), at(1, 1, slabY), at(1, 1, groundY), at(0, 1, groundY)]);
+  graphics.fillStyle(shade(UNDER_DECK, 0.72), 1);
+  polygon(graphics, [at(1, 1, slabY), at(1, 0, slabY), at(1, 0, groundY), at(1, 1, groundY)]);
+
+  for (const [u, v] of YARD_POSTS) {
+    const head = at(u, v, slabY);
+    const foot = at(u, v, groundY);
+    graphics.fillStyle(palette.trim, 1);
+    graphics.fillRect(head.x - 2.5, head.y, 5, foot.y - head.y + 1.5);
+    // A lit edge down the left of each post. Two polygons per post, and it is
+    // the difference between a post and a dark slot.
+    graphics.fillStyle(shade(palette.trim, 1.3), 1);
+    graphics.fillRect(head.x - 2.5, head.y, 1.6, foot.y - head.y + 1.5);
+  }
+
+  // --- the sawn ends of the boards, along the two near edges ----------------
+  //
+  // The planks run along `u`, so the near-right edge shows end grain and the
+  // near-left edge shows the long side of the last board. Different things, and
+  // drawn as different things.
+  graphics.fillStyle(shade(palette.wall, 0.84), 1);
+  polygon(graphics, [at(0, 1, deckY), at(1, 1, deckY), at(1, 1, slabY), at(0, 1, slabY)]);
+  graphics.fillStyle(shade(palette.wall, 0.6), 1);
+  polygon(graphics, [at(1, 1, deckY), at(1, 0, deckY), at(1, 0, slabY), at(1, 1, slabY)]);
+  graphics.fillStyle(shade(palette.wall, 0.44), 1);
+  for (let i = 1; i < YARD.planks; i += 1) {
+    const p = at(1, i / YARD.planks, deckY);
+    graphics.fillRect(p.x - 0.5, p.y, 1, YARD.slab);
+  }
+
+  // --- the deck itself, board by board --------------------------------------
+  //
+  // Filled dark first, then each plank drawn inside that fill: the gap between
+  // two boards is then a gap, not a line painted on a solid surface.
+  graphics.fillStyle(shade(palette.wall, 0.46), 1);
+  polygon(graphics, [at(0, 0, deckY), at(1, 0, deckY), at(1, 1, deckY), at(0, 1, deckY)]);
+
+  const gap = 0.008;
+  for (let i = 0; i < YARD.planks; i += 1) {
+    // Three tones in a repeating run rather than two: two alternating shades
+    // read as a stripe pattern, and three read as timber.
+    const tone = PLANK_TONES[i % PLANK_TONES.length] ?? 1;
+    graphics.fillStyle(shade(palette.wall, tone), 1);
+    polygon(graphics, [
+      at(0, i / YARD.planks + gap, deckY),
+      at(1, i / YARD.planks + gap, deckY),
+      at(1, (i + 1) / YARD.planks - gap, deckY),
+      at(0, (i + 1) / YARD.planks - gap, deckY),
+    ]);
+  }
+
+  // Gloom in the far corners, where light does not reach into the frame, and a
+  // lit arris along the near-left edge where the deck breaks.
+  occlude(graphics, at(0, 0, deckY), at(1, 0, deckY), 3.5, 0.16);
+  occlude(graphics, at(0, 0, deckY), at(0, 1, deckY), 3.5, 0.1);
+  bevel(graphics, at(0, 1, deckY), at(1, 1, deckY), shade(palette.wall, 1.28), 1.2);
+
+  // --- the way up onto it ---------------------------------------------------
+  //
+  // Two boards from the path to the deck's near corner. It costs six polygons and
+  // it answers a question the eye asks the moment the deck leaves the ground:
+  // how does anybody get a barrel up there?
+  const rampFoot = at(1, 1, groundY + 1);
+  const rampHead = at(1, 1, deckY);
+  const rampHalf = halfW * 0.13;
+  graphics.fillStyle(shade(palette.wall, 0.88), 1);
+  polygon(graphics, [
+    { x: rampHead.x - rampHalf, y: rampHead.y },
+    { x: rampHead.x + rampHalf, y: rampHead.y },
+    { x: rampFoot.x + rampHalf * 1.5, y: rampFoot.y + YARD.stand * 0.5 },
+    { x: rampFoot.x - rampHalf * 1.5, y: rampFoot.y + YARD.stand * 0.5 },
+  ]);
+  graphics.fillStyle(shade(palette.wall, 0.66), 1);
+  polygon(graphics, [
+    { x: rampHead.x, y: rampHead.y },
+    { x: rampHead.x + rampHalf, y: rampHead.y },
+    { x: rampFoot.x + rampHalf * 1.5, y: rampFoot.y + YARD.stand * 0.5 },
+    { x: rampFoot.x, y: rampFoot.y + YARD.stand * 0.5 },
+  ]);
+  bevel(
+    graphics,
+    { x: rampHead.x - rampHalf, y: rampHead.y },
+    { x: rampHead.x + rampHalf, y: rampHead.y },
+    shade(palette.wall, 1.2),
+    1,
+  );
+
+  // --- the rail, on the two far sides only ----------------------------------
+  //
+  // Far sides only, so it frames the goods instead of standing in front of them.
+  const railTop = deckY - YARD.post;
+  for (const [u, v] of YARD_RAIL_POSTS) {
+    const head = at(u, v, railTop);
+    graphics.fillStyle(shade(palette.trim, 0.9), 1);
+    graphics.fillRect(head.x - 2, head.y, 4, YARD.post);
+    graphics.fillStyle(shade(palette.trim, 1.25), 1);
+    graphics.fillRect(head.x - 2, head.y, 1.4, YARD.post);
+  }
+  for (const height of [0, YARD.post * 0.52]) {
+    const y = railTop + height;
+    graphics.fillStyle(shade(palette.trim, height === 0 ? 1.08 : 0.86), 1);
+    polygon(graphics, [at(0, 0, y), at(0, 1, y), at(0, 1, y + 2.4), at(0, 0, y + 2.4)]);
+    polygon(graphics, [at(0, 0, y), at(1, 0, y), at(1, 0, y + 2.4), at(0, 0, y + 2.4)]);
+  }
+
+  // --- what is stored on it -------------------------------------------------
+  //
+  // Back to front, so nearer goods overlap further ones. `u + v` is depth: the
+  // deck plane maps it straight onto screen height.
+  const stock = [...YARD_GOODS].sort((a, b) => a.u + a.v - (b.u + b.v));
+  for (const good of stock) {
+    const base = at(good.u, good.v, deckY);
+    const width = good.size * halfW;
+    // Its own shadow on the boards, or it floats.
+    graphics.fillStyle(0x000000, 0.16);
+    polygon(graphics, [
+      { x: base.x + width * 0.12, y: base.y - width * 0.28 },
+      { x: base.x + width * 0.68, y: base.y + width * 0.04 },
+      { x: base.x + width * 0.12, y: base.y + width * 0.36 },
+      { x: base.x - width * 0.44, y: base.y + width * 0.04 },
+    ]);
+
+    switch (good.kind) {
+      case 'crate':
+        isoCrate(graphics, base, width, width * 0.62, CRATE);
+        if (good.stacked) {
+          isoCrate(
+            graphics,
+            { x: base.x - width * 0.08, y: base.y - width * 0.62 },
+            width * 0.72,
+            width * 0.5,
+            shade(CRATE, 0.92),
+          );
+        }
+        break;
+      case 'barrel':
+        isoBarrel(graphics, base, width, width * 0.78);
+        break;
+      case 'sacks':
+        isoSack(graphics, base, width * 0.8, width * 0.6);
+        isoSack(
+          graphics,
+          { x: base.x + width * 0.42, y: base.y + width * 0.1 },
+          width * 0.66,
+          width * 0.5,
+        );
+        break;
+      case 'logs':
+        isoLogStack(graphics, base, width);
+        break;
+    }
+  }
+}
+
+/** A flat-shaded isometric box: three faces, boarded, lit from the upper left. */
+function isoCrate(
+  graphics: Phaser.GameObjects.Graphics,
+  base: Point,
+  width: number,
+  height: number,
+  colour: number,
+): void {
+  const hw = width / 2;
+  const hh = width / 4;
+  const topY = base.y - height;
+
+  graphics.fillStyle(shade(colour, 1.16), 1);
+  polygon(graphics, [
+    { x: base.x, y: topY - hh },
+    { x: base.x + hw, y: topY },
+    { x: base.x, y: topY + hh },
+    { x: base.x - hw, y: topY },
+  ]);
+
+  graphics.fillStyle(colour, 1);
+  polygon(graphics, [
+    { x: base.x - hw, y: topY },
+    { x: base.x, y: topY + hh },
+    { x: base.x, y: base.y + hh },
+    { x: base.x - hw, y: base.y },
+  ]);
+
+  graphics.fillStyle(shade(colour, 0.72), 1);
+  polygon(graphics, [
+    { x: base.x, y: topY + hh },
+    { x: base.x + hw, y: topY },
+    { x: base.x + hw, y: base.y },
+    { x: base.x, y: base.y + hh },
+  ]);
+
+  // Two boards per face. A crate with no seams is a die.
+  for (const depth of [height * 0.36, height * 0.7]) {
+    graphics.fillStyle(shade(colour, 0.6), 1);
+    polygon(graphics, [
+      { x: base.x - hw, y: topY + depth },
+      { x: base.x, y: topY + hh + depth },
+      { x: base.x, y: topY + hh + depth + 1.1 },
+      { x: base.x - hw, y: topY + depth + 1.1 },
+    ]);
+    graphics.fillStyle(shade(colour, 0.5), 1);
+    polygon(graphics, [
+      { x: base.x, y: topY + hh + depth },
+      { x: base.x + hw, y: topY + depth },
+      { x: base.x + hw, y: topY + depth + 1.1 },
+      { x: base.x, y: topY + hh + depth + 1.1 },
+    ]);
+  }
+
+  // The lit arris along the near-left top edge, and gloom in the inside corner.
+  bevel(
+    graphics,
+    { x: base.x - hw, y: topY },
+    { x: base.x, y: topY + hh },
+    shade(colour, 1.34),
+    1.1,
+  );
+}
+
+/**
+ * A barrel, as a ten-sided prism.
+ *
+ * Facets rather than an ellipse with a gradient, because the settlement is
+ * flat-shaded throughout: each facet takes one tone from how far it turns away
+ * from the light, and the eye assembles the curve. Drawn back to front, so the
+ * far facets are simply covered rather than needing to be culled.
+ */
+function isoBarrel(
+  graphics: Phaser.GameObjects.Graphics,
+  base: Point,
+  width: number,
+  height: number,
+): void {
+  const facets = 10;
+  const hw = width / 2;
+  const hh = width / 4;
+  const topY = base.y - height;
+
+  const rim = (index: number, y: number): Point => {
+    const angle = (Math.PI * 2 * index) / facets;
+    return { x: base.x + Math.cos(angle) * hw, y: y + Math.sin(angle) * hh };
+  };
+
+  // Back to front: a facet's screen depth is the sine of its angle.
+  const order = Array.from({ length: facets }, (_, index) => index).sort(
+    (a, b) =>
+      Math.sin((Math.PI * 2 * a) / facets) +
+      Math.sin((Math.PI * 2 * (a + 1)) / facets) -
+      (Math.sin((Math.PI * 2 * b) / facets) + Math.sin((Math.PI * 2 * (b + 1)) / facets)),
+  );
+
+  for (const index of order) {
+    const mid = (Math.PI * 2 * (index + 0.5)) / facets;
+    // Facing the light is facing up and to the left, which in this projection is
+    // negative in both screen axes.
+    const towards = (-Math.cos(mid) - Math.sin(mid)) / Math.SQRT2;
+    graphics.fillStyle(shade(BARREL, 0.66 + 0.5 * Math.max(0, towards)), 1);
+    polygon(graphics, [
+      rim(index, topY),
+      rim(index + 1, topY),
+      rim(index + 1, base.y),
+      rim(index, base.y),
+    ]);
+    // Two iron hoops, following the same facets so they wrap rather than float.
+    for (const band of [height * 0.24, height * 0.7]) {
+      graphics.fillStyle(shade(BARREL_HOOP, 0.85 + 0.4 * Math.max(0, towards)), 1);
+      polygon(graphics, [
+        { x: rim(index, topY).x, y: rim(index, topY).y + band },
+        { x: rim(index + 1, topY).x, y: rim(index + 1, topY).y + band },
+        { x: rim(index + 1, topY).x, y: rim(index + 1, topY).y + band + 1.6 },
+        { x: rim(index, topY).x, y: rim(index, topY).y + band + 1.6 },
+      ]);
+    }
+  }
+
+  // The lid, and a board across it.
+  graphics.fillStyle(shade(BARREL, 1.24), 1);
+  polygon(
+    graphics,
+    Array.from({ length: facets }, (_, index) => rim(index, topY)),
+  );
+  graphics.fillStyle(shade(BARREL, 1.05), 1);
+  polygon(graphics, [
+    { x: base.x - hw * 0.86, y: topY - hh * 0.1 },
+    { x: base.x + hw * 0.86, y: topY - hh * 0.1 },
+    { x: base.x + hw * 0.86, y: topY + hh * 0.1 },
+    { x: base.x - hw * 0.86, y: topY + hh * 0.1 },
+  ]);
+}
+
+/**
+ * Cut timber stacked on the deck: three logs and two on top of them.
+ *
+ * Lying down rather than stood on end, because that is how a settlement stacks
+ * timber and because a lying log gives the eye a cylinder to read — a
+ * parallelogram of bark with a pale sawn round at the near end.
+ */
+function isoLogStack(graphics: Phaser.GameObjects.Graphics, base: Point, width: number): void {
+  const span = width * 0.9;
+  const rise = span / 2;
+  const bore = Math.max(4, width * 0.26);
+
+  const log = (offsetX: number, offsetY: number): void => {
+    const nearX = base.x + offsetX;
+    const nearY = base.y + offsetY;
+    const farX = nearX - span;
+    const farY = nearY - rise;
+
+    graphics.fillStyle(LOG_BARK, 1);
+    polygon(graphics, [
+      { x: farX, y: farY - bore },
+      { x: nearX, y: nearY - bore },
+      { x: nearX, y: nearY },
+      { x: farX, y: farY },
+    ]);
+    // A lit strip along the top of the barrel of the log.
+    graphics.fillStyle(shade(LOG_BARK, 1.3), 1);
+    polygon(graphics, [
+      { x: farX, y: farY - bore },
+      { x: nearX, y: nearY - bore },
+      { x: nearX, y: nearY - bore + 1.4 },
+      { x: farX, y: farY - bore + 1.4 },
+    ]);
+    // The sawn end, pale against the bark: the whole reason a woodpile reads.
+    graphics.fillStyle(LOG_END, 1);
+    polygon(graphics, [
+      { x: nearX, y: nearY - bore * 0.96 },
+      { x: nearX + bore * 0.34, y: nearY - bore * 0.74 },
+      { x: nearX + bore * 0.34, y: nearY - bore * 0.24 },
+      { x: nearX, y: nearY - bore * 0.04 },
+      { x: nearX - bore * 0.34, y: nearY - bore * 0.24 },
+      { x: nearX - bore * 0.34, y: nearY - bore * 0.74 },
+    ]);
+    // Heartwood, a shade darker than the sapwood round it.
+    graphics.fillStyle(shade(LOG_END, 0.82), 1);
+    graphics.fillRect(nearX - bore * 0.12, nearY - bore * 0.62, bore * 0.24, bore * 0.26);
+  };
+
+  // Two courses of two, cross-stacked. Five rounds at this size turned into a
+  // spray of pale dots rather than a woodpile.
+  for (let i = 0; i < 2; i += 1) {
+    log(i * bore * 1.05, -i * bore * 0.52);
+  }
+  log(bore * 0.52, -bore * 1.2);
+}
+
+/** A sack: a prism that narrows towards a tied throat. */
+function isoSack(
+  graphics: Phaser.GameObjects.Graphics,
+  base: Point,
+  width: number,
+  height: number,
+): void {
+  const hw = width / 2;
+  const hh = width / 4;
+  const topY = base.y - height;
+  const neck = hw * 0.42;
+
+  graphics.fillStyle(SACK, 1);
+  polygon(graphics, [
+    { x: base.x - neck, y: topY },
+    { x: base.x, y: topY + neck / 2 },
+    { x: base.x, y: base.y + hh },
+    { x: base.x - hw, y: base.y },
+  ]);
+  graphics.fillStyle(shade(SACK, 0.76), 1);
+  polygon(graphics, [
+    { x: base.x, y: topY + neck / 2 },
+    { x: base.x + neck, y: topY },
+    { x: base.x + hw, y: base.y },
+    { x: base.x, y: base.y + hh },
+  ]);
+  // The tied throat, and a lit crease down the near edge.
+  graphics.fillStyle(shade(SACK, 1.06), 1);
+  polygon(graphics, [
+    { x: base.x, y: topY - neck / 2 },
+    { x: base.x + neck, y: topY },
+    { x: base.x, y: topY + neck / 2 },
+    { x: base.x - neck, y: topY },
+  ]);
+  graphics.fillStyle(shade(SACK, 0.6), 1);
+  graphics.fillRect(base.x - neck * 0.6, topY + neck * 0.5, neck * 1.2, 1.4);
+}
+
 function drawStackedGoods(
   graphics: Phaser.GameObjects.Graphics,
   cx: number,

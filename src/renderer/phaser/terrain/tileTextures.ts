@@ -55,7 +55,6 @@ export const TextureKeys = {
   designation: 'designation-mark',
   logPile: 'pile-logs',
   stonePile: 'pile-stone',
-  storageYard: 'storage-yard',
   building: (id: string): string => `building-${id}`,
   site: 'construction-site',
   ghostCell: 'ghost-cell',
@@ -113,9 +112,6 @@ export const SITE_GROUND_LINE = 86 / SITE_TEXTURE_HEIGHT;
 
 /** Resource pile sprite height, per the art bible. */
 export const PILE_HEIGHT = 40;
-/** Storage yard placeholder: a 3x3 footprint, low and open. */
-export const STORAGE_WIDTH = 192;
-export const STORAGE_HEIGHT = 96;
 const VILLAGER_WIDTH = 32;
 
 /** Cloth and skin tones, kept muted and earthy like everything else. */
@@ -166,12 +162,6 @@ export function createPlaceholderTextures(scene: Phaser.Scene): void {
   if (!scene.textures.exists(TextureKeys.stonePile)) {
     drawStonePile(graphics);
     graphics.generateTexture(TextureKeys.stonePile, TILE_WIDTH, PILE_HEIGHT);
-    graphics.clear();
-  }
-
-  if (!scene.textures.exists(TextureKeys.storageYard)) {
-    drawStorageYard(graphics);
-    graphics.generateTexture(TextureKeys.storageYard, STORAGE_WIDTH, STORAGE_HEIGHT);
     graphics.clear();
   }
 
@@ -789,123 +779,6 @@ function drawStonePile(graphics: Phaser.GameObjects.Graphics): void {
       [cx + b.x + b.w, b.y],
     ]);
   }
-}
-
-/**
- * The founding storage yard: a low fenced platform stacked with goods.
- *
- * Open rather than enclosed, so it reads as a stockpile rather than a building.
- * It is the first thing a new player sees and the thing they will look at most,
- * so it earns more detail than anything else at this size: a planked floor, a
- * rail between the posts, and goods with real faces on them.
- */
-function drawStorageYard(graphics: Phaser.GameObjects.Graphics): void {
-  const cx = STORAGE_WIDTH / 2;
-  const baseY = STORAGE_HEIGHT - 8;
-  const halfW = 88;
-  const halfH = 44;
-
-  // The isometric footprint: a 3x3 diamond of trodden earth, split into two
-  // facets like the ground it stands on.
-  graphics.fillStyle(0x473d2f, 1);
-  polygonAt(graphics, [
-    [cx, baseY - halfH],
-    [cx + halfW, baseY],
-    [cx, baseY + halfH],
-  ]);
-  graphics.fillStyle(0x3f3628, 1);
-  polygonAt(graphics, [
-    [cx, baseY - halfH],
-    [cx - halfW, baseY],
-    [cx, baseY + halfH],
-  ]);
-
-  // Planking, running along one axis. Faint, so it suggests a floor without
-  // turning into a grid the eye has to read.
-  graphics.lineStyle(1, 0x3a3126, 0.45);
-  for (let t = -0.7; t <= 0.7; t += 0.35) {
-    graphics.beginPath();
-    graphics.moveTo(cx + halfW * t, baseY - halfH * (1 - Math.abs(t)));
-    graphics.lineTo(cx + halfW * t, baseY + halfH * (1 - Math.abs(t)));
-    graphics.strokePath();
-  }
-
-  const corners: readonly (readonly [number, number])[] = [
-    [cx, baseY - halfH],
-    [cx + halfW, baseY],
-    [cx, baseY + halfH],
-    [cx - halfW, baseY],
-  ];
-
-  // A rail between the posts, along the two back edges only — a fence across
-  // the front would hide the goods the yard exists to show.
-  graphics.lineStyle(2.5, 0x5a4a36, 0.9);
-  graphics.beginPath();
-  graphics.moveTo(cx - halfW, baseY - 9);
-  graphics.lineTo(cx, baseY - halfH - 9);
-  graphics.lineTo(cx + halfW, baseY - 9);
-  graphics.strokePath();
-
-  // Corner posts, each with a lit and a shaded side.
-  for (const [px, py] of corners) {
-    graphics.fillStyle(0x5a4b39, 1);
-    graphics.fillRect(px - 2.5, py - 16, 2.5, 16);
-    graphics.fillStyle(0x453927, 1);
-    graphics.fillRect(px, py - 16, 2.5, 16);
-  }
-
-  // Crates and sacks, drawn as boxes rather than rectangles.
-  crate(graphics, cx - 46, baseY - 6, 28, 22, 0x6b573c);
-  crate(graphics, cx - 14, baseY - 4, 32, 28, 0x74603f);
-  crate(graphics, cx + 22, baseY - 2, 26, 19, 0x7a6748);
-  // A sack leaning on the stack, so the yard is not all right angles.
-  graphics.fillStyle(0x8a7a5a, 1);
-  polygonAt(graphics, [
-    [cx + 4, baseY - 4],
-    [cx + 12, baseY - 24],
-    [cx + 20, baseY - 4],
-  ]);
-  graphics.fillStyle(0x6f6248, 1);
-  polygonAt(graphics, [
-    [cx + 12, baseY - 24],
-    [cx + 20, baseY - 4],
-    [cx + 15, baseY - 4],
-  ]);
-}
-
-/** A box standing on the ground: top, lit face, shaded face. */
-function crate(
-  graphics: Phaser.GameObjects.Graphics,
-  x: number,
-  groundY: number,
-  width: number,
-  height: number,
-  colour: number,
-): void {
-  const top = groundY - height;
-  const depth = width * 0.28;
-
-  graphics.fillStyle(shade(colour, 1.26), 1);
-  polygonAt(graphics, [
-    [x, top],
-    [x + width * 0.5, top - depth * 0.5],
-    [x + width, top],
-    [x + width * 0.5, top + depth * 0.5],
-  ]);
-  graphics.fillStyle(shade(colour, 1.02), 1);
-  polygonAt(graphics, [
-    [x, top],
-    [x + width * 0.5, top + depth * 0.5],
-    [x + width * 0.5, groundY + depth * 0.5],
-    [x, groundY],
-  ]);
-  graphics.fillStyle(shade(colour, 0.76), 1);
-  polygonAt(graphics, [
-    [x + width, top],
-    [x + width * 0.5, top + depth * 0.5],
-    [x + width * 0.5, groundY + depth * 0.5],
-    [x + width, groundY],
-  ]);
 }
 
 /**
