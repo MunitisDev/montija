@@ -249,9 +249,9 @@ construction — the simulation cannot import the renderer.
 
 ## Structures that are platforms — Implemented
 
-The generic building routine can draw one thing: a box on a plot, optionally with a roof, a stone
-footing and a prop beside it. That covers a house, a workshop and a shed, and it does not cover the
-storage yard, which is a **deck** — and it showed. The yard was a flat lozenge with three
+The generic building routine could draw one thing: a box on a plot, optionally with a roof and a
+stone footing. That covered a house, a workshop and a shed, and it did not cover the storage yard,
+which is a **deck** — and it showed. The yard was a flat lozenge with three
 axis-aligned rectangles lying on it, and since the founding camp borrows this art it was the first
 structure every player ever saw.
 
@@ -339,56 +339,80 @@ left, so a shadow still reaches the plot's down-right edge and falls short of th
 The one exception is **eaves**, which are declared per building and which the texture is widened for.
 A roof may oversail. Nothing else may.
 
-### The house: a cross-gabled cottage on a stone base
+### Every building is built, not tinted — Implemented
 
-Two gables crossing, meeting at the corner nearest the camera, with the valley between them running
-straight down to it. That silhouette is most of what the eye actually reads, and it is the thing a
-single-apex roof cannot give you: a pyramid is the same lozenge whatever it sits on, so a house, a
-workshop and a store all read as one object.
+The generic routine used to draw one thing: a box under a pyramid, in a different brown. Fifteen of
+those in a settlement is one silhouette repeated fifteen times, and the player cannot tell a
+Woodcutter from a Tailor without tapping it. The house was drawn properly first — a cross-gabled
+cottage timber-framed on a stone base — and only the house read as a building.
+
+`structureArt.ts` is that construction generalised. Four things are varied, and each of them is
+legible from across the map:
+
+| Knob    | Values                              | What it changes                    |
+| ------- | ----------------------------------- | ---------------------------------- |
+| Roof    | `cross`, `gable`, `gable-left`      | The silhouette, which reads first  |
+| Walls   | `boarded`, `framed`, `log`, `stone` | What the building is made of       |
+| Cover   | `shingle`, `thatch`, `slate`        | Depth at the eaves, course density |
+| Feature | thirteen, one a trade               | Which trade, without a label       |
+
+**No single-apex roof, anywhere.** Four planes meeting at a point is the same lozenge whatever it
+sits on. Every roof here hangs from a ridge _segment_:
+
+- **`cross`** — two gables meeting over the middle, with the valley between them running down to the
+  corner nearest the camera. The richest silhouette and the most expensive, so it goes to the
+  buildings people look at: the house, the healer, the school.
+- **`gable` / `gable-left`** — one ridge, with the gable end standing over the near-right or the
+  near-left wall. Mirroring it is free and it makes two neighbours read as two buildings.
+
+**Three traps, all of them fallen into first.**
+
+- The gable walls stand _in front of_ the valley behind them and _behind_ the barge boards that cap
+  them. There is no order outside the roof function that works, so the roof sequences them itself.
+- The valley planes on a cross gable are easy to forget, which leaves a hole through the middle of
+  the roof.
+- Rafters laid along a gable's rakes as plain strips have square ends, and where two meet at the
+  apex their outer corners carry past it — against the sky that is a dark splinter hanging over the
+  roof behind. Each rafter is cut as a wedge _inside_ its own triangle instead, mitred at the apex.
+
+**Pitch.** A single gable carries its whole rise on one plane, so a pitch that suits a cross gable
+swallows the building. Gables are drawn at roughly the wall's own height; the cross gable runs half
+again as tall.
+
+**An open work bay.** A mono-pitch lean-to on two posts, hanging off the near-left wall and reaching
+out across the building's own plot. It is the cheapest thing that says _a trade is carried on here_
+rather than _people live here_, because it breaks the silhouette. Two rules learned by breaking
+them: it covers **one bay** — run the full length of the wall and it buries the door, the steps and
+both windows and the building stops existing — and it hangs off an **eaves** wall only, never off a
+gable end.
+
+**Stone gables get an opening, not a frame.** Masonry has no rafters showing, and a blank triangle
+two storeys tall is the flattest shape in the settlement.
 
 The pieces that earn their place at forty pixels tall, and nothing else does:
 
-- **a stone base**, two courses of large blocks. What stops a timber house looking like it is
-  resting on the grass. Large blocks, not rubble — small masonry marks turn to noise and read as
-  dirt on the wall.
-- **corner posts, a mid post and a head beam**, with faint boarding in the panels between them. The
-  frame is what makes it a _timber_ house rather than a brown box; three posts a face is the whole
-  of it, and a full cruck frame at this size is noise.
-- **rafters and a king post on each gable**, which is how a gable is actually built.
-- **beam ends** — squared-off blocks where the rafters carry past the barge. Four of them, and they
-  are most of what makes a roof look built rather than folded.
-- **four-pane windows**, two a face, and a plank door with straps under the gable, with stone steps.
+- **a stone base**, drawn as _joints_ rather than as tiles. Beds run the whole course and perpends
+  are cut by them, so nothing can leave the face by construction — the first version drew each stone
+  as a pale quad from `t` to `t + 0.2`, which runs off the corner and read as loose tiles stuck on
+  the wall.
+- **the wall's own construction** — posts and boarding, or braced half-timbering, or log courses
+  with the ends crossing at the corner, or coursed masonry with quoins.
+- **beam ends** at the eaves, squared-off where the rafters carry past. Not at the head of a gable:
+  that is the end of the ridge, and nothing projects there.
+- **four-pane windows** and a plank door with straps, with stone steps at the threshold.
+- **one identifying feature** on the ring of plot around the building.
 
-**Two ordering traps, both of which were fallen into.** The gable walls stand _in front of_ the
-valley behind them and _behind_ the barge boards that cap them — there is no order that works if
-they are painted before the roof or after it, so the roof function sequences them itself. And the
-valley planes are easy to forget entirely, which leaves a hole through the middle of the roof.
+### What the trade leaves on its ground — Implemented
 
-#### An earlier pass: the boarded cottage with an offset porch gable
+Mass and colour get a building most of the way to recognisable and then stop. The feature is the part
+that says _which trade_, and it is drawn on the ground rather than on the walls so it survives the
+building being small: split logs and a chopping block with the axe still in it, a forge mouth with
+fire in it, a hide stretched in its frame, cloth on a line, a nursery row of saplings, a timbered
+mine mouth, sacks on staddle stones, a bell in its frame.
 
-Drawn from a vector recipe, in `houseArt.ts`. Three constructions were drawn and compared on the
-preview board — an oak frame with limewashed daub, boarded planks under thatch, and log courses on a
-deep drystone base — and the boarded one was chosen. The other two are not kept as dead code; the
-recipes they came from are the record.
-
-Heights are **shares of the footprint's screen diagonal**, not pixels, so the house keeps its
-proportions if the tile size ever changes. The recipe's own proportions were adjusted once after
-looking at it: at a wall of 0.48 against a roof of 0.68 the roof swallowed the house, and the
-boarding, the door and the window all happen on the wall.
-
-**A hipped roof with a real ridge, not a pyramid.** Four planes meeting at a point has no direction,
-so a house, a workshop and a store all read as the same lozenge. A ridge running back to front gives
-the house an axis, and the eye reads an axis as architecture.
-
-**One architectural feature, set off centre.** A porch in the middle of a symmetrical elevation makes
-a house look machined; these are cottages people put up themselves. It is a projecting gable rather
-than a flat hood because its whole job is the silhouette — at this zoom a hood against the roof
-disappears and a ridge sticking out of it does not.
-
-The density rule the recipe gives, and it is a good one: **at gameplay zoom a house reads from its
-silhouette, its roof colour, its wall construction and one feature.** Three roof seams, five plank
-seams a face, one window, one door, one chimney, one porch. Nothing else survives being forty pixels
-tall, and more costs the low-poly look.
+Features are placed in **plot coordinates** — `u` and `v` running -1 at the back corner to 1 at the
+front one — not in pixels, because `(0.84, 0.1)` means "out beside the near-right wall" on a 2x2 plot
+and on a 3x3 one and a pixel offset would only be right on one of them.
 
 ### What a poor building looks like
 
@@ -479,12 +503,15 @@ It is muted and earthy on purpose. Even the prototype should never read as a bri
 
 ### Where the placeholder art lives
 
-| File              | Draws                                                      |
-| ----------------- | ---------------------------------------------------------- |
-| `groundArt.ts`    | Terrain tiles: facets, tufts, rock outcrops, ripples, snow |
-| `treeArt.ts`      | Conifers and broadleaves, through the year                 |
-| `buildingArt.ts`  | Walls, timber framing, roofs, plinths, chimneys, doors     |
-| `tileTextures.ts` | Atlas assembly, plus villagers, piles, yards, sites, roads |
+| File                  | Draws                                                      |
+| --------------------- | ---------------------------------------------------------- |
+| `groundArt.ts`        | Terrain tiles: facets, tufts, rock outcrops, ripples, snow |
+| `treeArt.ts`          | Conifers and broadleaves, through the year                 |
+| `buildingArt.ts`      | Plots, fields, yards, and how each building is massed      |
+| `structureArt.ts`     | Walls, roofs, plinths, chimneys, doors, work bays          |
+| `buildingFeatures.ts` | What each trade leaves standing on its own plot            |
+| `isoProps.ts`         | Crates, barrels, sacks, log stacks                         |
+| `tileTextures.ts`     | Atlas assembly, plus villagers, piles, yards, sites, roads |
 
 Everything is generated into **two atlases** — one for ground, one for trees — plus a handful of
 standalone textures. That is not tidiness: the display list is depth-sorted, which interleaves

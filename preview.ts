@@ -92,28 +92,55 @@ class CanvasGraphics {
 }
 
 const params = new URLSearchParams(location.search);
-const wanted = (params.get('id') ?? 'house') as BuildingId;
 const scale = Number(params.get('scale') ?? 3);
-const id: BuildingId = BUILDING_IDS.includes(wanted) ? wanted : 'house';
-const variants = artVariants(id);
-const spec = buildingTextureSpec(id);
+const wanted = params.get('id') ?? 'house';
 const gap = 16;
 
 const canvas = document.getElementById('sheet') as HTMLCanvasElement;
-canvas.width = (spec.width + gap) * variants * scale;
-canvas.height = (spec.height + gap * 3) * scale;
 const ctx = canvas.getContext('2d')!;
+
+/** One cell of the board: a building drawn in one of its variants. */
+interface Cell {
+  readonly id: BuildingId;
+  readonly variant: number;
+}
+
+const cells: Cell[] =
+  wanted === 'all'
+    ? BUILDING_IDS.map((id) => ({ id, variant: 0 }))
+    : Array.from({ length: artVariants(wanted as BuildingId) }, (_, variant) => ({
+        id: wanted as BuildingId,
+        variant,
+      }));
+
+const columns = wanted === 'all' ? 5 : cells.length;
+const cellW = Math.max(...cells.map((c) => buildingTextureSpec(c.id).width)) + gap;
+const cellH = Math.max(...cells.map((c) => buildingTextureSpec(c.id).height)) + gap * 3;
+const rows = Math.ceil(cells.length / columns);
+
+canvas.width = cellW * columns * scale;
+canvas.height = cellH * rows * scale;
 ctx.scale(scale, scale);
 ctx.imageSmoothingEnabled = false;
 
 const graphics = new CanvasGraphics(ctx);
-for (let variant = 0; variant < variants; variant += 1) {
+cells.forEach((cell, index) => {
+  const spec = buildingTextureSpec(cell.id);
+  const column = index % columns;
+  const row = Math.floor(index / columns);
+  const x = cellW * column + (cellW - spec.width) / 2;
+  const y = cellH * row + gap + (cellH - gap * 3 - spec.height);
+
   ctx.save();
-  ctx.translate((spec.width + gap) * variant + gap / 2, gap);
-  drawBuilding(graphics as never, id, BUILDING_COLOURS[id], variant);
+  ctx.translate(x, y);
+  drawBuilding(graphics as never, cell.id, BUILDING_COLOURS[cell.id], cell.variant);
   ctx.restore();
 
   ctx.fillStyle = '#ddd6c2';
   ctx.font = '9px system-ui, sans-serif';
-  ctx.fillText(`${id} · ${variant}`, (spec.width + gap) * variant + gap / 2, spec.height + gap * 2);
-}
+  ctx.fillText(
+    `${cell.id} \u00b7 ${cell.variant}`,
+    cellW * column + gap / 2,
+    cellH * (row + 1) - gap,
+  );
+});

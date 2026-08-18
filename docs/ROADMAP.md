@@ -1479,3 +1479,37 @@ cutting plumes short in ordinary play, which looks like fires going out.
 The test for that was measuring the wrong thing — a bare threshold that needed re-tuning the moment
 the rate changed. It now measures the plume twice, a thousand frames apart, and asks it to have
 stopped growing, which is the claim that was always meant.
+
+## PHASE 47 — Every building built, not tinted — Implemented
+
+The house was the only building in the settlement that had been drawn properly. Everything else was
+a box under a pyramid in a different brown, which at gameplay zoom is one silhouette repeated fifteen
+times: a player could not tell a Woodcutter from a Tailor without tapping it.
+
+The house's construction is now `structureArt.ts`, and every roofed building goes through it. Four
+things are varied and each is legible from across the map: which way the ridge runs (`cross`,
+`gable`, `gable-left`), what the walls are built of (boarded, half-timbered, log, stone), what the
+roof is covered with (shingle, thatch, slate), and what the trade leaves lying on its own ground.
+
+Every building is now **inset inside its own cells**, the way the house and the yard already were,
+with its own ground drawn on the ring that leaves — bare earth with a trodden path to the door, or
+kept green. That ring is where the work bay reaches out to and where the tools stand, and the whole
+of it is inside the footprint: `tests/building-art.test.ts` fails the build if any building, in any
+variant, draws so much as a shadow outside its own plot.
+
+Thirteen features, one a trade, in `buildingFeatures.ts`: split logs and a chopping block with the
+axe still in it, a forge mouth with fire in it — the one warm colour in the settlement — a hide
+stretched in its frame, cloth on a line over a dye vat, a nursery row of saplings, a timbered mine
+mouth with ore out of it, dressed blocks and a pick, sacks on staddle stones, drying racks, baskets
+heaped over their rims, a physic garden, a cart with its shafts down, a bell in its frame.
+
+Three things were got wrong first and are worth remembering:
+
+- **A single gable carries its whole rise on one plane.** Pitches that suit a cross gable swallow the
+  building. Gables want roughly the wall's own height.
+- **A work bay covers one bay.** Run it the length of the wall and it buries the door, the steps and
+  both windows, and the building behind it stops existing. And it hangs off an eaves wall, never off
+  a gable end, where it buries the barge boards instead.
+- **The temple and the school were the same building in two greys** — same footprint, same cross
+  gable, same pale walls. The temple is a long steep hall now, stone the whole way up under the
+  heaviest roof in the settlement.
