@@ -111,15 +111,16 @@ Full detail in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Documentation
 
-| Document                                       | Contents                                                    |
-| ---------------------------------------------- | ----------------------------------------------------------- |
-| [`CLAUDE.md`](CLAUDE.md)                       | The project brief: constraints, rules and phase plan        |
-| [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md)   | The survival loop, the economy, and the measured difficulty |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Layers, data flow, determinism, what exists today           |
-| [`docs/ROADMAP.md`](docs/ROADMAP.md)           | Phase-by-phase status                                       |
-| [`docs/ART_BIBLE.md`](docs/ART_BIBLE.md)       | Grid, sprite and anchor conventions; art direction          |
-| [`docs/MOBILE_UX.md`](docs/MOBILE_UX.md)       | Touch targets, gestures, safe areas, responsiveness         |
-| [`docs/SAVE_FORMAT.md`](docs/SAVE_FORMAT.md)   | What a save contains, and how versioning works              |
+| Document                                           | Contents                                                           |
+| -------------------------------------------------- | ------------------------------------------------------------------ |
+| [`CLAUDE.md`](CLAUDE.md)                           | The project brief: constraints, rules and phase plan               |
+| [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md)       | The survival loop, the economy, and the measured difficulty        |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)     | Layers, data flow, determinism, what exists today                  |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md)               | Phase-by-phase status                                              |
+| [`docs/ART_BIBLE.md`](docs/ART_BIBLE.md)           | Grid, sprite and anchor conventions; art direction                 |
+| [`docs/GRAPHICS_BRIEF.md`](docs/GRAPHICS_BRIEF.md) | What a contributor working only on the look may and may not change |
+| [`docs/MOBILE_UX.md`](docs/MOBILE_UX.md)           | Touch targets, gestures, safe areas, responsiveness                |
+| [`docs/SAVE_FORMAT.md`](docs/SAVE_FORMAT.md)       | What a save contains, and how versioning works                     |
 
 ## Licence
 

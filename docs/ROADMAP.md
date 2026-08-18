@@ -67,6 +67,8 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 40    | The harvest that arrives       | **Implemented** |
 | 41    | Each thing in its own building | **Implemented** |
 | 42    | Castilian names                | **Implemented** |
+| 43    | Built off the ground           | **Implemented** |
+| 44    | The store nobody could reach   | **Implemented** |
 
 ---
 
@@ -1315,3 +1317,77 @@ findings rather than bookkeeping:
 - **a job's `targetEntityId` is a shared namespace**, and the demolition test that
   swept it by id alone was matching a pile of the settlers' own timber that happened
   to be pile number 1 while the site was building number 1.
+
+---
+
+## Phase 44 — The store nobody could reach — Implemented
+
+"Have the game begin paused and the villagers near the starting resources, with none
+of them across the river. What did the forester's lodge do? The woodcutter does not
+seem to make me any firewood, or they do not move it to the store. In the 'How to
+play' texts please put how much each building produces in a year, in normal
+conditions. Put a reset button in the options. As it is now, the movement for placing
+buildings will not let you place in the corners. Let us put the initial store back."
+
+And, from the next game: "In year 5 I end up dying of cold for lack of food and
+because people stop hauling the food and the firewood and they do not cut logs. Who
+is supposed to do those jobs?"
+
+The answers to those two reports turned out to be the same answer, and it was not a
+balance problem at all. **A store is fetched from at exactly one cell, and nothing
+stopped the player building a house on top of the camp's.** Goods still went in — a
+hauler delivers from the next cell over — so the HUD showed a yard filling steadily
+to a hundred and seventy logs while every site and every workshop starved beside it.
+
+Three defects, all in `docs/GAME_DESIGN.md` under "The founding yard's doorway":
+
+- **a walled-in store now moves its doorway** to reachable ground, once a tick, the
+  same reconciliation a building's doorway already gets — and never onto another
+  building's doorstep, because a building answers for its own doorway before any yard
+  does, and the first version of the rescue had baskets of food vanishing into a
+  house's store-cupboard;
+- **a delivery prefers a source that can fill the trip.** Nearest-first meant a pile
+  holding one log beat a shelf holding a hundred and seventy, and a site costing
+  eight logs took a trip per log;
+- **a haul is worth what the settlement lacks**, not what it happens to be carrying.
+  Above `wantedPerVillager` in `data/resources.ts`, carrying more of a good drops to
+  the bottom of the board. A third of the settlement's waking hours had been going on
+  timber it already had while people starved a hundred paces away.
+
+Measured over twelve settlements playing the strong opening for a year: **120 deaths
+became 63**, firewood on the shelves went from 0 to 57, food banked at the first frost
+from 701 to 1219, five of the twelve now come through winter without a grave, and idle
+time fell from 22% to 14%. Two balance tests that recorded defects had to be rewritten
+because the defects were gone — the woodshed is no longer empty, and playing well now
+buys about two settlements' worth of lives where it used to buy none.
+
+**Reachability is measured from the settlement, not from one cell.** Both the
+placement check and the doorway search used a single anchor at the camp, and five
+buildings ringing it sealed that cell — after which the entire map answered
+"unreachable". Measured on a probe settlement: 991 refusals and one legal plot.
+`World.anchors` is now the villagers and the stores, cached against a connectivity
+version on the navigation grid.
+
+The rest of the list, all smaller:
+
+- **the game opens paused**, and a fresh settlement does too;
+- **the settlers arrive within four cells of their stores, and on their own bank** —
+  the spawn search never checked, so two or three of them could start across the water
+  and stand there until somebody built a bridge nobody knew was needed;
+- **the camera clamp holds the centre rather than the viewport**, so a corner tile can
+  sit under the placement ghost. There is empty ground past the edge of the world now,
+  which is honest — there is nothing there;
+- **a Begin again button** in the settings sheet, which asks once in place;
+- **everything the settlers carried starts on the shelves again.** Bundles on the
+  ground read as a mess rather than as a camp, and made the opening move "tidy up";
+- **the guide states what each building makes in a year** — full staff, no tools, no
+  experience, nobody ill — and a Forester's Lodge says what it tends instead, because
+  it has no recipe and no yearly figure can honestly be quoted for it.
+
+### What is still broken
+
+**Felling and mining cannot both progress**, and no ordering of the two fixes it.
+Three attempts are recorded in GAME_DESIGN.md and each one simply reversed which of
+them starved. The answer is a scheduler that shares hands between kinds of work; the
+standing-order experiment is the strongest hint about its shape. Until then a
+well-played settlement survives its first winter on about half of all worlds.
