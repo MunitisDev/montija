@@ -166,8 +166,14 @@ describe('the random stream', () => {
  * "nothing upstream of this quietly started drawing dice". If a change moves it,
  * the balance figures in `docs/GAME_DESIGN.md` were measured on a different game
  * and have to be measured again.
+ *
+ * **It moved once, deliberately.** The sea became a river, which re-cut every map
+ * from every seed: different trees, different rock, a different camp, and so a
+ * different sequence of decisions for the villagers to draw dice for. The balance
+ * figures were re-measured against the new map at the same time — that is what
+ * this number is for.
  */
-const NO_SCHOOL_CURSOR = 1761371935;
+const NO_SCHOOL_CURSOR = 2513513699;
 
 function run(simulation: Simulation, ticks: number): void {
   for (let tick = 0; tick < ticks; tick += 1) {
@@ -187,12 +193,31 @@ function same(a: { gx: number; gy: number }, b: { gx: number; gy: number }): boo
   return a.gx === b.gx && a.gy === b.gy;
 }
 
+/**
+ * Puts a building on the first spot that will take it, nearest the camp first.
+ *
+ * It used to scan from the map's top-left corner, which since the river is a
+ * different patch of ground from the settlement — and, where it is the same
+ * patch, can be forty cells away. That matters here more than anywhere: a
+ * toddler's whole test is how far they stray from their own front door, and a
+ * house across the map turns the measurement into the length of the walk home.
+ */
 function place(simulation: Simulation, id: BuildingId): Building | null {
-  for (let gy = 0; gy < simulation.world.height; gy += 1) {
-    for (let gx = 0; gx < simulation.world.width; gx += 1) {
-      const cell = { gx, gy };
-      if (simulation.canPlaceBuilding(id, cell).ok) {
-        return simulation.placeBuilding(id, cell);
+  const heart = simulation.world.heartCell;
+  for (
+    let radius = 1;
+    radius < Math.max(simulation.world.width, simulation.world.height);
+    radius += 1
+  ) {
+    for (let dy = -radius; dy <= radius; dy += 1) {
+      for (let dx = -radius; dx <= radius; dx += 1) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) {
+          continue;
+        }
+        const cell = { gx: heart.gx + dx, gy: heart.gy + dy };
+        if (simulation.canPlaceBuilding(id, cell).ok) {
+          return simulation.placeBuilding(id, cell);
+        }
       }
     }
   }

@@ -59,6 +59,11 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 32    | Spirit                        | **Implemented** |
 | 33    | The silent dead ends          | **Implemented** |
 | 34    | Roads, growth and the ages    | **Implemented** |
+| 35    | Whole numbers and a last page | **Implemented** |
+| 36    | The labour panel              | **Implemented** |
+| 37    | The wood tends itself         | **Implemented** |
+| 38    | Room left in the sheds        | **Implemented** |
+| 39    | The river                     | **Implemented** |
 
 ---
 
@@ -132,7 +137,8 @@ Delivered:
 
 - 96×96 map = 9,216 tiles + 1,973 trees = 11,190 render objects.
 - JS cost per frame: `step` 0 ms, render submission 4.1 ms.
-- Terrain mix varies widely by seed (water 2%–35%); every surveyed seed stays above 50% habitable.
+- Terrain mix varies by seed (water 3%–12% since Phase 39 lowered the pond line); every surveyed seed
+  stays well above 50% habitable.
 
 **Known limitations:**
 
@@ -142,7 +148,8 @@ Delivered:
   smooth panning, zooming and accurate tile picking, which resolves the concern raised by the
   container numbers. No frame-rate figure is recorded because none was captured; repeatable
   benchmarks remain Phase 11.
-- Terrain is static: no rivers, no coastlines, no elevation. Tiles are flat diamonds.
+- Terrain is flat: no elevation, no cliffs. Tiles are flat diamonds. (A river arrived in Phase 39; it
+  is cut into the map rather than flowing downhill, because there is no downhill.)
 - Trees are scenery. They are not harvestable until Phase 5.
 - No occupancy or navigation grid yet — `isWalkable` reads terrain only.
 - Placeholder art throughout; no seasonal variants.
@@ -685,6 +692,10 @@ The settlement finally has a reason to exist. Set out in
 > Built as a **shipwreck** and rewritten in Phase 34: castaways contradicted two
 > systems the game already had — newcomers walking in, and a merchant calling
 > every twelve days. The world generation below is unchanged; only the story is.
+>
+> **And the sea itself went in Phase 39**, replaced by a river through the middle
+> of the map. Water at one edge was scenery; water through the middle is a
+> decision. What follows describes the map as it was, not as it is.
 
 - **Every map has a sea**, on one edge, chosen from the seed and cut out of the
   same elevation noise so the coast wanders.
@@ -1082,3 +1093,69 @@ The same pass re-measured the opening on the player's own line — eight stone o
 day one, top up when short — and found a second, different way settlements die:
 food rotting in the field for want of hands to carry it, in summer, long before
 the winter the game is about. Recorded, not fixed.
+
+---
+
+## Phase 39 — The river — Implemented
+
+"Instead of a sea let us have a river on the map. River cells can be turned into a
+bridge for 5 logs, and a cell next to the river can be turned into a ditch. And I
+want roads and ditches to take corners and make crossings."
+
+Set out in [GAME_DESIGN.md](./GAME_DESIGN.md#the-river--implemented).
+
+- **A river across every map**, in one of two directions, meandering out of its
+  own noise stream. Inland ponds are rarer to make room for it.
+- **The map is in two pieces until it is bridged**, and the game says so:
+  placement on the far bank is refused with _nobody can walk there_. The
+  navigation grid labels connected patches of ground for this, which also stops a
+  job on the far bank costing a full pathfinding search to reject.
+- **Bridges**: five logs, one cell of river, offered on the panel for the cell
+  rather than in the build menu. A bridge is a road over water — that is the whole
+  implementation.
+- **Ditches**: a cell of open ground beside water can be dug into a channel, and
+  each channel is itself water, so the player leads the river inland one cell at a
+  time.
+- **The orchard needs water** and is worth **twice as much beside a Food Storage**,
+  which is the first rule in the game about _where_ a building goes.
+- **Roads, bridges and ditches are drawn from what joins them**: sixteen shapes per
+  kind. See [ART_BIBLE.md](./ART_BIBLE.md#roads-bridges-and-ditches--implemented).
+
+Two real bugs came out of it, both found by the balance measurements rather than by
+reading:
+
+- **A building's doorway could be built over.** The cell a workshop drops its
+  harvest on is a walkable neighbour chosen when it is finished, and the next
+  building raised next door can be standing on it. Nothing noticed: the hut went
+  on piling food onto a cell inside a wall, where no hauler could ever reach it,
+  and a settlement starved with its gatherers working. Doorways are now re-found
+  whenever the walls change, and a doorway the settlement cannot reach does not
+  count as one.
+- **A load set down on a building site was buried by it.** A site stays walkable
+  while it is built, so a hauler can leave a pile on it; the day the walls went up
+  that pile was inside them. The builders now shift anything stranded on or beside
+  the plot out to the doorway.
+
+What the river cost, honestly:
+
+- **The reference seed stopped surviving its first winter.** Not because the river
+  is harder, but because that seed's rock happened to sit one cell from the camp,
+  which was the only reason its settlement ever got the 4 stone a Woodcutter needs.
+  The river re-cut every map and took the luck away. The balance suite now
+  measures the hut ladder across twenty-four seeds instead of one — the numbers
+  are in `tests/balance.test.ts` — and the reference seed moved with it.
+- **The stone bottleneck is now visible on every seed**, and `stone-supply.test.ts`
+  records that its one exception has gone. What the measurements also showed, and
+  what nobody had noticed before: in a settlement with three huts, a Woodcutter and
+  a Forester, **every adult is employed**, and an employee's own workshop always
+  has an `urgent` job — so the standing mining orders are never claimed by anybody
+  at all. Two hundred and twenty-three of them were measured sitting on the board
+  for forty days. Raising mining's priority does not touch it, and neither does
+  ageing the board: both were measured and backed out. The lever that does work is
+  the labour panel, which the player has to reach for by hand.
+- **One seed in the sweep is a pathologically expensive map to find routes
+  across**: 3.5 seconds of pathfinding for its simulated year, against 80ms for its
+  neighbours, with no failures — simply long searches through heavy woodland.
+  Reusing A\*'s working buffers was tried and measured as no help at all (the cost
+  is the search, not the allocation) and backed out. Unaddressed, and the first
+  thing to profile in Phase 11.

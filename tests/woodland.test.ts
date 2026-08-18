@@ -130,6 +130,11 @@ describe('the woodland growing back', () => {
     const cell = firstTree(simulation);
     fellNow(simulation, cell, false);
     expect(simulation.world.trees.has(cell)).toBe(false);
+    // And somebody carried the timber off. A stump under its own woodpile does
+    // not sprout, which is the right rule and not the one under test — this
+    // tree stands on the far bank of the river, where no hauler will ever reach
+    // it until the settlement builds a bridge.
+    carryOff(simulation, cell);
 
     runDays(simulation, REGROWTH_DAYS + 2);
     expect(simulation.world.trees.has(cell)).toBe(true);
@@ -276,6 +281,17 @@ function nearestTreeWithin(
     }
   }
   return null;
+}
+
+/** Takes whatever is lying on a cell away, as a hauler would. */
+function carryOff(simulation: Simulation, cell: { gx: number; gy: number }): void {
+  for (;;) {
+    const pile = simulation.world.piles.anyAt(cell);
+    if (!pile) {
+      return;
+    }
+    simulation.world.piles.remove(pile.id);
+  }
 }
 
 function runDays(simulation: Simulation, days: number): void {

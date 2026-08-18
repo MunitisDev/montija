@@ -15,6 +15,7 @@ import { TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
 import type { Building } from '@/simulation/buildings/Building';
 import type { BuildingId } from '@/data/buildings';
 import type { GridPoint } from '@/shared/types/geometry';
+import { designateNearbyTrees } from './support/playtest';
 
 function isDone(state: string): boolean {
   return state === 'complete' || state === 'cancelled';
@@ -239,9 +240,7 @@ describe('only the staff work the workshop', () => {
       }
       sawWinter = true;
       if (tick % 20 === 0) {
-        for (const tree of [...simulation.world.trees.all].slice(0, 6)) {
-          simulation.designateTreeForFelling({ gx: tree.gx, gy: tree.gy });
-        }
+        designateNearbyTrees(simulation, 6);
       }
       for (const villager of simulation.villagers.all) {
         if (villager.employerId === null || villager.currentJobId === null) {

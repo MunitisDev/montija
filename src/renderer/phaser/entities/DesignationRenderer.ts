@@ -24,6 +24,7 @@ const PLAYER_DESIGNATED: ReadonlySet<JobType> = new Set<JobType>([
   'chop-tree',
   'gather-stone',
   'pave-road',
+  'dig-ditch',
 ]);
 
 /**
@@ -42,6 +43,8 @@ export const MARK_LIFT: Readonly<Partial<Record<JobType, number>>> = {
   'chop-tree': 34,
   'gather-stone': ROCK_PEAK_LIFT,
   'pave-road': 0,
+  // A channel is cut into the ground, so its mark lies on it like a road's.
+  'dig-ditch': 0,
 };
 
 export class DesignationRenderer {

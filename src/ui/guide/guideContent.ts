@@ -51,6 +51,7 @@ export const SECTION_IDS = [
   'objective',
   'loop',
   'controls',
+  'land',
   'seasons',
   'needs',
   'hardship',
@@ -69,6 +70,15 @@ export type SectionId = (typeof SECTION_IDS)[number];
 const LOOP_STEPS = ['designate', 'work', 'haul', 'store'] as const;
 const CONTROLS = ['pan', 'zoom', 'select', 'build', 'speed', 'save'] as const;
 const HARDSHIPS = ['hunger', 'cold', 'illness', 'age'] as const;
+
+/**
+ * What the player can do to the ground itself, as opposed to build on it.
+ *
+ * Its own section because none of it is in the build menu — a road, a ditch and a
+ * bridge are all offered on the panel for the cell you tapped — so a player who
+ * only reads the menu would never learn that any of them exists.
+ */
+const LAND = ['river', 'road', 'ditch', 'bridge'] as const;
 
 /**
  * The four meters on a villager, and how they differ.
@@ -94,6 +104,14 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
       entries: CONTROLS.map((control) => ({
         term: t(`guide.control.${control}` as MessageKey),
         detail: t(`guide.control.${control}.detail` as MessageKey),
+        meta: null,
+      })),
+    }),
+    section('land', t, {
+      body: t('guide.land.body'),
+      entries: LAND.map((feature) => ({
+        term: t(`guide.land.${feature}` as MessageKey),
+        detail: t(`guide.land.${feature}.detail` as MessageKey),
         meta: null,
       })),
     }),

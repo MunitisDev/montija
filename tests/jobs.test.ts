@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { JobPriority, isClaimable } from '@/simulation/jobs/Job';
 import { JobManager } from '@/simulation/jobs/JobManager';
 import { Simulation } from '@/simulation/Simulation';
+import { designateNearbyTrees, reachableTree } from './support/playtest';
 
 function makeManager(): JobManager {
   return new JobManager();
@@ -312,9 +313,16 @@ describe('Simulation job integration', () => {
   const options = { seed: 20260815, worldWidth: 48, worldHeight: 48, startingVillagers: 10 };
   const TICK = 0.1;
 
+  /**
+   * The nearest tree the settlement can actually walk to.
+   *
+   * It used to be the first tree in the registry, which is the one nearest the
+   * top-left corner of the map — fine when everything walkable was one piece,
+   * and wrong the day a river cut the map in two. Half these tests are about a
+   * villager going and felling it, which they cannot do across water.
+   */
   function firstTreeCell(simulation: Simulation) {
-    const tree = [...simulation.world.trees.all][0]!;
-    return { gx: tree.gx, gy: tree.gy };
+    return reachableTree(simulation);
   }
 
   it('designates a tree for felling', () => {
@@ -401,11 +409,16 @@ describe('Simulation job integration', () => {
 
   it('works through a backlog of designations', () => {
     const simulation = new Simulation(options);
-    const trees = [...simulation.world.trees.all].slice(0, 12);
-    for (const tree of trees) {
-      simulation.designateTreeForFelling({ gx: tree.gx, gy: tree.gy });
+    // Trees within reach of the settlement, marked a dozen at a time. The wood
+    // on the far bank of the river is not a backlog, it is a different problem.
+    const marked: number[] = [];
+    designateNearbyTrees(simulation, 12);
+    for (const job of simulation.jobs.all) {
+      if (job.type === 'chop-tree' && job.targetEntityId !== null) {
+        marked.push(job.targetEntityId);
+      }
     }
-    const marked = trees.map((tree) => tree.id);
+    expect(marked).toHaveLength(12);
 
     for (let tick = 1; tick <= 6000; tick += 1) {
       simulation.update(tick, TICK);

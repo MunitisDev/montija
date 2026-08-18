@@ -37,6 +37,7 @@ export const EN = {
   'terrain.meadow': 'Meadow',
   'terrain.forest': 'Forest',
   'terrain.water': 'Water',
+  'terrain.ditch': 'Ditch',
   'terrain.stone': 'Rock',
   'terrain.tree': 'Tree',
   'terrain.stoneDeposit': 'Stone deposit',
@@ -98,6 +99,9 @@ export const EN = {
     'The one meter that cannot kill anybody. It sits at 50 and is worth nothing there; a Cemetery and a staffed Temple lift it, and above 50 the whole settlement works faster. Below 50 nothing bad happens at all — you are simply not collecting.',
   'need.spirit': 'Spirit',
 
+  'building.bridge': 'Bridge',
+  'building.bridge.description':
+    'Timber over the water. One cell of river, and the far bank stops being a view.',
   'building.house': 'House',
   'building.house.description':
     'Shelter for a family of four. Firewood only warms people who have a house.',
@@ -162,6 +166,13 @@ export const EN = {
   'placement.occupied': 'something is already here',
   'placement.treesInTheWay': 'clear the trees first',
   'placement.needsRockFace': 'must be dug into a rock face',
+  'action.bridge': 'Bridge',
+  'action.dig': 'Dig a ditch',
+  'action.fillDitch': 'Fill in',
+  'status.ditchOrdered': 'ditch ordered',
+  'placement.needsWater': 'must be built on the water',
+  'placement.needsWaterNearby': 'must stand beside the river or a ditch',
+  'placement.unreachable': 'nobody can walk there — bridge the river first',
 
   'warning.foodLow': 'Nobody is gathering food — build a Gatherer Hut',
   'warning.needMoreHuts': 'One hut cannot feed everyone — build another Gatherer Hut',
@@ -383,6 +394,21 @@ export const EN = {
   'guide.control.save': 'Saving',
   'guide.control.save.detail':
     'The settlement saves itself every few days, and the buttons save and reload it by hand.',
+  'guide.land': 'The land itself',
+  'guide.land.body':
+    'Three things are done to the ground rather than built on it. Tap a cell and the panel offers whichever of them that cell will take.',
+  'guide.land.river': 'The river',
+  'guide.land.river.detail':
+    'Every map has one, and it cuts the map in two. Nothing can be built on the far bank until you bridge it.',
+  'guide.land.road': 'Roads',
+  'guide.land.road.detail':
+    'Beaten earth, and free but for the work. Villagers walk about twice as fast on one, and every problem this settlement has is a hauling problem.',
+  'guide.land.ditch': 'Ditches',
+  'guide.land.ditch.detail':
+    'A channel dug from water that is already there, one cell at a time. An Orchard has to stand on water, so a ditch is how you decide where the orchard goes.',
+  'guide.land.bridge': 'Bridges',
+  'guide.land.bridge.detail':
+    'Five logs for one cell of river. Tap the water and the panel offers it. Villagers cross it like a road.',
   'guide.seasons': 'The year',
   'guide.season.spring': 'Foraging begins and the ground can be built on. The year starts here.',
   'guide.season.summer': 'The best gathering of the year, and the time to expand.',
@@ -486,6 +512,7 @@ export const ES: Messages = {
   'terrain.meadow': 'Pradera',
   'terrain.forest': 'Bosque',
   'terrain.water': 'Agua',
+  'terrain.ditch': 'Acequia',
   'terrain.stone': 'Roca',
   'terrain.tree': 'Árbol',
   'terrain.stoneDeposit': 'Yacimiento de piedra',
@@ -541,6 +568,9 @@ export const ES: Messages = {
     'El único marcador que no puede matar a nadie. Está en 50 y ahí no vale nada; un cementerio y un templo con guarda lo suben, y por encima de 50 todo el asentamiento trabaja más rápido. Por debajo de 50 no pasa nada malo: simplemente no estás cobrando.',
   'need.spirit': 'Ánimo',
 
+  'building.bridge': 'Puente',
+  'building.bridge.description':
+    'Madera sobre el agua. Una casilla de río, y la otra orilla deja de ser paisaje.',
   'building.house': 'Casa',
   'building.house.description': 'Refugio para cuatro. La leña solo calienta a quien tiene casa.',
   'building.storage-yard': 'Almacén',
@@ -606,6 +636,13 @@ export const ES: Messages = {
   'placement.occupied': 'ya hay algo aquí',
   'placement.treesInTheWay': 'tala los árboles primero',
   'placement.needsRockFace': 'debe excavarse en una pared de roca',
+  'action.bridge': 'Puente',
+  'action.dig': 'Cavar acequia',
+  'action.fillDitch': 'Rellenar',
+  'status.ditchOrdered': 'acequia encargada',
+  'placement.needsWater': 'debe construirse sobre el agua',
+  'placement.needsWaterNearby': 'debe estar junto al río o a una acequia',
+  'placement.unreachable': 'nadie puede llegar — cruza el río con un puente',
 
   'warning.foodLow': 'Nadie recolecta comida: construye una Cabaña de recolección',
   'warning.needMoreHuts': 'Una cabaña no alimenta a todos: construye otra Cabaña de recolección',
@@ -809,6 +846,21 @@ export const ES: Messages = {
   'guide.control.save': 'Guardado',
   'guide.control.save.detail':
     'El asentamiento se guarda solo cada pocos días, y los botones lo guardan y lo recargan a mano.',
+  'guide.land': 'La tierra',
+  'guide.land.body':
+    'Tres cosas se hacen sobre el suelo en lugar de construirse encima. Toca una casilla y el panel te ofrece la que admita.',
+  'guide.land.river': 'El río',
+  'guide.land.river.detail':
+    'Todos los mapas tienen uno, y parte el mapa en dos. No se puede construir en la otra orilla hasta cruzarlo con un puente.',
+  'guide.land.road': 'Caminos',
+  'guide.land.road.detail':
+    'Tierra pisada, gratis salvo el trabajo. Se camina casi el doble de rápido, y aquí todos los problemas son problemas de acarreo.',
+  'guide.land.ditch': 'Acequias',
+  'guide.land.ditch.detail':
+    'Un canal cavado desde el agua que ya hay, casilla a casilla. El huerto tiene que estar junto al agua, así que la acequia es cómo decides dónde va el huerto.',
+  'guide.land.bridge': 'Puentes',
+  'guide.land.bridge.detail':
+    'Cinco troncos por casilla de río. Toca el agua y el panel te lo ofrece. Los aldeanos lo cruzan como un camino.',
   'guide.seasons': 'El año',
   'guide.season.spring': 'Empieza la recolección y ya se puede construir. El año arranca aquí.',
   'guide.season.summer': 'La mejor recolección del año, y el momento de crecer.',

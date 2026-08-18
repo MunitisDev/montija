@@ -210,10 +210,33 @@ describe('A* pathfinding', () => {
     }
   });
 
-  it('gives up within its node budget instead of expanding the whole map', () => {
+  it('refuses a walled-off goal without searching for it at all', () => {
+    // **What the node budget used to catch, and now never sees.** A wall across
+    // the map leaves two patches of ground with no route between them; the grid
+    // knows that, so the answer costs one array read. The budget below is 200
+    // nodes and not one of them is spent.
     const rows = Array.from({ length: 60 }, () => '.'.repeat(60));
-    // Wall the goal off completely, so the search can never succeed.
     rows[30] = '#'.repeat(60);
+    const grid = gridFrom(rows);
+
+    const result = findPath(grid, { gx: 0, gy: 0 }, { gx: 59, gy: 59 }, { maxExpandedNodes: 200 });
+
+    expect(result.path).toBeNull();
+    expect(result.expandedNodes).toBe(0);
+    expect(result.exhausted).toBe(false);
+  });
+
+  it('still gives up within its budget on ground it can reach', () => {
+    // The budget is not redundant: a goal on the same side of the wall is
+    // reachable in principle and may still be further than a search is allowed
+    // to look. That is the case it exists for.
+    const rows = Array.from({ length: 60 }, () => '.'.repeat(60));
+    // A comb: open ground, but every route is long enough to run the search out
+    // of nodes.
+    for (let gy = 1; gy < 59; gy += 2) {
+      const wall = '#'.repeat(59);
+      rows[gy] = gy % 4 === 1 ? `.${wall}` : `${wall}.`;
+    }
     const grid = gridFrom(rows);
 
     const result = findPath(grid, { gx: 0, gy: 0 }, { gx: 59, gy: 59 }, { maxExpandedNodes: 200 });

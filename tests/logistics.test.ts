@@ -5,6 +5,7 @@ import { Simulation } from '@/simulation/Simulation';
 import { Inventory } from '@/simulation/resources/Inventory';
 import { ResourcePileRegistry } from '@/simulation/resources/ResourcePile';
 import { StorageRegistry } from '@/simulation/logistics/Storage';
+import { nearbyTrees, reachableTree } from './support/playtest';
 
 const TICK = 0.1;
 const OPTIONS = { seed: 20260815, worldWidth: 48, worldHeight: 48, startingVillagers: 10 };
@@ -199,9 +200,15 @@ describe('StorageRegistry', () => {
 });
 
 describe('the full logistics loop', () => {
+  /**
+   * The nearest tree with a route to it.
+   *
+   * The first tree in the registry stands in the map's top-left corner, which
+   * since the river may be on the far bank — and a haul that cannot happen is
+   * not a hauling test.
+   */
   function firstTreeCell(simulation: Simulation) {
-    const tree = [...simulation.world.trees.all][0]!;
-    return { gx: tree.gx, gy: tree.gy };
+    return reachableTree(simulation);
   }
 
   function run(simulation: Simulation, ticks: number, from = 1): void {
@@ -253,7 +260,7 @@ describe('the full logistics loop', () => {
 
   it('conserves every log: felled equals stored plus loose plus carried', () => {
     const simulation = new Simulation(OPTIONS);
-    const trees = [...simulation.world.trees.all].slice(0, 6);
+    const trees = nearbyTrees(simulation, 6).map((cell) => simulation.world.trees.getAt(cell)!);
     for (const tree of trees) {
       simulation.designateTreeForFelling({ gx: tree.gx, gy: tree.gy });
     }
@@ -276,7 +283,7 @@ describe('the full logistics loop', () => {
 
   it('empties the ground once hauling catches up', () => {
     const simulation = new Simulation(OPTIONS);
-    const trees = [...simulation.world.trees.all].slice(0, 3);
+    const trees = nearbyTrees(simulation, 3).map((cell) => simulation.world.trees.getAt(cell)!);
     for (const tree of trees) {
       simulation.designateTreeForFelling({ gx: tree.gx, gy: tree.gy });
     }
@@ -290,8 +297,8 @@ describe('the full logistics loop', () => {
 
   it('never lets two villagers haul the same pile', () => {
     const simulation = new Simulation(OPTIONS);
-    for (const tree of [...simulation.world.trees.all].slice(0, 15)) {
-      simulation.designateTreeForFelling({ gx: tree.gx, gy: tree.gy });
+    for (const cell of nearbyTrees(simulation, 15)) {
+      simulation.designateTreeForFelling(cell);
     }
 
     for (let tick = 1; tick <= 3000; tick += 1) {

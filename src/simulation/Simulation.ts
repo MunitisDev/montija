@@ -598,6 +598,62 @@ export class Simulation {
     return job !== null;
   }
 
+  /**
+   * Orders a channel dug from the water into a cell.
+   *
+   * The second thing the player can build that changes the *shape* of the
+   * settlement rather than adding to it, and the more interesting one: a road
+   * makes hauling quicker, a ditch decides where an orchard can stand. The
+   * water has to be led there one cell at a time, from the river or from a
+   * channel already cut, so the line is the player's rather than the map's.
+   *
+   * Labour and no materials, like paving: digging is work, not goods.
+   */
+  public designateDitch(cell: GridPoint): boolean {
+    if (!this.world.canDig(cell)) {
+      return false;
+    }
+
+    const cellId = cell.gy * this.world.width + cell.gx;
+    const job = this.jobs.create({
+      type: 'dig-ditch',
+      target: cell,
+      // Alongside paving and felling, for the same reason: the nearest job wins,
+      // so a ditch the player asked for is dug within a day or two, and it still
+      // loses to hauling — the settlement never digs while its food is in the
+      // field.
+      priority: JobPriority.normal,
+      targetEntityId: cellId,
+    });
+    return job !== null;
+  }
+
+  /** Cancels a pending digging order. */
+  public cancelDitchDesignation(cell: GridPoint): boolean {
+    const cellId = cell.gy * this.world.width + cell.gx;
+    const job = this.jobs.findByTarget('dig-ditch', cellId);
+    if (!job) {
+      return false;
+    }
+    this.jobs.cancel(job.id);
+    this.releaseVillagersFrom(job.id);
+    return true;
+  }
+
+  public isDitchDesignated(cell: GridPoint): boolean {
+    const cellId = cell.gy * this.world.width + cell.gx;
+    return this.jobs.isTargetReserved('dig-ditch', cellId);
+  }
+
+  public hasDitch(cell: GridPoint): boolean {
+    return this.world.terrainAt(cell) === 'ditch';
+  }
+
+  /** Fills a channel in again. Immediate, like taking up a road. */
+  public fillDitch(cell: GridPoint): boolean {
+    return this.world.fillDitch(cell);
+  }
+
   /** Cancels a pending paving order. */
   public cancelRoadDesignation(cell: GridPoint): boolean {
     const cellId = cell.gy * this.world.width + cell.gx;
@@ -627,6 +683,12 @@ export class Simulation {
    * track would be ceremony rather than a decision.
    */
   public liftRoad(cell: GridPoint): boolean {
+    // Not a bridge. A crossing is paved by the building that carries it, and
+    // lifting those boards by hand would leave a bridge standing over water
+    // nobody could cross — pull the bridge down instead.
+    if (this.world.buildings.getAt(cell) !== null) {
+      return false;
+    }
     return this.world.liftRoad(cell);
   }
 

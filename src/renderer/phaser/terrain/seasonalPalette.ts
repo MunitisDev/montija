@@ -36,6 +36,10 @@ const TERRAIN_BY_SEASON: Readonly<Record<Season, Readonly<Record<TerrainType, Te
     meadow: { fill: 0x56683f, edge: 0x4a5b37 },
     forest: { fill: 0x35452c, edge: 0x2c3a24 },
     water: { fill: 0x2c3f4a, edge: 0x263742 },
+    // A dug channel is drawn as the earth it was cut into: the water itself is
+    // a narrow band the ditch renderer lays down the middle, which is what makes
+    // an acequia read as something the settlement made rather than as river.
+    ditch: { fill: 0x413a2d, edge: 0x372f24 },
     stone: { fill: 0x5a5750, edge: 0x4c4a44 },
   },
   // Deeper greens going dry at the edges, in warm light.
@@ -44,6 +48,10 @@ const TERRAIN_BY_SEASON: Readonly<Record<Season, Readonly<Record<TerrainType, Te
     meadow: { fill: 0x64702f, edge: 0x57632a },
     forest: { fill: 0x33452a, edge: 0x2a3a22 },
     water: { fill: 0x2f4650, edge: 0x283d47 },
+    // A dug channel is drawn as the earth it was cut into: the water itself is
+    // a narrow band the ditch renderer lays down the middle, which is what makes
+    // an acequia read as something the settlement made rather than as river.
+    ditch: { fill: 0x473f30, edge: 0x3c3427 },
     stone: { fill: 0x5d5a51, edge: 0x4f4c45 },
   },
   // Ochre, rust and umber under a low sun. The settlement's last warning.
@@ -52,6 +60,10 @@ const TERRAIN_BY_SEASON: Readonly<Record<Season, Readonly<Record<TerrainType, Te
     meadow: { fill: 0x6d5f2c, edge: 0x5f5327 },
     forest: { fill: 0x4a4526, edge: 0x3e3a20 },
     water: { fill: 0x2b3c45, edge: 0x25343d },
+    // A dug channel is drawn as the earth it was cut into: the water itself is
+    // a narrow band the ditch renderer lays down the middle, which is what makes
+    // an acequia read as something the settlement made rather than as river.
+    ditch: { fill: 0x453b2b, edge: 0x3a3124 },
     stone: { fill: 0x585449, edge: 0x4b473e },
   },
   // Desaturated blue-white. Cold reads as an absence of colour, not as blue
@@ -61,6 +73,10 @@ const TERRAIN_BY_SEASON: Readonly<Record<Season, Readonly<Record<TerrainType, Te
     meadow: { fill: 0x93968f, edge: 0x83867f },
     forest: { fill: 0x5c665c, edge: 0x4f584f },
     water: { fill: 0x40525c, edge: 0x384852 },
+    // A dug channel is drawn as the earth it was cut into: the water itself is
+    // a narrow band the ditch renderer lays down the middle, which is what makes
+    // an acequia read as something the settlement made rather than as river.
+    ditch: { fill: 0x6a6a63, edge: 0x5c5c56 },
     stone: { fill: 0x6e6f6c, edge: 0x5f605d },
   },
 };

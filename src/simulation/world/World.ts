@@ -22,7 +22,7 @@
  */
 
 import { LOGS_PER_TREE, STONE_PER_DEPOSIT } from '@/data/resources';
-import { terrainDefinition, type TerrainType } from '@/data/terrain';
+import { WET_TERRAIN, terrainDefinition, type TerrainType } from '@/data/terrain';
 import { gridBoundsToScene } from '@/shared/math/isometric';
 import type { GridPoint, SceneBounds } from '@/shared/types/geometry';
 import { BuildingRegistry } from '@/simulation/buildings/BuildingRegistry';
@@ -31,10 +31,10 @@ import { ResourcePileRegistry } from '@/simulation/resources/ResourcePile';
 import { NavigationGrid } from './NavigationGrid';
 import type { TerrainGrid } from './TerrainGrid';
 import { TreeRegistry } from './TreeRegistry';
-import { generateWorld, type Shore } from './WorldGenerator';
+import { generateWorld, type RiverCourse } from './WorldGenerator';
 
-/** Cells inland from the waterline the camp is set back by. */
-const SHORE_SETBACK = 5;
+/** Cells back from the water the camp is set, so it has ground on every side. */
+const BANK_SETBACK = 4;
 
 export class World {
   public readonly terrain: TerrainGrid;
@@ -45,17 +45,17 @@ export class World {
   public readonly buildings = new BuildingRegistry();
 
   /**
-   * Which edge the sea is on.
+   * The river the settlement is built around.
    *
-   * Kept on the world rather than recomputed, because "which side has the most
-   * water" is not the same question — a map can have a big inland lake, and the
-   * coast is what the settlement is built against.
+   * Kept on the world rather than recomputed, because "which water is the
+   * river" stops being answerable the moment somebody digs a ditch — and both
+   * the camp and the ditch rules need to know.
    */
-  public readonly shore: Shore;
+  public readonly river: RiverCourse;
 
   constructor(options: { width: number; height: number; seed: number }) {
     const generated = generateWorld(options);
-    this.shore = generated.shore;
+    this.river = generated.river;
     this.terrain = generated.terrain;
     this.trees = new TreeRegistry(generated.terrain.width, generated.trees);
     this.navigation = new NavigationGrid(this.terrain);
@@ -71,47 +71,58 @@ export class World {
   /**
    * Where the settlers made camp, and where their stores sit.
    *
-   * The first buildable ground inland of the sea, on the line running from the
-   * middle of the coast into the map. Walking inland from the water rather than
-   * outward from the centre puts the camp within sight of the shore, which is
-   * the opening image, and guarantees the sea is on screen from the first frame.
+   * On the bank of the river, halfway along its course. Water is the reason to
+   * stop walking: it is what the orchards need, what the ditches come out of,
+   * and the one thing on the map a settlement cannot do without — so the camp
+   * is set against it, a few paces back so there is ground on every side rather
+   * than a channel at its back.
    *
-   * Falls back to the middle of the map if the search finds nothing, which
-   * would mean a coast with no shore at all — not a map this generator can
-   * produce, but a settlement with nowhere to stand is a worse failure than a
-   * settlement in the wrong place.
+   * Both banks are tried, nearer one first, because the river's meander leaves
+   * one side of the map wider than the other and the camp belongs on the side
+   * with room. Falls back to the middle of the map if neither bank will take
+   * it, which no map this generator produces — but a settlement standing in the
+   * wrong place is a better failure than one with nowhere to stand.
    */
   public get landfallCell(): GridPoint {
-    const horizontal = this.shore === 'east' || this.shore === 'west';
-    const along = horizontal ? Math.floor(this.height / 2) : Math.floor(this.width / 2);
-    const depth = horizontal ? this.width : this.height;
-    const inward = this.shore === 'east' || this.shore === 'south' ? -1 : 1;
-    const start =
-      this.shore === 'east' ? this.width - 1 : this.shore === 'south' ? this.height - 1 : 0;
+    if (this.camp) {
+      return this.camp;
+    }
+    this.camp = this.findLandfall();
+    return this.camp;
+  }
 
-    let seenWater = false;
-    for (let step = 0; step < depth; step += 1) {
-      const at = start + inward * step;
-      const cell = horizontal ? { gx: at, gy: along } : { gx: along, gy: at };
+  /**
+   * The settlement's own patch of ground, for asking what is reachable.
+   *
+   * The camp cell itself is built over within a tick of the game starting — the
+   * founding yard stands on it — so the anchor has to be a cell somebody can
+   * actually stand on nearby.
+   */
+  public get heartCell(): GridPoint {
+    const camp = this.landfallCell;
+    return this.navigation.nearestWalkable(camp) ?? camp;
+  }
 
-      if (this.terrain.get(cell.gx, cell.gy) === 'water') {
-        seenWater = true;
-        continue;
-      }
-      // Only once past the sea itself: an inland lake on the way out would
-      // otherwise beach the settlers on its far bank.
-      if (!seenWater) {
-        continue;
-      }
+  /** Worked out once: the map does not move, and the answer is a search. */
+  private camp: GridPoint | null = null;
 
-      // A pace or two back from the waterline, so the camp has ground on every
-      // side of it rather than a wall of sea against its back.
-      const inland = horizontal
-        ? { gx: at + inward * SHORE_SETBACK, gy: along }
-        : { gx: along, gy: at + inward * SHORE_SETBACK };
-      const spot = this.navigation.nearestWalkable(inland) ?? this.navigation.nearestWalkable(cell);
-      if (spot) {
-        return spot;
+  private findLandfall(): GridPoint {
+    const course = this.river.middle;
+    const centre = course[Math.floor(course.length / 2)] ?? this.centreCell;
+    const horizontal = this.river.axis === 'horizontal';
+
+    for (const setback of [BANK_SETBACK, BANK_SETBACK + 3, BANK_SETBACK + 6]) {
+      for (const side of [1, -1]) {
+        const bank = horizontal
+          ? { gx: centre.gx, gy: centre.gy + side * setback }
+          : { gx: centre.gx + side * setback, gy: centre.gy };
+        if (!this.terrain.contains(bank.gx, bank.gy)) {
+          continue;
+        }
+        const spot = this.navigation.nearestWalkable(bank, 6);
+        if (spot) {
+          return spot;
+        }
       }
     }
 
@@ -276,6 +287,86 @@ export class World {
       this.terrain.set(cell.gx, cell.gy, 'forest');
       this.navigation.refreshCell(this.terrain, cell.gx, cell.gy);
     }
+    return true;
+  }
+
+  /**
+   * `true` when this cell could be dug into a channel.
+   *
+   * The rule that makes a ditch interesting: it has to be cut from water that is
+   * already there. So a settlement leads the river where it wants it, one cell
+   * at a time, and a ditch is a line the player draws rather than a tile they
+   * stamp.
+   */
+  public canDig(cell: GridPoint): boolean {
+    if (!this.terrain.contains(cell.gx, cell.gy)) {
+      return false;
+    }
+    const type = this.terrainAt(cell);
+    // Open ground only. Rock has to be quarried and a wood has to be felled
+    // before anybody digs through it, which are decisions the player has already
+    // learned to make.
+    if (type !== 'grass' && type !== 'meadow') {
+      return false;
+    }
+    if (this.trees.has(cell) || this.roads.hasAt(cell) || this.buildings.getAt(cell) !== null) {
+      return false;
+    }
+    if (this.piles.anyAt(cell) !== null) {
+      return false;
+    }
+    return this.touchesWater(cell);
+  }
+
+  /** `true` when the river or a channel runs alongside this cell. */
+  public touchesWater(cell: GridPoint): boolean {
+    // Four-sided rather than eight: water flows along a channel, and a ditch
+    // joined to the river only at a corner would read as two separate ditches.
+    for (const [dx, dy] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ] as const) {
+      const beside = { gx: cell.gx + dx, gy: cell.gy + dy };
+      if (!this.terrain.contains(beside.gx, beside.gy)) {
+        continue;
+      }
+      if (WET_TERRAIN.includes(this.terrainAt(beside))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Lets the water in, and re-costs the cell.
+   *
+   * @returns `true` when a channel was actually cut
+   */
+  public digDitch(cell: GridPoint): boolean {
+    if (!this.canDig(cell)) {
+      return false;
+    }
+    this.terrain.set(cell.gx, cell.gy, 'ditch');
+    this.navigation.refreshCell(this.terrain, cell.gx, cell.gy);
+    return true;
+  }
+
+  /**
+   * Fills a channel in again, giving back the ground.
+   *
+   * Immediate, like taking up a road: it is the player correcting a line they no
+   * longer want, and making them wait for somebody to come and shovel it would
+   * be ceremony rather than a decision. A channel with a bridge over it stays —
+   * pull the bridge down first.
+   */
+  public fillDitch(cell: GridPoint): boolean {
+    if (this.terrainAt(cell) !== 'ditch' || this.buildings.getAt(cell) !== null) {
+      return false;
+    }
+    this.terrain.set(cell.gx, cell.gy, 'grass');
+    this.navigation.refreshCell(this.terrain, cell.gx, cell.gy);
     return true;
   }
 

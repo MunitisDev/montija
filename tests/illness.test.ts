@@ -28,6 +28,7 @@ import { Villager } from '@/simulation/villagers/Villager';
 import { TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
 import type { BuildingId } from '@/data/buildings';
 import type { Building } from '@/simulation/buildings/Building';
+import { designateNearbyTrees } from './support/playtest';
 
 const TICK = 0.1;
 const OPTIONS = { seed: 20260815, worldWidth: 64, worldHeight: 64, startingVillagers: 10 };
@@ -151,9 +152,7 @@ describe('an ill villager, in play', () => {
     // reserved job held by somebody who will not move for eight days is a job
     // nobody else can take.
     const simulation = new Simulation(OPTIONS);
-    for (const tree of [...simulation.world.trees.all].slice(0, 20)) {
-      simulation.designateTreeForFelling({ gx: tree.gx, gy: tree.gy });
-    }
+    designateNearbyTrees(simulation, 20);
     for (let tick = 1; tick <= TICKS_PER_DAY * 2; tick += 1) {
       simulation.update(tick, TICK);
     }

@@ -37,6 +37,7 @@ import { WORKING_AGE } from '@/data/population';
 import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
 import { STORAGE_WARNING_FRACTION, type Simulation } from '@/simulation/Simulation';
 import { hasColdReading } from '@/simulation/history/Chronicle';
+import { siteYield } from '@/simulation/production/siteYield';
 import { DAYS_PER_YEAR, SEASONAL_YIELD, TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
 import {
   SPIRIT_NEUTRAL,
@@ -154,7 +155,9 @@ export function estimateFlows(simulation: Simulation): Flows {
       // resource into another, so neither belongs in a table of goods.
       continue;
     }
-    const scale = SEASONAL_YIELD[recipe.seasonal][snapshot.season];
+    const scale =
+      SEASONAL_YIELD[recipe.seasonal][snapshot.season] *
+      siteYield(simulation.world.buildings, building);
     const batches = (building.workers.length * TICKS_PER_DAY * workRate) / recipe.workTicks;
 
     for (const output of recipe.outputs) {

@@ -172,9 +172,14 @@ export function restore(simulation: Simulation, save: SaveGame): void {
     if (saved.complete) {
       building.state = 'complete';
       // Finished buildings block their footprint; the navigation rebuild above
-      // cleared that, so it has to be re-applied.
-      for (const cell of building.cells()) {
-        world.navigation.block(cell.gx, cell.gy);
+      // cleared that, so it has to be re-applied. A bridge is the exception and
+      // the reverse: it *opens* its cell, and the road that carries it came back
+      // with the rest of the roads above — blocking it here would load a
+      // settlement whose bridges nobody could cross.
+      if (!building.definition.crossing) {
+        for (const cell of building.cells()) {
+          world.navigation.block(cell.gx, cell.gy);
+        }
       }
     }
     world.buildings.restoreOne(building);

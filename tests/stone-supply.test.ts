@@ -79,18 +79,24 @@ describe('mining, once the player marks trees', () => {
     expect(starved.length).toBeGreaterThanOrEqual(4);
   });
 
-  it('survives only where the rock is closer than the trees', () => {
-    // The exception proves the mechanism: the one seed that keeps mining is the
-    // one whose nearest deposit is a single cell from the camp, where no tree
-    // can be nearer.
-    // `> 0` matters: one seed's rock is thirty cells out and it delivers nothing
-    // either way, which is a different failure and not evidence of this one.
+  it('escapes only where the rock is closer than the trees', () => {
+    // The exception used to prove the mechanism: one seed kept mining, and it was
+    // the one whose nearest deposit sat a single cell from the camp, where no
+    // tree could be nearer.
+    //
+    // **On the current maps there is no exception left.** The sea became a river,
+    // which re-cut every map from every seed, and none of these eight now happens
+    // to be founded on top of its rock. That does not change the mechanism — it
+    // removes the luck that was hiding it, which is why the reference seed's
+    // settlement stopped surviving its first winter the day the river arrived.
+    //
+    // Written so it holds either way: if a map does keep its mining, the rock is
+    // on the doorstep.
     const unaffected = SEEDS.filter((seed) => {
       const contested = stoneDelivered(seed, { trees: 40 });
       return contested > 0 && contested >= stoneDelivered(seed, { trees: 0 });
     });
 
-    expect(unaffected.length).toBeGreaterThan(0);
     for (const seed of unaffected) {
       expect(nearestStoneDistance(seed)).toBeLessThan(4);
     }

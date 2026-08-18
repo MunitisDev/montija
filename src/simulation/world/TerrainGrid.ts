@@ -16,6 +16,18 @@ export class TerrainGrid {
   public readonly width: number;
   public readonly height: number;
   private readonly cells: Uint8Array;
+  private changeVersion = 0;
+
+  /**
+   * Bumped whenever a cell changes.
+   *
+   * So a renderer can skip diffing the map: terrain changes when a tree comes
+   * down or a channel is dug, which is a handful of times an hour of play, and
+   * comparing one integer a frame is the whole cost of noticing.
+   */
+  public get version(): number {
+    return this.changeVersion;
+  }
 
   constructor(width: number, height: number, fill: TerrainType = 'grass') {
     this.width = width;
@@ -56,8 +68,9 @@ export class TerrainGrid {
       return;
     }
     const index = TERRAIN_TYPES.indexOf(type);
-    if (index >= 0) {
+    if (index >= 0 && this.cells[gy * this.width + gx] !== index) {
       this.cells[gy * this.width + gx] = index;
+      this.changeVersion += 1;
     }
   }
 
@@ -96,5 +109,6 @@ export class TerrainGrid {
       throw new Error(`Terrain buffer is ${buffer.length} cells, expected ${this.cells.length}.`);
     }
     this.cells.set(buffer);
+    this.changeVersion += 1;
   }
 }

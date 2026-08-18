@@ -46,12 +46,21 @@ describe('grouping', () => {
   it('offers every building exactly once', () => {
     // A building in the data and not in the menu is unreachable, and nothing
     // else in the codebase would notice.
+    //
+    // Except the ones the data says are placed on a cell the player has already
+    // tapped: a bridge is offered on the panel for its own square of river,
+    // because siting one by eye with a floating outline is worse in every way
+    // and a fifth card in a group turns the menu back into a scroller.
     const offered = buildMenuGroups(EMPTY, t)
       .flatMap((group) => group.options)
       .map((option) => option.id)
       .sort();
+    const fromMenu = BUILDING_IDS.filter(
+      (id) => buildingDefinition(id).placement !== 'cell',
+    ).sort();
 
-    expect(offered).toEqual([...BUILDING_IDS].sort());
+    expect(offered).toEqual(fromMenu);
+    expect(fromMenu.length).toBeLessThan(BUILDING_IDS.length);
   });
 
   it('puts each building in the group its data names', () => {

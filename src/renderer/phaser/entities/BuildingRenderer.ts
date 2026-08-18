@@ -52,6 +52,13 @@ export class BuildingRenderer {
 
     const live = new Set<number>();
     for (const building of buildings.all) {
+      // A finished bridge is drawn by the road renderer, because a finished
+      // bridge *is* a road: it has to join the tracks on both banks and take
+      // their corners, which a building sprite standing on its own plot cannot
+      // do. While it is being built it is an ordinary site like any other.
+      if (building.definition.crossing && building.isComplete) {
+        continue;
+      }
       live.add(building.id);
       const existing = this.sprites.get(building.id);
 

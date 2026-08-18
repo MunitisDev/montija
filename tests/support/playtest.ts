@@ -181,7 +181,7 @@ export function designateNearbyTrees(simulation: Simulation, count: number): num
     if (marked >= count) {
       break;
     }
-    if (simulation.designateTreeForFelling(cell)) {
+    if (canReach(simulation, cell) && simulation.designateTreeForFelling(cell)) {
       marked += 1;
     }
   }
@@ -197,7 +197,7 @@ export function designateNearbyStone(simulation: Simulation, count: number): num
     if (marked >= count) {
       break;
     }
-    if (simulation.designateStoneForMining(cell)) {
+    if (canReach(simulation, cell) && simulation.designateStoneForMining(cell)) {
       marked += 1;
     }
   }
@@ -266,6 +266,60 @@ function lowestNeed(simulation: Simulation, key: 'hunger' | 'warmth'): number {
     lowest = Math.min(lowest, villager.needs[key]);
   }
   return lowest;
+}
+
+/**
+ * Whether somebody in the settlement could walk to a cell, or beside it.
+ *
+ * **What the river added to every one of these helpers.** They stand in for a
+ * player, and a player can see that the trees on the far bank are across the
+ * water; a spiral search cannot. Without this the helpers mark forty trees, half
+ * of them unreachable, and the settlement looks lazy while it is in fact
+ * standing on the wrong side of a river.
+ *
+ * Answered of the cell or any of its neighbours, because the things worth
+ * marking — a tree, a rock face — are not walkable themselves. Somebody has to
+ * be able to stand next to them.
+ */
+export function canReach(simulation: Simulation, cell: GridPoint): boolean {
+  const heart = simulation.world.heartCell;
+  const navigation = simulation.world.navigation;
+  for (let dy = -1; dy <= 1; dy += 1) {
+    for (let dx = -1; dx <= 1; dx += 1) {
+      if (navigation.connects(heart, { gx: cell.gx + dx, gy: cell.gy + dy })) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/** The nearest tree the settlement could actually walk to. */
+export function reachableTree(simulation: Simulation): GridPoint {
+  const found = nearbyTrees(simulation, 1)[0];
+  if (!found) {
+    throw new Error('No tree within reach of the settlement');
+  }
+  return found;
+}
+
+/**
+ * The nearest `count` trees the settlement could walk to, nearest first.
+ *
+ * Returned rather than marked, because half these tests want the tree ids to
+ * check afterwards which of them actually came down.
+ */
+export function nearbyTrees(simulation: Simulation, count: number): GridPoint[] {
+  const cells: GridPoint[] = [];
+  for (const cell of spiral(settlementCentre(simulation), 40)) {
+    if (cells.length >= count) {
+      break;
+    }
+    if (simulation.world.trees.has(cell) && canReach(simulation, cell)) {
+      cells.push(cell);
+    }
+  }
+  return cells;
 }
 
 function settlementCentre(simulation: Simulation): GridPoint {

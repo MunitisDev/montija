@@ -56,6 +56,16 @@ World generation is deterministic from the seed, so in principle the terrain cou
 mined, ground is built on. Regenerating would restore a pristine wilderness around a settlement that
 had spent a year clearing it.
 
+### Why a ditch needs nothing new, and a bridge needs nothing at all
+
+Terrain is one byte per cell, indexed into `TERRAIN_TYPES` — so that list is **append-only**.
+`ditch` was added at the end, which leaves every existing index meaning what it always meant; a save
+written before ditches existed loads with no ditches in it, which is true.
+
+A bridge is a building standing on a cell of water, and the boards it carries are a road: both were
+already saved. The one thing the loader has to know is that a finished crossing **opens** its cell
+rather than blocking it, or a settlement would load with bridges nobody could walk over.
+
 ### Why the RNG position is stored
 
 A seeded stream is only reproducible from its **position**, not merely its seed. Saving the seed but

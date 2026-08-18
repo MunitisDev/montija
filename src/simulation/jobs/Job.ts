@@ -31,6 +31,7 @@ export type JobType =
   | 'build'
   | 'produce'
   | 'pave-road'
+  | 'dig-ditch'
   | 'plant-tree'
   | 'demolish';
 
@@ -122,6 +123,9 @@ export const JOB_WORK_TICKS: Readonly<Record<JobType, number>> = {
   // Clearing and beating a track flat. Short, because a road is only worth
   // laying if a settlement can afford to lay a line of them.
   'pave-road': 20,
+  // Digging a channel and letting the water in. Real work — more than beating a
+  // track flat, less than felling a tree.
+  'dig-ditch': 35,
   // Setting a sapling. Quick work; the waiting is done by the tree.
   'plant-tree': 15,
   // Pulling a building down and stacking what is worth keeping. Slower than

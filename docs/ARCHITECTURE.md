@@ -286,6 +286,22 @@ priced at the cheapest step the grid can currently offer — which is the old fi
 settlement finishes its first road, so a village that never lays one pays nothing for the weaker
 heuristic.
 
+**The grid knows which ground is joined to which.** A river cuts the map in two, and both banks are
+perfectly walkable — so "is there a route" stopped being a question A\* could be left to answer by
+failing. Every walkable cell carries the number of the connected patch it belongs to, flood-filled
+eight-way and rebuilt lazily, and only when a cell's walkability actually flips: felling a tree
+changes what a step costs, not what connects to what, and that is the great majority of grid changes.
+
+Two things read it. `findPath` refuses a goal in another patch before it searches at all — the
+alternative was a full four-thousand-node search per attempt, per villager, for as long as a job stood
+on the far bank. And placement refuses a plot no villager could reach, so the player is told _nobody
+can walk there — bridge the river first_ rather than watching materials never arrive.
+
+**A bridge is a road over water**, which is the whole of how crossing works. The navigation grid
+learns one rule — boards can be laid over water and not over rock — and everything else follows from
+what a road already does: preferred by pathfinding, walked faster, drawn joined to the tracks either
+side, and saved with the other roads.
+
 **Pathfinding is deterministic**, because save/replay reproducibility depends on it. Neighbours are
 visited in a fixed order and equal scores break on insertion order — a heap keyed on object identity
 would silently destroy that guarantee.

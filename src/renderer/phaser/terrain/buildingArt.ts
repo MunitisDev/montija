@@ -93,6 +93,10 @@ interface BuildingMass {
  * Steep pitches are also what the period asks for.
  */
 const MASS: Readonly<Record<BuildingId, BuildingMass>> = {
+  // A bridge, while it is being built: a course of timbers just clear of the
+  // water and nothing above them. Once it is finished the road art draws it, so
+  // this is only ever seen as a half-built crossing.
+  bridge: { wallHeight: 4, roofHeight: 0, eaves: 0, open: true },
   // The only building people live in, and the only one with a hearth — so it is
   // the only one with smoke coming out of it, which is most of what makes a
   // settlement look inhabited rather than built.
@@ -181,6 +185,8 @@ const MASS: Readonly<Record<BuildingId, BuildingMass>> = {
 
 /** Muted, earthy, and distinguishable at a glance without being colourful. */
 export const BUILDING_COLOURS: Readonly<Record<BuildingId, BuildingPalette>> = {
+  // Wet timber, darker than anything on dry land.
+  bridge: { wall: 0x6b5a41, roof: 0x4a3d2c, trim: 0x332a1e },
   // Limewashed daub on a dark oak frame, under a russet tiled roof. The single
   // biggest change the art ever had: every building used to be brown walls
   // under a slightly darker brown roof, and at a settlement's worth of zoom

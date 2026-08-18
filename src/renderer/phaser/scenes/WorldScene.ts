@@ -14,7 +14,7 @@ import { PhaserCameraBinding } from '@/renderer/phaser/camera/PhaserCameraBindin
 import { TerrainRenderer } from '@/renderer/phaser/terrain/TerrainRenderer';
 import { VillagerRenderer } from '@/renderer/phaser/entities/VillagerRenderer';
 import { DesignationRenderer } from '@/renderer/phaser/entities/DesignationRenderer';
-import { RoadRenderer } from '@/renderer/phaser/entities/RoadRenderer';
+import { ConnectorRenderer } from '@/renderer/phaser/entities/ConnectorRenderer';
 import { ResourceRenderer } from '@/renderer/phaser/entities/ResourceRenderer';
 import { BuildingRenderer } from '@/renderer/phaser/entities/BuildingRenderer';
 import { TextureKeys } from '@/renderer/phaser/terrain/tileTextures';
@@ -36,7 +36,7 @@ export class WorldScene extends Phaser.Scene {
   private terrainRenderer!: TerrainRenderer;
   private villagerRenderer!: VillagerRenderer;
   private designationRenderer!: DesignationRenderer;
-  private roadRenderer!: RoadRenderer;
+  private connectorRenderer!: ConnectorRenderer;
   private resourceRenderer!: ResourceRenderer;
   private buildingRenderer!: BuildingRenderer;
   private weatherRenderer!: WeatherRenderer;
@@ -81,7 +81,7 @@ export class WorldScene extends Phaser.Scene {
     );
     this.villagerRenderer = new VillagerRenderer(this);
     this.designationRenderer = new DesignationRenderer(this);
-    this.roadRenderer = new RoadRenderer(this);
+    this.connectorRenderer = new ConnectorRenderer(this);
     this.resourceRenderer = new ResourceRenderer(this);
     this.buildingRenderer = new BuildingRenderer(this);
     this.weatherRenderer = new WeatherRenderer(this);
@@ -96,7 +96,7 @@ export class WorldScene extends Phaser.Scene {
       this.weatherRenderer.destroy();
       this.villagerRenderer.destroy();
       this.designationRenderer.destroy();
-      this.roadRenderer.destroy();
+      this.connectorRenderer.destroy();
       this.resourceRenderer.destroy();
       this.buildingRenderer.destroy();
     });
@@ -130,7 +130,7 @@ export class WorldScene extends Phaser.Scene {
 
     this.syncSeason(delta);
     this.designationRenderer.sync(this.context.simulation.jobs);
-    this.roadRenderer.sync(this.context.simulation.world.roads);
+    this.connectorRenderer.sync(this.context.simulation.world);
     this.resourceRenderer.sync(
       this.context.simulation.world.piles,
       this.context.simulation.storages,

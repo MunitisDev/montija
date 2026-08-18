@@ -76,6 +76,15 @@ export function findPath(
     return { path: null, expandedNodes: 0, exhausted: false };
   }
 
+  // **Asked before searching, not discovered by searching.** Two banks of a
+  // river are both walkable and no route joins them, and finding that out the
+  // hard way costs the full node budget every time anybody so much as considers
+  // a job on the far side. The grid already knows which patch of ground each
+  // cell belongs to.
+  if (!grid.connects(start, goal)) {
+    return { path: null, expandedNodes: 0, exhausted: false };
+  }
+
   const width = grid.width;
   const startIndex = start.gy * width + start.gx;
   const goalIndex = goal.gy * width + goal.gx;

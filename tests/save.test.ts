@@ -136,16 +136,21 @@ describe('round trip', () => {
 
   it('restores buildings, their blocking and their stores', () => {
     const simulation = new Simulation(OPTIONS);
+    // Cleared beside the settlement rather than in a corner of the map: since
+    // the river, a plot on the far bank cannot be built on at all.
+    const heart = simulation.world.heartCell;
+    const origin = { gx: heart.gx - 3, gy: heart.gy - 3 };
     for (let dy = 0; dy < 6; dy += 1) {
       for (let dx = 0; dx < 6; dx += 1) {
-        const cell = { gx: 10 + dx, gy: 10 + dy };
+        const cell = { gx: origin.gx + dx, gy: origin.gy + dy };
         const tree = simulation.world.trees.getAt(cell);
         if (tree) simulation.world.trees.remove(tree.id);
         simulation.world.terrain.set(cell.gx, cell.gy, 'grass');
         simulation.world.navigation.refreshCell(simulation.world.terrain, cell.gx, cell.gy);
       }
     }
-    const building = simulation.placeBuilding('house', { gx: 11, gy: 11 })!;
+    const plot = { gx: origin.gx + 1, gy: origin.gy + 1 };
+    const building = simulation.placeBuilding('house', plot)!;
     building.materials.add('logs', 3);
     simulation.world.buildings.complete(simulation.world, building);
 
@@ -155,7 +160,7 @@ describe('round trip', () => {
 
     const restored = loaded.world.buildings.getById(building.id)!;
     expect(restored.isComplete).toBe(true);
-    expect(loaded.world.isWalkable({ gx: 11, gy: 11 })).toBe(false);
+    expect(loaded.world.isWalkable(plot)).toBe(false);
     expect(loaded.snapshot().housingCapacity).toBe(simulation.snapshot().housingCapacity);
   });
 

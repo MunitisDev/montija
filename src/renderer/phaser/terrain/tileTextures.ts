@@ -24,10 +24,26 @@ import { TILE_HEIGHT, TILE_WIDTH } from '@/shared/math/isometric';
 import { BUILDING_IDS, type BuildingId } from '@/data/buildings';
 import { SEASONS, type Season } from '@/simulation/seasons/SeasonClock';
 import { drawGroundTile, TERRAIN_VARIANTS } from './groundArt';
+import {
+  CONNECTOR_MASKS,
+  drawBridgeConnector,
+  drawDitchConnector,
+  drawRoadConnector,
+} from './connectors';
 import { contactShadow, shade } from './shading';
 import { PERSON_COLOURS, VILLAGER_LOOKS, type VillagerLook } from '@/shared/appearance';
 import { drawTree, TREE_HEIGHT, TREE_SHAPES, TREE_WIDTH } from './treeArt';
 import { BUILDING_COLOURS, buildingTextureSpec, drawBuilding } from './buildingArt';
+
+/**
+ * The three things that run from cell to cell.
+ *
+ * A bridge is a road over water and a ditch is water in a cut, so all three are
+ * the same shape problem — an end, a straight, a corner, a T or a crossing — and
+ * they share one generator and one atlas.
+ */
+export const CONNECTOR_KINDS = ['road', 'bridge', 'ditch'] as const;
+export type ConnectorKind = (typeof CONNECTOR_KINDS)[number];
 
 /** Texture and frame keys, so call sites never pass raw strings around. */
 export const TextureKeys = {
@@ -43,7 +59,19 @@ export const TextureKeys = {
   building: (id: string): string => `building-${id}`,
   site: 'construction-site',
   ghostCell: 'ghost-cell',
-  road: 'road-tile',
+  /**
+   * Roads, bridges and ditches, in one atlas.
+   *
+   * Sixteen shapes each — one per combination of neighbours that carry the same
+   * thing — so a road can turn a corner and a channel can visibly join the
+   * river. One atlas rather than forty-eight textures, for the same reason the
+   * terrain is one atlas: the depth-sorted display list interleaves them, and a
+   * texture change between two adjacent objects breaks the GPU batch.
+   */
+  connectorAtlas: 'connector-atlas',
+  /** Frame within the connector atlas. */
+  connectorFrame: (kind: ConnectorKind, mask: number): string =>
+    `${kind}-${mask % CONNECTOR_MASKS}`,
   /** Frame name within the terrain atlas. */
   terrainFrame: (type: TerrainType, season: Season, variant = 0): string =>
     `${type}-${season}-${variant % TERRAIN_VARIANTS}`,
@@ -115,6 +143,7 @@ export function createPlaceholderTextures(scene: Phaser.Scene): void {
   }
 
   buildVillagerAtlas(scene, graphics);
+  buildConnectorAtlas(scene, graphics);
 
   if (!scene.textures.exists(TextureKeys.villagerRing)) {
     drawVillagerRing(graphics);
@@ -149,12 +178,6 @@ export function createPlaceholderTextures(scene: Phaser.Scene): void {
   if (!scene.textures.exists(TextureKeys.site)) {
     drawConstructionSite(graphics);
     graphics.generateTexture(TextureKeys.site, 128, 96);
-    graphics.clear();
-  }
-
-  if (!scene.textures.exists(TextureKeys.road)) {
-    drawRoad(graphics);
-    graphics.generateTexture(TextureKeys.road, TILE_WIDTH, TILE_HEIGHT);
     graphics.clear();
   }
 
@@ -227,6 +250,54 @@ function buildTerrainAtlas(scene: Phaser.Scene, graphics: Phaser.GameObjects.Gra
           TILE_HEIGHT,
         );
       });
+    }
+  });
+}
+
+/**
+ * Packs every connector shape into one image: kind across, mask down.
+ *
+ * Sixteen rows because four neighbours give sixteen combinations, and drawing
+ * all of them costs nothing at load — it is forty-eight tile-sized diamonds,
+ * once.
+ */
+function buildConnectorAtlas(scene: Phaser.Scene, graphics: Phaser.GameObjects.Graphics): void {
+  if (scene.textures.exists(TextureKeys.connectorAtlas)) {
+    return;
+  }
+
+  const draw: Readonly<Record<ConnectorKind, (mask: number) => void>> = {
+    road: (mask) => drawRoadConnector(graphics, mask),
+    bridge: (mask) => drawBridgeConnector(graphics, mask),
+    ditch: (mask) => drawDitchConnector(graphics, mask),
+  };
+
+  CONNECTOR_KINDS.forEach((kind, column) => {
+    for (let mask = 0; mask < CONNECTOR_MASKS; mask += 1) {
+      graphics.translateCanvas(column * TILE_WIDTH, mask * TILE_HEIGHT);
+      draw[kind](mask);
+      graphics.translateCanvas(-column * TILE_WIDTH, -mask * TILE_HEIGHT);
+    }
+  });
+
+  graphics.generateTexture(
+    TextureKeys.connectorAtlas,
+    CONNECTOR_KINDS.length * TILE_WIDTH,
+    CONNECTOR_MASKS * TILE_HEIGHT,
+  );
+  graphics.clear();
+
+  const texture = scene.textures.get(TextureKeys.connectorAtlas);
+  CONNECTOR_KINDS.forEach((kind, column) => {
+    for (let mask = 0; mask < CONNECTOR_MASKS; mask += 1) {
+      texture.add(
+        TextureKeys.connectorFrame(kind, mask),
+        0,
+        column * TILE_WIDTH,
+        mask * TILE_HEIGHT,
+        TILE_WIDTH,
+        TILE_HEIGHT,
+      );
     }
   });
 }
@@ -905,61 +976,6 @@ function drawConstructionSite(graphics: Phaser.GameObjects.Graphics): void {
   graphics.moveTo(cx + 13, base + 3);
   graphics.lineTo(cx + 28, base + 3);
   graphics.strokePath();
-}
-
-/**
- * A stretch of beaten track, painted onto the ground.
- *
- * Deliberately smaller than the tile it sits on and slightly ragged at the
- * edges: a road here is trodden earth rather than a paved surface, and a
- * diamond filling the cell exactly would read as a floor tile and make the grid
- * — which the brief wants hidden — the most obvious thing on screen. Adjacent
- * road cells still overlap enough to read as one continuous line.
- */
-function drawRoad(graphics: Phaser.GameObjects.Graphics): void {
-  const cx = TILE_WIDTH / 2;
-  const cy = TILE_HEIGHT / 2;
-  const halfWidth = TILE_WIDTH / 2 - 1;
-  const halfHeight = TILE_HEIGHT / 2 - 1;
-
-  // Three passes: a damp margin, the trodden bed, and a lit crown down the
-  // middle where the traffic has worn it smooth.
-  const passes = [
-    { inset: 0.98, colour: 0x4a4034, alpha: 0.75 },
-    { inset: 0.72, colour: 0x6a5a45, alpha: 0.9 },
-  ];
-  for (const pass of passes) {
-    graphics.fillStyle(pass.colour, pass.alpha);
-    polygonAt(graphics, [
-      [cx, cy - halfHeight * pass.inset],
-      [cx + halfWidth * pass.inset, cy],
-      [cx, cy + halfHeight * pass.inset],
-      [cx - halfWidth * pass.inset, cy],
-    ]);
-  }
-
-  graphics.fillStyle(0x7b6a51, 0.75);
-  polygonAt(graphics, [
-    [cx, cy - halfHeight * 0.44],
-    [cx + halfWidth * 0.44, cy],
-    [cx, cy + halfHeight * 0.2],
-    [cx - halfWidth * 0.44, cy],
-  ]);
-
-  // A fixed scatter of grit, so a long road is not a flat band of one colour.
-  // Fixed rather than random: every road cell shares this one texture, and a
-  // per-draw scatter would only ever be generated once anyway.
-  graphics.fillStyle(0x877357, 0.7);
-  for (const [gx, gy] of [
-    [-10, -2],
-    [-2, 3],
-    [6, -3],
-    [11, 2],
-    [1, -5],
-    [-6, 5],
-  ] as const) {
-    graphics.fillRect(cx + gx, cy + gy, 2, 1);
-  }
 }
 
 /** One cell of the placement ghost. Tinted green or red by the renderer. */

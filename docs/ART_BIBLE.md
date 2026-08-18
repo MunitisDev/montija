@@ -448,3 +448,35 @@ Twenty-four frames — four figures × six colours — drawn once at load into a
 single atlas, so the whole settlement is still one draw batch. Not a tint at draw
 time: the season tint already owns `setTint`, and a second one on top would wash
 every villager the same shade of whatever they were standing in.
+
+## Roads, bridges and ditches — Implemented
+
+Anything that runs from cell to cell is drawn from **what joins it**: a centre, and an arm towards
+each of the four grid neighbours carrying the same thing. Four neighbours give sixteen shapes, which
+cover every end, straight, corner, T-junction and crossing without anybody drawing them one at a
+time.
+
+A road used to be a single flat tile whatever stood beside it, so a corner was two overlapping
+lozenges and a crossroads was four — a scatter of identical patches rather than a line the settlement
+had beaten into the ground.
+
+| Kind   | Reads as                                                | Joins                           |
+| ------ | ------------------------------------------------------- | ------------------------------- |
+| Road   | Trodden earth: a damp margin, a bed, a worn crown       | Other roads                     |
+| Bridge | Timber deck with cross-planks, over dark water          | Roads, and the bank either side |
+| Ditch  | Two banks of thrown-up earth with water down the middle | The river, and other ditches    |
+
+Three rules hold the set together:
+
+- **bands are measured in cells, not pixels.** An arm is half a cell long on the ground and its
+  corners are projected on the way out. A band of constant screen thickness is not a band of constant
+  width on an isometric grid, and its corners come out the wrong shape.
+- **a bridge also meets the bank.** Its abutment is not a road — the ground beside a river is usually
+  just ground — and a deck that stopped at the waterline read as a raft moored in midstream.
+- **a ditch is drawn over earth, not over water.** The cell is painted as the mud it was cut into and
+  the channel is a narrow band down the middle, which is what makes an _acequia_ read as something the
+  settlement made rather than as a stray piece of river.
+
+All forty-eight frames live in one atlas (`connector-atlas`, kind across and mask down), for the same
+reason the terrain does: the depth-sorted display list interleaves them, and a texture change between
+two adjacent objects breaks the GPU batch.

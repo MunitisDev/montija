@@ -128,9 +128,11 @@ describe('roads and navigation', () => {
     expect(grid.costAt(3, 3)).toBe(plain);
   });
 
-  it('never makes impassable ground walkable', () => {
+  it('never carries a road across rock', () => {
+    // A rock face is not a gap. Whatever is laid on it, it is still the thing
+    // in the way.
     const { terrain, roads } = openWorld(6, 6);
-    terrain.set(3, 3, 'water');
+    terrain.set(3, 3, 'stone');
     const grid = new NavigationGrid(terrain);
     grid.useRoads(roads, terrain);
 
@@ -138,6 +140,23 @@ describe('roads and navigation', () => {
     grid.refreshCell(terrain, 3, 3);
 
     expect(grid.isWalkable(3, 3)).toBe(false);
+  });
+
+  it('does carry one across water, which is what a bridge is', () => {
+    // The one exception, and the whole of how a bridge works: nothing in the
+    // navigation grid knows what a bridge is, only that boards can be laid over
+    // water and not over stone.
+    const { terrain, roads } = openWorld(6, 6);
+    terrain.set(3, 3, 'water');
+    const grid = new NavigationGrid(terrain);
+    grid.useRoads(roads, terrain);
+
+    expect(grid.isWalkable(3, 3)).toBe(false);
+
+    roads.lay(3, 3);
+    grid.refreshCell(terrain, 3, 3);
+
+    expect(grid.isWalkable(3, 3)).toBe(true);
   });
 
   it('costs a settlement with no roads nothing at all', () => {
@@ -204,7 +223,7 @@ describe('laying roads', () => {
 
   it('orders a road, and a villager eventually lays it', () => {
     const simulation = new Simulation(OPTIONS);
-    const cell = openCellNear(simulation, simulation.world.centreCell);
+    const cell = openCellNear(simulation, simulation.world.heartCell);
     expect(cell).not.toBeNull();
     if (!cell) {
       return;
@@ -235,7 +254,7 @@ describe('laying roads', () => {
     // Measured on a two-year-old settlement of nineteen people: nine roads
     // ordered, **nought laid** in fifteen days. At `normal` all nine went down.
     const simulation = new Simulation(OPTIONS);
-    const cell = openCellNear(simulation, simulation.world.centreCell);
+    const cell = openCellNear(simulation, simulation.world.heartCell);
     expect(cell).not.toBeNull();
     if (!cell) {
       return;
@@ -271,7 +290,7 @@ describe('laying roads', () => {
     // The rule that `low` was protecting, and the one worth keeping: hauling is
     // `high`, so a settlement never paves while its dinner sits in the field.
     const simulation = new Simulation(OPTIONS);
-    const cell = openCellNear(simulation, simulation.world.centreCell);
+    const cell = openCellNear(simulation, simulation.world.heartCell);
     if (!cell) {
       return;
     }
@@ -290,7 +309,7 @@ describe('laying roads', () => {
 
   it('refuses a second order on a cell already ordered', () => {
     const simulation = new Simulation(OPTIONS);
-    const cell = openCellNear(simulation, simulation.world.centreCell);
+    const cell = openCellNear(simulation, simulation.world.heartCell);
     if (!cell) {
       return;
     }
@@ -301,7 +320,7 @@ describe('laying roads', () => {
 
   it('cancels a pending order', () => {
     const simulation = new Simulation(OPTIONS);
-    const cell = openCellNear(simulation, simulation.world.centreCell);
+    const cell = openCellNear(simulation, simulation.world.heartCell);
     if (!cell) {
       return;
     }
@@ -314,7 +333,7 @@ describe('laying roads', () => {
 
   it('lifts a laid road immediately, and restores the cost', () => {
     const simulation = new Simulation(OPTIONS);
-    const cell = openCellNear(simulation, simulation.world.centreCell);
+    const cell = openCellNear(simulation, simulation.world.heartCell);
     if (!cell) {
       return;
     }
@@ -330,7 +349,7 @@ describe('laying roads', () => {
 
   it('will not pave a cell that already has a road', () => {
     const simulation = new Simulation(OPTIONS);
-    const cell = openCellNear(simulation, simulation.world.centreCell);
+    const cell = openCellNear(simulation, simulation.world.heartCell);
     if (!cell) {
       return;
     }
@@ -388,7 +407,7 @@ describe('walking on roads', () => {
 describe('saving roads', () => {
   it('brings roads back, and the routing that goes with them', () => {
     const simulation = new Simulation(OPTIONS);
-    const cell = openCellNear(simulation, simulation.world.centreCell);
+    const cell = openCellNear(simulation, simulation.world.heartCell);
     if (!cell) {
       return;
     }
@@ -428,7 +447,7 @@ describe('saving roads', () => {
 
   it('does not carry roads over into a settlement that has none', () => {
     const simulation = new Simulation(OPTIONS);
-    const cell = openCellNear(simulation, simulation.world.centreCell);
+    const cell = openCellNear(simulation, simulation.world.heartCell);
     if (!cell) {
       return;
     }

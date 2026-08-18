@@ -33,6 +33,7 @@ import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
 import { SeededRandom, deriveSeed } from '@/shared/math/random';
 import type { BuildingId, ResourceAmount } from '@/data/buildings';
 import type { PlacementCheck } from '@/simulation/buildings/BuildingRegistry';
+import { siteYield } from '@/simulation/production/siteYield';
 import type { Inventory } from '@/simulation/resources/Inventory';
 import type { WorkPreference } from '@/simulation/villagers/Villager';
 import { restore, serialise } from '@/simulation/save/serialise';
@@ -96,6 +97,14 @@ export interface Selection {
   readonly roadDesignated: boolean;
   /** `true` when this cell would take a road. */
   readonly canPave: boolean;
+  /** `true` when a channel already runs here. */
+  readonly hasDitch: boolean;
+  /** `true` when a channel here has been ordered but not yet dug. */
+  readonly ditchDesignated: boolean;
+  /** `true` when the water could be led into this cell. */
+  readonly canDig: boolean;
+  /** `true` when this cell of water could be bridged. */
+  readonly canBridge: boolean;
 }
 
 /**
@@ -137,6 +146,14 @@ export interface BuildingSelection {
   readonly residents: number;
   /** `true` when this building is already waiting to be pulled down. */
   readonly demolitionOrdered: boolean;
+  /**
+   * What this building's surroundings multiply its output by.
+   *
+   * `1` for almost everything. An orchard beside a larder is `2`, and the panel
+   * has to know or it would quote the lone figure for a building the player can
+   * see is not alone.
+   */
+  readonly yieldBonus: number;
 }
 
 /** What the presentation layer is allowed to see. */
@@ -175,6 +192,8 @@ export interface GameContext {
    * whichever the cell's current state calls for.
    */
   toggleSelectedRoad(): boolean;
+  toggleSelectedDitch(): boolean;
+  bridgeSelectedCell(): boolean;
   /** Changes how many people the selected building should employ. */
   adjustSelectedWorkers(delta: number): boolean;
   /** Orders the selected building pulled down, or takes the order back. */
@@ -679,6 +698,10 @@ export class Game implements GameContext, InputIntentSink {
       hasRoad: this.simulation.hasRoad(cell),
       roadDesignated: this.simulation.isRoadDesignated(cell),
       canPave: this.simulation.world.canPave(cell),
+      hasDitch: this.simulation.hasDitch(cell),
+      ditchDesignated: this.simulation.isDitchDesignated(cell),
+      canDig: this.simulation.world.canDig(cell),
+      canBridge: this.simulation.canPlaceBuilding('bridge', cell).ok,
     };
   }
 
@@ -721,6 +744,7 @@ export class Game implements GameContext, InputIntentSink {
       residents: this.simulation.villagers.all.filter((villager) => villager.homeId === building.id)
         .length,
       demolitionOrdered: this.simulation.isDemolitionOrdered(building.id),
+      yieldBonus: siteYield(this.simulation.world.buildings, building),
     };
   }
 
@@ -765,6 +789,7 @@ export class Game implements GameContext, InputIntentSink {
       // pull down — and it is the settlement's only store on day one, which
       // makes offering to demolish it a trap rather than a choice.
       demolitionOrdered: false,
+      yieldBonus: 1,
     };
   }
 
@@ -849,6 +874,51 @@ export class Game implements GameContext, InputIntentSink {
       this.refreshSelection(selection.cell);
     }
     return acted;
+  }
+
+  /**
+   * The ditch button, which is the road button's twin.
+   *
+   * Three commands wearing one hat, for the same reason: a cell either has a
+   * channel, has one ordered, or could take one, and the three are mutually
+   * exclusive by construction.
+   */
+  public toggleSelectedDitch(): boolean {
+    const selection = this.currentSelection;
+    if (!selection) {
+      return false;
+    }
+
+    const acted = selection.hasDitch
+      ? this.simulation.fillDitch(selection.cell)
+      : selection.ditchDesignated
+        ? this.simulation.cancelDitchDesignation(selection.cell)
+        : this.simulation.designateDitch(selection.cell);
+
+    if (acted) {
+      this.refreshSelection(selection.cell);
+    }
+    return acted;
+  }
+
+  /**
+   * Orders a bridge over the selected cell of water.
+   *
+   * Not a menu building with a ghost: the player has already told the game which
+   * square of river they mean by tapping it, and asking them to aim at it a
+   * second time with a floating outline would be worse in every way. What follows
+   * is an ordinary construction site — five logs hauled out and laid by hand.
+   */
+  public bridgeSelectedCell(): boolean {
+    const selection = this.currentSelection;
+    if (!selection) {
+      return false;
+    }
+    const placed = this.simulation.placeBuilding('bridge', selection.cell);
+    if (placed) {
+      this.refreshSelection(selection.cell);
+    }
+    return placed !== null;
   }
 
   /**

@@ -35,16 +35,61 @@ and a premise that explains itself has nothing left to reveal.
 > plainer one they agree with. The rescue arc it existed to support — a School, a
 > bottle on the tide and a ship forty years later — went with it.
 
-Every map still has a coast: one edge is ocean, chosen from the seed and produced
-by subtracting a falloff from the same elevation noise as everything else, so the
-waterline wanders into inlets and headlands instead of ruling a straight blue line
-down one side. Only one edge — a settlement ringed by water is a different game
-and a much smaller map. It gives the settlement one side it cannot be approached
-from, which is worth having when the walls arrive.
+### The river — Implemented
 
-The settlers make camp within sight of the water, and **the starting yard is what
-they carried**. The camera opens on it, so the first thing anybody sees is their
-own people.
+Every map has a river, running the whole way across it, in one of two directions
+chosen from the seed. Its course meanders out of the same kind of noise as
+everything else, so no two seeds bend the same way, and it is two or three cells
+wide with the odd wide reach.
+
+> **The sea this replaced.** One edge of the map used to be ocean. It gave every
+> settlement a horizon and nothing else: water you cannot cross, cannot dig from
+> and cannot farm beside is scenery. A river through the middle is a _decision_ —
+> it splits the ground the settlement lives on, it is what an orchard needs, and
+> it is where the ditches come from. Inland ponds got rarer at the same time
+> (`WATER_LEVEL` came down from 0.34 to 0.28): with the river carrying the water,
+> the old threshold put a quarter of some maps under standing water.
+
+**The map is in two pieces until the settlement bridges it**, and the game says
+so rather than letting the player find out by watching villagers refuse work: a
+plot on the far bank is refused with _nobody can walk there — bridge the river
+first_. The navigation grid labels connected patches of ground for this, which is
+also what stops a job on the far bank costing a full pathfinding search to reject.
+
+The settlers make camp on the bank, a few paces back so there is ground on every
+side of them, and **the starting yard is what they carried**. The camera opens on
+it, so the first thing anybody sees is their own people.
+
+### Bridges — Implemented
+
+Five logs and one cell of river. A bridge is placed from the build menu like
+anything else, its timber is hauled and laid by a villager like anything else, and
+what makes it interesting is what it _is_: **a road over the water**. Nothing in
+the navigation grid knows what a bridge is — only that boards can be laid over
+water and not over rock — so a bridge is preferred by pathfinding, walked at road
+speed, drawn joined to the tracks on both banks, and saved, all without a line of
+special-case code.
+
+Cheap on purpose. A settlement that has to save up for a crossing simply ignores
+half the map for a year, which is not a decision at all.
+
+### Ditches, and the orchard — Implemented
+
+An orchard has to stand on water: the river, or a channel dug from it. It is the
+one building whose place on the map is a real decision rather than "anywhere there
+is room" — and it is worth **twice as much beside a Food Storage**, because fruit
+is the one harvest that will not wait. Baskets standing in an autumn field are
+half spoiled by the time a hauler reaches them.
+
+The ditch is what turns that restriction into a decision. A cell of open ground
+next to water can be dug into a channel — labour, no materials, like a road — and
+each new channel is itself water, so the player leads the river inland one cell at
+a time. A ditch is water: nobody wades it and nothing is built in it. It can be
+filled in again immediately, like taking up a road.
+
+Roads and ditches are both drawn from what joins them: sixteen shapes per kind,
+one for every combination of the four neighbours, so a track turns corners and
+makes crossroads instead of being a scatter of identical patches.
 
 What is in that bundle says the same thing the premise does:
 
@@ -174,6 +219,10 @@ settled village.
 | Woodcutter      | 16 firewood a day        | 4 logs          |
 | Blacksmith      | 6 tools a day            | 4 iron + 2 logs |
 | Tailor          | 4.4 clothing a day       | 6.5 hides       |
+
+**The Orchard's figure doubles beside a larder.** It is the only building whose surroundings change
+what it makes, and the panel says so rather than quoting the lone figure — a player who can see a Food
+Storage standing next to it should not be told the orchard is working alone.
 
 **The Forester's Lodge is not on that list, because it makes nothing.** It works on the map instead:
 it plants saplings and marks surplus trees for felling, keeping about 110 trees standing inside a
@@ -436,6 +485,10 @@ planting one is a bet on a later autumn rather than a purchase.
 | Foraging | 0.8    | 1.4    | 1.0    | 0      |
 | Field    | 0.25   | 0.8    | 1.9    | 0      |
 | Orchard  | 0      | 0.7    | 2.4    | 0      |
+
+An orchard also has to **stand on water** — the river, or a ditch dug out to it — and is worth
+**twice as much with a Food Storage within ten cells**. Fruit is the one harvest that will not wait,
+and those two rules together are the first time the game asks _where_ rather than _whether_.
 
 A settlement that lives on foraging survives hand to mouth. One that farms has to
 store what it brings in and make it last — which is the lesson winter teaches,
@@ -844,6 +897,29 @@ not the work rate, just the tie on priority being broken by proximity.
 
 Pinned in `tests/stone-supply.test.ts`, written as characterisation tests that fail loudly when this
 is fixed.
+
+#### And a second mechanism, found when the river arrived
+
+The exception in that table — the seed whose rock sat one cell from the camp — was also the seed the
+balance suite used as its reference, which is the only reason a well-played settlement there ever got
+the four stone a Woodcutter costs. The river re-cut every map and took the luck away, and what came
+out of the re-measurement is a _different_ mechanism sitting behind the first:
+
+**In a settlement with three huts, a Woodcutter and a Forester, every adult is employed** — and an
+employee's own workshop always has an `urgent` job waiting, so ordinary `normal`-priority work never
+comes up at all. Two hundred and twenty-three standing mining orders were measured sitting on the
+board, unclaimed by anybody, for forty days, while the player was told nothing was wrong.
+
+Two fixes were measured and backed out, because neither touches it:
+
+- **mining above felling** (and then at hauling's own priority): 80 of 80 dead across eight seeds,
+  no firewood anywhere. Priority cannot help work that nobody is free to take.
+- **ageing the board**, so an order nobody has taken rises: worse — 70 of 80 against 63. It pulls the
+  few free hands off hauling onto stale orders, and the food stops moving.
+
+The lever that does work today is the **labour panel**: take a gatherer off a hut and the stone
+arrives. That the player has to know to do it by hand is the real defect, and it is the next thing to
+fix in the opening.
 
 ### Things tried on the opening that did not work
 

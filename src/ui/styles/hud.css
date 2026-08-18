@@ -387,6 +387,24 @@
   border-color: rgba(179, 161, 132, 0.42);
 }
 
+/*
+ * A ditch reads as water, for the same reason a road reads as earth: it is what
+ * the player is about to put on the ground. Beside the road button in the same
+ * panel, the two have to be told apart at a glance.
+ */
+.tile-panel__action--ditch:not(.is-cancel) {
+  color: #8fb0bd;
+  background: rgba(143, 176, 189, 0.1);
+  border-color: rgba(143, 176, 189, 0.42);
+}
+
+/* A bridge is timber, and the only one of the three that costs materials. */
+.tile-panel__action--bridge {
+  color: #c0a374;
+  background: rgba(192, 163, 116, 0.12);
+  border-color: rgba(192, 163, 116, 0.45);
+}
+
 /* Two actions can appear at once; on a narrow phone they wrap rather than
    push the panel off the edge of the screen. */
 .tile-panel {

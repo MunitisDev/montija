@@ -7,7 +7,7 @@
  */
 
 import type { ResourceId } from './resources';
-import type { TerrainType } from './terrain';
+import { WET_TERRAIN, type TerrainType } from './terrain';
 
 export type BuildingId =
   | 'house'
@@ -28,7 +28,8 @@ export type BuildingId =
   | 'healer'
   | 'school'
   | 'cemetery'
-  | 'temple';
+  | 'temple'
+  | 'bridge';
 
 /**
  * What a building is *for*, which is how the build menu is organised.
@@ -71,6 +72,20 @@ export interface BuildingDefinition {
   readonly workerSlots: number;
   /** Which group of the build menu this appears under. */
   readonly category: BuildingCategory;
+  /**
+   * How the player puts it down. `menu` — the default — is the build menu and a
+   * placement ghost.
+   *
+   * `cell` means it is a **transformation of a cell the player has already
+   * tapped**, offered on the panel for that cell instead: a bridge is not
+   * something you site by eye, it is something you do to one square of river.
+   * The build menu's groups are also sized for a thumb, and a fifth card in one
+   * of them turns the panel back into the scroller the grouping replaced.
+   *
+   * Everything else about such a building is ordinary: the same site, the same
+   * hauled materials, the same builder job.
+   */
+  readonly placement?: 'menu' | 'cell';
 
   /** Set when the building stores resources. */
   readonly storage?: {
@@ -128,14 +143,61 @@ export interface BuildingDefinition {
   };
 
   /**
-   * Terrain this building must be dug into, if any.
+   * Terrain this building must stand *on*, if any.
    *
-   * A quarry has to bite into a rock face; it cannot sit in a meadow. Checked
-   * as *adjacency* rather than as the footprint itself, because the footprint
-   * has to be buildable ground for anyone to work on it — what the rule really
-   * says is that the working face must be within reach.
+   * The opposite of {@link adjacentTo}, and it exists for exactly one thing so
+   * far: a bridge is built on the water rather than beside it. Everything else
+   * needs buildable ground, and this is what lets a definition say it does not.
    */
-  readonly adjacentTo?: TerrainType;
+  readonly on?: TerrainType;
+
+  /**
+   * Set when the finished building carries traffic instead of blocking it.
+   *
+   * A bridge is the only thing in the settlement that is walked *through*
+   * rather than walked *to*, and it is the whole reason to build one: the river
+   * splits the map, and until a crossing stands, half the wood and rock on it
+   * may as well not exist.
+   *
+   * Implemented as a road laid over the water, which is not a trick — it is what
+   * a bridge is. Pathfinding, the road art, the speed a villager walks and the
+   * save all work on it already, and nothing in any of them has to learn a new
+   * concept.
+   */
+  readonly crossing?: boolean;
+
+  /**
+   * Terrain this building must stand next to, if any.
+   *
+   * A quarry has to bite into a rock face; it cannot sit in a meadow. An orchard
+   * has to be able to drink. Checked as *adjacency* rather than as the footprint
+   * itself, because the footprint has to be buildable ground for anyone to work
+   * on it — what the rule really says is that what the building needs must be
+   * within reach.
+   *
+   * A list, because "water" means the river or a channel dug from it, and a
+   * settlement that has gone to the trouble of digging one has earned the same
+   * answer as one that happened to be founded on a bank.
+   */
+  readonly adjacentTo?: readonly TerrainType[];
+
+  /**
+   * A building whose presence nearby changes what this one produces.
+   *
+   * An orchard beside a larder is the case it was written for: fruit is the one
+   * harvest that does not keep, and an orchard with somewhere cool to put its
+   * crop the same afternoon brings in far more of it than one whose baskets
+   * stand in the sun waiting for a hauler. It is also the first reason in the
+   * game to think about *where* a store goes rather than only whether there is
+   * one.
+   */
+  readonly nearby?: {
+    readonly building: BuildingId;
+    /** How far away it may be, in cells, measured between plots. */
+    readonly radius: number;
+    /** What its presence multiplies this building's output by. */
+    readonly yieldMultiplier: number;
+  };
 
   /**
    * Set for a building that keeps the settlement's spirits up.
@@ -252,7 +314,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     buildTicks: 220,
     workerSlots: 3,
     recipeId: 'cut-stone',
-    adjacentTo: 'stone',
+    adjacentTo: ['stone'],
   },
   mine: {
     id: 'mine',
@@ -267,7 +329,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     buildTicks: 240,
     workerSlots: 2,
     recipeId: 'dig-iron',
-    adjacentTo: 'stone',
+    adjacentTo: ['stone'],
   },
   'crop-field': {
     id: 'crop-field',
@@ -287,12 +349,20 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     id: 'orchard',
     category: 'food',
     name: 'Orchard',
-    description: 'Fruit trees. Years to establish, and the best harvest there is.',
+    description:
+      'Fruit trees, on a bank or a ditch. Years to establish, and beside a larder the best harvest there is.',
     footprint: { width: 3, height: 3 },
     constructionCost: [
       { resource: 'logs', amount: 10 },
       { resource: 'stone', amount: 2 },
     ],
+    // Trees drink. An orchard has to sit on the river or on a channel dug from
+    // it, which makes it the one building whose place on the map is a real
+    // decision rather than "anywhere there is room".
+    adjacentTo: WET_TERRAIN,
+    // And it is the one harvest that does not keep. A larder within reach is
+    // worth as much as the trees.
+    nearby: { building: 'food-storage', radius: 10, yieldMultiplier: 2 },
     // Far the longest build in the game, and that *is* the mechanic: an orchard
     // is a bet on a later autumn. Planting one in a hungry spring is a mistake;
     // planting one in a comfortable summer is how a settlement stops being
@@ -479,6 +549,22 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     workerSlots: 0,
     solace: { share: 0.35 },
   },
+  bridge: {
+    id: 'bridge',
+    category: 'settlement',
+    name: 'Bridge',
+    description: 'Timber over the water. One cell of river, and the far bank stops being a view.',
+    footprint: { width: 1, height: 1 },
+    // Cheap on purpose: the river is a decision about *where* to cross, not a
+    // late-game monument. A settlement that has to save up for a bridge simply
+    // ignores half the map for a year, which is not a decision at all.
+    constructionCost: [{ resource: 'logs', amount: 5 }],
+    buildTicks: 50,
+    workerSlots: 0,
+    placement: 'cell',
+    on: 'water',
+    crossing: true,
+  },
   temple: {
     id: 'temple',
     category: 'settlement',
@@ -497,6 +583,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
 
 /** Menu order. Storage first, because nothing else works without somewhere to put things. */
 export const BUILDING_IDS: readonly BuildingId[] = [
+  'bridge',
   'house',
   'storage-yard',
   'food-storage',

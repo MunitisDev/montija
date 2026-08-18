@@ -50,6 +50,7 @@ import type { Job } from '@/simulation/jobs/Job';
 import type { JobManager } from '@/simulation/jobs/JobManager';
 import type { StorageRegistry } from '@/simulation/logistics/Storage';
 import { findPath } from '@/simulation/pathfinding/AStar';
+import { siteYield } from '@/simulation/production/siteYield';
 import { ROAD_SPEED_MULTIPLIER } from '@/simulation/world/RoadGrid';
 import type { SeasonalProfile } from '@/simulation/seasons/SeasonClock';
 import type { World } from '@/simulation/world/World';
@@ -546,7 +547,11 @@ export class VillagerSystem {
       building.input.remove(ingredient.resource, ingredient.amount);
     }
 
-    const yieldScale = this.productionScale(recipe.seasonal);
+    // The season, and then where the building stands: an orchard beside a larder
+    // gets its whole crop in while an orchard on its own loses half of it. See
+    // `production/siteYield`.
+    const yieldScale =
+      this.productionScale(recipe.seasonal) * siteYield(this.world.buildings, building);
     for (const output of recipe.outputs) {
       const amount = Math.max(0, Math.round(output.amount * yieldScale));
       if (amount > 0) {
@@ -651,6 +656,9 @@ export class VillagerSystem {
         break;
       case 'pave-road':
         this.world.paveRoad(job.target);
+        break;
+      case 'dig-ditch':
+        this.world.digDitch(job.target);
         break;
       case 'demolish':
         if (job.targetEntityId !== null) {

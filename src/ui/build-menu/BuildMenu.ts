@@ -35,6 +35,9 @@ const REFUSAL_KEY: Readonly<Record<PlacementRefusal, MessageKey>> = {
   occupied: 'placement.occupied',
   'trees-in-the-way': 'placement.treesInTheWay',
   'needs-rock-face': 'placement.needsRockFace',
+  'needs-water': 'placement.needsWater',
+  'needs-water-nearby': 'placement.needsWaterNearby',
+  unreachable: 'placement.unreachable',
 };
 
 export class BuildMenu {

@@ -91,6 +91,10 @@ function ground(cell: { gx: number; gy: number }): Selection {
     hasRoad: false,
     roadDesignated: false,
     canPave: true,
+    hasDitch: false,
+    ditchDesignated: false,
+    canDig: false,
+    canBridge: false,
   };
 }
 
@@ -117,6 +121,7 @@ function building(
       housing: 0,
       residents: 0,
       demolitionOrdered: false,
+      yieldBonus: 1,
     },
   };
 }
@@ -176,6 +181,7 @@ function onBuilding(cell: GridPoint, id: number): Selection {
     housing: 0,
     residents: 0,
     demolitionOrdered: false,
+    yieldBonus: 1,
   });
 }
 
@@ -193,6 +199,10 @@ function base(cell: GridPoint, building: Selection['building']): Selection {
     hasRoad: false,
     roadDesignated: false,
     canPave: true,
+    hasDitch: false,
+    ditchDesignated: false,
+    canDig: false,
+    canBridge: false,
   };
 }
 

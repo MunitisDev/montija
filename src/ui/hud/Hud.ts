@@ -51,6 +51,8 @@ interface HudElements {
   readonly selectionFlags: HTMLElement;
   readonly selectionAction: HTMLButtonElement;
   readonly selectionRoad: HTMLButtonElement;
+  readonly selectionDitch: HTMLButtonElement;
+  readonly selectionBridge: HTMLButtonElement;
   readonly season: HTMLElement;
   readonly temperature: HTMLElement;
   readonly advice: HTMLElement;
@@ -392,7 +394,7 @@ export class Hud {
       // Said on the site as well as on the finished building: "is this worth
       // carrying stone across the map for?" is a question asked *before* it is
       // standing, not after.
-      const promise = this.describeProduction(building.buildingId);
+      const promise = this.describeProduction(building.buildingId, building.yieldBonus);
       this.elements.buildingState.textContent =
         `${this.i18n.t('building.underConstruction')} ${percent}%` +
         (promise ? ` · ${promise}` : '');
@@ -426,7 +428,7 @@ export class Hud {
     // What it can make. The one thing a workshop is *for* was the one thing the
     // panel never said, so a player choosing between a Quarry and a Woodcutter
     // was comparing two rates neither of which was on screen.
-    const rate = this.describeProduction(building.buildingId);
+    const rate = this.describeProduction(building.buildingId, building.yieldBonus);
     if (rate) {
       state.push(rate);
     }
@@ -460,8 +462,8 @@ export class Hud {
    * A season rather than a day because a day's worth of most of these is a
    * fraction, and "10.3 stone" is a number nobody can plan a winter with.
    */
-  private describeProduction(buildingId: BuildingId): string {
-    const summary = productionSummary(buildingId);
+  private describeProduction(buildingId: BuildingId, siteBonus = 1): string {
+    const summary = productionSummary(buildingId, siteBonus);
     if (summary.outputs.length === 0) {
       return '';
     }
@@ -645,6 +647,8 @@ export class Hud {
     const actionable = selection.treeId !== null || selection.isStoneDeposit;
     this.renderSelectionAction(actionable, selection.designated, selection.treeId !== null);
     this.renderRoadAction(selection);
+    this.renderDitchAction(selection);
+    this.renderBridgeAction(selection);
 
     // A tapped villager is what the player meant; the tile is the fallback.
     if (selection.villager) {
@@ -691,6 +695,9 @@ export class Hud {
     } else if (selection.roadDesignated) {
       flags.push(this.i18n.t('status.roadOrdered'));
     }
+    if (selection.ditchDesignated) {
+      flags.push(this.i18n.t('status.ditchOrdered'));
+    }
     if (!selection.walkable) {
       flags.push(this.i18n.t('terrain.impassable'));
     }
@@ -732,6 +739,43 @@ export class Hud {
       this.context.toggleSelectedRoad();
       this.update();
     });
+    this.elements.selectionDitch.addEventListener('click', () => {
+      this.context.toggleSelectedDitch();
+      this.update();
+    });
+    this.elements.selectionBridge.addEventListener('click', () => {
+      this.context.bridgeSelectedCell();
+      this.update();
+    });
+  }
+
+  /**
+   * The ditch button, built exactly like the road one.
+   *
+   * Only on cells the water could actually reach: a channel has to be cut from
+   * the river or from another channel, so on the great majority of the map this
+   * button does not exist — which is itself how the player learns the rule.
+   */
+  private renderDitchAction(selection: {
+    hasDitch: boolean;
+    ditchDesignated: boolean;
+    canDig: boolean;
+  }): void {
+    const available = selection.hasDitch || selection.ditchDesignated || selection.canDig;
+    this.elements.selectionDitch.hidden = !available;
+    if (!available) {
+      return;
+    }
+
+    const undoing = selection.hasDitch || selection.ditchDesignated;
+    this.elements.selectionDitch.textContent = this.i18n.t(
+      selection.hasDitch
+        ? 'action.fillDitch'
+        : selection.ditchDesignated
+          ? 'action.cancel'
+          : 'action.dig',
+    );
+    this.elements.selectionDitch.classList.toggle('is-cancel', undoing);
   }
 
   /**
@@ -761,6 +805,26 @@ export class Hud {
           : 'action.pave',
     );
     this.elements.selectionRoad.classList.toggle('is-cancel', undoing);
+  }
+
+  /**
+   * The bridge button, on a cell of river the settlement could reach.
+   *
+   * It carries its price, which no other button on this panel does — a road and
+   * a ditch are labour, and a bridge is five logs out of the yard. A cost the
+   * player only discovers after ordering is a cost they cannot decide about.
+   */
+  private renderBridgeAction(selection: { canBridge: boolean }): void {
+    this.elements.selectionBridge.hidden = !selection.canBridge;
+    if (!selection.canBridge) {
+      return;
+    }
+    const price = buildingDefinition('bridge')
+      .constructionCost.map(
+        (cost) => `${cost.amount} ${this.i18n.t(`hud.${cost.resource}` as MessageKey)}`,
+      )
+      .join(' + ');
+    this.elements.selectionBridge.textContent = `${this.i18n.t('action.bridge')} · ${price}`;
   }
 
   private renderSelectionAction(actionable: boolean, designated: boolean, isTree: boolean): void {
@@ -851,6 +915,8 @@ function collectElements(root: HTMLElement): HudElements {
     selectionFlags: requireElement(root, '[data-hud="selection-flags"]'),
     selectionAction: requireElement(root, '[data-hud="selection-action"]') as HTMLButtonElement,
     selectionRoad: requireElement(root, '[data-hud="selection-road"]') as HTMLButtonElement,
+    selectionDitch: requireElement(root, '[data-hud="selection-ditch"]') as HTMLButtonElement,
+    selectionBridge: requireElement(root, '[data-hud="selection-bridge"]') as HTMLButtonElement,
     season: requireElement(root, '[data-hud="season"]'),
     temperature: requireElement(root, '[data-hud="temperature"]'),
     advice: requireElement(root, '[data-hud="advice"]'),

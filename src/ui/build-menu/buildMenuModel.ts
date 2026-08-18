@@ -75,6 +75,11 @@ export function buildMenuGroups(stores: Stores, t: Translate): readonly BuildGro
   // order inside a group is the one deliberately chosen in the data.
   for (const id of BUILDING_IDS) {
     const definition = buildingDefinition(id);
+    // A bridge is offered on the panel for the cell of river it spans, not here.
+    // See `BuildingDefinition.placement`.
+    if (definition.placement === 'cell') {
+      continue;
+    }
     const cost = definition.constructionCost.map((entry) => ({
       resource: entry.resource,
       amount: entry.amount,

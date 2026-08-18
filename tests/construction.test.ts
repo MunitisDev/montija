@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildingDefinition } from '@/data/buildings';
+import type { GridPoint } from '@/shared/types/geometry';
 import { Simulation } from '@/simulation/Simulation';
 
 const TICK = 0.1;
@@ -20,6 +21,32 @@ function clearArea(simulation: Simulation, origin: { gx: number; gy: number }, s
   }
 }
 
+/**
+ * Clears a patch of ground on the settlement's own side of the river, and
+ * returns its origin.
+ *
+ * It used to be a fixed corner of the map, which was fine while everything
+ * walkable was one piece. The day a river cut the map in two, half of these
+ * tests were putting a building on the far bank — where no material can be
+ * carried and nothing can be built, and where placement is now refused outright.
+ *
+ * Inland from the camp rather than towards it, so clearing the patch cannot
+ * accidentally fill in the river.
+ */
+function plotNear(simulation: Simulation, size = 4): GridPoint {
+  const world = simulation.world;
+  const heart = world.heartCell;
+  const horizontal = world.river.axis === 'horizontal';
+  const middle = world.river.middle[horizontal ? heart.gx : heart.gy] ?? heart;
+  const away = -(Math.sign(horizontal ? middle.gy - heart.gy : middle.gx - heart.gx) || 1);
+
+  const origin = horizontal
+    ? { gx: heart.gx - 1, gy: heart.gy + away * 3 }
+    : { gx: heart.gx + away * 3, gy: heart.gy - 1 };
+  clearArea(simulation, origin, size);
+  return origin;
+}
+
 function stock(simulation: Simulation, resource: 'logs' | 'stone', amount: number) {
   simulation.storages.all[0]!.inventory.add(resource, amount);
   simulation.storages.markChanged();
@@ -28,8 +55,7 @@ function stock(simulation: Simulation, resource: 'logs' | 'stone', amount: numbe
 describe('placement', () => {
   it('accepts a clear, buildable patch', () => {
     const simulation = new Simulation(OPTIONS);
-    const origin = { gx: 20, gy: 20 };
-    clearArea(simulation, origin);
+    const origin = plotNear(simulation);
 
     expect(simulation.canPlaceBuilding('house', origin).ok).toBe(true);
   });
@@ -56,9 +82,8 @@ describe('placement', () => {
 
   it('refuses water and rock', () => {
     const simulation = new Simulation(OPTIONS);
-    const origin = { gx: 20, gy: 20 };
-    clearArea(simulation, origin);
-    simulation.world.terrain.set(21, 21, 'water');
+    const origin = plotNear(simulation);
+    simulation.world.terrain.set(origin.gx + 1, origin.gy + 1, 'water');
 
     const check = simulation.canPlaceBuilding('house', origin);
     expect(check.ok).toBe(false);
@@ -67,11 +92,10 @@ describe('placement', () => {
 
   it('refuses a cell another building already occupies', () => {
     const simulation = new Simulation(OPTIONS);
-    const origin = { gx: 20, gy: 20 };
-    clearArea(simulation, origin, 6);
+    const origin = plotNear(simulation, 6);
     simulation.placeBuilding('house', origin);
 
-    const check = simulation.canPlaceBuilding('house', { gx: 21, gy: 21 });
+    const check = simulation.canPlaceBuilding('house', { gx: origin.gx + 1, gy: origin.gy + 1 });
     expect(check.ok).toBe(false);
     expect(check.ok === false && check.reason).toBe('occupied');
   });
@@ -87,25 +111,24 @@ describe('placement', () => {
 
   it('leaves a site walkable while it is being built, and blocks it once finished', () => {
     const simulation = new Simulation(OPTIONS);
-    const origin = { gx: 20, gy: 20 };
-    clearArea(simulation, origin);
+    const origin = plotNear(simulation);
 
     const site = simulation.placeBuilding('house', origin)!;
 
     // Builders and haulers must be able to reach the middle of their own site.
-    expect(simulation.world.isWalkable({ gx: 21, gy: 21 })).toBe(true);
+    const inside = { gx: origin.gx + 1, gy: origin.gy + 1 };
+    expect(simulation.world.isWalkable(inside)).toBe(true);
 
     simulation.world.buildings.complete(simulation.world, site);
 
-    expect(simulation.world.isWalkable({ gx: 21, gy: 21 })).toBe(false);
+    expect(simulation.world.isWalkable(inside)).toBe(false);
   });
 });
 
 describe('construction', () => {
   it('starts a site empty and unbuilt', () => {
     const simulation = new Simulation(OPTIONS);
-    const origin = { gx: 20, gy: 20 };
-    clearArea(simulation, origin);
+    const origin = plotNear(simulation);
 
     const site = simulation.placeBuilding('house', origin)!;
 
@@ -117,8 +140,7 @@ describe('construction', () => {
 
   it('knows what it still needs', () => {
     const simulation = new Simulation(OPTIONS);
-    clearArea(simulation, { gx: 20, gy: 20 });
-    const site = simulation.placeBuilding('house', { gx: 20, gy: 20 })!;
+    const site = simulation.placeBuilding('house', plotNear(simulation))!;
     const cost = buildingDefinition('house').constructionCost;
 
     expect(site.stillNeeds('logs')).toBe(cost.find((c) => c.resource === 'logs')!.amount);
@@ -129,11 +151,11 @@ describe('construction', () => {
 
   it('will not build without materials, however long it waits', () => {
     const simulation = new Simulation(OPTIONS);
-    clearArea(simulation, { gx: 20, gy: 20 });
+    const origin = plotNear(simulation);
     // Strip the settlers' supplies: the settlement genuinely has nothing.
     simulation.storages.all[0]!.inventory.clear();
     simulation.storages.markChanged();
-    const site = simulation.placeBuilding('house', { gx: 20, gy: 20 })!;
+    const site = simulation.placeBuilding('house', origin)!;
 
     for (let tick = 1; tick <= 3000; tick += 1) {
       simulation.update(tick, TICK);
@@ -144,10 +166,10 @@ describe('construction', () => {
 
   it('villagers carry materials from the yard to the site', () => {
     const simulation = new Simulation(OPTIONS);
-    clearArea(simulation, { gx: 30, gy: 30 }, 8);
+    const origin = plotNear(simulation, 8);
     stock(simulation, 'logs', 40);
     stock(simulation, 'stone', 20);
-    const site = simulation.placeBuilding('house', { gx: 32, gy: 32 })!;
+    const site = simulation.placeBuilding('house', { gx: origin.gx + 2, gy: origin.gy + 2 })!;
 
     for (let tick = 1; tick <= 12000 && !site.hasAllMaterials; tick += 1) {
       simulation.update(tick, TICK);
@@ -159,10 +181,10 @@ describe('construction', () => {
 
   it('completes a house once materials and labour are done', () => {
     const simulation = new Simulation(OPTIONS);
-    clearArea(simulation, { gx: 30, gy: 30 }, 8);
+    const origin = plotNear(simulation, 8);
     stock(simulation, 'logs', 40);
     stock(simulation, 'stone', 20);
-    const site = simulation.placeBuilding('house', { gx: 32, gy: 32 })!;
+    const site = simulation.placeBuilding('house', { gx: origin.gx + 2, gy: origin.gy + 2 })!;
 
     for (let tick = 1; tick <= 30000 && !site.isComplete; tick += 1) {
       simulation.update(tick, TICK);
@@ -174,11 +196,11 @@ describe('construction', () => {
 
   it('takes the materials out of storage, not out of nowhere', () => {
     const simulation = new Simulation(OPTIONS);
-    clearArea(simulation, { gx: 30, gy: 30 }, 8);
+    const origin = plotNear(simulation, 8);
     stock(simulation, 'logs', 40);
     stock(simulation, 'stone', 20);
     const before = simulation.snapshot().stored.logs;
-    const site = simulation.placeBuilding('house', { gx: 32, gy: 32 })!;
+    const site = simulation.placeBuilding('house', { gx: origin.gx + 2, gy: origin.gy + 2 })!;
 
     for (let tick = 1; tick <= 30000 && !site.isComplete; tick += 1) {
       simulation.update(tick, TICK);
@@ -189,20 +211,20 @@ describe('construction', () => {
 
   it('reports footprint cells correctly', () => {
     const simulation = new Simulation(OPTIONS);
-    clearArea(simulation, { gx: 20, gy: 20 }, 6);
-    const yard = simulation.placeBuilding('storage-yard', { gx: 20, gy: 20 })!;
+    const origin = plotNear(simulation, 6);
+    const yard = simulation.placeBuilding('storage-yard', origin)!;
 
     expect(yard.cells()).toHaveLength(9);
-    expect(yard.cells()).toContainEqual({ gx: 22, gy: 22 });
+    expect(yard.cells()).toContainEqual({ gx: origin.gx + 2, gy: origin.gy + 2 });
   });
 
   it('stays deterministic through a full build', () => {
     const play = (): string => {
       const simulation = new Simulation(OPTIONS);
-      clearArea(simulation, { gx: 30, gy: 30 }, 8);
+      const origin = plotNear(simulation, 8);
       stock(simulation, 'logs', 40);
       stock(simulation, 'stone', 20);
-      const site = simulation.placeBuilding('house', { gx: 32, gy: 32 })!;
+      const site = simulation.placeBuilding('house', { gx: origin.gx + 2, gy: origin.gy + 2 })!;
       for (let tick = 1; tick <= 6000; tick += 1) {
         simulation.update(tick, TICK);
       }
