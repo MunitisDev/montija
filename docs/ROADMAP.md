@@ -69,6 +69,7 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 42    | Castilian names                | **Implemented** |
 | 43    | Built off the ground           | **Implemented** |
 | 44    | The store nobody could reach   | **Implemented** |
+| 45    | Buildings that sit on plots    | **Implemented** |
 
 ---
 
@@ -1391,3 +1392,46 @@ Three attempts are recorded in GAME_DESIGN.md and each one simply reversed which
 them starved. The answer is a scheduler that shares hands between kinds of work; the
 standing-order experiment is the strongest hint about its shape. Until then a
 well-played settlement survives its first winter on about half of all worlds.
+
+---
+
+## Phase 45 — Buildings that sit on their plots — Implemented
+
+"First the load variants of the yard, and I think it would be important that no building went outside
+its cells. One, make sure again that no trees or stone or anything can grow under a building, and two,
+that it does not exceed. In the yard, that worn earth exceeds the cell. Let us also improve the house
+model — a smaller building inside the cell, with room around it for a fence, ground, and any element
+that gives it a bit more detail. Maybe a small porch, rustic and simple, since these are not
+well-worked houses."
+
+Four things, in the order they were asked for.
+
+**Nothing a building draws leaves its footprint.** The yard's path of worn earth reached past its
+plot — right, and worth fixing for the reason the report gave: the footprint blocks navigation,
+validates placement and gets saved, so art that oversails it promises ground the player cannot use.
+The answer is not a smaller path but a smaller _building_: `BuildingMass.inset` shrinks the built part
+and the rest of the plot becomes the building's own ground. Both the yard and the house read as larger
+for it, because they have somewhere to sit.
+
+`tests/building-art.test.ts` now holds the line for every building at once, by **recording the drawing
+rather than rendering it** — a stand-in `Graphics` that writes down every coordinate it is handed
+measures the art exactly, headless, with no canvas. It caught a second offender on its first run:
+**every contact shadow in the game**, which spread to about 1.5x the plot it was given, and which on a
+one-cell building was being sliced square by the edge of its own texture.
+
+**Nothing grows under a building**, and there was a hole. The wild spread keeps two cells from every
+finished building, but the founding camp is a _store_ with no building behind it, so the rule never
+applied to it: measured over four simulated years, one plot in four grew a tree on the camp itself.
+The camp's ground is now remembered as cleared on purpose, which is what it is.
+`tests/ground-under-buildings.test.ts` pins all of it.
+
+**A yard is drawn as full as it is.** Five textures from bare boards to piled high, chosen from what
+the store holds. Entirely a renderer change: it reads `inventory.total` and picks a texture, and the
+simulation neither knows nor cares. The level comes from an absolute figure rather than the store's
+capacity — the founding yard holds two thousand, and tying the picture to that would draw the whole
+first year as an empty platform.
+
+**A cottage, not a box.** The House is drawn at 0.56 of its plot, with beaten earth around it, grass
+surviving in the corners, a path from the gate to the door, a fence with a gap where the gate is, and
+a lean-to over the door on two posts. The detail is the detail people put on a house raised in a hurry
+out of eight logs and four stone — see the art bible on what a poor building should look like.

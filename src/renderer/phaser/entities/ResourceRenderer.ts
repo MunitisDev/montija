@@ -13,6 +13,7 @@ import type Phaser from 'phaser';
 import type { ResourceId } from '@/data/resources';
 import { RenderLayer, depthFor, depthForFootprint } from '@/renderer/phaser/sorting';
 import { TextureKeys, buildingGroundLine } from '@/renderer/phaser/terrain/tileTextures';
+import { yardFillVariant } from '@/renderer/phaser/terrain/buildingArt';
 import { gridToScene } from '@/shared/math/isometric';
 import { FOUNDING_YARD_RADIUS } from '@/simulation/Simulation';
 import type { StorageRegistry } from '@/simulation/logistics/Storage';
@@ -26,6 +27,8 @@ export class ResourceRenderer {
   private readonly scene: Phaser.Scene;
   private readonly pileSprites = new Map<number, Phaser.GameObjects.Image>();
   private readonly storageSprites = new Map<number, Phaser.GameObjects.Image>();
+  /** Which fill each yard is currently drawn at, so it is only swapped when it moves. */
+  private readonly storageFills = new Map<number, number>();
   private renderedPileVersion = -1;
   private renderedStorageVersion = -1;
   /** Seasonal light, so the founding yard is not the one warm thing in winter. */
@@ -84,7 +87,13 @@ export class ResourceRenderer {
     this.renderedStorageVersion = storages.version;
 
     for (const storage of storages.all) {
-      if (this.storageSprites.has(storage.id)) {
+      const existing = this.storageSprites.get(storage.id);
+      if (existing) {
+        // **The camp is drawn as full as it is.** Yards have a texture per
+        // stocked-ness, and this is where one is chosen — a pure read of what the
+        // store holds, which is exactly what a renderer is for. Swapped only when
+        // the level actually moves, since the version bumps on every transfer.
+        this.dressYard(storage.id, existing, storage.inventory.total);
         continue;
       }
       // A yard opened by a building is already drawn by that building. Drawing
@@ -101,7 +110,11 @@ export class ResourceRenderer {
       // centred on it, so that cell's centre is already the footprint's centre.
       const centre = gridToScene(storage.cell);
       const sprite = this.scene.add
-        .image(centre.px, centre.py, TextureKeys.building('storage-yard'))
+        .image(
+          centre.px,
+          centre.py,
+          TextureKeys.building('storage-yard', yardFillVariant(storage.inventory.total)),
+        )
         .setTint(this.seasonTint)
         .setOrigin(0.5, buildingGroundLine('storage-yard'))
         // Sorted on the footprint's front corner, so a villager standing beside
@@ -116,7 +129,18 @@ export class ResourceRenderer {
           ),
         );
       this.storageSprites.set(storage.id, sprite);
+      this.storageFills.set(storage.id, yardFillVariant(storage.inventory.total));
     }
+  }
+
+  /** Puts the right amount of goods on a yard's deck. */
+  private dressYard(id: number, sprite: Phaser.GameObjects.Image, total: number): void {
+    const fill = yardFillVariant(total);
+    if (this.storageFills.get(id) === fill) {
+      return;
+    }
+    this.storageFills.set(id, fill);
+    sprite.setTexture(TextureKeys.building('storage-yard', fill));
   }
 
   /** Tints the yards for the season. Piles are goods, and keep their own colour. */

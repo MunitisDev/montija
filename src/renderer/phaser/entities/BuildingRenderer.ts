@@ -21,6 +21,8 @@ import { buildingDefinition } from '@/data/buildings';
 import type { PlacementState } from '@/game/Game';
 import type { Building } from '@/simulation/buildings/Building';
 import type { BuildingRegistry } from '@/simulation/buildings/BuildingRegistry';
+import type { StorageRegistry } from '@/simulation/logistics/Storage';
+import { artVariants, yardFillVariant } from '@/renderer/phaser/terrain/buildingArt';
 
 const VALID_TINT = 0x7fb069;
 const INVALID_TINT = 0xc0584a;
@@ -36,6 +38,9 @@ export class BuildingRenderer {
   private readonly sprites = new Map<number, BuildingSprites>();
   private readonly ghostCells: Phaser.GameObjects.Image[] = [];
   private renderedVersion = -1;
+  private renderedFillVersion = -1;
+  /** Which fill each yard is drawn at, so a texture is only swapped when it moves. */
+  private readonly fills = new Map<number, number>();
   /** Seasonal light, applied to buildings raised later as well. */
   private seasonTint = 0xffffff;
   private renderedPlacementVersion = -1;
@@ -44,7 +49,49 @@ export class BuildingRenderer {
     this.scene = scene;
   }
 
-  public sync(buildings: BuildingRegistry): void {
+  public sync(buildings: BuildingRegistry, storages: StorageRegistry): void {
+    this.syncBuildings(buildings);
+    this.syncYardFills(buildings, storages);
+  }
+
+  /**
+   * Puts the right amount of goods on every yard's deck.
+   *
+   * A separate pass on its own version counter, because a yard filling up is not
+   * a change to the *buildings* — nothing is raised or pulled down — and the
+   * building sync rightly does nothing when its version has not moved.
+   *
+   * A pure read of what each store holds. The simulation neither knows nor cares
+   * that the picture changed.
+   */
+  private syncYardFills(buildings: BuildingRegistry, storages: StorageRegistry): void {
+    if (this.renderedFillVersion === storages.version) {
+      return;
+    }
+    this.renderedFillVersion = storages.version;
+
+    for (const building of buildings.all) {
+      if (!building.isComplete || building.storageId === null) {
+        continue;
+      }
+      if (artVariants(building.definition.id) <= 1) {
+        continue;
+      }
+      const sprites = this.sprites.get(building.id);
+      const storage = storages.getById(building.storageId);
+      if (!sprites || !storage) {
+        continue;
+      }
+      const fill = yardFillVariant(storage.inventory.total);
+      if (this.fills.get(building.id) === fill) {
+        continue;
+      }
+      this.fills.set(building.id, fill);
+      sprites.body.setTexture(TextureKeys.building(building.definition.id, fill));
+    }
+  }
+
+  private syncBuildings(buildings: BuildingRegistry): void {
     if (this.renderedVersion === buildings.version) {
       return;
     }
@@ -82,6 +129,7 @@ export class BuildingRenderer {
       if (!live.has(id)) {
         sprites.body.destroy();
         sprites.progress?.destroy();
+        this.fills.delete(id);
         this.sprites.delete(id);
       }
     }

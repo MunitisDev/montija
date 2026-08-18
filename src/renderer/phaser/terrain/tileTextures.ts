@@ -33,7 +33,7 @@ import {
 import { contactShadow, shade } from './shading';
 import { PERSON_COLOURS, VILLAGER_LOOKS, type VillagerLook } from '@/shared/appearance';
 import { drawTree, TREE_HEIGHT, TREE_SHAPES, TREE_WIDTH } from './treeArt';
-import { BUILDING_COLOURS, buildingTextureSpec, drawBuilding } from './buildingArt';
+import { BUILDING_COLOURS, artVariants, buildingTextureSpec, drawBuilding } from './buildingArt';
 
 /**
  * The three things that run from cell to cell.
@@ -55,7 +55,11 @@ export const TextureKeys = {
   designation: 'designation-mark',
   logPile: 'pile-logs',
   stonePile: 'pile-stone',
-  building: (id: string): string => `building-${id}`,
+  /**
+   * A building's art. `variant` picks between the textures a building has more
+   * than one of — today only the yard, whose goods follow how full it is.
+   */
+  building: (id: string, variant = 0): string => `building-${id}-${variant}`,
   site: 'construction-site',
   ghostCell: 'ghost-cell',
   /**
@@ -188,6 +192,14 @@ export function createPlaceholderTextures(scene: Phaser.Scene): void {
     drawBuilding(graphics, id, BUILDING_COLOURS[id]);
     graphics.generateTexture(key, spec.width, spec.height);
     graphics.clear();
+
+    // The variants beyond the first, where a building has any. Still load-time
+    // work: five textures for the yard, drawn once, and nothing per frame.
+    for (let variant = 1; variant < artVariants(id); variant += 1) {
+      drawBuilding(graphics, id, BUILDING_COLOURS[id], variant);
+      graphics.generateTexture(TextureKeys.building(id, variant), spec.width, spec.height);
+      graphics.clear();
+    }
   }
 
   graphics.destroy();

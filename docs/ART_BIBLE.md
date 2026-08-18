@@ -293,10 +293,66 @@ curve is assembled from flats.
 Their arrangement is fixed and deliberately uneven. Goods on a grid read as an inventory screen; a
 yard is stacked by people putting things down where there is room.
 
-**One texture, not ten.** The obvious next step is a yard whose goods reflect what is actually stored
-in it, which needs several textures and a rule in the renderer for choosing between them from a
-figure it reads off the simulation. That is a renderer change and not a simulation one, and it is not
-done yet.
+### A yard is drawn as full as it is
+
+Five textures, from bare boards to piled high, chosen by how much the store holds. The goods are
+declared in the order a yard actually fills — the back corner first, because that is where somebody
+carrying a crate in puts it down — and a level takes the first few of them.
+
+**The level comes from an absolute figure, not from the store's capacity.** The founding yard holds
+two thousand, which is a number the player never sees and which exists so the camp can never be the
+thing that stops them; tie the picture to it and the settlement's whole first year is drawn as an
+empty platform. Three hundred goods is a yard that looks stocked.
+
+This is a **renderer** change and no part of it is a simulation one. The renderer reads
+`inventory.total` and picks a texture; the simulation neither knows nor cares that the picture
+changed. Both yard renderers do it — the founding camp in `ResourceRenderer` and built yards in
+`BuildingRenderer` — each on its own version counter, because a yard filling up is not a change to
+the _buildings_, and swapping a texture only when the level actually moves.
+
+---
+
+## Buildings sit on their plots — Implemented
+
+**No building's art may leave its footprint.** The footprint blocks navigation, validates placement
+and gets saved, so art that oversails it promises the player ground they cannot build on and cannot
+walk through — and two buildings raised side by side draw over each other.
+
+The temptation is real, because a building wants ground around it: a yard wears a path, a cottage has
+a garden. The answer is not to draw past the plot edge but to **make the building smaller and draw
+the ground inside the plot** — `BuildingMass.inset`. A 3x3 yard is a deck with a path round it at
+0.7 of the plot; a 2x2 house is a cottage with a yard at 0.56. Both are contained, and both read as
+_larger_ than the bare box did, because there is somewhere for them to sit.
+
+`tests/building-art.test.ts` holds the line for every building, by recording the drawing rather than
+rendering it: `drawBuilding` talks to a handful of methods on a Phaser `Graphics`, so a stand-in that
+writes down every coordinate measures the art exactly, headless. It found two things on the first
+run — the yard's path, and every contact shadow in the game.
+
+**A contact shadow handed the whole footprint does not stay on it.** It spreads its faintest ring to
+1.24x what it is given and then slides down-right by the sun offset, so the full footprint comes out
+at about one and a half times the plot — over the neighbour, and on a one-cell building, whose
+texture is only as wide as its own diamond, straight off the edge where it was being sliced square.
+Shadows are now sized to land inside the plot, which costs nothing: the light comes from the upper
+left, so a shadow still reaches the plot's down-right edge and falls short of the up-left one.
+
+The one exception is **eaves**, which are declared per building and which the texture is widened for.
+A roof may oversail. Nothing else may.
+
+### The house, and what a poor building looks like
+
+A House is eight logs and four stone. It should not look joined and turned, and it should not look
+like a shed either — so the detail it gets is the detail people put on a house they raised in a hurry:
+
+- **beaten earth, not lawn.** Green ground against green terrain reads as nothing at all; the first
+  pass was a tended green and the plot vanished into the meadow. The grass is the tufts left in the
+  corners, and the ground is what has been walked on.
+- **a path from the gate to the door**, which says a house is lived in more cheaply than any amount
+  of detail on the walls does.
+- **a fence with a gap at the near corner.** Drawn in two halves — far rails before the building and
+  near rails after — because a fence drawn all at once is a fence the house stands on top of.
+- **a lean-to over the door on two posts**, and the shade it throws on the wall behind it, which is
+  what stops it reading as a plank glued to a flat surface.
 
 ---
 

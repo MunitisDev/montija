@@ -87,13 +87,28 @@ describe('the ledger of what was felled', () => {
 });
 
 describe('a settlement felling trees', () => {
+  /**
+   * Cleared ground a settlement has before anybody fells anything.
+   *
+   * The founding camp's own plot. It is a store rather than a building, so the
+   * rule that keeps the woods two cells from every building never applied to it —
+   * measured over four simulated years, one camp in four grew a tree on itself —
+   * and it is now remembered as ground cleared on purpose, which is what it is.
+   * See `tests/ground-under-buildings.test.ts`.
+   *
+   * So these counts are read as differences rather than as absolutes.
+   */
+  function barrenBefore(): number {
+    return new Simulation(OPTIONS).woodland.barrenCount;
+  }
+
   it('leaves a stump where a workshop cropped', () => {
     const simulation = new Simulation(OPTIONS);
     const tree = firstTree(simulation);
     fellNow(simulation, tree, false);
 
     expect(simulation.woodland.stumpCount).toBe(1);
-    expect(simulation.woodland.barrenCount).toBe(0);
+    expect(simulation.woodland.barrenCount).toBe(barrenBefore());
   });
 
   it('clears the ground for good where the player marked', () => {
@@ -101,7 +116,7 @@ describe('a settlement felling trees', () => {
     const tree = firstTree(simulation);
     fellNow(simulation, tree, true);
 
-    expect(simulation.woodland.barrenCount).toBe(1);
+    expect(simulation.woodland.barrenCount).toBe(barrenBefore() + 1);
     expect(simulation.woodland.isBarren(tree)).toBe(true);
     expect(simulation.woodland.stumpCount).toBe(0);
   });
@@ -117,7 +132,7 @@ describe('a settlement felling trees', () => {
     expect(near).not.toBeNull();
 
     fellNow(simulation, near!, true);
-    expect(simulation.woodland.barrenCount).toBe(0);
+    expect(simulation.woodland.barrenCount).toBe(barrenBefore());
     expect(simulation.woodland.stumpCount).toBe(1);
   });
 });

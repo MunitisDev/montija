@@ -38,9 +38,17 @@ export interface Point {
  */
 export const SUN_OFFSET = 0.18;
 
+/**
+ * How far the faintest, widest ring of a shadow reaches past what it is given.
+ *
+ * Exported because a caller that must keep its shadow inside something — a
+ * building inside its own plot — cannot work that out without it.
+ */
+export const SHADOW_SPREAD = 1.24;
+
 /** Widest and faintest first, so the rings darken towards the object. */
 const SHADOW_RINGS: readonly { spread: number; alpha: number }[] = [
-  { spread: 1.24, alpha: 0.07 },
+  { spread: SHADOW_SPREAD, alpha: 0.07 },
   { spread: 1.1, alpha: 0.09 },
   { spread: 1.0, alpha: 0.13 },
 ];

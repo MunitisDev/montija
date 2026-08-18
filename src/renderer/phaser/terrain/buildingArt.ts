@@ -36,7 +36,16 @@ import type Phaser from 'phaser';
 
 import { BUILDINGS, type BuildingId } from '@/data/buildings';
 import { TILE_HEIGHT, TILE_WIDTH } from '@/shared/math/isometric';
-import { bevel, contactShadow, occlude, polygon, shade, type Point } from './shading';
+import {
+  SHADOW_SPREAD,
+  SUN_OFFSET,
+  bevel,
+  contactShadow,
+  occlude,
+  polygon,
+  shade,
+  type Point,
+} from './shading';
 
 export interface BuildingPalette {
   readonly wall: number;
@@ -91,17 +100,33 @@ interface BuildingMass {
    */
   readonly yard?: boolean;
   /**
-   * Ground drawn *outside* the footprint, in pixels, and the room to draw it in.
+   * How much of its own plot the built part covers, as a fraction, `1` for all.
    *
-   * The one sanctioned way for a building's art to reach past its own plot.
-   * Nothing about the simulation changes — the footprint is still the footprint —
-   * but a working yard wears a path into the grass around itself, and a path that
-   * stops dead at the plot boundary reads as a rug rather than as ground.
+   * **The rule this exists to keep: nothing a building draws may leave its
+   * footprint.** A yard wants a worn path around it and a house wants a bit of
+   * garden and a fence, and the tempting way to get either is to draw past the
+   * plot edge. That was tried on the yard and it is wrong — the footprint is what
+   * blocks navigation, validates placement and gets saved, so art that oversails
+   * it promises the player ground they cannot build on and cannot walk through.
    *
-   * Counted into the texture on every side, and into the ground line with it, so
-   * the anchor stays exactly on the footprint's centre.
+   * So the building shrinks instead and the ground around it is drawn *inside*
+   * the plot. A 3x3 yard is a deck with a path round it; a 2x2 house is a cottage
+   * with a garden. Both are contained, and both read as larger than the bare box
+   * did, because there is somewhere for them to sit.
    */
-  readonly apron?: number;
+  readonly inset?: number;
+  /**
+   * Ground drawn on the rest of the plot, where the building is inset.
+   *
+   * `worn` is the bare earth of a yard people cross all day; `garden` is the
+   * kept ground round a house — a bit of green, and a path beaten from the gate
+   * to the door.
+   */
+  readonly ground?: 'worn' | 'garden';
+  /** A low fence round the plot's edge, with the near corner left open. */
+  readonly fence?: boolean;
+  /** A lean-to over the door, on two posts. */
+  readonly porch?: boolean;
 }
 
 /**
@@ -120,7 +145,22 @@ const MASS: Readonly<Record<BuildingId, BuildingMass>> = {
   // The only building people live in, and the only one with a hearth — so it is
   // the only one with smoke coming out of it, which is most of what makes a
   // settlement look inhabited rather than built.
-  house: { wallHeight: 24, roofHeight: 48, eaves: 6, plinth: 5, chimney: true, windows: 2 },
+  // **A cottage on its plot, not a box filling it.** Two thirds the width it used
+  // to be drawn at, which leaves ground for a garden, a fence with a gap at the
+  // gate and a lean-to over the door — and reads as *larger*, because a building
+  // with somewhere to stand looks like a building rather than a block.
+  house: {
+    wallHeight: 24,
+    roofHeight: 44,
+    eaves: 5,
+    plinth: 5,
+    chimney: true,
+    windows: 2,
+    inset: 0.56,
+    ground: 'garden',
+    fence: true,
+    porch: true,
+  },
   // **A deck, not a box.** It was a low flat slab with three rectangles on it —
   // the least built-looking thing in the settlement, and the first thing every
   // player sees, since the founding camp borrows this art. It is now a plank
@@ -134,7 +174,7 @@ const MASS: Readonly<Record<BuildingId, BuildingMass>> = {
     wallHeight: 30,
     roofHeight: 0,
     eaves: 0,
-    apron: 16,
+    inset: 0.7,
     open: true,
     yard: true,
   },
@@ -293,6 +333,32 @@ const YARD = {
 const YARD_APRON = 0x776449;
 
 /**
+ * The ground round a cottage: beaten earth, with grass surviving in patches.
+ *
+ * Earth rather than lawn, and not only because it is what a cottage yard was.
+ * Green ground against green terrain reads as nothing at all — the first pass was
+ * a tended green and the plot simply disappeared into the meadow around it. The
+ * grass is the tufts; the ground is what people have walked on.
+ */
+const GARDEN_GROUND = 0x6a5c45;
+/** The line beaten from the gate to the door, barer still. */
+const GARDEN_PATH = 0x82724f;
+/** Grass surviving in the corners, at fixed places: nothing here may be rolled. */
+const GARDEN_TUFTS: readonly (readonly [number, number])[] = [
+  [0.24, 0.72],
+  [0.7, 0.34],
+  [0.82, 0.78],
+  [0.4, 0.2],
+];
+
+/** A fence's posts along one edge, and how tall they stand. */
+const FENCE_POSTS: readonly number[] = [0.06, 0.34, 0.62, 0.9];
+const FENCE_HEIGHT = 7;
+
+/** What is left of the grass, between the path and the fence. */
+const GARDEN_TUFT = 0x5d6b40;
+
+/**
  * The shadowed space under the boards.
  *
  * Not black. A void that dark swallowed the posts standing in it, and the posts
@@ -344,8 +410,8 @@ interface YardGood {
 const YARD_GOODS: readonly YardGood[] = [
   { u: 0.24, v: 0.24, size: 0.28, kind: 'crate', stacked: true },
   { u: 0.56, v: 0.18, size: 0.23, kind: 'barrel' },
-  { u: 0.8, v: 0.28, size: 0.24, kind: 'crate' },
   { u: 0.24, v: 0.58, size: 0.28, kind: 'logs' },
+  { u: 0.8, v: 0.28, size: 0.24, kind: 'crate' },
   { u: 0.56, v: 0.48, size: 0.24, kind: 'sacks' },
   { u: 0.82, v: 0.66, size: 0.25, kind: 'barrel' },
   { u: 0.44, v: 0.8, size: 0.21, kind: 'crate' },
@@ -376,6 +442,24 @@ const THATCH = 0x7d6a42;
  */
 const FOOTPRINT_INSET = 3;
 
+/**
+ * How large a contact shadow may be asked for, as a share of the plot it is on.
+ *
+ * **A shadow handed the whole footprint does not stay on it.** `contactShadow`
+ * spreads its faintest ring to {@link SHADOW_SPREAD} of what it is given and then
+ * slides the whole thing down-right by {@link SUN_OFFSET}, so the full footprint
+ * comes out at about one and a half times the plot: over the neighbouring tile,
+ * and — on a one-cell building, whose texture is only as wide as its own
+ * diamond — straight off the edge of the texture, where it is sliced off square.
+ *
+ * The building's ground art is the thing a player reads as "this plot is taken",
+ * so it is the thing that must be exact. Sizing the shadow to land inside the
+ * plot costs nothing: the light comes from the upper left, so the shadow still
+ * reaches the plot's down-right edge and falls short of the up-left one, which is
+ * where a shadow belongs.
+ */
+const SHADOW_FIT = 1 / (SHADOW_SPREAD + SUN_OFFSET);
+
 export interface BuildingTextureSpec {
   readonly width: number;
   readonly height: number;
@@ -400,17 +484,13 @@ export function buildingTextureSpec(id: BuildingId): BuildingTextureSpec {
   const base = baseSize(BUILDINGS[id].footprint);
   const mass = MASS[id];
 
-  // Ground drawn outside the plot, where a building has any. A rhombus grows
-  // twice as fast across as it does down, so the apron adds `apron` to the
-  // half-width and half of it to the half-height — and both ends of the texture
-  // have to grow, or the near corner of the path is clipped off.
-  const apron = mass.apron ?? 0;
-  // Room for the roof's overhang on both sides.
-  const width = Math.ceil(base.width + mass.eaves * 2 + apron * 2);
+  // Room for the roof's overhang on both sides. Nothing else needs width: a
+  // building's art is contained by its own plot — see `BuildingMass.inset`.
+  const width = Math.ceil(base.width + mass.eaves * 2);
   // Everything above the anchor, plus the half-rhombus that falls in front of
   // it. Forgetting that half is exactly what clipped every building's front.
-  const above = base.height / 2 + mass.wallHeight + mass.roofHeight + TOP_MARGIN + apron / 2;
-  const below = base.height / 2 + apron / 2;
+  const above = base.height / 2 + mass.wallHeight + mass.roofHeight + TOP_MARGIN;
+  const below = base.height / 2;
 
   return {
     width,
@@ -420,15 +500,58 @@ export function buildingTextureSpec(id: BuildingId): BuildingTextureSpec {
 }
 
 /**
+ * How many stocked-ness a yard is drawn in, from bare boards to piled high.
+ *
+ * Five. Enough that a settlement watching its stores go down through a winter
+ * sees them go down, and few enough that the whole set is five textures drawn
+ * once at load rather than anything happening per frame.
+ */
+export const YARD_FILL_LEVELS = 5;
+
+/**
+ * How much in a store the art calls "piled high".
+ *
+ * **Deliberately not the store's own capacity.** The founding yard holds two
+ * thousand, which is a number the player never sees and which exists so the camp
+ * can never be the thing that stops them — tie the picture to it and the
+ * settlement's whole first year is drawn as an empty platform. Three hundred
+ * goods is a yard that looks stocked, and the settlers arrive with two hundred
+ * and nineteen, so the camp starts nearly full and visibly empties as they eat.
+ */
+const YARD_LOOKS_FULL = 300;
+
+/** Which yard texture a store's contents call for. */
+export function yardFillVariant(total: number): number {
+  const share = Math.min(1, Math.max(0, total / YARD_LOOKS_FULL));
+  return Math.round(share * (YARD_FILL_LEVELS - 1));
+}
+
+/**
+ * How many textures a building needs.
+ *
+ * One for almost everything: a house looks like a house whatever is happening
+ * inside it. The yard is the exception, because what a yard *is* is what is
+ * stacked on it.
+ */
+export function artVariants(id: BuildingId): number {
+  return MASS[id].yard === true ? YARD_FILL_LEVELS : 1;
+}
+
+/**
  * Draws one building into `graphics`, sized to its own footprint.
  *
- * The result is an isometric box standing exactly on its plot: the base rhombus
- * is the footprint, the walls rise from it, and the roof caps them.
+ * The result stands exactly on its plot: the base rhombus is the footprint, the
+ * walls rise from it and the roof caps them. Where a building declares an
+ * {@link BuildingMass.inset} the built part is smaller than the plot and the rest
+ * of the plot is *its ground* — a garden, a yard, a path — which is how a
+ * building gets somewhere to stand without ever leaving its own cells.
  */
 export function drawBuilding(
   graphics: Phaser.GameObjects.Graphics,
   id: BuildingId,
   palette: BuildingPalette,
+  /** Which variant to draw, `0` to `artVariants(id) - 1`. */
+  variant = 0,
 ): void {
   const spec = buildingTextureSpec(id);
   const base = baseSize(BUILDINGS[id].footprint);
@@ -437,8 +560,13 @@ export function drawBuilding(
   const cx = spec.width / 2;
   const groundY = spec.height * spec.groundLine;
 
-  const halfW = base.width / 2 - FOOTPRINT_INSET;
-  const halfH = base.height / 2 - FOOTPRINT_INSET / 2;
+  // The plot, and the smaller thing standing on it. They are the same for most
+  // buildings; where they differ, the difference is the building's own ground.
+  const plotW = base.width / 2 - FOOTPRINT_INSET;
+  const plotH = base.height / 2 - FOOTPRINT_INSET / 2;
+  const inset = mass.inset ?? 1;
+  const halfW = plotW * inset;
+  const halfH = plotH * inset;
 
   /** The four corners of a rhombus centred on `cx`, at height `y`. */
   const rhombus = (y: number): Rhombus => ({
@@ -457,11 +585,22 @@ export function drawBuilding(
       palette,
       cx,
       groundY,
-      halfW,
-      halfH,
-      apron: mass.apron ?? 0,
+      halfW: plotW,
+      halfH: plotH,
+      inset,
+      stocked: variant / Math.max(1, YARD_FILL_LEVELS - 1),
     });
     return;
+  }
+
+  // The building's own ground, and the fence round it. The far half of the fence
+  // is drawn now and the near half after the building, or a house would stand in
+  // front of the rails that are supposed to be in front of it.
+  if (mass.ground) {
+    drawPlotGround(graphics, { cx, groundY, halfW: plotW, halfH: plotH, kind: mass.ground });
+  }
+  if (mass.fence) {
+    drawFence(graphics, { palette, cx, groundY, halfW: plotW, halfH: plotH, side: 'far' });
   }
 
   const plinthHeight = mass.plinth ?? 0;
@@ -469,7 +608,7 @@ export function drawBuilding(
   const top = rhombus(groundY - mass.wallHeight);
 
   // Planted rather than floating, and softly: see `contactShadow`.
-  contactShadow(graphics, { x: cx, y: groundY }, halfW + 2, halfH + 1);
+  contactShadow(graphics, { x: cx, y: groundY }, halfW * SHADOW_FIT, halfH * SHADOW_FIT);
 
   // A stone footing, where the building has one. Rubble rather than dressed
   // masonry: this is a frontier settlement, not a cathedral.
@@ -672,10 +811,199 @@ export function drawBuilding(
     });
   }
 
+  // A lean-to over the door, on two posts. Drawn after the wall it leans on and
+  // after the door it shelters, and before the near fence, which is nearer still.
+  if (mass.porch) {
+    drawPorch(graphics, {
+      palette,
+      cx,
+      groundY: groundY - plinthHeight,
+      halfW,
+      halfH,
+      height: Math.min(wallSpan - 2, 18),
+    });
+  }
+
+  if (mass.fence) {
+    drawFence(graphics, { palette, cx, groundY, halfW: plotW, halfH: plotH, side: 'near' });
+  }
+
   const stack = chimneyOffset(id);
   if (stack) {
     drawChimney(graphics, cx + stack.dx, groundY + stack.dy);
   }
+}
+
+/**
+ * The ground a building keeps around itself, inside its own plot.
+ *
+ * Two facets meeting on a diagonal, like every other piece of ground in this
+ * game — a flat patch beside faceted terrain reads as a sticker laid on it.
+ *
+ * A garden also gets a path beaten from the plot's near corner to the door,
+ * because that is the corner people arrive at and the door is where they are
+ * going, and a worn line between the two says a house is lived in more cheaply
+ * than any amount of detail on the walls does.
+ */
+function drawPlotGround(
+  graphics: Phaser.GameObjects.Graphics,
+  options: {
+    cx: number;
+    groundY: number;
+    halfW: number;
+    halfH: number;
+    kind: 'worn' | 'garden';
+  },
+): void {
+  const { cx, groundY, halfW, halfH, kind } = options;
+  const colour = kind === 'garden' ? GARDEN_GROUND : YARD_APRON;
+  drawWornGround(graphics, { cx, groundY, halfW, halfH, colour });
+
+  if (kind !== 'garden') {
+    return;
+  }
+
+  // The path: from the near corner up the left side, where the door is.
+  graphics.fillStyle(GARDEN_PATH, 1);
+  polygon(graphics, [
+    { x: cx, y: groundY + halfH },
+    { x: cx - halfW * 0.5, y: groundY + halfH * 0.5 },
+    { x: cx - halfW * 0.44, y: groundY + halfH * 0.26 },
+    { x: cx + halfW * 0.1, y: groundY + halfH * 0.86 },
+  ]);
+
+  // A few tufts, at fixed places, so the green is not a flat wash.
+  graphics.fillStyle(GARDEN_TUFT, 1);
+  for (const [u, v] of GARDEN_TUFTS) {
+    graphics.fillRect(cx + (u - v) * halfW - 2, groundY + (u + v - 1) * halfH - 1.5, 4, 2.5);
+  }
+}
+
+/**
+ * A low fence round a plot, with the near corner left open for a gate.
+ *
+ * Drawn in two halves. The far rails belong behind the building and the near
+ * ones in front of it, and a fence drawn all at once is a fence a house stands
+ * on top of.
+ */
+function drawFence(
+  graphics: Phaser.GameObjects.Graphics,
+  options: {
+    palette: BuildingPalette;
+    cx: number;
+    groundY: number;
+    halfW: number;
+    halfH: number;
+    side: 'far' | 'near';
+  },
+): void {
+  const { palette, cx, groundY, halfW, halfH, side } = options;
+  const timber = shade(palette.trim, side === 'far' ? 0.86 : 1.06);
+
+  /** A point on the plot's rim: `t` runs 0..1 along an edge. */
+  const rim = (edge: 'backLeft' | 'backRight' | 'frontLeft' | 'frontRight', t: number): Point => {
+    switch (edge) {
+      case 'backLeft':
+        return { x: cx - halfW * t, y: groundY - halfH * (1 - t) };
+      case 'backRight':
+        return { x: cx + halfW * t, y: groundY - halfH * (1 - t) };
+      case 'frontLeft':
+        return { x: cx - halfW * (1 - t), y: groundY + halfH * t };
+      default:
+        return { x: cx + halfW * (1 - t), y: groundY + halfH * t };
+    }
+  };
+
+  const edges =
+    side === 'far' ? (['backLeft', 'backRight'] as const) : (['frontLeft', 'frontRight'] as const);
+
+  for (const edge of edges) {
+    // The gate: the near corner is `t = 1` on both near edges, so the last post
+    // of each is left off and the settlement has a way in.
+    const stops = side === 'far' ? FENCE_POSTS : FENCE_POSTS.filter((t) => t < 0.8);
+
+    // A rail first, so the posts stand in front of it.
+    const from = rim(edge, stops[0] ?? 0);
+    const to = rim(edge, stops.at(-1) ?? 1);
+    graphics.fillStyle(shade(timber, 0.82), 1);
+    polygon(graphics, [
+      { x: from.x, y: from.y - FENCE_HEIGHT * 0.66 },
+      { x: to.x, y: to.y - FENCE_HEIGHT * 0.66 },
+      { x: to.x, y: to.y - FENCE_HEIGHT * 0.66 + 1.8 },
+      { x: from.x, y: from.y - FENCE_HEIGHT * 0.66 + 1.8 },
+    ]);
+
+    for (const t of stops) {
+      const post = rim(edge, t);
+      graphics.fillStyle(timber, 1);
+      graphics.fillRect(post.x - 1.4, post.y - FENCE_HEIGHT, 2.8, FENCE_HEIGHT);
+      graphics.fillStyle(shade(timber, 1.28), 1);
+      graphics.fillRect(post.x - 1.4, post.y - FENCE_HEIGHT, 1, FENCE_HEIGHT);
+    }
+  }
+}
+
+/**
+ * A lean-to over the door: two posts, a sloping roof, and the shade it throws.
+ *
+ * The cheapest possible porch, and the right one — these are houses raised in a
+ * hurry out of eight logs and four stone, and a joined and turned porch would be
+ * a lie about what the settlement can afford. Two posts and some boards is what
+ * people actually build.
+ */
+function drawPorch(
+  graphics: Phaser.GameObjects.Graphics,
+  options: {
+    palette: BuildingPalette;
+    cx: number;
+    groundY: number;
+    halfW: number;
+    halfH: number;
+    height: number;
+  },
+): void {
+  const { palette, cx, groundY, halfW, halfH, height } = options;
+
+  /** A point on or beyond the left wall: `v` past 1 steps out into the plot. */
+  const at = (u: number, v: number, y: number): Point => ({
+    x: cx + (u - v) * halfW,
+    y: y + (u + v - 1) * halfH,
+  });
+
+  const reach = 1.34;
+  const headY = groundY - height;
+  const wallY = groundY - height - 7;
+
+  // The posts, standing on the ground out in front of the wall.
+  for (const u of [0.1, 0.52]) {
+    const foot = at(u, reach, groundY);
+    const head = at(u, reach, headY);
+    graphics.fillStyle(shade(palette.trim, 1.05), 1);
+    graphics.fillRect(head.x - 1.6, head.y, 3.2, foot.y - head.y);
+    graphics.fillStyle(shade(palette.trim, 1.35), 1);
+    graphics.fillRect(head.x - 1.6, head.y, 1.1, foot.y - head.y);
+  }
+
+  // The roof, sloping down away from the wall, and its sawn edge.
+  graphics.fillStyle(shade(palette.roof, 1.06), 1);
+  polygon(graphics, [
+    at(0.02, 1, wallY),
+    at(0.6, 1, wallY),
+    at(0.6, reach, headY),
+    at(0.02, reach, headY),
+  ]);
+  graphics.fillStyle(shade(palette.roof, 0.7), 1);
+  polygon(graphics, [
+    at(0.02, reach, headY),
+    at(0.6, reach, headY),
+    at(0.6, reach, headY + 2.4),
+    at(0.02, reach, headY + 2.4),
+  ]);
+  bevel(graphics, at(0.02, 1, wallY), at(0.6, 1, wallY), shade(palette.roof, 1.3), 1.2);
+
+  // And the shade it throws on the wall behind it, which is what stops the whole
+  // thing reading as a plank glued to a flat surface.
+  occlude(graphics, at(0.02, 1, wallY), at(0.6, 1, wallY), 4, 0.2);
 }
 
 /**
@@ -1156,12 +1484,20 @@ function drawStorageYard(
     palette: BuildingPalette;
     cx: number;
     groundY: number;
+    /** Half-extents of the whole plot, which nothing drawn here may leave. */
     halfW: number;
     halfH: number;
-    apron: number;
+    /** Share of the plot the deck itself takes; the rest is the path round it. */
+    inset: number;
+    /** How full it is, `0` for bare boards and `1` for piled high. */
+    stocked: number;
   },
 ): void {
-  const { palette, cx, groundY, halfW, halfH, apron } = options;
+  const { palette, cx, groundY, inset, stocked } = options;
+  const plotW = options.halfW;
+  const plotH = options.halfH;
+  const halfW = plotW * inset;
+  const halfH = plotH * inset;
 
   const deckY = groundY - YARD.stand;
   /** Underside of the deck slab: where the posts start. */
@@ -1179,39 +1515,41 @@ function drawStorageYard(
     y: y + (u + v - 1) * halfH,
   });
 
-  // --- the path worn round it ------------------------------------------------
-  if (apron > 0) {
-    const aw = halfW + apron;
-    const ah = halfH + apron / 2;
-    graphics.fillStyle(YARD_APRON, 1);
-    polygon(graphics, [
-      { x: cx, y: groundY - ah },
-      { x: cx + aw, y: groundY },
-      { x: cx, y: groundY + ah },
-      { x: cx - aw, y: groundY },
-    ]);
-    // Ruts and scuffs, at fixed angles: this texture is drawn once and has to
-    // come out the same on every run, so nothing here may be rolled.
-    graphics.fillStyle(shade(YARD_APRON, 0.82), 1);
-    for (const turn of APRON_SCUFFS) {
-      const angle = Math.PI * 2 * turn;
-      const x = cx + Math.cos(angle) * (halfW + apron * 0.45);
-      const y = groundY + Math.sin(angle) * (halfH + apron * 0.45);
-      graphics.fillRect(x - 3.5, y - 1, 7, 2);
-    }
-    graphics.fillStyle(shade(YARD_APRON, 1.14), 1);
-    for (const turn of APRON_STONES) {
-      const angle = Math.PI * 2 * turn;
-      const x = cx + Math.cos(angle) * (halfW + apron * 0.7);
-      const y = groundY + Math.sin(angle) * (halfH + apron * 0.7);
-      graphics.fillRect(x - 1.5, y - 1, 3, 2);
-    }
+  // --- the path worn round it, inside the plot -------------------------------
+  //
+  // Out to the plot's own edge and not a pixel further. Two facets, meeting on a
+  // diagonal, because that is how every other piece of ground in this game is
+  // drawn and a flat patch beside faceted terrain reads as a sticker.
+  drawWornGround(graphics, { cx, groundY, halfW: plotW, halfH: plotH, colour: YARD_APRON });
+  // Ruts and scuffs in the ring between the deck and the plot edge, at fixed
+  // angles: this texture is drawn once and has to come out the same on every
+  // run, so nothing here may be rolled.
+  const ringW = (plotW + halfW) / 2;
+  const ringH = (plotH + halfH) / 2;
+  graphics.fillStyle(shade(YARD_APRON, 0.82), 1);
+  for (const turn of APRON_SCUFFS) {
+    const angle = Math.PI * 2 * turn;
+    graphics.fillRect(
+      cx + Math.cos(angle) * ringW - 3.5,
+      groundY + Math.sin(angle) * ringH - 1,
+      7,
+      2,
+    );
+  }
+  graphics.fillStyle(shade(YARD_APRON, 1.14), 1);
+  for (const turn of APRON_STONES) {
+    const angle = Math.PI * 2 * turn;
+    graphics.fillRect(
+      cx + Math.cos(angle) * ringW - 1.5,
+      groundY + Math.sin(angle) * ringH - 1,
+      3,
+      2,
+    );
   }
 
-  // Tighter than a building's, and for a reason worth recording: the default
-  // spreads to 1.24x the footprint, which reached right across the apron and
-  // turned the path into a smudge. A raised deck's shadow belongs *under* it.
-  contactShadow(graphics, { x: cx, y: groundY }, halfW * 0.88, halfH * 0.88);
+  // Sized from the deck rather than the plot: a raised deck's shadow belongs
+  // under the deck, not spread across the path around it.
+  contactShadow(graphics, { x: cx, y: groundY }, halfW * SHADOW_FIT, halfH * SHADOW_FIT);
 
   // --- the dark under the boards, and the posts holding them up -------------
   //
@@ -1325,9 +1663,15 @@ function drawStorageYard(
 
   // --- what is stored on it -------------------------------------------------
   //
-  // Back to front, so nearer goods overlap further ones. `u + v` is depth: the
-  // deck plane maps it straight onto screen height.
-  const stock = [...YARD_GOODS].sort((a, b) => a.u + a.v - (b.u + b.v));
+  // **How much is on the deck is a picture of how much is in the store.** The
+  // goods are declared in the order a yard actually fills — the back corner
+  // first, because that is where somebody carrying a crate in puts it down — and
+  // a level takes the first few of them.
+  //
+  // Then sorted back to front for drawing, so nearer goods overlap further ones.
+  // `u + v` is depth: the deck plane maps it straight onto screen height.
+  const carried = Math.round(YARD_GOODS.length * Math.min(1, Math.max(0, stocked)));
+  const stock = YARD_GOODS.slice(0, carried).sort((a, b) => a.u + a.v - (b.u + b.v));
   for (const good of stock) {
     const base = at(good.u, good.v, deckY);
     const width = good.size * halfW;
@@ -1370,6 +1714,27 @@ function drawStorageYard(
         break;
     }
   }
+}
+
+/**
+ * A patch of ground inside a plot: bare earth, trodden, in two facets.
+ *
+ * Two facets meeting on a diagonal rather than one flat fill, which is the rule
+ * every other piece of ground in this game obeys — a single-colour patch beside
+ * faceted terrain reads as a sticker laid on the scene.
+ */
+function drawWornGround(
+  graphics: Phaser.GameObjects.Graphics,
+  options: { cx: number; groundY: number; halfW: number; halfH: number; colour: number },
+): void {
+  const { cx, groundY, halfW, halfH, colour } = options;
+  const back = { x: cx, y: groundY - halfH };
+  const front = { x: cx, y: groundY + halfH };
+
+  graphics.fillStyle(colour, 1);
+  polygon(graphics, [back, { x: cx - halfW, y: groundY }, front]);
+  graphics.fillStyle(shade(colour, 0.93), 1);
+  polygon(graphics, [back, { x: cx + halfW, y: groundY }, front]);
 }
 
 /** A flat-shaded isometric box: three faces, boarded, lit from the upper left. */

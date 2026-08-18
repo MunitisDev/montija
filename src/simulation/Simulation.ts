@@ -2191,9 +2191,18 @@ export class Simulation {
     //
     // The yard is recorded as one cell and stands three across, so all nine are
     // cleared. Nothing is salvaged from it — see `World.clearGround`.
+    //
+    // **And it stays cleared.** The wild spread keeps two cells away from every
+    // finished building, and the founding yard is not one: it is a store with no
+    // building behind it, so nothing was stopping a sapling taking root on the
+    // camp itself. Rare — one plot in four grew a tree over four measured years —
+    // and unmistakable when it happens, because the yard's own art covers the
+    // whole plot and a tree would come up through the deck.
     for (let dy = -FOUNDING_YARD_RADIUS; dy <= FOUNDING_YARD_RADIUS; dy += 1) {
       for (let dx = -FOUNDING_YARD_RADIUS; dx <= FOUNDING_YARD_RADIUS; dx += 1) {
-        this.world.clearGround({ gx: cell.gx + dx, gy: cell.gy + dy });
+        const plot = { gx: cell.gx + dx, gy: cell.gy + dy };
+        this.world.clearGround(plot);
+        this.woodland.clear(plot);
       }
     }
 

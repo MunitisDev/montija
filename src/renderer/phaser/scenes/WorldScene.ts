@@ -137,7 +137,10 @@ export class WorldScene extends Phaser.Scene {
     );
     // Cheap: returns immediately unless a tree was felled since last frame.
     this.terrainRenderer.syncTrees(this.context.simulation.world);
-    this.buildingRenderer.sync(this.context.simulation.world.buildings);
+    this.buildingRenderer.sync(
+      this.context.simulation.world.buildings,
+      this.context.simulation.storages,
+    );
     this.hearthRenderer.sync(this.context.simulation.world.buildings);
     this.buildingRenderer.syncGhost(this.context.placement, this.context.placementVersion);
     this.syncSelectionMarker();
