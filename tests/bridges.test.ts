@@ -32,6 +32,14 @@ describe('what a bridge costs and where it goes', () => {
     expect(definition.crossing).toBe(true);
   });
 
+  it('costs a building\u2019s labour, per cell of river', () => {
+    // Five logs is cheap on purpose — a settlement that has to save up for a
+    // crossing ignores half the map for a year — but the work is a fortnight of
+    // somebody's time, because crossing a river is the biggest thing a small
+    // settlement does to its own map.
+    expect(buildingDefinition('bridge').buildTicks).toBe(buildingDefinition('house').buildTicks);
+  });
+
   it('is offered on its own square of river, not in the build menu', () => {
     // Siting a one-cell bridge by eye with a floating outline is worse in every
     // way than tapping the water and pressing a button — and the build menu's

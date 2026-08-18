@@ -1505,7 +1505,7 @@ export class Simulation {
    */
   private cancelSite(building: Building): void {
     for (const { resource, amount } of building.materials.contents) {
-      this.world.piles.drop(building.accessCell, resource, amount);
+      this.world.dropNear(building.accessCell, resource, amount);
     }
     this.retireBuilding(building);
   }
@@ -1557,14 +1557,14 @@ export class Simulation {
       const storage = this.storages.getById(building.storageId);
       if (storage) {
         for (const { resource, amount } of storage.inventory.contents) {
-          this.world.piles.drop(building.accessCell, resource, amount);
+          this.world.dropNear(building.accessCell, resource, amount);
         }
         this.storages.remove(storage.id);
       }
     }
 
     for (const { resource, amount } of building.input.contents) {
-      this.world.piles.drop(building.accessCell, resource, amount);
+      this.world.dropNear(building.accessCell, resource, amount);
     }
 
     this.world.buildings.demolish(this.world, building.id);
@@ -1645,7 +1645,7 @@ export class Simulation {
     for (const cost of building.definition.constructionCost) {
       const salvage = Math.floor(cost.amount * SALVAGE_SHARE);
       if (salvage > 0) {
-        this.world.piles.drop(building.accessCell, cost.resource, salvage);
+        this.world.dropNear(building.accessCell, cost.resource, salvage);
       }
     }
 
@@ -1822,6 +1822,7 @@ export class Simulation {
         capacity: definition.capacity,
         ...(definition.accepts ? { accepts: definition.accepts } : {}),
         ...(definition.preservation === undefined ? {} : { preservation: definition.preservation }),
+        ...(definition.shelters === undefined ? {} : { shelters: definition.shelters }),
         ownerBuildingId: building.id,
       });
       building.storageId = storage.id;

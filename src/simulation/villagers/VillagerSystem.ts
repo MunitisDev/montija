@@ -50,7 +50,6 @@ import type { Job } from '@/simulation/jobs/Job';
 import type { JobManager } from '@/simulation/jobs/JobManager';
 import type { StorageRegistry } from '@/simulation/logistics/Storage';
 import { findPath } from '@/simulation/pathfinding/AStar';
-import { siteYield } from '@/simulation/production/siteYield';
 import { ROAD_SPEED_MULTIPLIER } from '@/simulation/world/RoadGrid';
 import type { SeasonalProfile } from '@/simulation/seasons/SeasonClock';
 import type { World } from '@/simulation/world/World';
@@ -547,15 +546,13 @@ export class VillagerSystem {
       building.input.remove(ingredient.resource, ingredient.amount);
     }
 
-    // The season, and then where the building stands: an orchard beside a larder
-    // gets its whole crop in while an orchard on its own loses half of it. See
-    // `production/siteYield`.
-    const yieldScale =
-      this.productionScale(recipe.seasonal) * siteYield(this.world.buildings, building);
+    const yieldScale = this.productionScale(recipe.seasonal);
     for (const output of recipe.outputs) {
       const amount = Math.max(0, Math.round(output.amount * yieldScale));
       if (amount > 0) {
-        this.world.piles.drop(building.accessCell, output.resource, amount);
+        // Spilling onto the next cell when the doorstep is full: a pile holds one
+        // stack, and everything past it used to be made and then lost.
+        this.world.dropNear(building.accessCell, output.resource, amount);
       }
     }
     this.world.buildings.markChanged();

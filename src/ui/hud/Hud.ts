@@ -394,7 +394,7 @@ export class Hud {
       // Said on the site as well as on the finished building: "is this worth
       // carrying stone across the map for?" is a question asked *before* it is
       // standing, not after.
-      const promise = this.describeProduction(building.buildingId, building.yieldBonus);
+      const promise = this.describeProduction(building.buildingId);
       this.elements.buildingState.textContent =
         `${this.i18n.t('building.underConstruction')} ${percent}%` +
         (promise ? ` · ${promise}` : '');
@@ -428,7 +428,7 @@ export class Hud {
     // What it can make. The one thing a workshop is *for* was the one thing the
     // panel never said, so a player choosing between a Quarry and a Woodcutter
     // was comparing two rates neither of which was on screen.
-    const rate = this.describeProduction(building.buildingId, building.yieldBonus);
+    const rate = this.describeProduction(building.buildingId);
     if (rate) {
       state.push(rate);
     }
@@ -462,8 +462,8 @@ export class Hud {
    * A season rather than a day because a day's worth of most of these is a
    * fraction, and "10.3 stone" is a number nobody can plan a winter with.
    */
-  private describeProduction(buildingId: BuildingId, siteBonus = 1): string {
-    const summary = productionSummary(buildingId, siteBonus);
+  private describeProduction(buildingId: BuildingId): string {
+    const summary = productionSummary(buildingId);
     if (summary.outputs.length === 0) {
       return '';
     }

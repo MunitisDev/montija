@@ -121,7 +121,6 @@ function building(
       housing: 0,
       residents: 0,
       demolitionOrdered: false,
-      yieldBonus: 1,
     },
   };
 }
@@ -181,7 +180,6 @@ function onBuilding(cell: GridPoint, id: number): Selection {
     housing: 0,
     residents: 0,
     demolitionOrdered: false,
-    yieldBonus: 1,
   });
 }
 

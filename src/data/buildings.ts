@@ -93,6 +93,21 @@ export interface BuildingDefinition {
     readonly accepts?: readonly ResourceId[];
     /** Multiplier on spoilage here; 1 is an open yard, lower keeps food better. */
     readonly preservation?: number;
+    /**
+     * How far this store's care reaches beyond its own walls, in cells.
+     *
+     * **What a larder does for a harvest that has not been carried in yet.**
+     * Goods lying on the ground keep as badly as goods in an open yard, which
+     * for the best crop in the game meant losing a share of every basket to the
+     * hours between picking it and somebody coming for it. Within this reach
+     * they keep exactly as well as they would inside — the shade of the store,
+     * its awning, the shelf by its door — so a settlement that puts its larder
+     * beside its orchard gets the whole crop rather than most of it.
+     *
+     * Only worth setting on a store that keeps things well: an open yard
+     * preserves nothing, so its reach would change nothing either.
+     */
+    readonly shelters?: number;
   };
   /** How many villagers can live here. */
   readonly housing?: number;
@@ -182,24 +197,6 @@ export interface BuildingDefinition {
   readonly adjacentTo?: readonly TerrainType[];
 
   /**
-   * A building whose presence nearby changes what this one produces.
-   *
-   * An orchard beside a larder is the case it was written for: fruit is the one
-   * harvest that does not keep, and an orchard with somewhere cool to put its
-   * crop the same afternoon brings in far more of it than one whose baskets
-   * stand in the sun waiting for a hauler. It is also the first reason in the
-   * game to think about *where* a store goes rather than only whether there is
-   * one.
-   */
-  readonly nearby?: {
-    readonly building: BuildingId;
-    /** How far away it may be, in cells, measured between plots. */
-    readonly radius: number;
-    /** What its presence multiplies this building's output by. */
-    readonly yieldMultiplier: number;
-  };
-
-  /**
    * Set for a building that keeps the settlement's spirits up.
    *
    * Not a recipe and not care: what these produce is **solace**, which is not
@@ -269,7 +266,8 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     id: 'food-storage',
     category: 'shelter',
     name: 'Food Storage',
-    description: 'Keeps food from spoiling. Food left in an open yard rots.',
+    description:
+      'Keeps food from spoiling — inside it, and within a few paces of its door. Food left in an open yard rots.',
     footprint: { width: 2, height: 2 },
     constructionCost: [
       { resource: 'logs', amount: 6 },
@@ -280,7 +278,10 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     // A tenth of the spoilage of an open yard. This is the whole reason the
     // building exists: food will sit anywhere, but only keeps through a winter
     // in here.
-    storage: { capacity: 800, accepts: ['food'], preservation: 0.1 },
+    // `shelters`: what a larder does for the basket that has not been carried in
+    // yet. Six cells is "beside it" — an orchard or a field next door is
+    // covered, one across the settlement is not.
+    storage: { capacity: 800, accepts: ['food'], preservation: 0.1, shelters: 6 },
   },
   'gatherer-hut': {
     id: 'gatherer-hut',
@@ -350,7 +351,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     category: 'food',
     name: 'Orchard',
     description:
-      'Fruit trees, on a bank or a ditch. Years to establish, and beside a larder the best harvest there is.',
+      'Fruit trees, on a bank or a ditch. Years to establish, and the best harvest there is — put a larder beside it or the crop rots where it is picked.',
     footprint: { width: 3, height: 3 },
     constructionCost: [
       { resource: 'logs', amount: 10 },
@@ -360,9 +361,6 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     // it, which makes it the one building whose place on the map is a real
     // decision rather than "anywhere there is room".
     adjacentTo: WET_TERRAIN,
-    // And it is the one harvest that does not keep. A larder within reach is
-    // worth as much as the trees.
-    nearby: { building: 'food-storage', radius: 10, yieldMultiplier: 2 },
     // Far the longest build in the game, and that *is* the mechanic: an orchard
     // is a bet on a later autumn. Planting one in a hungry spring is a mistake;
     // planting one in a comfortable summer is how a settlement stops being
@@ -555,11 +553,17 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     name: 'Bridge',
     description: 'Timber over the water. One cell of river, and the far bank stops being a view.',
     footprint: { width: 1, height: 1 },
-    // Cheap on purpose: the river is a decision about *where* to cross, not a
-    // late-game monument. A settlement that has to save up for a bridge simply
-    // ignores half the map for a year, which is not a decision at all.
+    // Cheap on purpose *in materials*: the river is a decision about where to
+    // cross, not a late-game monument, and a settlement that has to save up for a
+    // bridge simply ignores half the map for a year — which is not a decision at
+    // all.
+    //
+    // The labour is another matter: a house's worth of it, per cell of river.
+    // Crossing a river is the biggest thing a small settlement does to its own
+    // map, and it should cost a fortnight of somebody's time rather than an
+    // afternoon.
     constructionCost: [{ resource: 'logs', amount: 5 }],
-    buildTicks: 50,
+    buildTicks: 120,
     workerSlots: 0,
     placement: 'cell',
     on: 'water',

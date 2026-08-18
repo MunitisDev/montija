@@ -285,7 +285,7 @@ export class BuildingRegistry {
     for (const pile of stranded) {
       const { resource, amount } = pile;
       world.piles.remove(pile.id);
-      world.piles.drop(building.accessCell, resource, amount);
+      world.dropNear(building.accessCell, resource, amount);
     }
   }
 

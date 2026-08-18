@@ -64,6 +64,7 @@ Balance is documented, and measured, in [GAME_DESIGN.md](./GAME_DESIGN.md).
 | 37    | The wood tends itself         | **Implemented** |
 | 38    | Room left in the sheds        | **Implemented** |
 | 39    | The river                     | **Implemented** |
+| 40    | The harvest that arrives      | **Implemented** |
 
 ---
 
@@ -1159,3 +1160,53 @@ What the river cost, honestly:
   Reusing A\*'s working buffers was tried and measured as no help at all (the cost
   is the search, not the allocation) and backed out. Unaddressed, and the first
   thing to profile in Phase 11.
+
+---
+
+## Phase 40 — The harvest that arrives — Implemented
+
+"Now that the orchard has other conditions — leading the water to it, or standing
+beside it — its food should be simple to carry to the larders and not be lost.
+Let the villager carry more per trip, or whatever, but let it not be lost if there
+is a larder nearby. I prefer that to the orchard giving double food for being
+close: what I mean is that the amount can be carried 100% to a larder more easily."
+
+Exactly right, and the previous phase had it the wrong way round.
+
+- **The orchard's double yield is gone.** In its place, a **Food Storage looks
+  after what is lying within six cells of its door** as well as what is inside it.
+  Losing nothing is a better reward than being given more, and it is a rule about
+  the store rather than about the orchard: anything perishable within reach of a
+  building made to keep it, keeps. Measured over ten days of a basket waiting for
+  a hauler: 90% of it left, against under 70% out in the open.
+- **A villager carries twenty units instead of ten.** Measured over twenty-four
+  seeds of the reference opening: food banked by winter went from 487 to 901, with
+  no change to who lived or died. It is the one lever on hauling that costs the
+  settlement nothing, and hauling is what every economic problem in this game turns
+  out to be.
+- **Produce spills onto the next cell instead of evaporating.** A pile holds one
+  stack, every caller dropped goods and ignored what the pile said it had taken,
+  and an Orchard — 22 food a batch, two pickers, one doorstep — quietly lost
+  everything past the first fifty. That was the largest single source of "where did
+  my harvest go", and it was not the orchard's fault.
+- **Earthworks are real work now**: a ditch is about two days of one person's time
+  per cell (35 → 120 ticks of labour) and a bridge is a house's worth per cell of
+  river (50 → 120). Crossing a river and leading water inland are the two things a
+  settlement does to the shape of its own map; neither should cost an afternoon.
+
+Four claims in the balance suite had to be re-measured, all of them because the
+food side genuinely improved:
+
+- **one hut now feeds exactly ten** — 10.00 food a day eaten against 10 needed —
+  where it used to fall short. It still banks almost nothing, which is what the
+  second hut is for: 806 food across the sweep against 1981.
+- **a one-hut settlement no longer reaches winter on literally nothing**, so that
+  assertion became a ceiling rather than a zero.
+- **a third hut is not worth a second larder-day.** `prepared` banks 1763 with
+  three huts and a day-20 larder; `twoHuts` banks 1981 with two and a day-14 one.
+- **the disciplined line is now measurably worse**, 230 deaths against 200, and the
+  reason is the employment trap recorded in Phase 39: every extra workshop post
+  takes a pair of hands out of the labour pool, and an employed villager's own
+  workshop always has an urgent job — so the mining orders that would buy a
+  Woodcutter are never claimed. Playing "better" employs the people who were going
+  to fetch the stone.

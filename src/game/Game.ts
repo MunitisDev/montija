@@ -33,7 +33,6 @@ import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
 import { SeededRandom, deriveSeed } from '@/shared/math/random';
 import type { BuildingId, ResourceAmount } from '@/data/buildings';
 import type { PlacementCheck } from '@/simulation/buildings/BuildingRegistry';
-import { siteYield } from '@/simulation/production/siteYield';
 import type { Inventory } from '@/simulation/resources/Inventory';
 import type { WorkPreference } from '@/simulation/villagers/Villager';
 import { restore, serialise } from '@/simulation/save/serialise';
@@ -146,14 +145,6 @@ export interface BuildingSelection {
   readonly residents: number;
   /** `true` when this building is already waiting to be pulled down. */
   readonly demolitionOrdered: boolean;
-  /**
-   * What this building's surroundings multiply its output by.
-   *
-   * `1` for almost everything. An orchard beside a larder is `2`, and the panel
-   * has to know or it would quote the lone figure for a building the player can
-   * see is not alone.
-   */
-  readonly yieldBonus: number;
 }
 
 /** What the presentation layer is allowed to see. */
@@ -744,7 +735,6 @@ export class Game implements GameContext, InputIntentSink {
       residents: this.simulation.villagers.all.filter((villager) => villager.homeId === building.id)
         .length,
       demolitionOrdered: this.simulation.isDemolitionOrdered(building.id),
-      yieldBonus: siteYield(this.simulation.world.buildings, building),
     };
   }
 
@@ -789,7 +779,6 @@ export class Game implements GameContext, InputIntentSink {
       // pull down — and it is the settlement's only store on day one, which
       // makes offering to demolish it a trap rather than a choice.
       demolitionOrdered: false,
-      yieldBonus: 1,
     };
   }
 

@@ -21,7 +21,7 @@
  * ```
  */
 
-import { LOGS_PER_TREE, STONE_PER_DEPOSIT } from '@/data/resources';
+import { LOGS_PER_TREE, STONE_PER_DEPOSIT, type ResourceId } from '@/data/resources';
 import { WET_TERRAIN, terrainDefinition, type TerrainType } from '@/data/terrain';
 import { gridBoundsToScene } from '@/shared/math/isometric';
 import type { GridPoint, SceneBounds } from '@/shared/types/geometry';
@@ -32,6 +32,15 @@ import { NavigationGrid } from './NavigationGrid';
 import type { TerrainGrid } from './TerrainGrid';
 import { TreeRegistry } from './TreeRegistry';
 import { generateWorld, type RiverCourse } from './WorldGenerator';
+
+/**
+ * How far a load will spill when the ground it is set down on is full.
+ *
+ * Three cells. Far enough that a busy workshop is not throwing its output away,
+ * near enough that the harvest stays recognisably *its* harvest rather than
+ * appearing across the settlement.
+ */
+const SPILL_RADIUS = 3;
 
 /** Cells back from the water the camp is set, so it has ground on every side. */
 const BANK_SETBACK = 4;
@@ -185,7 +194,7 @@ export class World {
       this.navigation.refreshCell(this.terrain, cell.gx, cell.gy);
     }
 
-    this.piles.drop(cell, 'logs', LOGS_PER_TREE);
+    this.dropNear(cell, 'logs', LOGS_PER_TREE);
     return true;
   }
 
@@ -241,7 +250,7 @@ export class World {
 
     // Safe to drop on the deposit's own tile: it became walkable grass on the
     // line above, so a hauler can reach the stone that was just cut from it.
-    this.piles.drop(cell, 'stone', STONE_PER_DEPOSIT);
+    this.dropNear(cell, 'stone', STONE_PER_DEPOSIT);
     return true;
   }
 
@@ -368,6 +377,47 @@ export class World {
     this.terrain.set(cell.gx, cell.gy, 'grass');
     this.navigation.refreshCell(this.terrain, cell.gx, cell.gy);
     return true;
+  }
+
+  /**
+   * Puts goods on the ground at a cell, spilling onto the next cell when it is
+   * full.
+   *
+   * **A pile holds one stack, and the surplus used to evaporate.** Every caller
+   * dropped goods and ignored what the pile said it had taken, so an Orchard —
+   * 22 food a batch, two pickers, one doorstep — quietly lost everything past the
+   * first fifty until a hauler came. The goods were made, the work was done, and
+   * they never existed.
+   *
+   * Baskets set down beside baskets, then: the cell itself first, then the ring
+   * around it, walkable ground only, so what is put down can be picked up again.
+   *
+   * @returns how much was actually put down; anything left over genuinely had
+   *   nowhere to go, which is a settlement that has run out of yard rather than
+   *   a rounding error
+   */
+  public dropNear(cell: GridPoint, resource: ResourceId, amount: number): number {
+    let left = amount - this.piles.drop(cell, resource, amount);
+    if (left <= 0) {
+      return amount;
+    }
+
+    for (let radius = 1; radius <= SPILL_RADIUS && left > 0; radius += 1) {
+      for (let dy = -radius; dy <= radius && left > 0; dy += 1) {
+        for (let dx = -radius; dx <= radius && left > 0; dx += 1) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) {
+            continue;
+          }
+          const beside = { gx: cell.gx + dx, gy: cell.gy + dy };
+          if (!this.isWalkable(beside)) {
+            continue;
+          }
+          left -= this.piles.drop(beside, resource, left);
+        }
+      }
+    }
+
+    return amount - left;
   }
 
   /** `true` when this cell could take a road, and has none yet. */

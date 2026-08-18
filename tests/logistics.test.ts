@@ -295,6 +295,33 @@ describe('the full logistics loop', () => {
     expect(snapshot.stored.logs).toBe(STARTING_RESOURCES.logs + trees.length * LOGS_PER_TREE);
   });
 
+  it('spills a load onto the next cell rather than losing it', () => {
+    // **The largest single source of "where did my harvest go".** A pile holds one
+    // stack, `drop` refuses the excess, and every caller ignored what it said it
+    // had taken — so an Orchard making 22 food a batch onto one doorstep lost
+    // everything past the first fifty until a hauler came.
+    const simulation = new Simulation(OPTIONS);
+    const cell = simulation.world.heartCell;
+    const stack = resourceDefinition('food').maxStack;
+
+    const placed = simulation.world.dropNear(cell, 'food', stack * 3);
+
+    expect(placed).toBe(stack * 3);
+    expect(simulation.world.piles.totalOf('food')).toBe(stack * 3);
+    // And spread over more than one cell, because one cell cannot hold it.
+    expect(simulation.world.piles.getAt(cell, 'food')?.amount).toBe(stack);
+  });
+
+  it('keeps a spilled load somewhere a hauler can stand', () => {
+    const simulation = new Simulation(OPTIONS);
+    const stack = resourceDefinition('food').maxStack;
+    simulation.world.dropNear(simulation.world.heartCell, 'food', stack * 3);
+
+    for (const pile of simulation.world.piles.all) {
+      expect(simulation.world.isWalkable(pile.cell), `${pile.cell.gx},${pile.cell.gy}`).toBe(true);
+    }
+  });
+
   it('never lets two villagers haul the same pile', () => {
     const simulation = new Simulation(OPTIONS);
     for (const cell of nearbyTrees(simulation, 15)) {

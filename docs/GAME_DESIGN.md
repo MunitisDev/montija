@@ -70,22 +70,41 @@ water and not over rock — so a bridge is preferred by pathfinding, walked at r
 speed, drawn joined to the tracks on both banks, and saved, all without a line of
 special-case code.
 
-Cheap on purpose. A settlement that has to save up for a crossing simply ignores
-half the map for a year, which is not a decision at all.
+Cheap on purpose, in materials. A settlement that has to save up for a crossing
+simply ignores half the map for a year, which is not a decision at all — but the
+**labour** is a house's worth per cell, because crossing a river is the biggest
+thing a small settlement does to its own map.
 
 ### Ditches, and the orchard — Implemented
 
 An orchard has to stand on water: the river, or a channel dug from it. It is the
 one building whose place on the map is a real decision rather than "anywhere there
-is room" — and it is worth **twice as much beside a Food Storage**, because fruit
-is the one harvest that will not wait. Baskets standing in an autumn field are
-half spoiled by the time a hauler reaches them.
+is room".
 
-The ditch is what turns that restriction into a decision. A cell of open ground
-next to water can be dug into a channel — labour, no materials, like a road — and
-each new channel is itself water, so the player leads the river inland one cell at
-a time. A ditch is water: nobody wades it and nothing is built in it. It can be
-filled in again immediately, like taking up a road.
+**And a larder beside it keeps the whole crop.** Fruit is the one harvest that will
+not wait: baskets standing in an autumn field were spoiling at an open yard's rate
+while they waited for a hauler, so a share of every picking never reached a shelf.
+A Food Storage now looks after what is lying **within six cells of its door** as
+well as it looks after what is inside — its shade, its awning, the shelf by the
+step.
+
+> **This replaced doubling the orchard's yield.** The first version made an
+> orchard beside a larder produce twice the fruit, which was the wrong shape: the
+> settlement did not need more fruit conjured out of proximity, it needed the fruit
+> it had already grown to arrive. Losing nothing is a better reward than being
+> given more, and it is a rule about the _store_ rather than about the orchard —
+> anything perishable lying within reach of a building made to keep it, keeps.
+
+The ditch is what turns the water requirement into a decision. A cell of open
+ground next to water can be dug into a channel — labour, no materials, like a road
+— and each new channel is itself water, so the player leads the river inland one
+cell at a time. A ditch is water: nobody wades it and nothing is built in it. It
+can be filled in again immediately, like taking up a road.
+
+**Both earthworks are real work.** A ditch is about two days of one person's time
+per cell, and a bridge is a house's worth of labour per cell of river. A decision
+that costs an afternoon is not a decision; these are the two things a settlement
+does to the shape of its own map, and they should be felt.
 
 Roads and ditches are both drawn from what joins them: sixteen shapes per kind,
 one for every combination of the four neighbours, so a track turns corners and
@@ -219,10 +238,6 @@ settled village.
 | Woodcutter      | 16 firewood a day        | 4 logs          |
 | Blacksmith      | 6 tools a day            | 4 iron + 2 logs |
 | Tailor          | 4.4 clothing a day       | 6.5 hides       |
-
-**The Orchard's figure doubles beside a larder.** It is the only building whose surroundings change
-what it makes, and the panel says so rather than quoting the lone figure — a player who can see a Food
-Storage standing next to it should not be told the orchard is working alone.
 
 **The Forester's Lodge is not on that list, because it makes nothing.** It works on the map instead:
 it plants saplings and marks surplus trees for felling, keeping about 110 trees standing inside a
@@ -486,9 +501,10 @@ planting one is a bet on a later autumn rather than a purchase.
 | Field    | 0.25   | 0.8    | 1.9    | 0      |
 | Orchard  | 0      | 0.7    | 2.4    | 0      |
 
-An orchard also has to **stand on water** — the river, or a ditch dug out to it — and is worth
-**twice as much with a Food Storage within ten cells**. Fruit is the one harvest that will not wait,
-and those two rules together are the first time the game asks _where_ rather than _whether_.
+An orchard also has to **stand on water** — the river, or a ditch dug out to it — and wants a **Food
+Storage within six cells**, which is what stops its crop spoiling in the field while it waits for a
+hauler. Fruit is the one harvest that will not wait, and those two rules together are the first time
+the game asks _where_ rather than _whether_.
 
 A settlement that lives on foraging survives hand to mouth. One that farms has to
 store what it brings in and make it last — which is the lesson winter teaches,
@@ -829,20 +845,30 @@ a second, so retuning a number is a measurement rather than a five-minute stare 
 | does nothing at all                 | everyone dead by day 25, during autumn             |
 | leaves the food supply until day 25 | everyone dead before the hut is even finished      |
 | builds one hut at midsummer         | survives, but reaches spring starving at 40 health |
-| builds one hut for ten villagers    | survives with empty stores and hungry people       |
+| builds one hut for ten villagers    | survives, fed exactly, with a few days in store    |
 | builds three huts and a larder      | survives comfortably, ending winter with food left |
 
-One Gatherer Hut feeds roughly six villagers. Ten need two, and the settlement that has one usually
-believes it has solved food — so the HUD says so explicitly rather than leaving the player to lose to
-an invisible rule.
+**One Gatherer Hut now feeds exactly ten villagers, and does not fill a store.** Measured at 10.00
+food a day eaten through the summer against 10 needed — which is a hut that keeps a settlement alive
+and leaves it nothing to spend on a winter. What the second hut buys is the margin: over 24 seeds a
+settlement on one hut banks 806 food by winter and a settlement on two banks 1981.
+
+> **That changed when a villager's load doubled** (Phase 40: ten units to twenty). Before it, one hut
+> could not feed ten and the same sweep banked 487. Nothing about foraging moved; the hauling did.
+> Every economic problem in this game has turned out to be a hauling problem, and the load is the one
+> lever on it that costs the settlement nothing at all — the same twenty-four seeds bury the same
+> hundred villagers either way, because what kills them is cold.
+>
+> A **third** hut is not worth a second larder-day: `prepared` raises its third hut on day 16 and its
+> larder on day 20, banks 1763, and is beaten by the two-hut line that has its larder up on day 14.
 
 The intended shape is that a prepared settlement survives its first winter _narrowly_: in the
 measured run above, the well-played settlement ends winter with six food in store and its firewood
 already gone.
 
 **That table is one seed.** Running the same well-played script across **24 seeds**, the settlement
-comes through its first year without a single death on **2 of them**, and buries 220 of its 240
-villagers. The table above is not wrong — it is what that seed does — but it describes a scenario on
+comes through its first year without a single death on a small handful of them, and buries 200 of its
+240 villagers. The table above is not wrong — it is what that seed does — but it describes a scenario on
 a knife edge, and the balance suite being pinned to a single seed makes it fragile in both
 directions: a change that alters anything at all can flip which seed lives without changing the
 difficulty.

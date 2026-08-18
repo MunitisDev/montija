@@ -123,9 +123,13 @@ export const JOB_WORK_TICKS: Readonly<Record<JobType, number>> = {
   // Clearing and beating a track flat. Short, because a road is only worth
   // laying if a settlement can afford to lay a line of them.
   'pave-road': 20,
-  // Digging a channel and letting the water in. Real work — more than beating a
-  // track flat, less than felling a tree.
-  'dig-ditch': 35,
+  // Digging a channel and letting the water in.
+  //
+  // **Two days of one person's work**, which is the point of it. A ditch is how a
+  // settlement decides where its orchards can be, and a decision that costs an
+  // afternoon is not a decision — it is a tap. Compare a road at 20: beating a
+  // track flat is an errand, cutting a channel is an undertaking.
+  'dig-ditch': 120,
   // Setting a sapling. Quick work; the waiting is done by the tree.
   'plant-tree': 15,
   // Pulling a building down and stacking what is worth keeping. Slower than

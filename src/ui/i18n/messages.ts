@@ -108,7 +108,8 @@ export const EN = {
   'building.storage-yard': 'Storage Yard',
   'building.storage-yard.description': 'Holds logs, stone and firewood.',
   'building.food-storage': 'Food Storage',
-  'building.food-storage.description': 'Keeps the settlement’s food through the winter.',
+  'building.food-storage.description':
+    'Keeps the settlement’s food through the winter — and keeps what is lying within a few paces of it, too.',
   'building.gatherer-hut': 'Gatherer Hut',
   'building.gatherer-hut.description': 'Workers forage the woods for food. Your only food source.',
   'building.woodcutter': 'Woodcutter',
@@ -140,7 +141,8 @@ export const EN = {
   'building.crop-field': 'Field',
   'building.crop-field.description': 'Sown in spring, worth having in autumn, empty in winter.',
   'building.orchard': 'Orchard',
-  'building.orchard.description': 'Years to establish, and then the best harvest there is.',
+  'building.orchard.description':
+    'On a bank or a ditch. Years to establish, then the best harvest there is — with a larder beside it, or the fruit rots where it is picked.',
 
   'building.school': 'School',
   'building.school.description':
@@ -405,10 +407,10 @@ export const EN = {
     'Beaten earth, and free but for the work. Villagers walk about twice as fast on one, and every problem this settlement has is a hauling problem.',
   'guide.land.ditch': 'Ditches',
   'guide.land.ditch.detail':
-    'A channel dug from water that is already there, one cell at a time. An Orchard has to stand on water, so a ditch is how you decide where the orchard goes.',
+    'A channel dug from water that is already there, one cell at a time, and about two days of somebody’s work each. An Orchard has to stand on water, so a ditch is how you decide where the orchard goes.',
   'guide.land.bridge': 'Bridges',
   'guide.land.bridge.detail':
-    'Five logs for one cell of river. Tap the water and the panel offers it. Villagers cross it like a road.',
+    'Five logs and a fortnight of work for one cell of river. Tap the water and the panel offers it. Villagers cross it like a road.',
   'guide.seasons': 'The year',
   'guide.season.spring': 'Foraging begins and the ground can be built on. The year starts here.',
   'guide.season.summer': 'The best gathering of the year, and the time to expand.',
@@ -418,7 +420,7 @@ export const EN = {
   'guide.hardship': 'What kills a settlement',
   'guide.hardship.hunger': 'Hunger',
   'guide.hardship.hunger.detail':
-    'Everyone eats one food a day. Food rots in the open, and far more slowly in a Food Storage.',
+    'Everyone eats one food a day. Food rots in the open, far more slowly in a Food Storage — and food lying within a few paces of one keeps as well as if it were inside.',
   'guide.hardship.cold': 'Cold',
   'guide.hardship.cold.detail':
     'Firewood only warms people who have a house. A full woodshed and no roofs will still kill everyone.',
@@ -576,7 +578,8 @@ export const ES: Messages = {
   'building.storage-yard': 'Almacén',
   'building.storage-yard.description': 'Guarda troncos, piedra y leña.',
   'building.food-storage': 'Despensa',
-  'building.food-storage.description': 'Conserva la comida del asentamiento durante el invierno.',
+  'building.food-storage.description':
+    'Conserva la comida del asentamiento durante el invierno — y también la que está a unos pasos de su puerta.',
   'building.gatherer-hut': 'Cabaña de recolección',
   'building.gatherer-hut.description':
     'Los trabajadores recolectan comida del bosque. Tu única fuente de comida.',
@@ -610,7 +613,8 @@ export const ES: Messages = {
   'building.crop-field.description':
     'Se siembra en primavera, se cosecha en otoño, vacío en invierno.',
   'building.orchard': 'Huerto',
-  'building.orchard.description': 'Tarda años en dar fruto, y luego da la mejor cosecha.',
+  'building.orchard.description':
+    'Junto al río o a una acequia. Tarda años, y luego da la mejor cosecha — con una despensa al lado, o la fruta se pudre donde se recoge.',
 
   'building.school': 'Escuela',
   'building.school.description':
@@ -857,10 +861,10 @@ export const ES: Messages = {
     'Tierra pisada, gratis salvo el trabajo. Se camina casi el doble de rápido, y aquí todos los problemas son problemas de acarreo.',
   'guide.land.ditch': 'Acequias',
   'guide.land.ditch.detail':
-    'Un canal cavado desde el agua que ya hay, casilla a casilla. El huerto tiene que estar junto al agua, así que la acequia es cómo decides dónde va el huerto.',
+    'Un canal cavado desde el agua que ya hay, casilla a casilla, y unos dos días de trabajo cada una. El huerto tiene que estar junto al agua, así que la acequia es cómo decides dónde va el huerto.',
   'guide.land.bridge': 'Puentes',
   'guide.land.bridge.detail':
-    'Cinco troncos por casilla de río. Toca el agua y el panel te lo ofrece. Los aldeanos lo cruzan como un camino.',
+    'Cinco troncos y unas dos semanas de trabajo por casilla de río. Toca el agua y el panel te lo ofrece. Los aldeanos lo cruzan como un camino.',
   'guide.seasons': 'El año',
   'guide.season.spring': 'Empieza la recolección y ya se puede construir. El año arranca aquí.',
   'guide.season.summer': 'La mejor recolección del año, y el momento de crecer.',
@@ -870,7 +874,7 @@ export const ES: Messages = {
   'guide.hardship': 'Qué acaba con un asentamiento',
   'guide.hardship.hunger': 'Hambre',
   'guide.hardship.hunger.detail':
-    'Cada persona come una comida al día. La comida se pudre a la intemperie, y mucho más despacio en una Despensa.',
+    'Cada persona come una comida al día. La comida se pudre a la intemperie, mucho más despacio en una Despensa — y la que está a unos pasos de una se conserva como si estuviera dentro.',
   'guide.hardship.cold': 'Frío',
   'guide.hardship.cold.detail':
     'La leña solo calienta a quien tiene casa. Una leñera llena y ningún tejado mata igual a todo el mundo.',

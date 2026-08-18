@@ -56,14 +56,10 @@ export const NO_PRODUCTION: ProductionSummary = { outputs: [], inputs: [], peakS
 /**
  * The most a building can turn out in a day.
  *
- * @param siteBonus what this building's surroundings multiply its output by; 1
- *   for a building with nothing helpful nearby, and for the build menu, where
- *   there is no building yet to have neighbours. See
- *   `simulation/production/siteYield`.
  * @returns {@link NO_PRODUCTION} for anything without a recipe — a house, a
  *   yard, a cemetery. Those are not slower producers, they are not producers.
  */
-export function productionSummary(buildingId: BuildingId, siteBonus = 1): ProductionSummary {
+export function productionSummary(buildingId: BuildingId): ProductionSummary {
   const definition = buildingDefinition(buildingId);
   const recipe = definition.recipeId ? findRecipe(definition.recipeId) : null;
   if (!recipe || definition.workerSlots <= 0) {
@@ -76,11 +72,7 @@ export function productionSummary(buildingId: BuildingId, siteBonus = 1): Produc
 
   const curve = SEASONAL_YIELD[recipe.seasonal];
   const peakSeason = recipe.seasonal === 'none' ? null : bestSeason(curve);
-  // The season, times whatever the building's neighbours are worth to it. An
-  // orchard beside a larder really does bring in twice the fruit, and a panel
-  // that quoted the lone figure would be telling the player the larder they can
-  // see standing next to it does nothing.
-  const scale = (peakSeason === null ? 1 : curve[peakSeason]) * siteBonus;
+  const scale = peakSeason === null ? 1 : curve[peakSeason];
 
   return {
     // Rounded per run, exactly as the simulation rounds it, so the panel cannot
