@@ -353,7 +353,15 @@ function drawFraming(
   }
 }
 
-/** Rafters and a tie beam on each gable wall, the way a gable is actually built. */
+/**
+ * Rafters and a king post on each gable wall, the way a gable is actually built.
+ *
+ * Each rafter is a wedge cut *inside* its own triangle rather than a strip laid
+ * along the edge: a strip has square ends, so where two of them meet at the apex
+ * their outer corners carry past it and hang a dark hook over the ridge behind.
+ * Insetting toward the triangle's own centre puts the rafters' outer edges on
+ * the gable's edges exactly, and mitres them at the apex.
+ */
 function drawGableFraming(
   graphics: Phaser.GameObjects.Graphics,
   points: {
@@ -366,18 +374,40 @@ function drawGableFraming(
 ): void {
   const { topLeft, topFront, topRight, apexLeft, apexRight } = points;
   const look = HOUSE_LOOK;
+  const timber = 2.6;
 
   for (const [a, apex, b, lit] of [
     [topLeft, apexLeft, topFront, true],
     [topFront, apexRight, topRight, false],
   ] as const) {
+    const centre = { x: (a.x + apex.x + b.x) / 3, y: (a.y + apex.y + b.y) / 3 };
+    // How far in each vertex has to move for the two rakes to gain `timber` of
+    // thickness. The centre sits a third of the way off each edge, so the edge
+    // travels that same fraction of the height standing over it.
+    const gap = Math.min(edgeGap(centre, a, apex), edgeGap(centre, apex, b));
+    const k = Math.min(0.6, Math.max(0.05, timber / Math.max(gap, 0.001)));
+    const inward = (p: Point): Point => ({
+      x: p.x + (centre.x - p.x) * k,
+      y: p.y + (centre.y - p.y) * k,
+    });
+    const inApex = inward(apex);
+
     graphics.fillStyle(shade(look.timber, lit ? 1.06 : 0.84), 1);
-    polygon(graphics, strip(a, apex, 2.6));
-    polygon(graphics, strip(apex, b, 2.6));
-    // The king post, up the middle from the tie beam to the apex.
+    polygon(graphics, [a, apex, inApex, inward(a)]);
+    polygon(graphics, [apex, b, inward(b), inApex]);
+    // The king post, down the middle from the ridge to the tie beam. It hangs
+    // from the mitre, not the apex, so it too stays under the roof.
     const tie = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-    polygon(graphics, strip(apex, tie, 2.2));
+    polygon(graphics, strip(inApex, tie, 2.2));
   }
+}
+
+/** Perpendicular distance from a point to the line through `a` and `b`. */
+function edgeGap(from: Point, a: Point, b: Point): number {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const length = Math.hypot(dx, dy) || 1;
+  return Math.abs((from.x - a.x) * dy - (from.y - a.y) * dx) / length;
 }
 
 /**
@@ -491,14 +521,14 @@ function drawCrossGableRoof(
 
   // **Beam ends.** The rafters carry past the barge and are cut off square, and
   // those blocks are most of what makes a roof look built rather than folded.
+  //
+  // At the eaves only. The same block at the head of a gable is not a rafter
+  // foot at all — that is the end of the ridge — and against the sky it reads
+  // as a splinter of timber floating over the roof behind.
   graphics.fillStyle(shade(look.timber, 1.1), 1);
-  for (const p of [bargeLeft, eaveLeft]) {
-    beamEnd(graphics, p, -1);
-  }
+  beamEnd(graphics, eaveLeft, -1);
   graphics.fillStyle(shade(look.timber, 0.86), 1);
-  for (const p of [bargeRight, eaveRight]) {
-    beamEnd(graphics, p, 1);
-  }
+  beamEnd(graphics, eaveRight, 1);
 }
 
 /** One squared-off rafter end, poking out of the roof's edge. */
