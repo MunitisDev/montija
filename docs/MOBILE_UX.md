@@ -128,6 +128,17 @@ The world is the interface. Chrome stays at the edges.
   HUD region still pans the world.
 - The top bar carries the readouts and the four ways in: the stores, the people, the ledger and
   settings. Clock included — one button cycling pause, 1x, 2x, 4x.
+- **Implemented.** The top bar is two named rows in the markup — the stores and the people, then the
+  four tools and the calendar. Landscape and desktop dissolve them back into one line with
+  `display: contents`, so the width they have is the width they use. Held upright, saying where the
+  break goes is what keeps the layout the same layout: the wrap used to fall wherever the widths of
+  the day landed, and the season name being eight letters longer in Spanish than in English was
+  enough to stand the calendar on a third row of its own. Under 380px the day within the season goes
+  — "Spring · Y1" is the half a player steers by, and the ledger keeps the rest.
+- **Implemented.** Advice and the transient notices hang off the bottom of the top bar — the third
+  line on a phone held upright, the second everywhere else — rather than floating across the middle
+  of the settlement, which is the one thing the player is looking at. The notices sit under the
+  advice so one arriving does not shove a standing warning down the screen.
 - The build bar has the whole **bottom** to itself: five category buttons, with the buildings of
   whichever one is open in a grid above them.
 - Readouts go **top**, where they are glanceable and out of the way.

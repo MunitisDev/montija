@@ -146,6 +146,17 @@
       <div id="hud">
         <div class="hud-bar hud-bar--top">
           <!--
+            Two named rows rather than a wrapping list.
+            
+            Landscape flattens them back into one line with `display: contents`,
+            so this costs nothing where the width is there. Held upright the
+            wrap used to fall wherever the widths happened to land — the roster
+            button on one line in Spanish and the next in English, the calendar
+            stranded on a third row of its own. Saying where the break goes is
+            the only way the phone layout stays the same layout.
+          -->
+          <div class="hud-row hud-row--stocks">
+            <!--
             The strip is a button, and the whole list is behind it.
 
             Nine resources across a phone held upright is two lines of world
@@ -153,140 +164,146 @@
             and a tap for the rest keeps the bar one line however many goods
             the settlement learns to make.
           -->
-          <button
-            type="button"
-            class="resource-strip"
-            data-ui="stock-toggle"
-            aria-expanded="false"
-            aria-controls="stock-drawer"
-          >
-            <span class="resource resource--population">
-              <svg class="resource__icon"><use href="#icon-population" /></svg>
-              <span class="resource__label" data-i18n="hud.population">population</span>
-              <span class="resource__value" data-hud="population">--</span>
-            </span>
-            <span class="resource resource--food">
-              <svg class="resource__icon"><use href="#icon-food" /></svg>
-              <span class="resource__label" data-i18n="hud.food">food</span>
-              <span class="resource__value" data-hud="food">--</span>
-            </span>
-            <span class="resource resource--logs">
-              <svg class="resource__icon"><use href="#icon-logs" /></svg>
-              <span class="resource__label" data-i18n="hud.logs">logs</span>
-              <span class="resource__value" data-hud="logs">--</span>
-            </span>
-            <span class="resource resource--firewood">
-              <svg class="resource__icon"><use href="#icon-firewood" /></svg>
-              <span class="resource__label" data-i18n="hud.firewood">firewood</span>
-              <span class="resource__value" data-hud="firewood">--</span>
-            </span>
-            <span class="resource resource--stone">
-              <svg class="resource__icon"><use href="#icon-stone" /></svg>
-              <span class="resource__label" data-i18n="hud.stone">stone</span>
-              <span class="resource__value" data-hud="stone">--</span>
-            </span>
-            <svg
-              class="resource-strip__chevron"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-              focusable="false"
+            <button
+              type="button"
+              class="resource-strip"
+              data-ui="stock-toggle"
+              aria-expanded="false"
+              aria-controls="stock-drawer"
             >
-              <path d="M5.6 9.2 12 15.4l6.4-6.2z" />
-            </svg>
-          </button>
+              <span class="resource resource--population">
+                <svg class="resource__icon"><use href="#icon-population" /></svg>
+                <span class="resource__label" data-i18n="hud.population">population</span>
+                <span class="resource__value" data-hud="population">--</span>
+              </span>
+              <span class="resource resource--food">
+                <svg class="resource__icon"><use href="#icon-food" /></svg>
+                <span class="resource__label" data-i18n="hud.food">food</span>
+                <span class="resource__value" data-hud="food">--</span>
+              </span>
+              <span class="resource resource--logs">
+                <svg class="resource__icon"><use href="#icon-logs" /></svg>
+                <span class="resource__label" data-i18n="hud.logs">logs</span>
+                <span class="resource__value" data-hud="logs">--</span>
+              </span>
+              <span class="resource resource--firewood">
+                <svg class="resource__icon"><use href="#icon-firewood" /></svg>
+                <span class="resource__label" data-i18n="hud.firewood">firewood</span>
+                <span class="resource__value" data-hud="firewood">--</span>
+              </span>
+              <span class="resource resource--stone">
+                <svg class="resource__icon"><use href="#icon-stone" /></svg>
+                <span class="resource__label" data-i18n="hud.stone">stone</span>
+                <span class="resource__value" data-hud="stone">--</span>
+              </span>
+              <svg
+                class="resource-strip__chevron"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M5.6 9.2 12 15.4l6.4-6.2z" />
+              </svg>
+            </button>
 
-          <!-- The settlement's people. Next to the rules because both are
+            <!-- The settlement's people. Next to the rules because both are
                "open, read, act, close" rather than part of the world. -->
-          <button type="button" class="icon-button" data-ui="roster-open" aria-label="People">
-            <svg
-              class="icon-button__glyph"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <circle cx="9" cy="7" r="3.4" />
-              <path d="M2 21c0-3.6 3.1-6.4 7-6.4s7 2.8 7 6.4z" />
-              <circle cx="17.5" cy="8.5" r="2.6" />
-              <path d="M14.6 14.4c.9-.4 1.9-.6 2.9-.6 3 0 4.5 2 4.5 4.6h-5.2c0-1.6-.8-3-2.2-4z" />
-            </svg>
-          </button>
+            <button type="button" class="icon-button" data-ui="roster-open" aria-label="People">
+              <svg
+                class="icon-button__glyph"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <circle cx="9" cy="7" r="3.4" />
+                <path d="M2 21c0-3.6 3.1-6.4 7-6.4s7 2.8 7 6.4z" />
+                <circle cx="17.5" cy="8.5" r="2.6" />
+                <path d="M14.6 14.4c.9-.4 1.9-.6 2.9-.6 3 0 4.5 2 4.5 4.6h-5.2c0-1.6-.8-3-2.2-4z" />
+              </svg>
+            </button>
+          </div>
 
-          <!-- Who works where. Beside the people button because the two
+          <div class="hud-row hud-row--tools">
+            <!-- Who works where. Beside the people button because the two
                answer halves of the same question: that one is by household,
                this one is by workplace. -->
-          <button type="button" class="icon-button" data-ui="labour-open" aria-label="Work">
-            <svg
-              class="icon-button__glyph"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <!-- A hammer: head across the top left, handle down to the right. -->
-              <path d="M3.1 7.4 7.4 3.1l4.9 4.9-4.3 4.3z" />
-              <path d="m9.4 12.5 2.1-2.1 8.6 8.6a1.5 1.5 0 0 1-2.1 2.1z" opacity=".55" />
-            </svg>
-          </button>
+            <button type="button" class="icon-button" data-ui="labour-open" aria-label="Work">
+              <svg
+                class="icon-button__glyph"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <!-- A hammer: head across the top left, handle down to the right. -->
+                <path d="M3.1 7.4 7.4 3.1l4.9 4.9-4.3 4.3z" />
+                <path d="m9.4 12.5 2.1-2.1 8.6 8.6a1.5 1.5 0 0 1-2.1 2.1z" opacity=".55" />
+              </svg>
+            </button>
 
-          <!-- One button for the clock, cycling pause, 1x, 2x, 4x. Four
+            <!-- One button for the clock, cycling pause, 1x, 2x, 4x. Four
                buttons for four speeds cost a corner of the bottom bar to say
                something one button says in two characters. -->
-          <button
-            type="button"
-            class="icon-button icon-button--text"
-            data-ui="speed-cycle"
-            aria-label="Speed"
-          >
-            <span class="icon-button__text" data-hud="speed-label">1x</span>
-          </button>
-
-          <!-- The ledger: what the settlement has, makes, spends and is. -->
-          <button type="button" class="icon-button" data-ui="ledger-open" aria-label="Ledger">
-            <svg
-              class="icon-button__glyph"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-              focusable="false"
+            <button
+              type="button"
+              class="icon-button icon-button--text"
+              data-ui="speed-cycle"
+              aria-label="Speed"
             >
-              <path d="M4.4 3.2h13.2a2 2 0 0 1 2 2v15.6H6.4a2 2 0 0 1-2-2z" opacity=".55" />
-              <path d="M4.4 3.2h2.6v17.6H6.4a2 2 0 0 1-2-2z" />
-              <rect x="9.2" y="7" width="7.6" height="1.5" rx=".7" />
-              <rect x="9.2" y="11" width="7.6" height="1.5" rx=".7" />
-              <rect x="9.2" y="15" width="4.8" height="1.5" rx=".7" />
-            </svg>
-          </button>
+              <span class="icon-button__text" data-hud="speed-label">1x</span>
+            </button>
 
-          <!-- Everything that is not the settlement itself lives behind this:
+            <!-- The ledger: what the settlement has, makes, spends and is. -->
+            <button type="button" class="icon-button" data-ui="ledger-open" aria-label="Ledger">
+              <svg
+                class="icon-button__glyph"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M4.4 3.2h13.2a2 2 0 0 1 2 2v15.6H6.4a2 2 0 0 1-2-2z" opacity=".55" />
+                <path d="M4.4 3.2h2.6v17.6H6.4a2 2 0 0 1-2-2z" />
+                <rect x="9.2" y="7" width="7.6" height="1.5" rx=".7" />
+                <rect x="9.2" y="11" width="7.6" height="1.5" rx=".7" />
+                <rect x="9.2" y="15" width="4.8" height="1.5" rx=".7" />
+              </svg>
+            </button>
+
+            <!-- Everything that is not the settlement itself lives behind this:
                the rules, saving, full screen, language. The top bar of a phone
                held upright has room for the numbers and very little else. -->
-          <button type="button" class="icon-button" data-ui="settings-open" aria-label="Settings">
-            <svg
-              class="icon-button__glyph"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <!-- A ring with a hole punched by the even-odd rule, and eight
+            <button type="button" class="icon-button" data-ui="settings-open" aria-label="Settings">
+              <svg
+                class="icon-button__glyph"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <!-- A ring with a hole punched by the even-odd rule, and eight
                    teeth laid out as one quartet rotated twice. -->
-              <path
-                fill-rule="evenodd"
-                d="M12 5.4a6.6 6.6 0 1 0 0 13.2 6.6 6.6 0 0 0 0-13.2zm0 2.4a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 0 1 0-8.4z"
-              />
-              <rect x="10.6" y="1.6" width="2.8" height="4.2" rx="0.7" />
-              <rect x="10.6" y="18.2" width="2.8" height="4.2" rx="0.7" />
-              <rect x="1.6" y="10.6" width="4.2" height="2.8" rx="0.7" />
-              <rect x="18.2" y="10.6" width="4.2" height="2.8" rx="0.7" />
-              <g transform="rotate(45 12 12)">
+                <path
+                  fill-rule="evenodd"
+                  d="M12 5.4a6.6 6.6 0 1 0 0 13.2 6.6 6.6 0 0 0 0-13.2zm0 2.4a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 0 1 0-8.4z"
+                />
                 <rect x="10.6" y="1.6" width="2.8" height="4.2" rx="0.7" />
                 <rect x="10.6" y="18.2" width="2.8" height="4.2" rx="0.7" />
                 <rect x="1.6" y="10.6" width="4.2" height="2.8" rx="0.7" />
                 <rect x="18.2" y="10.6" width="4.2" height="2.8" rx="0.7" />
-              </g>
-            </svg>
-          </button>
+                <g transform="rotate(45 12 12)">
+                  <rect x="10.6" y="1.6" width="2.8" height="4.2" rx="0.7" />
+                  <rect x="10.6" y="18.2" width="2.8" height="4.2" rx="0.7" />
+                  <rect x="1.6" y="10.6" width="4.2" height="2.8" rx="0.7" />
+                  <rect x="18.2" y="10.6" width="4.2" height="2.8" rx="0.7" />
+                </g>
+              </svg>
+            </button>
 
-          <div class="climate-strip">
-            <span class="climate__season" data-hud="season"></span>
-            <span class="climate__temperature" data-hud="temperature">--</span>
+            <div class="climate-strip">
+              <span class="climate__season" data-hud="season"></span>
+              <!-- The day of the season, split off so a narrow phone can drop
+                   it and keep the season itself. -->
+              <span class="climate__day" data-hud="day"></span>
+              <span class="climate__temperature" data-hud="temperature">--</span>
+            </div>
           </div>
         </div>
 
@@ -381,11 +398,13 @@
           <button type="button" class="failure__restart" data-hud="failure-restart"></button>
         </div>
 
-        <!-- Transient notices: births, arrivals, deaths. -->
-        <div class="events" data-hud="events" role="status" aria-live="polite"></div>
-
-        <!-- Advice when the settlement is heading for trouble. -->
+        <!-- Advice when the settlement is heading for trouble. Under the top
+             bar, not across the middle of the settlement. -->
         <div class="advice" data-hud="advice" role="status" hidden></div>
+
+        <!-- Transient notices: births, arrivals, deaths. Below the advice so
+             one arriving does not shove the standing warning down the screen. -->
+        <div class="events" data-hud="events" role="status" aria-live="polite"></div>
 
         <div class="hud-bar hud-bar--bottom">
           <div class="bottom-left">

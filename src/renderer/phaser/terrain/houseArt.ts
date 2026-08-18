@@ -66,7 +66,7 @@ const STONE = 0x83806f;
 /** The charcoal of an unglazed opening. */
 const WINDOW_DARK = 0x2b3138;
 /** Where the stack stands and how big it is. */
-const CHIMNEY = { alongRidge: 0.42, width: 7.5, height: 15 } as const;
+const CHIMNEY = { alongRidge: 0.42, width: 7.5, height: 11.5 } as const;
 /** Panels between the posts on one wall face. */
 const WALL_POSTS: readonly number[] = [0.04, 0.5, 0.96];
 /** Where the two windows sit on a face, as a share of it. */

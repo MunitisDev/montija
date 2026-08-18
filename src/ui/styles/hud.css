@@ -27,6 +27,20 @@
   align-items: center;
 }
 
+/*
+ * The top bar's two rows.
+ *
+ * `display: contents` dissolves them wherever the width is there, so landscape
+ * and desktop get exactly the single line they had before — wrapping the HUD
+ * onto extra rows is what once cost a 320px-tall landscape phone two thirds of
+ * its screen. Portrait turns them back into real rows further down, because
+ * there the break has to fall in a fixed place rather than wherever the widths
+ * of the day happen to land.
+ */
+.hud-row {
+  display: contents;
+}
+
 .hud-bar--bottom {
   align-items: flex-end;
 }
@@ -221,6 +235,7 @@
   font-size: 0.9rem;
 }
 
+.climate__day,
 .climate__temperature {
   font-variant-numeric: tabular-nums;
   color: var(--colour-ink-dim);
@@ -267,6 +282,14 @@
  * Advice sits under the top bar, centred and out of the way of the thumbs.
  * It only appears when the settlement is heading somewhere bad, so it stays a
  * warning rather than becoming furniture the player learns to ignore.
+ *
+ * The HUD is a column spread with `space-between`, which put this in the middle
+ * of the screen — over the settlement, which is the one thing the player is
+ * looking at. An auto margin below it takes the slack instead, so the advice
+ * hangs off the bar above it: the third line on a phone held upright, the
+ * second everywhere else. The auto margin lives on the notices below, which are
+ * always in the tree; two of them would split the slack and sink the notices
+ * back into the middle.
  */
 .advice {
   align-self: center;
@@ -871,10 +894,48 @@
     padding: 0 6px;
   }
 
-  /* The top strip has room to breathe over two lines rather than scrolling. */
+  /*
+   * Two rows, and the break in a fixed place.
+   *
+   * Wrapping put the calendar on a third row of its own — the season name is
+   * eight letters longer in Spanish than in English, so the same phone laid the
+   * bar out differently depending on the language. The rows say it instead: the
+   * stores and the people on one, the four tools and the calendar on the next.
+   */
   .hud-bar--top {
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: stretch;
     row-gap: 6px;
+  }
+
+  .hud-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--hud-gap);
+    min-width: 0;
+  }
+
+  /*
+   * The calendar has to share 360px with four 44px targets, and the targets are
+   * not negotiable on a touch screen. So the calendar tightens: smaller type,
+   * less padding, and it gives up its width first.
+   */
+  .hud-row--tools .climate-strip {
+    flex: 0 1 auto;
+    min-width: 0;
+    gap: 6px;
+    padding: 5px 8px;
+    overflow: hidden;
+  }
+
+  .hud-row--tools .climate__season {
+    font-size: 0.78rem;
+  }
+
+  .hud-row--tools .climate__day,
+  .hud-row--tools .climate__temperature {
+    font-size: 0.78rem;
   }
 
   /* One line, now that icons carry the names. */
@@ -911,6 +972,36 @@
 
   .tile-panel {
     flex-wrap: wrap;
+  }
+}
+
+/*
+ * The narrowest phones: the day of the season goes.
+ *
+ * Under about 380px the calendar cannot share its row with four touch targets
+ * however small the type gets, and "Spring · Y1" is the half a player steers
+ * by — the day within the season is detail the ledger already keeps.
+ */
+@media (orientation: portrait) and (max-width: 380px) {
+  .climate__day {
+    display: none;
+  }
+}
+
+/*
+ * 320px held upright, the narrowest screen this game claims to run on: four
+ * touch targets and the calendar want nine pixels more than there are. Taken
+ * out of the gaps and the calendar's own padding, because the touch targets
+ * themselves are not negotiable and a clipped "Primaver" is worse than a
+ * crowded row.
+ */
+@media (orientation: portrait) and (max-width: 344px) {
+  .hud-row {
+    gap: 4px;
+  }
+
+  .hud-row--tools .climate-strip {
+    padding: 5px 6px;
   }
 }
 
@@ -1201,19 +1292,21 @@
 /*
  * Transient notices: births, arrivals, deaths.
  *
- * Stacked above the advice banner, drifting up and fading out. Deliberately
+ * Stacked under the advice banner, drifting up and fading out. Deliberately
  * separate from that banner: advice is a standing problem to fix, and these are
- * things that have already happened and need no reply.
+ * things that have already happened and need no reply. Under rather than over
+ * it so a notice arriving does not shove a standing warning down the screen.
  */
 .events {
-  position: absolute;
-  left: 50%;
-  top: 22%;
-  transform: translateX(-50%);
+  align-self: center;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  margin-top: var(--hud-gap);
+  /* Whatever vertical slack the HUD has goes here, under both notices and
+     advice, so the pair hang off the top bar and the bottom bar stays put. */
+  margin-bottom: auto;
   pointer-events: none;
 }
 

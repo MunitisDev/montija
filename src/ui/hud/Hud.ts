@@ -54,6 +54,7 @@ interface HudElements {
   readonly selectionDitch: HTMLButtonElement;
   readonly selectionBridge: HTMLButtonElement;
   readonly season: HTMLElement;
+  readonly day: HTMLElement;
   readonly temperature: HTMLElement;
   readonly advice: HTMLElement;
   readonly events: HTMLElement;
@@ -101,6 +102,7 @@ export class Hud {
   /** The last day whose events were announced, so each is announced once. */
   private lastAnnouncedDay = -1;
   private lastRenderedSeason = '';
+  private lastRenderedDay = '';
   private lastRenderedTemperature = Number.NaN;
 
   constructor(root: HTMLElement, context: GameContext, i18n: I18n) {
@@ -197,14 +199,22 @@ export class Hud {
       }
     }
 
+    // The season and year together, and the day beside them. Split because the
+    // narrowest phone drops the day to keep the calendar on one row with the
+    // four tool buttons, and CSS can only hide what has its own element.
     const seasonLabel = [
       this.i18n.t(`season.${snapshot.season}` as MessageKey),
       `${this.i18n.t('time.yearShort')}${snapshot.year}`,
-      `${this.i18n.t('time.dayShort')}${snapshot.dayOfSeason}`,
     ].join(' · ');
     if (seasonLabel !== this.lastRenderedSeason) {
       this.elements.season.textContent = seasonLabel;
       this.lastRenderedSeason = seasonLabel;
+    }
+
+    const dayLabel = `${this.i18n.t('time.dayShort')}${snapshot.dayOfSeason}`;
+    if (dayLabel !== this.lastRenderedDay) {
+      this.elements.day.textContent = dayLabel;
+      this.lastRenderedDay = dayLabel;
     }
 
     if (snapshot.temperature !== this.lastRenderedTemperature) {
@@ -872,6 +882,7 @@ export class Hud {
     this.lastRenderedSelection = -1;
     this.lastRenderedSpeed = null;
     this.lastRenderedSeason = '';
+    this.lastRenderedDay = '';
     this.lastRenderedTemperature = Number.NaN;
     this.lastRenderedAdvice = undefined;
     this.lastRenderedFailure = undefined;
@@ -918,6 +929,7 @@ function collectElements(root: HTMLElement): HudElements {
     selectionDitch: requireElement(root, '[data-hud="selection-ditch"]') as HTMLButtonElement,
     selectionBridge: requireElement(root, '[data-hud="selection-bridge"]') as HTMLButtonElement,
     season: requireElement(root, '[data-hud="season"]'),
+    day: requireElement(root, '[data-hud="day"]'),
     temperature: requireElement(root, '[data-hud="temperature"]'),
     advice: requireElement(root, '[data-hud="advice"]'),
     events: requireElement(root, '[data-hud="events"]'),
