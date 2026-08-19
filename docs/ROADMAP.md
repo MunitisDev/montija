@@ -1726,3 +1726,42 @@ with none.
 The split holds: `guideContent` names _which_ building the picture is of and stays DOM-free so it can
 go on being tested under Node, and `Guide.ts` decides what a building looks like — the same division
 the people cards already make between naming a portrait and drawing one.
+
+## PHASE 56 — The maker carries her own harvest — Implemented
+
+A player sent a photograph of the ground covered in goods, and the shape behind it is a deadlock rather
+than a backlog: a settlement can employ every pair of hands it has, and then nothing is left to haul —
+and because a workshop's own work is `urgent`, its people go on producing onto a heap that never moves.
+
+Every heap now counts the **days it has been lying there**, and a heap that has sat for twelve days
+_beside the workshop that made it_ becomes the most important thing on the board: `overdue`, the one
+priority above `urgent`. Nobody had to be named to carry it, because the nearest pair of hands is
+almost always the pair that made it — the forager is standing beside her own harvest. She carries it
+in and goes back to work.
+
+**Beside its maker, and measured that way.** The blunt version — escalate any twelve-day-old pile
+anywhere — was implemented first and measured worse: whole settlements crossed the map for the log
+heaps a player's felling orders had left in the wood, food banked before the frost fell from 181 to 92,
+and eighteen more people died across twenty-four worlds. Restricted to a workshop's own output, over
+the same twenty-four worlds:
+
+|                                              | Before | After     |
+| -------------------------------------------- | ------ | --------- |
+| Deaths, the disciplined line                 | 57     | **54**    |
+| Deaths, the prepared line                    | 73     | **72**    |
+| Food banked at the frost (disciplined)       | 189    | **235**   |
+| Food banked at the frost (prepared)          | 181    | **193**   |
+| Settlements surviving, of 24                 | 20/18  | **20/19** |
+| Food still lying on the ground at year's end | 31     | **5**     |
+
+Adding to a heap does not reset its age, which is the point: a heap being topped up while nobody
+carries any of it away is exactly the situation the count exists to notice. The age is saved, because a
+reload that forgot it would hand the player back the deadlock they had just been rescued from.
+
+**A latent bug found and deliberately left standing.** `repriceHauls` tests `job.haulResource`, which is
+only ever set on a load bound for a building site — so the loop has never once repriced an ordinary
+pile-to-yard haul, which is the exact case its own comment describes. Repairing it was measured:
+pricing hauls of a plentiful good down to `low` cost twenty-three lives across twenty-four worlds and
+half the food banked before the frost, because "the yard already holds enough logs" stays true right up
+to the day a woodshed eats them. It stays inert, with the measurement recorded where the next reader
+will find it.

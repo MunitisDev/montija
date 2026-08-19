@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { LOGS_PER_TREE, RESOURCE_IDS, resourceDefinition } from '@/data/resources';
 import { STARTING_RESOURCES } from '@/app/config';
-import { Simulation } from '@/simulation/Simulation';
+import { Simulation, STALE_PILE_DAYS } from '@/simulation/Simulation';
+import { JobPriority } from '@/simulation/jobs/Job';
+import { restore, serialise } from '@/simulation/save/serialise';
+import { TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
 import { Inventory } from '@/simulation/resources/Inventory';
 import { ResourcePileRegistry } from '@/simulation/resources/ResourcePile';
 import { StorageRegistry } from '@/simulation/logistics/Storage';
+import type { BuildingId } from '@/data/buildings';
+import type { ResourceId } from '@/data/resources';
+import type { GridPoint } from '@/shared/types/geometry';
 import { nearbyTrees, reachableTree } from './support/playtest';
 
 const TICK = 0.1;
@@ -415,3 +421,201 @@ describe('the full logistics loop', () => {
     expect(play()).toBe(play());
   });
 });
+
+/**
+ * Goods nobody carries.
+ *
+ * **Reported from play, and the failure it names is a real one.** A settlement
+ * can employ every pair of hands it has; then nothing is left to haul, and
+ * because a workshop's own work is `urgent`, its people go on making more onto a
+ * heap that never moves. Twelve days of that is not a busy settlement, it is a
+ * broken one — and the fix is to make the heap the most important thing on the
+ * board, so the nearest pair of hands carries it in. The nearest pair is almost
+ * always the pair that made it.
+ */
+describe('a heap nobody has carried', () => {
+  it('counts the days it has been lying there', () => {
+    const piles = new ResourcePileRegistry();
+    piles.drop({ gx: 4, gy: 4 }, 'logs', 6);
+    const pile = piles.getAt({ gx: 4, gy: 4 }, 'logs')!;
+
+    expect(pile.days).toBe(0);
+    piles.ageByADay();
+    piles.ageByADay();
+    expect(pile.days).toBe(2);
+  });
+
+  it('does not start again when more is thrown on top', () => {
+    // The whole point. A heap being topped up while nobody carries any of it
+    // away is exactly the situation the count exists to notice, so adding to it
+    // must not look like a fresh heap.
+    const piles = new ResourcePileRegistry();
+    piles.drop({ gx: 4, gy: 4 }, 'logs', 6);
+    const pile = piles.getAt({ gx: 4, gy: 4 }, 'logs')!;
+    for (let day = 0; day < 8; day += 1) {
+      piles.ageByADay();
+      piles.drop({ gx: 4, gy: 4 }, 'logs', 1);
+    }
+    expect(pile.days).toBe(8);
+  });
+
+  it('ages by one a day as the settlement runs', () => {
+    // Nobody in the valley, so the heap is still there to be counted: with ten
+    // idle villagers it is carried in on the first afternoon, which is the
+    // behaviour every other test here is about.
+    const simulation = new Simulation({ ...OPTIONS, startingVillagers: 0 });
+    const cell = reachableTree(simulation);
+    simulation.world.piles.drop(cell, 'stone', 4);
+    const pile = simulation.world.piles.getAt(cell, 'stone')!;
+
+    advance(simulation, TICKS_PER_DAY * 3);
+    expect(pile.days).toBe(3);
+  });
+
+  it("outranks its own workshop's work once it is a season old", () => {
+    // Above `urgent`, which nothing else in the game is. A forager's produce job
+    // is urgent and sits at distance zero from her, so anything merely equal to
+    // it would lose the tiebreak for ever.
+    //
+    // Nobody in the valley: a claimed job keeps the price it was claimed at, and
+    // what is being tested is the price on the board.
+    const simulation = new Simulation({ ...OPTIONS, startingVillagers: 0 });
+    const hut = workshop(simulation, 'gatherer-hut');
+    const pile = heapAt(simulation, hut.accessCell, 'food');
+
+    advance(simulation, 2);
+    const job = haulFor(simulation, pile.id);
+    expect(job.priority).toBeLessThan(JobPriority.urgent);
+
+    pile.days = STALE_PILE_DAYS;
+    advance(simulation, 2);
+    expect(job.priority).toBe(JobPriority.overdue);
+    expect(JobPriority.overdue).toBeGreaterThan(JobPriority.urgent);
+  });
+
+  it('leaves a heap in the wood at its ordinary price, however old', () => {
+    // **Measured, not assumed.** Escalating every twelve-day-old pile anywhere
+    // sent whole settlements across the map for the timber a player's felling
+    // orders had left standing in log heaps, and food banked before the frost fell
+    // from 181 to 92 with eighteen more dead over twenty-four worlds. Timber lying
+    // in a wood nobody has reached yet is a backlog; a heap outside the hut that is
+    // still making more of it is a deadlock. Only the second is worth a day.
+    const simulation = new Simulation({ ...OPTIONS, startingVillagers: 0 });
+    const far = reachableTree(simulation);
+    simulation.world.piles.drop(far, 'logs', 8);
+    const pile = simulation.world.piles.getAt(far, 'logs')!;
+    pile.days = STALE_PILE_DAYS * 4;
+
+    advance(simulation, 3);
+    expect(haulFor(simulation, pile.id).priority).toBeLessThan(JobPriority.overdue);
+  });
+
+  it('ignores a heap of something the workshop beside it does not make', () => {
+    // A heap of stone outside a Gatherer Hut is somebody else's backlog. The rule
+    // is about a workshop's *own* output piling up, because that is the case where
+    // making more of it is worse than useless.
+    const simulation = new Simulation({ ...OPTIONS, startingVillagers: 0 });
+    const hut = workshop(simulation, 'gatherer-hut');
+    const pile = heapAt(simulation, hut.accessCell, 'stone');
+    pile.days = STALE_PILE_DAYS * 2;
+
+    advance(simulation, 3);
+    expect(haulFor(simulation, pile.id).priority).toBeLessThan(JobPriority.overdue);
+  });
+
+  it('is still the same age after a reload', () => {
+    // A reload that forgot the age would hand the player back the deadlock they
+    // had just been rescued from.
+    const simulation = new Simulation(OPTIONS);
+    const cell = reachableTree(simulation);
+    simulation.world.piles.drop(cell, 'stone', 5);
+    simulation.world.piles.getAt(cell, 'stone')!.days = 9;
+
+    const save = serialise(simulation, 'now');
+    const reloaded = new Simulation(OPTIONS);
+    restore(reloaded, save);
+
+    expect(reloaded.world.piles.getAt(cell, 'stone')?.days).toBe(9);
+  });
+
+  it("takes the workshop's own people off production to carry it", () => {
+    // The request, in one assertion: the people who made it are the people who
+    // carry it. They are also the nearest — a forager standing beside her own
+    // harvest — so no rule has to name them; putting the heap above `urgent` is
+    // enough, and it is her own workshop's job she is being taken off.
+    // Two settlers and a two-post hut, which is the deadlock in miniature: every
+    // pair of hands is employed, so there is nobody left to haul and the hut's own
+    // work is `urgent` for ever.
+    const simulation = new Simulation({ ...OPTIONS, startingVillagers: 2 });
+    const hut = workshop(simulation, 'gatherer-hut');
+    advance(simulation, TICKS_PER_DAY * 2);
+    expect(hut.workers).toHaveLength(2);
+
+    const pile = heapAt(simulation, hut.accessCell, 'food');
+    pile.days = STALE_PILE_DAYS;
+    advance(simulation, 2);
+    expect(haulFor(simulation, pile.id).priority).toBe(JobPriority.overdue);
+
+    // Polled rather than run for a fixed stretch: nobody abandons a job
+    // half-done, so a forager finishes the armful she is gathering first. What
+    // matters is who picks the errand up when she next looks at the board.
+    let taker: number | null = null;
+    for (let tick = 0; tick < TICKS_PER_DAY * 2 && taker === null; tick += 1) {
+      advance(simulation, 1);
+      taker = standingHaul(simulation, pile.id)?.assignedVillager ?? null;
+    }
+    expect(hut.workers).toContain(taker);
+  });
+});
+
+/** A finished workshop of this kind, put up wherever the ground allows. */
+function workshop(simulation: Simulation, id: BuildingId) {
+  const world = simulation.world;
+  const from = world.landfallCell;
+  for (let radius = 3; radius < 20; radius += 1) {
+    for (let dx = -radius; dx <= radius; dx += 1) {
+      for (let dy = -radius; dy <= radius; dy += 1) {
+        const placed = world.buildings.place(world, id, { gx: from.gx + dx, gy: from.gy + dy });
+        if (placed) {
+          world.buildings.complete(world, placed);
+          return placed;
+        }
+      }
+    }
+  }
+  throw new Error(`nowhere to put a ${id}`);
+}
+
+/** A heap on or beside a cell, whichever the ground took. */
+function heapAt(simulation: Simulation, cell: GridPoint, resource: ResourceId) {
+  simulation.world.dropNear(cell, resource, 8);
+  const pile = [...simulation.world.piles.all].find((candidate) => candidate.resource === resource);
+  if (!pile) {
+    throw new Error(`no heap of ${resource} was dropped`);
+  }
+  return pile;
+}
+
+/** The standing haul job against a heap, or `undefined` once it is done with. */
+function standingHaul(simulation: Simulation, pileId: number) {
+  return [...simulation.jobs.all].find(
+    (candidate) => candidate.type === 'haul' && candidate.targetEntityId === pileId,
+  );
+}
+
+/** The same, for the tests that would be meaningless without one. */
+function haulFor(simulation: Simulation, pileId: number) {
+  const job = standingHaul(simulation, pileId);
+  if (!job) {
+    throw new Error(`no haul job for pile ${pileId}`);
+  }
+  return job;
+}
+
+/** Runs a settlement forward, keeping its own tick count. */
+function advance(simulation: Simulation, ticks: number): void {
+  const from = simulation.tick + 1;
+  for (let tick = from; tick < from + ticks; tick += 1) {
+    simulation.update(tick, TICK);
+  }
+}

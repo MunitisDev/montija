@@ -78,6 +78,7 @@ export function serialise(simulation: Simulation, savedAt: string): SaveGame {
       gy: pile.cell.gy,
       resource: pile.resource,
       amount: pile.amount,
+      days: pile.days,
     })),
 
     storages: simulation.storages.all.map((storage) => ({
@@ -142,7 +143,15 @@ export function restore(simulation: Simulation, save: SaveGame): void {
 
   world.piles.clear();
   for (const pile of save.piles) {
-    world.piles.drop({ gx: pile.gx, gy: pile.gy }, pile.resource, pile.amount);
+    const cell = { gx: pile.gx, gy: pile.gy };
+    world.piles.drop(cell, pile.resource, pile.amount);
+    // The age comes back with it. A heap twelve days old is the settlement's
+    // most urgent errand, and a reload that forgot it would quietly hand the
+    // player back the deadlock they had just been rescued from.
+    const restored = world.piles.getAt(cell, pile.resource);
+    if (restored) {
+      restored.days = pile.days ?? 0;
+    }
   }
 
   simulation.storages.clear();

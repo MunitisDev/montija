@@ -31,6 +31,7 @@ import {
 } from './logistics/TradeSystem';
 import { newChronicle, type Chronicle } from './history/Chronicle';
 import { causeOfDeath, Necrology, type DeathRecord } from './history/Necrology';
+import type { ResourcePile } from './resources/ResourcePile';
 import { WearLedger } from './resources/wear';
 
 import {
@@ -161,6 +162,29 @@ export type Advice =
  * by then the answer is "you needed another one yesterday".
  */
 export const STORAGE_WARNING_FRACTION = 0.9;
+
+/**
+ * Days a heap may lie on the ground before carrying it beats making more.
+ *
+ * Twelve, which is a season — the player's own figure, and the right one: it is
+ * long enough that an ordinary busy day, or a hauler taking the long way round,
+ * never trips it, and short enough that a settlement cannot spend a whole season
+ * producing onto ground nobody clears.
+ *
+ * What it guards against is a specific and previously fatal shape: every pair of
+ * hands employed, so nothing is left to haul, and a workshop's own work being
+ * `urgent` means its people keep making more. See `haulWorth`.
+ */
+export const STALE_PILE_DAYS = 12;
+
+/**
+ * How far from its doorway a workshop's own output can land, in cells.
+ *
+ * Output is dropped at the doorway and spills to the next free cell when that
+ * one is taken, so three covers a busy doorway and takes in nothing that the
+ * workshop did not make.
+ */
+const OUTPUT_RADIUS = 3;
 
 /** `true` when a set of stores exists and is nearly full. */
 function nearlyFull(fill: { readonly used: number; readonly capacity: number }): boolean {
@@ -451,6 +475,7 @@ export class Simulation {
     this.createProductionJobs();
     this.createForestryJobs();
     this.createHaulJobs();
+    this.escalateStaleHauls();
     this.villagers.update(tickSeconds);
     // Phase 7+ : production, seasons.
   }
@@ -1054,6 +1079,11 @@ export class Simulation {
     // People eat before anything turns. A settlement should never starve on a
     // day it had food, only to watch that same food rot the same night.
     this.lastSpoilage = runSpoilage(this.storages, this.world.piles);
+
+    // And every heap on the ground is a day older. What that buys is the rule
+    // below it: goods nobody has carried in twelve days outrank the work of
+    // making more of them.
+    this.world.piles.ageByADay();
 
     // Sickness, after people have eaten and burned: whether somebody is hungry
     // or cold today is what decides whether they fall ill today.
@@ -2165,6 +2195,72 @@ export class Simulation {
   }
 
   /**
+   * Sends a workshop's people to carry their own output when it stops moving.
+   *
+   * **The failure this answers was reported from play: the ground covered in
+   * goods.** A settlement can employ every pair of hands it has, and then nothing
+   * is left to haul — and because a workshop's own work is `urgent`, its people go
+   * on making more onto a heap that never moves. A season of that is not a busy
+   * settlement, it is a broken one.
+   *
+   * So a heap that has lain {@link STALE_PILE_DAYS} days **beside the workshop that
+   * made it** becomes the most important thing on the board, above production
+   * itself. The nearest pair of hands is then the pair that made it: the forager is
+   * standing beside her own harvest, so she carries it in and goes back to work,
+   * which is what a person would do.
+   *
+   * **Beside its maker, and not every old heap anywhere** — measured, because the
+   * blunt version was tried first. Escalating *any* twelve-day-old pile sent the
+   * whole settlement across the map for the log heaps a player's felling orders had
+   * left in the wood, and food banked before the frost fell from 181 to 92 with
+   * eighteen more dead over twenty-four worlds. Timber lying in a wood nobody has
+   * got to yet is a backlog; a heap of food outside the hut that is still making
+   * more of it is a deadlock, and only the second one is worth breaking a day for.
+   */
+  private escalateStaleHauls(): void {
+    for (const pile of this.world.piles.all) {
+      if (pile.days < STALE_PILE_DAYS || !this.madeNearby(pile)) {
+        continue;
+      }
+      const job = this.jobs.findByTarget('haul', pile.id);
+      if (job && job.state === 'available') {
+        job.priority = JobPriority.overdue;
+      }
+    }
+  }
+
+  /**
+   * `true` when a working workshop that makes this good stands beside the heap.
+   *
+   * Both halves matter. A **complete** building, because a site makes nothing. A
+   * building that **produces this resource**, so a heap of stone beside a
+   * woodcutter is somebody else's backlog rather than its own output.
+   *
+   * The radius is small on purpose: output is dropped at the workshop's doorway
+   * and spills to the next free cell when that one is taken, so three cells covers
+   * a busy doorway and nothing else.
+   */
+  private madeNearby(pile: ResourcePile): boolean {
+    for (const building of this.world.buildings.all) {
+      if (!building.isComplete) {
+        continue;
+      }
+      const recipe = building.definition.recipeId ? findRecipe(building.definition.recipeId) : null;
+      if (!recipe?.outputs.some((output) => output.resource === pile.resource)) {
+        continue;
+      }
+      const cell = building.accessCell;
+      if (
+        Math.abs(cell.gx - pile.cell.gx) <= OUTPUT_RADIUS &&
+        Math.abs(cell.gy - pile.cell.gy) <= OUTPUT_RADIUS
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Re-prices standing haul work as the stores fill and empty.
    *
    * Pricing only at the moment a job is posted is not enough: a pile of logs
@@ -2185,6 +2281,14 @@ export class Simulation {
     // order; what the settlement is free to deprioritise is *carrying more of
     // what it already has*.
     for (const job of this.jobs.all) {
+      // **`haulResource` is only set on a load bound for a site**, so this loop has
+      // never actually touched an ordinary pile-to-yard haul — the very case the
+      // paragraph above describes. Repairing that was tried and measured: pricing
+      // ordinary hauls of a plentiful good down to `low` cost twenty-three lives
+      // across twenty-four worlds and half the food banked before the frost, because
+      // "the yard already holds enough logs" is true right up to the day a woodshed
+      // eats them. It stays as it is until there is a rule worth putting here; what
+      // the ground needed was `escalateStaleHauls`, which is a different question.
       if (job.type !== 'haul' || job.state !== 'available' || !job.haulResource) {
         continue;
       }

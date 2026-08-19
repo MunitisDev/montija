@@ -727,14 +727,15 @@ Every job carries a priority, and a villager takes the highest-priority job they
 are allowed to do, breaking ties on distance and then on job id so a settlement
 replayed from its seed behaves identically.
 
-| Priority   | Work                                                                     |
-| ---------- | ------------------------------------------------------------------------ |
-| **urgent** | producing at a workshop — employees only                                 |
-| **high**   | building; hauling goods the settlement still wants; delivering to a site |
-| **normal** | felling, mining, planting, paving                                        |
-| **low**    | demolition; hauling more of something the settlement has plenty of       |
+| Priority    | Work                                                                     |
+| ----------- | ------------------------------------------------------------------------ |
+| **overdue** | a workshop's own output, left on the ground beside it for a season       |
+| **urgent**  | producing at a workshop — employees only                                 |
+| **high**    | building; hauling goods the settlement still wants; delivering to a site |
+| **normal**  | felling, mining, planting, paving                                        |
+| **low**     | demolition; hauling more of something the settlement has plenty of       |
 
-Three asymmetries in that table are deliberate and were each put there to fix
+Four asymmetries in that table are deliberate and were each put there to fix
 something measured.
 
 **Hauling in outranks cutting more down.** At equal priority the nearest job
@@ -753,6 +754,27 @@ drops to the bottom of the board. Measured over twelve settlements playing the
 `prepared` line for a year: **120 deaths before, 80 after**, and food banked at
 the first frost up by a fifth. It is not the goods that are worthless, it is that
 particular trip, and the hands it frees go to the harvest and to the rock.
+
+**A workshop's own output, left where it fell, outranks making more of it.** The
+one thing in the game above `urgent`, and it exists because of a shape a player
+photographed: the ground covered in goods. A settlement can employ every pair of
+hands it has, and then nothing is left to haul — and because a workshop's own work
+is urgent, its people go on producing onto a heap that never moves. After
+twelve days — a season, `STALE_PILE_DAYS` — that heap becomes the most
+important thing on the board, and the nearest pair of hands is almost always the
+pair that made it: the forager is standing beside her own harvest, so she carries
+it in and goes back to work.
+
+**Beside its maker, and not every old heap anywhere** — which was tried first and
+measured. Escalating _any_ twelve-day-old pile sent whole settlements across the
+map for the log heaps a player's felling orders had left in the wood: food banked
+before the frost fell from 181 to 92 and eighteen more people died across
+twenty-four worlds. Timber lying in a wood nobody has reached yet is a backlog; a
+heap outside the hut that is still making more of it is a deadlock, and only the
+second is worth breaking a day for. Restricted to the maker, over the same
+twenty-four worlds: **57 deaths to 54 and 73 to 72**, food banked up from 189 to
+235 and from 181 to 193, and the food left lying on the ground at the year's end
+down from 31 to 5.
 
 **Demolition sits below everything.** Tearing something down is never more urgent
 than feeding the people who live there.

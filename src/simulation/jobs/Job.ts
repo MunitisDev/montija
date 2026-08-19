@@ -65,6 +65,16 @@ export const JobPriority = {
   normal: 20,
   high: 30,
   urgent: 40,
+  /**
+   * Above a workshop's own work, which nothing else is.
+   *
+   * Reserved for goods that have been lying on the ground so long that making
+   * more of them is worse than useless. A workshop's produce job is `urgent`, so
+   * this is the one thing in the game that will take a forager out of her hut —
+   * and it is her own harvest she is being sent to carry. See
+   * `Simulation.haulWorth`.
+   */
+  overdue: 50,
 } as const;
 
 export interface Job {

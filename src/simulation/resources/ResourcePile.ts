@@ -8,6 +8,9 @@
  *
  * Piles are reserved while a hauler is on the way, so two villagers never set
  * off for the same one.
+ *
+ * Every pile also counts the **days it has been lying there**, which is how the
+ * settlement notices goods nobody is carrying. See {@link ResourcePile.days}.
  */
 
 import { resourceDefinition, type ResourceId } from '@/data/resources';
@@ -19,6 +22,16 @@ export class ResourcePile {
   public readonly cell: GridPoint;
   public readonly resource: ResourceId;
   public readonly inventory: Inventory;
+  /**
+   * Days this pile has been on the ground.
+   *
+   * Counted once at each day boundary, like every other slow process in the
+   * game. **Adding to a pile does not reset it**, and that is the point: a heap
+   * that keeps being topped up while nobody carries any of it away is exactly
+   * the situation this number exists to notice — a workshop making more of
+   * something than the settlement is moving. See `Simulation.haulWorth`.
+   */
+  public days = 0;
 
   constructor(id: number, cell: GridPoint, resource: ResourceId) {
     this.id = id;
@@ -140,6 +153,19 @@ export class ResourcePileRegistry {
     this.byId.clear();
     this.byCell.clear();
     this.changeVersion += 1;
+  }
+
+  /**
+   * Adds a day to every pile's count.
+   *
+   * Called at the day boundary. A loop over a short list once a day, which is
+   * why the age is a counter here rather than a tick stamped on each pile and
+   * subtracted from a clock the registry would otherwise have to be told about.
+   */
+  public ageByADay(): void {
+    for (const pile of this.byId.values()) {
+      pile.days += 1;
+    }
   }
 
   /** Total of one resource lying on the ground, not yet stored. */

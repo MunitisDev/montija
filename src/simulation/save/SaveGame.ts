@@ -92,6 +92,12 @@ export interface SavedPile {
   readonly gy: number;
   readonly resource: ResourceId;
   readonly amount: number;
+  /**
+   * Days it has lain there. Absent in saves written before heaps had an age,
+   * which restore as new — a settlement reloaded is not punished for the time
+   * its goods spent on the ground before anybody was counting.
+   */
+  readonly days?: number;
 }
 
 export interface SavedStorage {
