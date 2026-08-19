@@ -42,6 +42,40 @@ const NEIGHBOURS: readonly (readonly [number, number])[] = [
   [-1, -1],
 ];
 
+/**
+ * `true` when a step from one cell to a neighbour is one a villager can take.
+ *
+ * **The rule that has to match the pathfinder exactly.** `AStar` forbids cutting
+ * a corner: a diagonal step is legal only when *both* orthogonal cells it passes
+ * between are clear, because the looser rule reads as walking through a wall. So
+ * a purely diagonal gap is impassable — and the region map used to count it as a
+ * way through.
+ *
+ * That mismatch was the most expensive bug this project has had. `connects` said
+ * two cells were joined; every route between them failed after burning the whole
+ * node budget; villagers claimed errands they could not finish, dropped their
+ * loads and were handed the same errand again. Measured on a settlement of fifty:
+ * **twenty-nine thousand** material errands completed carrying nothing, nineteen
+ * sites had not moved in a hundred days, and the ground filled with heaps nobody
+ * could deliver. It also quietly broke everything built on top of `connects` —
+ * the sealed-pocket rule, the rescue for stranded villagers, the check that stops
+ * a villager claiming work across a wall.
+ *
+ * `blocked` is ground that is about to close: see {@link NavigationGrid.wouldSeal}.
+ */
+function stepAllowed(
+  passable: (gx: number, gy: number) => boolean,
+  gx: number,
+  gy: number,
+  dx: number,
+  dy: number,
+): boolean {
+  if (dx === 0 || dy === 0) {
+    return true;
+  }
+  return passable(gx + dx, gy) && passable(gx, gy + dy);
+}
+
 export class NavigationGrid {
   public readonly width: number;
   public readonly height: number;
@@ -70,6 +104,8 @@ export class NavigationGrid {
    * majority of grid changes are of that kind.
    */
   private regions: Int32Array | null = null;
+  /** Cells per region, built with the region map and thrown away with it. */
+  private regionSizes: Map<number, number> | null = null;
   private structure = 0;
 
   /**
@@ -109,6 +145,7 @@ export class NavigationGrid {
       this.refreshCell(terrain, gx, gy);
     });
     this.regions = null;
+    this.regionSizes = null;
     this.structure += 1;
   }
 
@@ -149,6 +186,7 @@ export class NavigationGrid {
     const now = (this.costs[index] ?? BLOCKED) !== BLOCKED;
     if (wasWalkable !== now) {
       this.regions = null;
+      this.regionSizes = null;
       this.structure += 1;
     }
   }
@@ -233,20 +271,32 @@ export class NavigationGrid {
    * The search is a flood fill that stops the moment it has found all of them,
    * which for an ordinary plot in open ground is a dozen cells.
    */
-  public wouldSeal(cells: readonly GridPoint[]): boolean {
+  public wouldSeal(cells: readonly GridPoint[], alsoBlocked: readonly GridPoint[] = []): boolean {
     const inside = new Set(cells.map((cell) => cell.gy * this.width + cell.gx));
+    // **Ground that is about to close but has not closed yet.** A construction
+    // site does not block traffic while it is being built — deliberately, so
+    // haulers can reach it — so two placements can each pass this test on its
+    // own and seal a pocket between them the day they both finish. Measured: a
+    // settlement of fifty-eight had thirty-one of its people in a four-cell yard
+    // and a one-cell hole, both walled in by pairs of houses raised side by side.
+    const pending = new Set(alsoBlocked.map((cell) => cell.gy * this.width + cell.gx));
+    const closed = (index: number): boolean => inside.has(index) || pending.has(index);
 
     // The walkable ring around the footprint, which is what has to stay joined.
+    /** Ground somebody could stand on once this plot is built. */
+    const open = (gx: number, gy: number): boolean =>
+      this.isWalkable(gx, gy) && !closed(gy * this.width + gx);
+
     const ring: number[] = [];
     for (const cell of cells) {
       for (const [dx, dy] of NEIGHBOURS) {
         const gx = cell.gx + dx;
         const gy = cell.gy + dy;
-        if (!this.isWalkable(gx, gy)) {
+        if (!open(gx, gy)) {
           continue;
         }
         const index = gy * this.width + gx;
-        if (inside.has(index) || ring.includes(index)) {
+        if (closed(index) || ring.includes(index)) {
           continue;
         }
         ring.push(index);
@@ -272,12 +322,16 @@ export class NavigationGrid {
       for (const [dx, dy] of NEIGHBOURS) {
         const nx = gx + dx;
         const ny = gy + dy;
-        if (!this.isWalkable(nx, ny)) {
+        if (!open(nx, ny)) {
+          continue;
+        }
+        // The same corner rule the pathfinder uses, against the map as it will
+        // be once this plot is built: a diagonal squeeze is not a way round.
+        if (!stepAllowed(open, gx, gy, dx, dy)) {
           continue;
         }
         const next = ny * this.width + nx;
-        // Round the footprint, not through it: it is about to be built on.
-        if (inside.has(next) || seen.has(next)) {
+        if (seen.has(next)) {
           continue;
         }
         seen.add(next);
@@ -287,6 +341,35 @@ export class NavigationGrid {
     }
 
     return wanted.size > 0;
+  }
+
+  /**
+   * How many cells belong to a region, or `0` for none.
+   *
+   * **What tells a settlement from a pocket.** Asking whether a region holds one
+   * of the settlement's stores is not enough: a four-cell yard walled in between
+   * four houses had a store's doorway inside it, so it looked like part of the
+   * settlement and the thirty people trapped in it were never rescued. Size is a
+   * structural fact and cannot be argued with.
+   *
+   * Counted off the same region map every other question uses, and cached with
+   * it, so this costs one array read after the first call.
+   */
+  public regionCellCount(region: number): number {
+    if (region < 0) {
+      return 0;
+    }
+    if (!this.regionSizes || !this.regions) {
+      this.regions ??= this.mapRegions();
+      const sizes = new Map<number, number>();
+      for (const at of this.regions) {
+        if (at >= 0) {
+          sizes.set(at, (sizes.get(at) ?? 0) + 1);
+        }
+      }
+      this.regionSizes = sizes;
+    }
+    return this.regionSizes.get(region) ?? 0;
   }
 
   /** `true` when a villager standing on one cell could reach the other. */
@@ -332,6 +415,11 @@ export class NavigationGrid {
             const nx = gx + dx;
             const ny = gy + dy;
             if (nx < 0 || ny < 0 || nx >= this.width || ny >= this.height) {
+              continue;
+            }
+            // The pathfinder will not cut this corner, so neither may the map
+            // that claims to say what the pathfinder can do. See `stepAllowed`.
+            if (!stepAllowed((x, y) => this.isWalkable(x, y), gx, gy, dx, dy)) {
               continue;
             }
             const neighbour = ny * this.width + nx;

@@ -66,7 +66,32 @@ import { Villager, type Sex } from './Villager';
 const TREE_SHAPE_COUNT = 6;
 
 /** Maximum A* searches started per tick, across all villagers. */
+/**
+ * How many villagers may look for work in one tick, at the very least.
+ *
+ * **A cap chosen when a settlement had ten people, and it does not scale.** Every
+ * villager who wants to start anything needs a route, and routes are the one
+ * genuinely expensive thing in a tick, so the search is rationed. At sixty-one
+ * villagers that ration meant each of them got to look for work about once every
+ * fifteen ticks — and half the rations went to children going for a walk.
+ * Measured: sixteen able adults standing free with thirty-seven material hauls on
+ * the board, thirteen sites that had not moved in eighty days, and eighty heaps
+ * of goods lying about a working settlement of sixty.
+ *
+ * It is a floor now rather than a ceiling: see {@link workSearchBudget}.
+ */
 const PATH_REQUESTS_PER_TICK = 4;
+
+/**
+ * How many villagers may look for **work** this tick.
+ *
+ * A quarter of the settlement, so the ration grows with the village that has to
+ * be run. Below sixteen people this is exactly the old four, which is why every
+ * measurement taken of a ten-villager settlement still holds.
+ */
+function workSearchBudget(population: number): number {
+  return Math.max(PATH_REQUESTS_PER_TICK, Math.ceil(population / 4));
+}
 
 /** How far an idle villager will pick a new spot to wander to, in cells. */
 const WANDER_RADIUS = 12;
@@ -313,7 +338,12 @@ export class VillagerSystem {
 
   /** Advances every villager by one fixed tick. */
   public update(tickSeconds: number): void {
-    let pathBudget = PATH_REQUESTS_PER_TICK;
+    let workBudget = workSearchBudget(this.villagers.length);
+    // **Wandering has its own ration.** Children and elders take the same routes
+    // as anybody else, and out of one shared pool a village of thirty-three
+    // children stopped its adults from working: the walk to nowhere and the walk
+    // to a job competed, and there were twice as many walkers.
+    let wanderBudget = PATH_REQUESTS_PER_TICK;
 
     for (const villager of this.villagers) {
       villager.previousPosition = villager.position;
@@ -348,6 +378,21 @@ export class VillagerSystem {
         continue;
       }
 
+      // **Nobody walks around full.** A villager can end a job still holding
+      // goods — they fall ill mid-errand, or they are rescued out of a pocket, or
+      // the load they fetched turned out not to be wanted — and a full pack means
+      // every future errand loads nothing at all. They were then useless for the
+      // rest of their lives while still claiming work: measured on a settlement of
+      // sixty-seven, eight of its haulers were walking about with forty logs each,
+      // forty thousand material errands had completed carrying nothing, and twelve
+      // sites had not moved in a hundred days.
+      //
+      // Put down rather than deleted, and the heap posts its own haul job like any
+      // other, so nothing is lost and somebody picks it up.
+      if (!villager.inventory.isEmpty) {
+        this.putDown(villager);
+      }
+
       if (villager.idleTicks > 0) {
         villager.activity = 'idle';
         villager.idleTicks -= 1;
@@ -355,18 +400,26 @@ export class VillagerSystem {
       }
 
       villager.activity = 'idle';
-      if (pathBudget <= 0) {
-        continue;
-      }
-      pathBudget -= 1;
 
       // Real work first; wandering is only what they do when there is none.
       // Children below working age are not put to work — they eat and grow up,
       // which is the cost of a population that renews itself — and neither are
       // elders, who have earned the walk about the village they are taking.
-      if (!villager.canWork || !this.tryTakeJob(villager)) {
-        this.chooseWanderTarget(villager);
+      if (villager.canWork) {
+        if (workBudget <= 0) {
+          continue;
+        }
+        workBudget -= 1;
+        if (this.tryTakeJob(villager)) {
+          continue;
+        }
       }
+
+      if (wanderBudget <= 0) {
+        continue;
+      }
+      wanderBudget -= 1;
+      this.chooseWanderTarget(villager);
     }
   }
 
@@ -445,10 +498,7 @@ export class VillagerSystem {
     }
     // Whatever they were carrying falls where they stood.
     if (villager) {
-      for (const { resource, amount } of villager.inventory.contents) {
-        const dropped = this.world.piles.drop(villager.cell, resource, amount);
-        villager.inventory.remove(resource, dropped);
-      }
+      this.putDown(villager);
     }
     return true;
   }
@@ -757,12 +807,18 @@ export class VillagerSystem {
     // goods — same inventories, same transfer, so "villagers physically deliver
     // construction materials" is enforced rather than merely intended.
     //
-    // **A site takes only what it still owes**, and getting that wrong killed
-    // buildings outright. A site's materials hold exactly its cost, so a load
-    // tipped in whole could fill the space another material needed: a Feller's
-    // Hut costing six logs and two stone was measured holding *eight logs* and
-    // full, with its two stone lying on the doorstep and re-fetched for ever.
-    // The building could never be finished and nothing on screen said why.
+    // Three destinations can share one cell, and the order between them is the
+    // whole of this: a **site that owes some of what is being carried** first,
+    // then a **yard whose doorway is here**, then a **finished building's input
+    // buffer**. Doorways get shared — a free cell beside one building is a free
+    // cell beside its neighbour — and every wrong ordering of these three has
+    // been shipped and measured.
+    //
+    // **A site takes only what it still owes.** A site's materials hold exactly
+    // its cost, so a load tipped in whole could fill the space another material
+    // needed: a Feller's Hut costing six logs and two stone was measured holding
+    // *eight logs* and full, with its two stone lying on the doorstep and
+    // re-fetched for ever.
     const site = job.deliverTo === null ? null : this.siteAwaiting(job.deliverTo, villager);
     if (site) {
       for (const { resource, amount } of [...villager.inventory.contents]) {
@@ -772,24 +828,9 @@ export class VillagerSystem {
         }
       }
       this.world.buildings.markChanged();
+    }
 
-      // **Anything the site cannot take goes on to a yard, in their hands.**
-      // Not down on the doorstep: a heap of stone outside a half-built house is
-      // exactly what a player reads as the works being stuck, and it is only
-      // there because somebody else's load arrived first while this one was
-      // walking. Measured before this: a pile sat on some site's doorway for one
-      // tick in forty of an ordinary year.
-      if (!villager.inventory.isEmpty) {
-        const carried = villager.inventory.contents[0];
-        const yard = carried
-          ? this.storages.findNearestAccepting(villager.cell, carried.resource)
-          : null;
-        if (yard) {
-          job.deliverTo = yard.cell;
-          return false;
-        }
-      }
-    } else {
+    if (!villager.inventory.isEmpty) {
       const destination = this.deliveryInventory(job.deliverTo);
       if (destination) {
         villager.inventory.transferAll(destination);
@@ -798,13 +839,33 @@ export class VillagerSystem {
       }
     }
 
+    // **Anything nobody here will take goes on to a yard, in their hands.** Not
+    // down on the doorstep: a heap of stone outside a half-built house is exactly
+    // what a player reads as the works being stuck, and it is only there because
+    // somebody else's load arrived first while this one was walking.
+    //
+    // Never back to the cell they are standing on, which was a live infinite
+    // loop: a Tailor site sharing its doorway with a finished larder was handed
+    // every passing load of food, could not take it, and sent the hauler to the
+    // nearest yard — which was the larder, at the same cell. The villager span
+    // there for the rest of the game, and a settlement of seventy-eight lost its
+    // haulers one at a time until twelve sites had not moved in eighty days.
     if (!villager.inventory.isEmpty) {
-      // The yard filled up mid-delivery. Put the remainder back on the ground
-      // rather than deleting it — resources must never simply vanish.
-      for (const { resource, amount } of villager.inventory.contents) {
-        const dropped = this.world.piles.drop(villager.cell, resource, amount);
-        villager.inventory.remove(resource, dropped);
+      const carried = villager.inventory.contents[0];
+      const yard = carried
+        ? this.storages.findNearestAccepting(villager.cell, carried.resource)
+        : null;
+      if (
+        yard &&
+        job.deliverTo !== null &&
+        (yard.cell.gx !== job.deliverTo.gx || yard.cell.gy !== job.deliverTo.gy)
+      ) {
+        job.deliverTo = yard.cell;
+        return false;
       }
+      // Nowhere at all will have it. Put it down rather than deleting it:
+      // resources must never simply vanish.
+      this.putDown(villager);
     }
 
     return true;
@@ -838,10 +899,14 @@ export class VillagerSystem {
       return false;
     }
 
+    const before = villager.inventory.count(pile.resource);
     pile.inventory.transfer(villager.inventory, pile.resource, room);
     this.world.piles.removeIfEmpty(pile.id);
 
-    return !villager.inventory.isEmpty;
+    // **What this trip picked up, not what the villager happens to hold.**
+    // Reporting the latter told a job it had loaded when it had loaded nothing,
+    // which is how a hauler with a full pack kept being handed errands.
+    return villager.inventory.count(pile.resource) > before;
   }
 
   /**
@@ -869,40 +934,48 @@ export class VillagerSystem {
 
     const carryLimit = resourceDefinition(job.haulResource).carryLimit;
     const room = Math.min(carryLimit, villager.inventory.freeSpace, needed);
+    const before = villager.inventory.count(job.haulResource);
     storage.inventory.transfer(villager.inventory, job.haulResource, room);
     this.storages.markChanged();
 
-    return !villager.inventory.isEmpty;
+    // What this trip took, not what is in the pack. See `loadFromPile`.
+    return villager.inventory.count(job.haulResource) > before;
   }
 
   /**
-   * What accepts a delivery at a cell.
+   * Where a delivery to this cell actually goes.
    *
-   * Buildings are checked before yards, because a workshop or site standing
-   * next to a yard must receive what was routed to it. An unfinished building
-   * takes construction materials; a finished one takes recipe inputs. They are
-   * separate stores so a woodcutter's logs are never mistaken for its walls.
+   * A **yard whose doorway is this cell** before a building standing on it. A
+   * finished larder shares its doorway with the storage it opened, and the
+   * building must not answer for it: goods delivered to a Food Storage were
+   * landing in the building's recipe-input buffer instead of on its shelves,
+   * where nothing could ever eat them.
+   *
+   * A site that owes the load is settled before this is ever asked — see
+   * `siteAwaiting` — so what is left here is a yard or a workshop's input.
    */
   private deliveryInventory(cell: GridPoint | null) {
     if (!cell) {
       return null;
     }
 
-    const building = this.buildingAtAccess(cell);
-    // A finished yard shares its doorway with the storage it opened, and the
-    // building must not answer for it: goods delivered to a Food Storage were
-    // landing in the building's recipe-input buffer instead of its shelves,
-    // where nothing could ever eat them. A yard still under construction is a
-    // different matter — it takes its own materials like anything else.
-    const isOpenYard = building !== null && building.isComplete && building.definition.storage;
-    if (building && !isOpenYard) {
-      return building.isComplete ? building.input : building.materials;
-    }
-
     const storage = this.storages.all.find(
       (candidate) => candidate.cell.gx === cell.gx && candidate.cell.gy === cell.gy,
     );
-    return storage?.inventory ?? null;
+    if (storage) {
+      return storage.inventory;
+    }
+
+    const building = this.buildingAtAccess(cell);
+    if (!building || !building.isComplete) {
+      // **Never a site's materials.** What a site owes is settled by
+      // `siteAwaiting`; anything else tipped in there fills the room its own cost
+      // needs and kills the building outright. Measured: a house owing eight logs
+      // and four stone was found holding eight logs and *four firewood*, full, and
+      // could never be finished.
+      return null;
+    }
+    return building.input;
   }
 
   /**
@@ -915,7 +988,6 @@ export class VillagerSystem {
    * ever. Asking for the one that actually owes the load settles it.
    */
   private siteAwaiting(cell: GridPoint, villager: Villager): Building | null {
-    let anySite: Building | null = null;
     for (const building of this.world.buildings.all) {
       if (building.isComplete) {
         continue;
@@ -923,28 +995,47 @@ export class VillagerSystem {
       if (building.accessCell.gx !== cell.gx || building.accessCell.gy !== cell.gy) {
         continue;
       }
-      anySite ??= building;
       for (const { resource } of villager.inventory.contents) {
         if (building.stillNeeds(resource) > 0) {
           return building;
         }
       }
     }
-    return anySite;
+    // **No fallback to "some site is here".** A site that owes nothing is not a
+    // destination, and treating it as one handed every passing load of food to a
+    // Tailor site that could not take it. See the note in `advanceHaul`.
+    return null;
   }
 
   /**
-   * How much of a resource the destination still wants.
+   * How much of a resource somebody at this cell still wants.
+   *
+   * **Asked of everybody standing there, not the first one found.** Doorways get
+   * shared, and resolving a shared cell arbitrarily is what froze a settlement of
+   * seventy-eight: a house site whose doorway it shared with three finished
+   * buildings was asked about through one of *them*, the answer was nought, the
+   * hauler picked up nothing, the job completed empty, and the site re-posted it
+   * — for eighty measured days. Thirteen sites never moved.
+   *
+   * The most anybody wants is the right answer: the load will find its taker at
+   * the far end, where the order is site-then-yard-then-workshop.
    *
    * Bounded so a hauler takes only what is needed rather than stripping the
    * yard and carrying the surplus back again.
    */
   private amountNeededAt(cell: GridPoint, resource: ResourceId): number {
-    const building = this.buildingAtAccess(cell);
-    if (!building) {
-      return 0;
+    let most = 0;
+    for (const building of this.world.buildings.all) {
+      if (building.accessCell.gx !== cell.gx || building.accessCell.gy !== cell.gy) {
+        continue;
+      }
+      most = Math.max(most, this.wantedBy(building, resource));
     }
+    return most;
+  }
 
+  /** How much of a resource one building would take right now. */
+  private wantedBy(building: Building, resource: ResourceId): number {
     if (!building.isComplete) {
       return building.stillNeeds(resource);
     }
@@ -960,14 +1051,25 @@ export class VillagerSystem {
     return Math.max(0, target - building.input.count(resource));
   }
 
-  /** The building whose work happens at this cell. */
-  private buildingAtAccess(cell: GridPoint) {
+  /**
+   * The building whose work happens at this cell, preferring a finished one.
+   *
+   * A site that owes the load is settled before this is asked — see
+   * `siteAwaiting` — so when a doorway is shared what is wanted here is the
+   * building that is actually working, not the one still going up.
+   */
+  private buildingAtAccess(cell: GridPoint): Building | null {
+    let site: Building | null = null;
     for (const building of this.world.buildings.all) {
-      if (building.accessCell.gx === cell.gx && building.accessCell.gy === cell.gy) {
+      if (building.accessCell.gx !== cell.gx || building.accessCell.gy !== cell.gy) {
+        continue;
+      }
+      if (building.isComplete) {
         return building;
       }
+      site ??= building;
     }
-    return null;
+    return site;
   }
 
   /**
@@ -1025,10 +1127,7 @@ export class VillagerSystem {
     if (!standing) {
       // Cannot reach the yard. Put the load down where we stand so it is not
       // lost, and hand the job back.
-      for (const { resource, amount } of villager.inventory.contents) {
-        const dropped = this.world.piles.drop(villager.cell, resource, amount);
-        villager.inventory.remove(resource, dropped);
-      }
+      this.putDown(villager);
       this.jobs.complete(job.id);
       villager.currentJobId = null;
       villager.activity = 'idle';
@@ -1271,6 +1370,23 @@ export class VillagerSystem {
       villager.currentJobId = null;
     }
     villager.activity = 'idle';
+  }
+
+  /**
+   * Sets down whatever a villager is holding, where they stand.
+   *
+   * Used when they have no job to deliver it with. The heap posts its own haul
+   * job on the next tick, exactly as a felled tree's logs do, so the goods are
+   * back in circulation rather than riding around in somebody's arms.
+   */
+  private putDown(villager: Villager): void {
+    for (const { resource, amount } of [...villager.inventory.contents]) {
+      // `dropNear`, not `drop`: a heap holds one stack, and a villager carrying
+      // two stacks onto a cell that already has one put down what fitted and
+      // walked away with the rest — which is the full pack this exists to clear.
+      const dropped = this.world.dropNear(villager.cell, resource, amount);
+      villager.inventory.remove(resource, dropped);
+    }
   }
 
   /**

@@ -1341,8 +1341,14 @@ export class Simulation {
       // to know: the trees it marks go through the same fell → logs → haul
       // pipeline the player's own marks do, and the ground grows back because
       // nobody said otherwise — see `recordFelling`.
+      // **Counted against what the settlement has, not what it has tidied
+      // away.** The target used to read the shelves alone, so a Feller went on
+      // cutting with nine hundred logs already lying in the wood — measured, and
+      // it is what carpets a working settlement in timber. A thousand logs on the
+      // ground are a thousand logs; the wood is better left standing until
+      // somebody has carried them in.
       const felling = building.definition.felling;
-      if (felling && this.storages.totalOf('logs') < felling.logTarget) {
+      if (felling && this.logsInHand() < felling.logTarget) {
         this.cropTimber(building, felling.radius, felling.outstanding);
       }
 
@@ -1431,6 +1437,23 @@ export class Simulation {
         employerId: workshop.id,
       });
     }
+  }
+
+  /**
+   * Every log the settlement owns: on the shelves and on the ground.
+   *
+   * A pile in the wood is not yet useful, but it is not another reason to fell
+   * either — and reading only the store is what let a Feller's Hut answer a
+   * shortage of *hauling* by cutting more trees down.
+   */
+  private logsInHand(): number {
+    let total = this.storages.totalOf('logs');
+    for (const pile of this.world.piles.all) {
+      if (pile.resource === 'logs') {
+        total += pile.amount;
+      }
+    }
+    return total;
   }
 
   /** Every tree standing inside a lodge's range. */
@@ -2313,37 +2336,59 @@ export class Simulation {
   }
 
   /**
-   * `true` when nobody standing here could walk to any of the settlement's stores.
+   * `true` when somebody standing here is walled off from the settlement proper.
    *
    * **The measurement `world.reaches` cannot make.** A villager is one of its
    * anchors, so a villager walled into a four-cell yard makes that yard count as
-   * part of the settlement and nothing can tell they are stranded. Asked against
-   * the stores instead — which the villager is not — a pocket is a pocket.
+   * part of the settlement and nothing can tell they are stranded.
+   *
+   * And asking merely whether the region holds a *store* is not enough either,
+   * which cost a second measured settlement: one of those four-cell yards had a
+   * larder's doorway inside it, so the pocket looked like part of the settlement
+   * and the thirty people trapped in it were never rescued. Thirty-one of
+   * fifty-eight villagers were in pockets, five sites had not moved in a hundred
+   * and forty days, and fifty-one heaps of goods sat untouched.
+   *
+   * So the settlement is the **largest** region that holds a store. Size is a
+   * structural fact; how many people or stores happen to be inside a pocket is
+   * not — the pocket had more villagers in it than the settlement did, because
+   * children are born at home and home was inside it.
    *
    * `false` for somebody standing inside a wall: that is `stepClear`'s business
-   * and rescuing them twice would fight over where they end up. `false` too when
-   * no store has a walkable doorway at all, because then the answer would be
-   * "everybody", which is not a rescue but a stampede.
+   * and rescuing them twice would fight over where they end up.
    */
   private isCutOff(cell: GridPoint): boolean {
-    const nav = this.world.navigation;
-    const region = nav.regionAt(cell.gx, cell.gy);
+    const region = this.world.navigation.regionAt(cell.gx, cell.gy);
     if (region < 0) {
       return false;
     }
+    const settlement = this.settlementRegion();
+    return settlement >= 0 && region !== settlement;
+  }
 
-    let anyStoreStanding = false;
+  /**
+   * The region the settlement itself occupies: the biggest one with a store in it.
+   *
+   * `-1` when no store has a walkable doorway at all, which makes `isCutOff`
+   * answer "nobody" — a settlement with nowhere to put anything is already lost,
+   * and a rescue that fires on everyone at once is a stampede rather than a fix.
+   */
+  private settlementRegion(): number {
+    const nav = this.world.navigation;
+    let best = -1;
+    let bestSize = 0;
     for (const storage of this.storages.all) {
-      const at = nav.regionAt(storage.cell.gx, storage.cell.gy);
-      if (at < 0) {
+      const region = nav.regionAt(storage.cell.gx, storage.cell.gy);
+      if (region < 0) {
         continue;
       }
-      if (at === region) {
-        return false;
+      const size = nav.regionCellCount(region);
+      if (size > bestSize) {
+        best = region;
+        bestSize = size;
       }
-      anyStoreStanding = true;
     }
-    return anyStoreStanding;
+    return best;
   }
 
   /** Frees any villager still holding a job that no longer exists. */

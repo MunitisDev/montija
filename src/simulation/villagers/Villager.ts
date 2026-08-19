@@ -17,8 +17,15 @@ import { skillLevelOf, type SkillLevel } from '@/data/skills';
 import type { GridPoint, WorldPoint } from '@/shared/types/geometry';
 import { Inventory } from '@/simulation/resources/Inventory';
 
-/** How many units a villager can carry at once, across all resources. */
-export const CARRY_CAPACITY = 20;
+/**
+ * How many units a villager can carry at once, across all resources.
+ *
+ * Doubled with the per-resource limits, and it has to be: a load of thirty food
+ * against a pack that holds twenty is a load of twenty, so raising one without
+ * the other changes nothing. See `ResourceDefinition.carryLimit` for the
+ * measurement that prompted it.
+ */
+export const CARRY_CAPACITY = 40;
 
 /** What a villager is doing, as far as the renderer needs to know. */
 export type VillagerActivity = 'idle' | 'walking' | 'working' | 'hauling' | 'ill';

@@ -20,7 +20,17 @@ export interface ResourceDefinition {
    * in. Bulky things stack lower, so hauling logs takes more trips than food.
    */
   readonly maxStack: number;
-  /** How many units a villager can carry at once. */
+  /**
+   * How many units a villager can carry at once.
+   *
+   * **Doubled once, on the evidence.** A player sent a screenshot of a working
+   * settlement of twenty-eight people with the ground carpeted in goods — nine
+   * hundred logs, five hundred stone, four hundred food in three hundred and
+   * thirty-eight heaps. Every one of those needed a trip, and a pile of twenty
+   * logs at five a trip is four of them. Doubling every limit halves the number
+   * of journeys the settlement owes without changing anything about what it can
+   * hold or how fast it works.
+   */
   readonly carryLimit: number;
   /**
    * Fraction of a stock lost per day in ordinary storage, or 0 for goods that
@@ -53,7 +63,7 @@ export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
     name: 'Logs',
     category: 'material',
     maxStack: 20,
-    carryLimit: 5,
+    carryLimit: 10,
     spoilsPerDay: 0,
     wantedPerVillager: 8,
   },
@@ -62,7 +72,7 @@ export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
     name: 'Firewood',
     category: 'fuel',
     maxStack: 40,
-    carryLimit: 10,
+    carryLimit: 20,
     spoilsPerDay: 0,
     wantedPerVillager: 15,
   },
@@ -71,7 +81,7 @@ export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
     name: 'Stone',
     category: 'material',
     maxStack: 20,
-    carryLimit: 4,
+    carryLimit: 8,
     spoilsPerDay: 0,
     wantedPerVillager: 5,
   },
@@ -82,7 +92,7 @@ export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
     // Dense and heavy: a villager carries less of it than of anything else,
     // so a mine a long way from a yard is a real cost rather than a detail.
     maxStack: 15,
-    carryLimit: 3,
+    carryLimit: 6,
     spoilsPerDay: 0,
     wantedPerVillager: 3,
   },
@@ -91,7 +101,7 @@ export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
     name: 'Tools',
     category: 'tool',
     maxStack: 20,
-    carryLimit: 6,
+    carryLimit: 12,
     // Tools wear out through use, not through sitting in a yard. The wear is
     // charged daily against the people doing the work, which is a different
     // thing from spoilage and lives in the survival system.
@@ -103,7 +113,7 @@ export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
     name: 'Hides',
     category: 'material',
     maxStack: 20,
-    carryLimit: 6,
+    carryLimit: 12,
     spoilsPerDay: 0,
     wantedPerVillager: 3,
   },
@@ -112,7 +122,7 @@ export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
     name: 'Clothing',
     category: 'clothing',
     maxStack: 20,
-    carryLimit: 5,
+    carryLimit: 10,
     // Wears out on people's backs through a cold winter, not in a yard. Like
     // tools, that wear is charged daily and lives in the survival system.
     spoilsPerDay: 0,
@@ -123,7 +133,7 @@ export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
     name: 'Herbs',
     category: 'food',
     maxStack: 30,
-    carryLimit: 10,
+    carryLimit: 20,
     // Dried and hung, not eaten fresh. They keep, which is the only reason a
     // settlement can gather them in summer against a winter of illness.
     spoilsPerDay: 0,
@@ -134,7 +144,7 @@ export const RESOURCES: Readonly<Record<ResourceId, ResourceDefinition>> = {
     name: 'Food',
     category: 'food',
     maxStack: 50,
-    carryLimit: 15,
+    carryLimit: 30,
     // Roughly a tenth of an open stockpile turns each day: enough that a heap
     // of food in a general yard will not survive a winter, and not so much
     // that the settlement cannot live hand to mouth in summer without a larder.

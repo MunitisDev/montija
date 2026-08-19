@@ -19,6 +19,7 @@
 
 import { describe, expect, it } from 'vitest';
 
+import { findPath } from '@/simulation/pathfinding/AStar';
 import { Simulation } from '@/simulation/Simulation';
 import type { GridPoint } from '@/shared/types/geometry';
 
@@ -222,4 +223,52 @@ describe('a construction site', () => {
 
     expect(ticksWithAHeapAtADoor).toBe(0);
   }, 30_000);
+});
+
+describe('the region map and the pathfinder', () => {
+  it('agree about a diagonal gap, which is the whole point of the region map', () => {
+    // **The most expensive disagreement this project has had.** `AStar` refuses to
+    // cut a corner — a diagonal step is legal only when both orthogonal cells it
+    // passes between are clear, because the looser rule reads as walking through a
+    // wall. The region map counted that squeeze as a way through. So `connects`
+    // said two cells were joined, every route between them failed after burning
+    // the whole search budget, and villagers claimed errands they could not
+    // finish, dropped their loads and were handed the same errand again.
+    //
+    // Measured on a settlement of fifty: twenty-nine thousand material errands
+    // completed carrying nothing, nineteen sites had not moved in a hundred days,
+    // and the ground filled with heaps nobody could deliver. Deaths across
+    // twenty-four seeds fell from 162 to 39 when the two were made to agree.
+    const simulation = new Simulation(OPTIONS);
+    const nav = simulation.world.navigation;
+    clear(simulation, { gx: 30, gy: 30 }, 10);
+
+    // Two single-cell rooms joined at one corner and nothing else. Everything in
+    // a seven-by-seven block is walled but these three cells:
+    //
+    //   A at (33,33) — the gap at (34,34) — B at (35,35)
+    //
+    // Both steps are purely diagonal, and both orthogonal cells beside each are
+    // blocked, so the pathfinder refuses them.
+    const open = new Set(['33,33', '34,34', '35,35']);
+    for (let gy = 31; gy <= 37; gy += 1) {
+      for (let gx = 31; gx <= 37; gx += 1) {
+        if (!open.has(`${gx},${gy}`)) {
+          nav.block(gx, gy);
+        }
+      }
+    }
+
+    const a = { gx: 33, gy: 33 };
+    const b = { gx: 35, gy: 35 };
+    expect(nav.isWalkable(a.gx, a.gy)).toBe(true);
+    expect(nav.isWalkable(b.gx, b.gy)).toBe(true);
+    expect(nav.isWalkable(34, 34)).toBe(true);
+
+    // The pathfinder cannot get from one to the other, so the region map must not
+    // pretend otherwise — and every rule built on `connects` depends on it.
+    const route = findPath(nav, a, b);
+    expect(route.path).toBeNull();
+    expect(nav.connects(a, b)).toBe(false);
+  });
 });

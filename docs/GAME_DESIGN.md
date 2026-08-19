@@ -493,6 +493,34 @@ through the same fell → logs → haul → yard pipeline as anything the player
 themselves. Crucially it **plants past the natural ceiling**: the wilderness
 returns only so much, and anything beyond that is something you did on purpose.
 
+### The region map must agree with the pathfinder — Implemented
+
+**The most expensive disagreement this project has had, and it was invisible.** `AStar` refuses to cut
+a corner: a diagonal step is legal only when _both_ orthogonal cells it passes between are clear,
+because the looser rule reads as walking through a wall. The region map — the thing that answers "can
+somebody standing here reach there" in one array read — counted that diagonal squeeze as a way through.
+
+So `connects()` lied. Every consequence followed from that one lie:
+
+- Villagers claimed errands they could not finish. The route failed _after_ burning the whole search
+  budget, the load was set down where they stood, and the pile they had just made posted the same
+  errand again. Measured on a settlement of fifty: **twenty-nine thousand six hundred material errands
+  completed carrying nothing**, nineteen sites had not moved in a hundred days, and the ground filled
+  with heaps nobody could deliver — which is exactly the screenshot a player sent.
+- The sealed-pocket rule was wrong, because a diagonal pinch counted as a way out.
+- The rescue for stranded villagers was wrong for the same reason.
+- The check that stops a villager claiming work across a wall passed work it should have refused.
+
+The rule lives in one place now — `stepAllowed` in `NavigationGrid` — and the region map, the sealing
+test and the pathfinder all use it. Deaths across twenty-four seeds fell from **162 to 39**, seven of
+eight settlements now survive their first winter and grow while doing it, and material errands went
+from twenty-nine thousand to two hundred and eleven.
+
+The lesson is worth keeping: **a cache of an expensive answer must be computed by the same rules as the
+expensive answer.** A connectivity map that is more permissive than the pathfinder does not merely
+mislead — it converts every wrong answer into wasted work at the worst possible moment, when somebody
+is already carrying a load.
+
 ### A settlement may not wall itself in — Implemented
 
 **Reported from a real game, and the worst class of defect this project has had.** The screenshot
@@ -514,12 +542,34 @@ Three separate things had to be true for that, and all three are fixed:
   to the nearest cell that does — the sibling of the rescue that already existed for somebody standing
   _inside_ a wall. Kept because a pocket can arise by other routes: a demolished bridge, a save from
   an older version, any future change to the terrain.
+- **A site does not block traffic until it is finished**, so two placements could each pass the test
+  alone and seal a pocket between them the day both were done. The test counts every unfinished
+  footprint as already closed.
+- **A store inside the pocket made it look like part of the settlement.** The settlement is the
+  _largest_ region holding a store now: size is a structural fact, and the pocket had more villagers
+  in it than the settlement did, because children are born at home and home was inside it.
 - **A villager offered work they could not walk to was offered the same work for ever.** The job board
   is deterministic — same villager, same board, same answer — so one unreachable job is not a job
   skipped but the only job that person will ever see. Reachability is now checked before a job is
   offered, by region comparison rather than by pathfinding, and for **both** legs of a haul: checking
   only the pickup produced a villager carrying a load to a yard behind a wall, failing to deliver,
   putting it down where they stood, and being handed the same errand by the pile they had just made.
+
+**Nobody walks around full.** A villager can end a job still holding goods — they fall ill mid-errand,
+or they are rescued out of a pocket, or the load they fetched turned out not to be wanted — and a full
+pack means every future errand loads nothing at all. They were then useless for the rest of their lives
+while still claiming work. Measured on a settlement of sixty-seven, eight of its haulers were walking
+about with forty logs each. A villager with no job and goods in hand puts them down, and the heap posts
+its own haul job like any other.
+
+**Three destinations can share one doorway, and the order between them is the whole of it**: a site
+that owes some of what is being carried, then a yard whose doorway is here, then a finished building's
+input buffer. A free cell beside one building is a free cell beside its neighbour, so sharing is legal
+and has to keep working — and every wrong ordering of those three has been shipped and measured. One
+put a house's delivery into a finished neighbour and the site stood unbuilt for ever; one asked a
+finished building how much the _site_ wanted, got nought, and had haulers pick up nothing forty
+thousand times; one tipped a passing load of firewood into a house's materials, filled the room its
+stone needed, and killed the building outright.
 
 **Nothing is left standing on a site's doorstep.** A load the site cannot take used to be set down
 where the hauler stood, which is the site's own doorway — and it only happens because somebody else's

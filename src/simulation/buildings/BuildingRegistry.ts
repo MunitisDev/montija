@@ -54,8 +54,11 @@ export class BuildingRegistry {
    * before any yard does, so anything else that wants to *own* a cell has to ask
    * first. See `Simulation.refreshStorageDoorways`.
    */
-  public anyAccessAt(cell: GridPoint): boolean {
+  public anyAccessAt(cell: GridPoint, exceptId?: number): boolean {
     for (const building of this.byId.values()) {
+      if (building.id === exceptId) {
+        continue;
+      }
       if (building.accessCell.gx === cell.gx && building.accessCell.gy === cell.gy) {
         return true;
       }
@@ -164,12 +167,37 @@ export class BuildingRegistry {
           cells.push({ gx: origin.gx + dx, gy: origin.gy + dy });
         }
       }
-      if (world.navigation.wouldSeal(cells)) {
+      // **Counting the ground that is already promised.** A site does not block
+      // traffic while it is being built, so two placements could each pass this
+      // test alone and seal a pocket between them the day they both finished.
+      // Measured: fifty-eight villagers, thirty-one of them in a four-cell yard
+      // and a one-cell hole, each walled in by a pair of houses raised side by
+      // side, and five sites that never moved in a hundred and forty days.
+      if (world.navigation.wouldSeal(cells, this.pendingFootprints())) {
         return { ok: false, reason: 'would-seal' };
       }
     }
 
     return { ok: true };
+  }
+
+  /**
+   * Every cell an unfinished building has already claimed.
+   *
+   * These will block traffic the day they are finished, so a connectivity test
+   * that ignores them is answering about a map that will not exist.
+   */
+  private pendingFootprints(): GridPoint[] {
+    const cells: GridPoint[] = [];
+    for (const building of this.byId.values()) {
+      if (building.isComplete) {
+        continue;
+      }
+      for (const cell of building.cells()) {
+        cells.push(cell);
+      }
+    }
+    return cells;
   }
 
   /**
@@ -471,6 +499,7 @@ export function findAccessCell(world: World, building: Building): GridPoint {
 
   for (let ring = 1; ring <= DOORWAY_SEARCH; ring += 1) {
     let free: GridPoint | null = null;
+    let shared: GridPoint | null = null;
 
     for (let x = gx - ring; x < gx + footprint.width + ring; x += 1) {
       for (let y = gy - ring; y < gy + footprint.height + ring; y += 1) {
@@ -490,15 +519,28 @@ export function findAccessCell(world: World, building: Building): GridPoint {
         }
         // A road beats bare ground at the same distance, and beats it enough to
         // stop looking: the whole point of laying one is that goods travel it.
-        if (world.roads.hasAt(cell)) {
+        if (world.roads.hasAt(cell) && !world.buildings.anyAccessAt(cell, building.id)) {
           return cell;
         }
-        free ??= cell;
+        // **A doorway nobody else has claimed, where there is a choice.** Two
+        // buildings sharing one is legal and has to keep working — a free cell
+        // beside one building is a free cell beside its neighbour — but every
+        // question routed by cell then has to be resolved between them, and every
+        // wrong resolution has been shipped and measured. Fewer shared doorways
+        // is fewer chances to get it wrong.
+        if (!world.buildings.anyAccessAt(cell, building.id)) {
+          free ??= cell;
+        } else {
+          shared ??= cell;
+        }
       }
     }
 
     if (free) {
       return free;
+    }
+    if (shared) {
+      return shared;
     }
   }
 

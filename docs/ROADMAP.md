@@ -1571,3 +1571,57 @@ year before, and none after.
 `tests/pile-art.test.ts` holds the set together: no heap may draw outside its sprite, float above the
 ground line, or share a silhouette with another. It caught a three-pixel clip on the old log pile's
 contact shadow that had been there since the day it was written.
+
+## PHASE 50 — The first winter is survivable — Implemented
+
+A player asked why the ground was covered in materials and why a larder would not build. Both had the
+same root cause, and it was not the one anybody would have guessed.
+
+**The region map counted a diagonal squeeze between two buildings as a way through; the pathfinder —
+correctly — refuses to cut that corner.** So `connects()` lied, and every rule built on it inherited
+the lie. Villagers claimed errands they could not finish, burned the whole search budget discovering
+it, set the load down where they stood and were handed the same errand again by the heap they had just
+made. Measured on a settlement of fifty: **twenty-nine thousand six hundred material errands completed
+carrying nothing**, nineteen sites unmoved in a hundred days, the ground filling with goods. It also
+silently broke the sealed-pocket rule, the rescue for stranded villagers and the check that stops
+somebody claiming work across a wall.
+
+The rule lives in one place now and everything uses it. What that repair did, measured over the same
+twenty-four seeds the balance suite has always used:
+
+|                                          | Before  | After            |
+| ---------------------------------------- | ------- | ---------------- |
+| Deaths across 24 worlds                  | 162     | **39**           |
+| Settlements surviving their first winter | 5 of 12 | **7 of 8**       |
+| Settlements that _grew_ while doing it   | 0       | **most of them** |
+| Food banked before the frost, per world  | 45      | **230**          |
+| Material errands in a 240-day run        | 29,600  | **211**          |
+
+Five balance tests had to be rewritten because they asserted the old badness. One of them said so in as
+many words — _"written to fail loudly when it is; if most of these settlements start living, delete this
+test and restore the one it replaced"_ — and that is what happened. Another had recorded the Food
+Storage as a building that "buys almost nothing": with hauling repaired it is now worth **1844 food
+banked against 1081** without one.
+
+Four more defects found and fixed along the way, each independently fatal:
+
+- **A site does not block traffic until it is finished**, so two placements could each pass the sealing
+  test alone and wall a pocket between them the day both were done.
+- **A store inside a pocket made the pocket look like the settlement**, so the thirty people trapped in
+  it were never rescued. The settlement is the largest region holding a store now.
+- **Nobody walks around full.** A villager who ends a job still holding goods — ill mid-errand, rescued
+  from a pocket, carrying something nobody wanted — could never load anything again. Eight haulers were
+  found walking about with forty logs each.
+- **Three destinations can share one doorway** and the order between them is everything. Three wrong
+  orderings were shipped and measured: one gave a house's delivery to a finished neighbour, one had
+  haulers pick up nothing forty thousand times, one tipped firewood into a house's materials and killed
+  the building.
+
+And two things the player asked for directly: **a villager's load is doubled** — every carry limit and
+the pack itself, so a pile of twenty logs is two trips rather than four — and **a Feller's Hut counts
+the logs already lying in the wood** against its target, so it stops cutting when the settlement has a
+thousand of them on the ground rather than only when the shelves are full.
+
+The Forester's Lodge no longer looks like the Gatherer Hut, which it did: both were a log cabin under
+thatch with the gable facing the same way. It is boarded, shingled, ridged the other way and stands on
+kept green ground.

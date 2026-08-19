@@ -16,7 +16,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { STARTING_RESOURCES } from '@/app/config';
+import { STARTING_RESOURCES, STARTING_VILLAGERS } from '@/app/config';
 import { FOOD_PER_VILLAGER_PER_DAY } from '@/simulation/seasons/SurvivalSystem';
 import type { BuildingId } from '@/data/buildings';
 import {
@@ -300,69 +300,62 @@ describe('the first winter', () => {
     expect(result.firstDeathDay).toBeGreaterThanOrEqual(firstDayOf('winter'));
   });
 
-  it('is still not reliably survived, and firewood is why', () => {
-    // **A characterisation test, and the most important one in the file.** It used
-    // to assert that a settlement which feeds itself properly survives, on the
-    // reference seed, and it passed — on that one world, by a hair. Played across
-    // eight, the same player loses everybody on most of them.
+  it('is survived by a settlement that plays properly', () => {
+    // **The test this replaces asserted the opposite, and asked to be deleted.**
+    // For most of this project a player who fed their settlement properly still
+    // lost everybody on most worlds, and the file said so in as many words:
+    // "written to fail loudly when it is — if most of these settlements start
+    // living, delete this test and restore the one it replaced". They live now.
     //
-    // The chain is not hunger. Food banked before the first frost is healthy and
-    // rising; what kills them is cold, and the reason is a single missing link:
+    // What was killing them was never hunger and never the balance. It was a
+    // disagreement between two pieces of the simulation: the region map counted a
+    // diagonal squeeze between two buildings as a way through, and the pathfinder
+    // — correctly — refuses to cut that corner. So `connects` said two cells were
+    // joined, every route between them failed after burning the whole search
+    // budget, and villagers claimed errands they could not finish, dropped their
+    // loads and were handed the same errand again. Measured on one settlement:
+    // twenty-nine thousand material errands completed carrying nothing, nineteen
+    // sites had not moved in a hundred days, and the ground filled with heaps
+    // nobody could deliver.
     //
-    // ```text
-    // no stone reaches the yard
-    //   └─▶ the Woodcutter is never finished (8 logs and 4 stone)
-    //         └─▶ no firewood is ever made
-    //               └─▶ nobody is warmed, and winter kills everyone
-    // ```
-    //
-    // Mining is not broken — see `stone-supply.test.ts`, which pins it precisely:
-    // left alone it brings home about 46 stone in ten days, and the moment the
-    // player marks trees as well it stops, because felling and mining tie on
-    // priority and there is always a tree nearer than the rock.
-    //
-    // Four ways out have been measured and none worked. Mining above felling: 121
-    // deaths against 100. Felling above mining: 93. Holding each standing order
-    // down to a working handful so neither queue can bury the other: 100 at three
-    // orders, 110 at six — and it did put real firewood on the shelves for the
-    // first time, 163 across twelve seeds, which is the strongest hint yet about
-    // where the answer lies. A House costing no stone at all: 97. The fix is a
-    // scheduler that shares hands between kinds of work rather than any ordering
-    // of them, and it is not written yet.
-    //
-    // **Written to fail loudly when it is.** If most of these settlements start
-    // living, delete this test and restore the one it replaced.
+    // Measured over eight worlds after it: seven of eight settlements live, every
+    // one of them *grows* — eleven to fifteen people from ten — and they bank 230
+    // food before the first frost. Deaths across all twenty-four seeds fell from
+    // 162 to 39.
     const runs = acrossSeeds(prepared);
     const lost = runs.filter((run) => run.survivors === 0).length;
 
-    // Half, as measured. It was every settlement but one before the logistics
-    // defects above were found, and the number is asserted loosely in both
-    // directions on purpose: a change that saves most of these worlds should fail
-    // this test and get it rewritten, and so should one that loses them again.
-    expect(lost).toBeGreaterThanOrEqual(runs.length / 2);
-    // And what firewood there is remains a fraction of a winter's need: ten people
-    // burn about ten a night through twelve freezing days.
-    expect(total(runs, (run) => run.atWinter.firewood) / runs.length).toBeLessThan(60);
+    // Most worlds, not all of them: a settlement that draws a bad map still dies,
+    // and it should. Asserted loosely in both directions on purpose — a change
+    // that loses these worlds again must fail here, and so must one that makes the
+    // game unloseable.
+    expect(lost).toBeLessThanOrEqual(runs.length / 4);
+    // And they end the year with more people than they started with, which is the
+    // real test of a settlement rather than of a stockpile.
+    const grew = runs.filter((run) => run.survivors > STARTING_VILLAGERS).length;
+    expect(grew).toBeGreaterThanOrEqual(runs.length / 2);
   }, 120_000);
 
-  it('leaves a one-hut settlement entering winter with next to nothing', () => {
-    // **Twice rewritten, and worth reading as a history of the food economy.** It
-    // used to assert deaths; the founding party changed to three near-adults and
-    // ten grown-ups became a smaller village, so one hut nearly fed it and nobody
-    // died. It then asserted a *bare* larder — nothing at all in store — and that
-    // went the day a villager's load doubled: hauling improved enough that one hut
-    // now banks about 43 on the reference seed.
+  it('leaves a one-hut settlement with a year that goes nowhere', () => {
+    // **Three times rewritten, and worth reading as a history of the food
+    // economy.** It used to assert deaths; the founding party changed and one hut
+    // nearly fed a smaller village, so nobody died. It then asserted a *bare*
+    // larder, and hauling was repaired until there was something in it. It now
+    // asserts the thing that is actually true and actually matters: one hut feeds
+    // the ten people who arrived and buys nothing beyond that.
     //
-    // What is left is still the difference the player can act on, and the ladder
-    // below is where it is measured properly. A settlement on one hut reaches the
-    // cold with a few days' food; a settlement on two reaches it with a season's.
-    // A few days' food, not a season's. Asserted on the reference seed only as a
-    // ceiling: which of two scripts banks more on *one* map is noise — this very
-    // seed has `twoHuts` finishing on nothing — and the ladder below is where the
-    // comparison is made properly, across twenty-four.
-    const result = runYear(oneHut);
-    expect(result.atWinter.food).toBeLessThan(120);
-  });
+    // Measured over eight worlds: seven survive, every one of them with **exactly
+    // the ten they started with**, banking 70 food where three huts bank 230. A
+    // settlement on one hut is not dying — it is standing still, which is a
+    // different and better kind of failure for a game to have.
+    const runs = acrossSeeds(oneHut);
+
+    const grew = runs.filter((run) => run.survivors > STARTING_VILLAGERS).length;
+    expect(grew).toBe(0);
+    // And a fraction of what a properly fed settlement banks.
+    const banked = total(runs, (run) => run.atWinter.food) / runs.length;
+    expect(banked).toBeLessThan(150);
+  }, 120_000);
 
   it('banks more food for every hut the player raises', () => {
     // The graded middle of the curve, and the reason a one-hut settlement is
@@ -442,30 +435,28 @@ describe('the first winter', () => {
     expect(total(runs, (run) => run.atWinter.food) / runs.length).toBeGreaterThan(20);
   }, 120_000);
 
-  it('is barely affected by having somewhere to keep the food, which is a defect', () => {
-    // **This test used to assert the opposite, and it was right at the time.**
-    // The same player minus the larder used to reach winter with two thirds of
-    // the food, because what was in store rotted at an open yard's rate.
+  it('banks half again as much food for having somewhere to keep it', () => {
+    // **This test has asserted three different things and been right each time.**
+    // It first said a larder mattered; then, once spoilage was measured properly,
+    // that it barely did — 661 food banked with one against 690 without, a
+    // difference of one per cent, for a building costing 6 logs, 2 stone and four
+    // hundred ticks of labour. That was recorded as a defect rather than fixed,
+    // with the reason: **the loss was in the field, not in the stores.** A
+    // settlement's gatherers out-ran its haulers, so most of what spoiled was
+    // lying where it was picked, at a rate no building can change.
     //
-    // Measured now, over twelve seeds: 661 food banked with a larder against 690
-    // without, 201 left at the end of winter against 190, **4751 food spoiled
-    // over the year against 4804** — a difference of one per cent — and 100 deaths
-    // against 103. The Food Storage costs 6 logs, 2 stone and four hundred ticks
-    // of labour, and buys almost nothing.
+    // Raising hauling throughput is one of the two answers that note offered, and
+    // it is what happened — a villager's load doubled, and the region map stopped
+    // claiming diagonal gaps were walkable, which had been quietly wasting most of
+    // the settlement's errands. The field empties now, so the larder is finally
+    // keeping the harvest rather than watching it rot on the ground.
     //
-    // The reason is that **the loss is in the field, not in the stores**. A
-    // settlement's gatherers out-run its haulers, so most of what spoils is lying
-    // where it was picked, at a rate no building can change. Two answers are
-    // available and neither is taken here: stop the open founding yard accepting
-    // food at all — each thing in its own building — or raise hauling throughput
-    // so the field empties. Recorded rather than fixed, and written so that
-    // fixing it fails this test loudly.
-    //
-    // Read across eight worlds now, for the same reason everything else about
-    // `prepared` is: on one seed the figure is noise.
+    // Measured over eight worlds: **1844 food banked with a larder against 1081
+    // without.** Both figures are also roughly treble what the same eight worlds
+    // managed before, which is the other half of the story.
     const withLarder = total(acrossSeeds(prepared), (run) => run.atWinter.food);
     const without = total(acrossSeeds(noLarder), (run) => run.atWinter.food);
-    expect(without).toBeGreaterThan(withLarder * 0.6);
+    expect(withLarder).toBeGreaterThan(without * 1.2);
   }, 240_000);
 
   it('kills a settlement that built no houses, and not by cold', () => {
@@ -581,24 +572,22 @@ describe('trying to play it better than `prepared` does', () => {
     // fetched from, so a Woodcutter with a season of timber on the shelf beside it
     // was starved of logs all year.
     //
-    // A winter costs ten people about a hundred firewood. Some settlements now
-    // reach it with a few dozen and none with enough, which is why they still
-    // die — but it is a shortage rather than a nothing, and the difference is the
-    // game becoming playable.
+    // A winter costs ten people about a hundred firewood. Measured over twelve
+    // worlds after hauling was repaired: a mean of 53 with the best world at 164
+    // and two at nothing at all. So a settlement now genuinely *has* a woodpile
+    // and it is still not a comfortable one, which is the shape this game wants —
+    // and whether a particular one has any depends on whether its autumn timber
+    // went into the woodshed or into the Quarry it was building, which is a
+    // decision rather than a defect.
     //
-    // **Judged across the sweep rather than on the reference seed**, because on
-    // one seed this is a coin toss: measured at [0, 0, 10, 0, 0, 100, 0, 40, 0,
-    // 40, 0, 0] over twelve worlds. Whether a particular settlement has any
-    // depends on whether its autumn timber went into the woodpile or into the
-    // Quarry it was building, which is a real decision and not something a
-    // single-seed assertion should be reading as a regression.
+    // **Judged across the sweep rather than on the reference seed**, because on one
+    // seed this is a coin toss.
     const sweep = SEED_SWEEP.slice(0, 12).map(
       (seed) => playtest({ seed, days: DAYS_PER_YEAR, script: disciplined }).atWinter.firewood,
     );
-    expect(sweep.reduce((total, at) => total + at, 0)).toBeGreaterThan(0);
-    for (const atWinter of sweep) {
-      expect(atWinter).toBeLessThan(120);
-    }
+    const mean = sweep.reduce((toal, at) => toal + at, 0) / sweep.length;
+    expect(mean).toBeGreaterThan(10);
+    expect(mean).toBeLessThan(120);
   }, 60_000);
 
   it('does now survive more often, across two dozen seeds', () => {
@@ -611,18 +600,22 @@ describe('trying to play it better than `prepared` does', () => {
     // pool, and an employed villager's own workshop always has an urgent job — so
     // playing "better" employed the very people who were going to fetch the stone.
     //
-    // That reversed when the camp's own store stopped being unfetchable — see
-    // `docs/GAME_DESIGN.md` — because the extra buildings a disciplined player
-    // raises can finally be *supplied*. Measured on the same 24 seeds: **153 deaths
-    // against 177.** Discipline is now worth about two settlements' worth of lives,
-    // which is the first time any of these openings has separated on survival.
+    // That reversed when the camp's own store stopped being unfetchable, and then
+    // the whole picture changed again when the region map was made to agree with
+    // the pathfinder about diagonal gaps — see `docs/GAME_DESIGN.md`. Measured on
+    // the same 24 seeds through those two repairs: **177 deaths, then 153, then
+    // 28**, against `prepared`'s 39.
+    //
+    // Discipline is still worth something and both lines are now survivable, which
+    // is what the whole file was written to detect and what it spent a year unable
+    // to say.
     const disciplinedDeaths = deathsAcrossSeeds(disciplined);
     const eagerDeaths = deathsAcrossSeeds(prepared);
 
     expect(disciplinedDeaths).toBeLessThan(eagerDeaths);
-    // And both still lose most of the people they started with, which is the part
-    // that has not been fixed: measured at 153 and 177 of 240 on the sweep.
-    expect(disciplinedDeaths).toBeGreaterThan(SEED_SWEEP.length * 10 * 0.5);
+    // And a settlement now keeps most of the people it started with: a tenth of
+    // them lost across two dozen worlds, where it used to be two thirds.
+    expect(disciplinedDeaths).toBeLessThan(SEED_SWEEP.length * 10 * 0.25);
     // Two dozen simulated years each, and one seed in the sweep is a
     // pathologically expensive map to find routes across — 3.5 seconds of
     // pathfinding for its year against 80ms for its neighbours. That is a real
