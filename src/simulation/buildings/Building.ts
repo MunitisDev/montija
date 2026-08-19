@@ -68,6 +68,26 @@ export class Building {
   public burning = false;
 
   /**
+   * `true` once this building's one improvement has been built.
+   *
+   * A house with a stone hearth burns markedly less firewood; see
+   * `BuildingDefinition.upgrade`.
+   */
+  public improved = false;
+
+  /**
+   * `true` while that improvement is being built.
+   *
+   * The building goes back to `underConstruction` for the duration, which is what
+   * makes an upgrade use the whole of the machinery that already exists —
+   * materials hauled by hand, labour spent on site, a progress bar. The one thing
+   * that does *not* follow from the state is the family: they go on living there
+   * while the masons work, because putting a household into the snow to give them
+   * a warmer hearth would be a bitter joke.
+   */
+  public upgrading = false;
+
+  /**
    * Recipe inputs delivered here.
    *
    * A woodcutter cannot split logs it does not have, and those logs have to be
@@ -129,9 +149,27 @@ export class Building {
     return cells;
   }
 
+  /**
+   * What this building is owed right now.
+   *
+   * Its construction cost while it is going up, and its upgrade's cost while that
+   * is being built. One indirection rather than a second inventory and a second
+   * set of haul rules — every part of the delivery machinery asks this question
+   * and none of them has to know which kind of work is in hand.
+   */
+  public requiredMaterials(): readonly {
+    readonly resource: ResourceId;
+    readonly amount: number;
+  }[] {
+    if (this.upgrading && this.definition.upgrade) {
+      return this.definition.upgrade.cost;
+    }
+    return this.definition.constructionCost;
+  }
+
   /** How much of a material is still needed on site. */
   public stillNeeds(resource: ResourceId): number {
-    const cost = this.definition.constructionCost.find((entry) => entry.resource === resource);
+    const cost = this.requiredMaterials().find((entry) => entry.resource === resource);
     if (!cost) {
       return 0;
     }
@@ -140,14 +178,16 @@ export class Building {
 
   /** `true` when every material has arrived and building can begin. */
   public get hasAllMaterials(): boolean {
-    return this.definition.constructionCost.every(
+    return this.requiredMaterials().every(
       (cost) => this.materials.count(cost.resource) >= cost.amount,
     );
   }
 
   /** Fraction of construction done, for the progress bar. */
   public get progress(): number {
-    const total = this.definition.buildTicks;
+    const total = this.upgrading
+      ? (this.definition.upgrade?.buildTicks ?? this.definition.buildTicks)
+      : this.definition.buildTicks;
     if (total === 0) {
       return 1;
     }

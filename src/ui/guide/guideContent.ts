@@ -414,6 +414,17 @@ function describeBuilding(definition: BuildingDefinition, t: Translate): string 
     parts.push(t('guide.fellsOwn'));
   }
 
+  // The one improvement a building can be given, with what it costs — the same
+  // rule as the construction cost above: a price found out afterwards is a price
+  // the player could not decide about.
+  if (definition.upgrade) {
+    parts.push(
+      `${t('guide.canImprove')} ${amountList(definition.upgrade.cost, t)} — ${percent(
+        1 - definition.upgrade.firewoodFactor,
+      )} ${t('guide.lessFirewood')}`,
+    );
+  }
+
   return parts.join(' · ');
 }
 
@@ -450,6 +461,16 @@ function describeYearlyOutput(id: BuildingId, t: Translate): string | null {
 
   const made = `${list(outputs)} ${t('guide.aYear')}`;
   return inputs.length === 0 ? made : `${made}, ${t('guide.using')} ${list(inputs)}`;
+}
+
+/** A list of amounts, as "6 stone, 2 iron". */
+function amountList(
+  costs: readonly { readonly resource: ResourceId; readonly amount: number }[],
+  t: Translate,
+): string {
+  return costs
+    .map((entry) => `${entry.amount} ${t(`hud.${entry.resource}` as MessageKey)}`)
+    .join(', ');
 }
 
 function describeCost(definition: BuildingDefinition, t: Translate): string {

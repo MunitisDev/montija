@@ -305,5 +305,11 @@ function styleFor(building: Building): number {
   if (looks <= 1 || building.definition.storage) {
     return 0;
   }
+  // A building that can be improved has its second look reserved for exactly
+  // that, rather than handed out by id: the player has to be able to tell which
+  // of their cottages they have already paid to warm.
+  if (building.definition.upgrade) {
+    return building.improved ? 1 : 0;
+  }
   return building.id % looks;
 }

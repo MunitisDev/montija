@@ -105,6 +105,8 @@ export function serialise(simulation: Simulation, savedAt: string): SaveGame {
       storageId: building.storageId,
       desiredWorkers: building.desiredWorkers,
       burning: building.burning,
+      improved: building.improved,
+      upgrading: building.upgrading,
     })),
 
     // Jobs are already plain data — that design choice in Phase 4 is what
@@ -192,6 +194,8 @@ export function restore(simulation: Simulation, save: SaveGame): void {
     building.storageId = saved.storageId ?? null;
     building.desiredWorkers = saved.desiredWorkers ?? building.definition.workerSlots;
     building.burning = saved.burning === true;
+    building.improved = saved.improved === true;
+    building.upgrading = saved.upgrading === true;
     fillInventory(building.materials, saved.materials);
     fillInventory(building.input, saved.input);
     if (saved.complete) {

@@ -298,6 +298,20 @@ export class BuildingRegistry {
   public onCompleted: ((building: Building) => void) | null = null;
 
   public complete(world: World, building: Building): void {
+    // **An upgrade finishing is not a building being raised.** The walls have
+    // stood the whole time: what has just gone in is a stone hearth. So the
+    // chronicle is not told a building went up, the plot is not re-cleared and
+    // the doorway is not moved — none of them changed. The materials inventory is
+    // emptied because the masons used them, exactly as construction does.
+    if (building.upgrading) {
+      building.upgrading = false;
+      building.improved = true;
+      building.materials.clear();
+      building.complete();
+      this.changeVersion += 1;
+      return;
+    }
+
     building.complete();
     this.onCompleted?.(building);
     for (const cell of building.cells()) {

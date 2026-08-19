@@ -218,6 +218,15 @@ export function runDay(
    * `resources/wear.ts`.
    */
   wear: WearLedger = new WearLedger(),
+  /**
+   * Firewood a freezing night costs, worked out from the houses themselves.
+   *
+   * Passed in for the same reason the solace and the healer's capacity are: how a
+   * house is *built* is not this system's business, and a household under a stone
+   * hearth burns about a third less. Defaults to a plain hearth for every housed
+   * villager, which is what it always was.
+   */
+  hearthDraw?: number,
 ): { report: DailyReport; dead: Villager[] } {
   if (villagers.length === 0) {
     return { report: EMPTY_REPORT, dead: [] };
@@ -234,7 +243,8 @@ export function runDay(
   // burn it, so a settlement with no houses saves the firewood and pays for it
   // in warmth.
   const housed = villagers.filter((villager) => villager.homeId !== null).length;
-  const firewoodWanted = needsFire ? housed * FIREWOOD_PER_VILLAGER_PER_COLD_DAY : 0;
+  const perNight = hearthDraw ?? housed * FIREWOOD_PER_VILLAGER_PER_COLD_DAY;
+  const firewoodWanted = needsFire ? perNight : 0;
   const firewoodTaken = takeFromStorages(storages, 'firewood', firewoodWanted);
 
   // Rations are shared evenly rather than first-come: a settlement that is

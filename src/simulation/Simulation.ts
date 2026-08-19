@@ -70,6 +70,7 @@ import { NO_FIRE, runFire, type FireReport } from './events/FireSystem';
 import { waterWithinReach } from './world/Water';
 import {
   EMPTY_REPORT,
+  FIREWOOD_PER_VILLAGER_PER_COLD_DAY,
   runDay,
   spiritWorkBonus,
   TOOL_WORK_BONUS,
@@ -522,6 +523,85 @@ export class Simulation {
     });
 
     return job !== null;
+  }
+
+  /**
+   * Orders a building's one improvement built.
+   *
+   * **A command, like every other thing the player asks for**, and it goes
+   * through the whole of the machinery that already exists: the building drops
+   * back to `underConstruction`, its materials are hauled in by hand, somebody
+   * spends labour on site, and the day the work is done it is a house with a
+   * stone hearth. Nothing about hauling, building or the panel had to learn a new
+   * kind of work — see `Building.requiredMaterials`.
+   *
+   * @returns `false` when there is nothing to improve, it is already improved, or
+   *   the building is not standing yet
+   */
+  public orderUpgrade(buildingId: number): boolean {
+    const building = this.world.buildings.getById(buildingId);
+    const upgrade = building?.definition.upgrade;
+    if (!building || !upgrade || !building.isComplete || building.improved) {
+      return false;
+    }
+
+    building.upgrading = true;
+    building.state = 'underConstruction';
+    building.materials.clear();
+    building.buildTicksRemaining = upgrade.buildTicks;
+    this.world.buildings.markChanged();
+    return true;
+  }
+
+  /**
+   * Takes an ordered improvement back.
+   *
+   * Whatever had already been carried in goes on the ground rather than
+   * evaporating: somebody walked it here.
+   */
+  public cancelUpgrade(buildingId: number): boolean {
+    const building = this.world.buildings.getById(buildingId);
+    if (!building || !building.upgrading) {
+      return false;
+    }
+
+    for (const { resource, amount } of building.materials.contents) {
+      this.world.dropNear(building.accessCell, resource, amount);
+    }
+    building.materials.clear();
+    building.upgrading = false;
+    building.state = 'complete';
+    building.buildTicksRemaining = 0;
+    for (const job of this.jobs.all) {
+      if (job.type === 'build' && job.targetEntityId === building.id && !isFinished(job)) {
+        this.jobs.cancel(job.id);
+        this.releaseVillagersFrom(job.id);
+      }
+    }
+    this.world.buildings.markChanged();
+    return true;
+  }
+
+  /**
+   * The firewood a night of frost costs the settlement.
+   *
+   * Worked out here rather than in the survival system for the reason that system
+   * gives for every figure it is handed: how a house is built is not its business.
+   * A household under a stone hearth burns about a third less, and somebody
+   * sleeping rough burns nothing at all — they have nowhere to burn it, which is
+   * the cruel half of that rule and not a saving.
+   */
+  private firewoodDemand(): number {
+    let total = 0;
+    for (const villager of this.villagers.all) {
+      if (villager.homeId === null) {
+        continue;
+      }
+      const home = this.world.buildings.getById(villager.homeId);
+      const factor = home?.improved ? (home.definition.upgrade?.firewoodFactor ?? 1) : 1;
+      total += FIREWOOD_PER_VILLAGER_PER_COLD_DAY * factor;
+    }
+    return total;
   }
 
   /** Cancels a felling designation, if the tree has one. */
@@ -977,7 +1057,7 @@ export class Simulation {
    */
   public stalledMaterial(): ResourceId | null {
     for (const site of this.world.buildings.underConstruction()) {
-      for (const cost of site.definition.constructionCost) {
+      for (const cost of site.requiredMaterials()) {
         if (site.stillNeeds(cost.resource) > 0 && this.storages.totalOf(cost.resource) <= 0) {
           return cost.resource;
         }
@@ -1119,6 +1199,7 @@ export class Simulation {
       this.year,
       this.solace,
       this.wear,
+      this.firewoodDemand(),
     );
     this.lastDayReport = report;
 
@@ -1316,7 +1397,7 @@ export class Simulation {
    * lands, which keeps the board short and the reservation simple.
    */
   private requestMaterialsFor(site: Building): void {
-    for (const cost of site.definition.constructionCost) {
+    for (const cost of site.requiredMaterials()) {
       if (site.stillNeeds(cost.resource) <= 0) {
         continue;
       }

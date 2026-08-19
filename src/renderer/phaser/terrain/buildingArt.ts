@@ -542,6 +542,18 @@ const TOP_MARGIN = 4;
 const STONE_FOOTING = 0x6a675e;
 
 /**
+ * The masonry an improved building shows for itself.
+ *
+ * **A house with a stone hearth has to be legible from the camera**, or the
+ * player has no way of knowing which of their eight cottages they have already
+ * paid for. Everything about the drawing is fixed by the texture box — the
+ * silhouette cannot grow — so the difference is carried in the *colour of the
+ * stone*: dressed and pale where the plain house's footing is field stone. It
+ * reads on the chimney, which is the part of a house the eye finds first.
+ */
+const IMPROVED_STONE = 0x9d9789;
+
+/**
  * The storage yard, in pixels. See {@link drawStorageYard}.
  *
  * `stand` minus `slab` is the gap you can see under the boards, and it is the
@@ -776,7 +788,9 @@ export function artVariants(id: BuildingId): number {
   if (MASS[id].yard === true) {
     return YARD_FILL_LEVELS;
   }
-  return 1;
+  // A building that can be improved is drawn twice: as built, and with the
+  // masonry that improvement buys. See {@link IMPROVED_STONE}.
+  return BUILDINGS[id].upgrade ? 2 : 1;
 }
 
 /**
@@ -809,7 +823,7 @@ function plotPoint(
 }
 
 /** The look one building is built to, assembled from its mass and its palette. */
-function lookFor(id: BuildingId, palette: BuildingPalette): StructureLook {
+function lookFor(id: BuildingId, palette: BuildingPalette, variant = 0): StructureLook {
   const mass = MASS[id];
   return {
     wallHeight: mass.wallHeight,
@@ -819,7 +833,7 @@ function lookFor(id: BuildingId, palette: BuildingPalette): StructureLook {
     wall: palette.wall,
     roof: palette.roof,
     timber: palette.trim,
-    stone: STONE_FOOTING,
+    stone: variant > 0 ? IMPROVED_STONE : STONE_FOOTING,
     form: mass.form ?? 'gable',
     build: mass.build ?? 'framed',
     cover: mass.cover ?? 'shingle',
@@ -923,7 +937,7 @@ export function drawBuilding(
     return;
   }
 
-  drawStructure(graphics, lookFor(id, palette), { cx, groundY, halfW, halfH });
+  drawStructure(graphics, lookFor(id, palette, variant), { cx, groundY, halfW, halfH });
 
   // What the trade leaves on its own ground. Last, because it stands between the
   // building and the camera — and inside the plot, always: see `BuildingMass`.

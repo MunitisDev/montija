@@ -1740,6 +1740,7 @@
  * settlement builder, not a warning, and it is reversible right up until
  * somebody arrives with a crowbar.
  */
+.building-panel__improve,
 .building-panel__demolish {
   align-self: flex-start;
   min-height: var(--touch-target);
@@ -1754,15 +1755,18 @@
   cursor: pointer;
 }
 
+.building-panel__improve[hidden],
 .building-panel__demolish[hidden] {
   display: none;
 }
 
+.building-panel__improve:hover,
 .building-panel__demolish:hover {
   color: var(--colour-ink);
 }
 
 /* Once ordered, the button is the way back. */
+.building-panel__improve.is-cancel,
 .building-panel__demolish.is-cancel {
   color: var(--colour-accent);
   border-color: rgba(201, 162, 39, 0.5);

@@ -183,6 +183,25 @@ export interface BuildingDefinition {
   readonly adjacentTo?: readonly TerrainType[];
 
   /**
+   * A single improvement the player can order once the building stands.
+   *
+   * **One upgrade, not a tech tree.** The settlement's surplus stone and iron had
+   * nowhere to go but more buildings, and a house that can be made warmer is the
+   * most useful thing to spend it on — but a settlement game turns into a
+   * spreadsheet the moment every building has three tiers and a menu, so there is
+   * exactly one, it is ordered from the building's own panel, and it is built the
+   * way everything else is: materials hauled by hand and labour spent on site.
+   *
+   * `firewoodFactor` is what the household burns afterwards, against 1 for the
+   * house as built.
+   */
+  readonly upgrade?: {
+    readonly cost: readonly ResourceAmount[];
+    readonly buildTicks: number;
+    readonly firewoodFactor: number;
+  };
+
+  /**
    * Set for a building that puts water within reach of the settlement.
    *
    * **Water is comfort every day and insurance on the bad one.** A house with
@@ -261,6 +280,24 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     // A lit hearth on a freezing night is the only thing in a house that could
     // start a fire, which is why a summer settlement cannot burn down.
     fireRisk: 'hearth',
+    /*
+     * **A stone hearth and a proper chimney**, which is where a settlement's
+     * spare stone and iron finally have somewhere to go.
+     *
+     * A third off the firewood, for six stone and two iron — about the cost of a
+     * winter's cutting for a household that then never pays it again. Iron is
+     * what makes it a *later* decision rather than an obvious first one: it means
+     * a mine and a blacksmith, so the settlement has to be standing before it can
+     * start being comfortable.
+     */
+    upgrade: {
+      cost: [
+        { resource: 'stone', amount: 6 },
+        { resource: 'iron', amount: 2 },
+      ],
+      buildTicks: 70,
+      firewoodFactor: 0.65,
+    },
   },
   'storage-yard': {
     id: 'storage-yard',

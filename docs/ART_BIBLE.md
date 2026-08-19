@@ -784,3 +784,14 @@ as a stone table. The water in it is the one cold colour on the map.
 Two signals, because one is never enough at gameplay zoom: the building takes a **warm tint** — the only
 one outside a forge — and it smokes **dark and fast**, four times a hearth's rate in a colour no cooking
 fire ever has. A fire and a chimney must not be mistakable for one another from across a valley.
+
+## An improved building — Implemented
+
+A building that has been given its one improvement is drawn as **the same silhouette with better
+masonry**: dressed, pale stone where the plain one has field stone. It cannot be anything else — the
+texture box is fixed per building, so the silhouette cannot grow — and it does not need to be, because
+the part of a house the eye finds first is its chimney and that is exactly what the stone colours.
+
+The variant machinery is the storage yard's, unchanged: `artVariants` reports two looks for anything
+with an upgrade in its data, the second is reserved for the improved state rather than handed out by id,
+and both are drawn into textures once at load.

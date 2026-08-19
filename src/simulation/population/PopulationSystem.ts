@@ -103,8 +103,13 @@ export function runPopulationDay(options: {
   const died = ageEveryone(villagers);
   const survivors = villagers.filter((villager) => !died.includes(villager));
 
+  // **A house being improved is still a home.** The building drops back to
+  // `underConstruction` while its stone hearth goes in — that is how an upgrade
+  // borrows the whole of the construction machinery — and putting the family into
+  // the snow to give them a warmer hearth would be a bitter joke.
   const houses = [...buildings.all].filter(
-    (building) => building.isComplete && (building.definition.housing ?? 0) > 0,
+    (building) =>
+      (building.isComplete || building.upgrading) && (building.definition.housing ?? 0) > 0,
   );
   assignHomes(survivors, houses);
   const paired = formPairs(survivors);

@@ -57,6 +57,7 @@ export const EN = {
   'roadline.skipped': 'cells of the line cannot take a road',
   'action.liftRoad': 'Lift road',
   'action.cancel': 'Cancel',
+  'action.improve': 'Stone hearth',
   'action.demolish': 'Demolish',
   'action.cancelDemolition': 'Keep it',
   'action.cancelBuilding': 'Cancel build',
@@ -472,6 +473,8 @@ export const EN = {
   'guide.using': 'using',
   'guide.cells': 'cells',
   'guide.fellsOwn': 'fells the wood around it while the stores are low',
+  'guide.canImprove': 'can be given a stone hearth for',
+  'guide.lessFirewood': 'less firewood',
   'guide.perVillagerYear': 'eaten a year, per villager',
   'guide.perHousedYear': 'burned a year, per villager under a roof',
 
@@ -636,6 +639,7 @@ export const ES: Messages = {
   'roadline.skipped': 'casillas de la línea no admiten camino',
   'action.liftRoad': 'Levantar camino',
   'action.cancel': 'Cancelar',
+  'action.improve': 'Hogar de piedra',
   'action.demolish': 'Demoler',
   'action.cancelDemolition': 'Conservar',
   'action.cancelBuilding': 'Cancelar obra',
@@ -1029,6 +1033,8 @@ export const ES: Messages = {
   'guide.using': 'consumiendo',
   'guide.cells': 'casillas',
   'guide.fellsOwn': 'tala el bosque a su alrededor mientras falten en los almacenes',
+  'guide.canImprove': 'admite un hogar de piedra por',
+  'guide.lessFirewood': 'menos leña',
   'guide.perVillagerYear': 'al año, por aldeano',
   'guide.perHousedYear': 'al año, por aldeano con techo',
 

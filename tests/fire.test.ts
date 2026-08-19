@@ -14,7 +14,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { Simulation } from '@/simulation/Simulation';
-import { Building } from '@/simulation/buildings/Building';
+import type { Building } from '@/simulation/buildings/Building';
 import {
   CROWDING_STEP,
   HEARTH_FIRE_CHANCE,

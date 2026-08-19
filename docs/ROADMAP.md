@@ -1862,3 +1862,29 @@ to learn twice that a single seed is not a measurement.
 A bug the tests caught before it ever reached a player: resolving fires while walking the live building
 registry let a fire jump to its neighbour and then immediately burn _that_ down too, chaining across a
 settlement in one night. What catches tonight burns tomorrow.
+
+## PHASE 60 — A stone hearth — Implemented
+
+The second half of the same question: what does a settlement do with its surplus? Until now, more
+buildings. Now a house can be given a **stone hearth** — 6 stone, 2 iron — and burns a third less
+firewood for ever afterwards.
+
+It is **built rather than bought**. The house drops back into `underConstruction`, its materials are
+hauled there by hand and somebody spends labour on the roof, which is the project's oldest rule and the
+reason this cost about forty lines rather than a system: the building is asked what it owes rather than
+told, so every part of the delivery machinery followed without changes. The family stays living there
+while the work is done, and the chronicle is not told a building was raised, because the walls stood the
+whole time.
+
+Iron is what makes it a decision rather than an obvious first move: it means a mine and a blacksmith, so
+a settlement has to be standing before it can start being comfortable.
+
+**An improved house shows it** — dressed pale masonry where a plain one has field stone, which reads on
+the chimney at any zoom. The building art already drew variants for the storage yard's fill levels, so
+this was one more.
+
+A stale panel found while checking it, and fixed: **a selection is a snapshot**, re-read only when the
+player taps again. That is right for a tile and wrong for a building — a house being improved went on
+saying "waiting for 6 stone" long after the masons had finished, and a construction site never showed
+its progress move at all. An open building panel now refreshes off the registry's own version, twice a
+second, so a settlement where nothing is being built still costs one comparison a frame.

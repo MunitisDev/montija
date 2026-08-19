@@ -155,6 +155,19 @@ export interface BuildingSelection {
   readonly residents: number;
   /** `true` when this building is already waiting to be pulled down. */
   readonly demolitionOrdered: boolean;
+  /**
+   * The one improvement this building can be given, when it can be given one.
+   *
+   * `null` for everything with no upgrade in its data, and for a building that
+   * already has it. Carries the cost so the panel can say what it will take
+   * before the player commits — a price discovered afterwards is a price they
+   * could not decide about.
+   */
+  readonly upgrade: { readonly cost: readonly ResourceAmount[] } | null;
+  /** `true` while that improvement is being built. */
+  readonly upgrading: boolean;
+  /** `true` once it is built. */
+  readonly improved: boolean;
 }
 
 /** What the presentation layer is allowed to see. */
@@ -199,6 +212,14 @@ export interface GameContext {
   adjustSelectedWorkers(delta: number): boolean;
   /** Orders the selected building pulled down, or takes the order back. */
   toggleSelectedDemolition(): boolean;
+  /**
+   * Orders the selected building's one improvement, or takes the order back.
+   *
+   * One command for both directions, like the road and the demolition: the panel
+   * shows what the next tap will do and the player never has to find a second
+   * button to undo the first.
+   */
+  toggleSelectedUpgrade(): boolean;
   /** What the trading post has been told to swap. Nulls mean "you decide". */
   readonly tradeOrder: { sell: ResourceId | null; buy: ResourceId | null };
   /** Steps the sell or buy choice on to the next good, or back to automatic. */
@@ -281,6 +302,15 @@ export interface RoadLineState {
   readonly payable: readonly GridPoint[];
 }
 
+/**
+ * Ticks between refreshes of an open building panel.
+ *
+ * Twice a second at 1x. Construction bumps the registry's version on every tick
+ * of work, and a panel rebuilt ten times a second to move a percentage would be
+ * the most expensive thing in the HUD for the least reason.
+ */
+const SELECTION_REFRESH_TICKS = 5;
+
 /** Where the placement ghost is and whether it may be committed. */
 export interface PlacementState {
   readonly buildingId: BuildingId;
@@ -329,6 +359,8 @@ export class Game implements GameContext, InputIntentSink {
   private simulationMs = 0;
   private currentSelection: Selection | null = null;
   private selectionChanges = 0;
+  private lastSeenBuildingsVersion = -1;
+  private lastSelectionRefresh = 0;
   private currentPlacement: PlacementState | null = null;
   private placementChanges = 0;
   private currentRoadLine: RoadLineState | null = null;
@@ -650,6 +682,7 @@ export class Game implements GameContext, InputIntentSink {
 
     this.camera.update(deltaSeconds);
     this.updatePlacementGhost();
+    this.refreshStaleSelection();
 
     if (this.ticksLastFrame > 0) {
       this.ticksUntilAutosave -= this.ticksLastFrame;
@@ -890,16 +923,15 @@ export class Game implements GameContext, InputIntentSink {
     }
 
     const definition = building.definition;
-    const missingMaterials = definition.constructionCost
+    const missingMaterials = building
+      .requiredMaterials()
       .map((cost) => ({ resource: cost.resource, amount: building.stillNeeds(cost.resource) }))
       .filter((entry) => entry.amount > 0);
 
     // A site's progress is the labour left, not the materials: materials are
     // reported separately because "waiting for stone" and "half built" are
     // different problems with different answers.
-    const progress = building.isComplete
-      ? 1
-      : 1 - building.buildTicksRemaining / Math.max(1, definition.buildTicks);
+    const progress = building.isComplete ? 1 : building.progress;
 
     const store = building.isComplete
       ? (this.storageContents(building.storageId) ?? inventoryAmounts(building.input))
@@ -921,6 +953,9 @@ export class Game implements GameContext, InputIntentSink {
       residents: this.simulation.villagers.all.filter((villager) => villager.homeId === building.id)
         .length,
       demolitionOrdered: this.simulation.isDemolitionOrdered(building.id),
+      upgrade: definition.upgrade && !building.improved ? { cost: definition.upgrade.cost } : null,
+      upgrading: building.upgrading,
+      improved: building.improved,
     };
   }
 
@@ -965,6 +1000,9 @@ export class Game implements GameContext, InputIntentSink {
       // pull down — and it is the settlement's only store on day one, which
       // makes offering to demolish it a trap rather than a choice.
       demolitionOrdered: false,
+      upgrade: null,
+      upgrading: false,
+      improved: false,
     };
   }
 
@@ -1139,6 +1177,22 @@ export class Game implements GameContext, InputIntentSink {
    * a misplaced tap on a quarry is a mistake the player can simply reverse
    * rather than one they have to live with.
    */
+  public toggleSelectedUpgrade(): boolean {
+    const selection = this.currentSelection;
+    const building = selection?.building;
+    if (!building) {
+      return false;
+    }
+
+    const acted = building.upgrading
+      ? this.simulation.cancelUpgrade(building.id)
+      : this.simulation.orderUpgrade(building.id);
+    if (acted) {
+      this.refreshSelection(selection!.cell);
+    }
+    return acted;
+  }
+
   public toggleSelectedDemolition(): boolean {
     const selection = this.currentSelection;
     const building = selection?.building;
@@ -1194,6 +1248,38 @@ export class Game implements GameContext, InputIntentSink {
   }
 
   /** Re-reads the selected cell after the world changed underneath it. */
+  /**
+   * Keeps an open panel telling the truth about what it is describing.
+   *
+   * **A selection is a snapshot**, taken at the tap and re-read only when the
+   * player taps again — which is right for a tile and wrong for a building. A
+   * house being improved sat there saying "waiting for 6 stone" long after the
+   * masons had finished, a site never showed its progress moving, and a workshop
+   * never showed the load it had just been brought.
+   *
+   * Refreshed off the building registry's own version, so a settlement in which
+   * nothing is being built costs one comparison a frame — and on a cadence rather
+   * than every change, because construction bumps that version on every tick of
+   * work and rebuilding the panel ten times a second to move a percentage would
+   * be the most expensive thing in the HUD.
+   */
+  private refreshStaleSelection(): void {
+    const selection = this.currentSelection;
+    if (!selection?.building) {
+      return;
+    }
+    const version = this.simulation.world.buildings.version;
+    if (version === this.lastSeenBuildingsVersion) {
+      return;
+    }
+    if (this.simulation.tick - this.lastSelectionRefresh < SELECTION_REFRESH_TICKS) {
+      return;
+    }
+    this.lastSeenBuildingsVersion = version;
+    this.lastSelectionRefresh = this.simulation.tick;
+    this.refreshSelection(selection.cell);
+  }
+
   private refreshSelection(cell: GridPoint): void {
     this.currentSelection = this.describeCell(cell, null);
     this.selectionChanges += 1;

@@ -137,6 +137,10 @@ export interface SavedBuilding {
    * nothing burning — which is what was true of them.
    */
   readonly burning?: boolean;
+  /** `true` once its one improvement is built. Absent in older saves. */
+  readonly improved?: boolean;
+  /** `true` while that improvement is being built. Absent in older saves. */
+  readonly upgrading?: boolean;
 }
 
 export interface SavedTree {

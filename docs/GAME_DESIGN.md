@@ -300,6 +300,35 @@ spare — provided it ever gets built. See
 
 ---
 
+## Improvements — Implemented
+
+**A settlement's spare stone and iron had nowhere to go but more buildings.** The most useful thing to
+spend them on is a house that is warmer for ever afterwards, so a house can be given a **stone hearth**:
+6 stone and 2 iron, and the household burns **a third less firewood** — about a winter's cutting, paid
+once.
+
+Three decisions worth recording:
+
+- **One improvement, not a tech tree.** A settlement game turns into a spreadsheet the moment every
+  building has three tiers and a menu. There is exactly one, it is ordered from the building's own
+  panel, and the button doubles as the way to take the order back.
+- **It is _built_.** The house drops back into `underConstruction` for the duration and borrows the whole
+  of the machinery that already exists: the stone and the iron are hauled there by hand, somebody spends
+  labour on the roof, the panel shows the progress. Nothing about hauling or building had to learn a new
+  kind of work — the building is simply asked what it owes (`requiredMaterials`) rather than told.
+- **Iron makes it a later decision.** Stone alone would make it an obvious first move; iron means a mine
+  and a blacksmith, so the settlement has to be standing before it can start being comfortable.
+
+The family goes on living there while the masons work — putting a household into the snow to give them a
+warmer hearth would be a bitter joke — and finishing an improvement is not counted in the chronicle as a
+building raised, because the walls stood the whole time.
+
+An improved house **shows it**: the same silhouette with dressed, pale masonry where the plain one has
+field stone, which reads on the chimney. A player with eight cottages has to be able to see which ones
+they have already paid to warm.
+
+---
+
 ## Spoilage — Implemented
 
 Food rots. It loses a tenth of itself each day in an ordinary yard or lying in the field, and a

@@ -77,6 +77,7 @@ interface HudElements {
   readonly workerCount: HTMLElement;
   readonly workerLabel: HTMLElement;
   readonly demolish: HTMLButtonElement;
+  readonly improve: HTMLButtonElement;
   readonly tradeControl: HTMLElement;
   readonly tradeSell: HTMLButtonElement;
   readonly tradeBuy: HTMLButtonElement;
@@ -127,6 +128,11 @@ export class Hud {
     this.bindWorkerControl();
     this.elements.demolish.addEventListener('click', () => {
       this.context.toggleSelectedDemolition();
+      this.update();
+    });
+
+    this.elements.improve.addEventListener('click', () => {
+      this.context.toggleSelectedUpgrade();
       this.update();
     });
     this.elements.tradeSell.addEventListener('click', () => {
@@ -388,6 +394,7 @@ export class Hud {
     if (!building) {
       this.elements.workerControl.hidden = true;
       this.elements.demolish.hidden = true;
+      this.elements.improve.hidden = true;
       this.elements.tradeControl.hidden = true;
       this.elements.buildingBuried.hidden = true;
       return;
@@ -401,6 +408,19 @@ export class Hud {
       const order = this.context.tradeOrder;
       this.elements.tradeSell.textContent = this.tradeLabel(order.sell, 'trade.sellAuto');
       this.elements.tradeBuy.textContent = this.tradeLabel(order.buy, 'trade.buyAuto');
+    }
+
+    // **The one improvement a building can be given.** Shown with its price,
+    // because a cost the player only discovers after ordering is a cost they
+    // could not decide about; and it doubles as the way to take the order back,
+    // like every other toggle on this panel.
+    const improvable = building.upgrade !== null && (building.complete || building.upgrading);
+    this.elements.improve.hidden = !improvable;
+    if (improvable) {
+      this.elements.improve.textContent = building.upgrading
+        ? this.i18n.t('action.cancel')
+        : `${this.i18n.t('action.improve')} — ${this.describeAmounts(building.upgrade?.cost ?? [])}`;
+      this.elements.improve.classList.toggle('is-cancel', building.upgrading);
     }
 
     // Hidden on the founding yard, which has no Building behind it and is the
@@ -1102,6 +1122,7 @@ function collectElements(root: HTMLElement): HudElements {
     workerCount: requireElement(root, '[data-hud="worker-count"]'),
     workerLabel: requireElement(root, '[data-hud="worker-label"]'),
     demolish: requireElement(root, '[data-hud="demolish"]') as HTMLButtonElement,
+    improve: requireElement(root, '[data-hud="improve"]') as HTMLButtonElement,
     tradeControl: requireElement(root, '[data-hud="trade-control"]'),
     tradeSell: requireElement(root, '[data-hud="trade-sell"]') as HTMLButtonElement,
     tradeBuy: requireElement(root, '[data-hud="trade-buy"]') as HTMLButtonElement,
