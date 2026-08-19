@@ -250,7 +250,8 @@ body.is-menu-open #hud {
   color: var(--colour-ink);
 }
 
-.guide__body + .guide__list {
+.guide__body + .guide__list,
+.guide__body + .guide__table-wrap {
   margin-top: 12px;
 }
 
@@ -300,6 +301,86 @@ body.is-menu-open #hud {
   margin: 0;
   font-size: 0.88rem;
   line-height: 1.5;
+  color: var(--colour-ink-dim);
+}
+
+/* --- Guide tables -------------------------------------------------------- */
+
+/*
+ * A block of figures. Scrolls sideways rather than crushing its columns.
+ *
+ * `touch-action: pan-x` has to be granted back: the body suppresses touch
+ * scrolling so gestures belong to the camera, and the sheet grants only
+ * `pan-y`. Without this line a table wider than a phone could not be read on a
+ * phone, which is the device the game is aimed at.
+ */
+.guide__table-wrap {
+  margin: 0 0 18px;
+  overflow-x: auto;
+  touch-action: pan-x pan-y;
+  overscroll-behavior-x: contain;
+}
+
+.guide__table {
+  width: 100%;
+  /* Wide enough that the four columns stay four columns; narrower than that
+   * and "Makes a year" wraps to one word a line. Below it the wrapper scrolls. */
+  min-width: 22rem;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.guide__caption {
+  padding: 0 0 6px;
+  text-align: left;
+  font-size: 0.82rem;
+  color: var(--colour-ink);
+}
+
+.guide__table th,
+.guide__table td {
+  padding: 5px 10px 5px 0;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(232, 224, 208, 0.09);
+}
+
+.guide__table thead th {
+  font-weight: 500;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--colour-ink-dim);
+  border-bottom-color: rgba(201, 162, 39, 0.35);
+}
+
+.guide__table tbody tr:last-child th,
+.guide__table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* The row's subject: what the figures beside it are about. */
+.guide__cell--label {
+  font-weight: 400;
+  color: var(--colour-ink);
+  white-space: nowrap;
+}
+
+/*
+ * The figures. Dimmer than the label, because the label is what you scan for
+ * and the number is what you stop on — reversing that makes the table a wall.
+ */
+.guide__cell--figure {
+  color: var(--colour-ink-dim);
+}
+
+/* The caveat a column cannot hold: the length of the year, what is salvaged. */
+.guide__note {
+  margin: 6px 0 0;
+  max-width: 62ch;
+  font-size: 0.74rem;
+  line-height: 1.45;
   color: var(--colour-ink-dim);
 }
 

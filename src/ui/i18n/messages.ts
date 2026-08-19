@@ -455,6 +455,34 @@ export const EN = {
   'guide.perVillagerYear': 'eaten a year, per villager',
   'guide.perHousedYear': 'burned a year, per villager under a roof',
 
+  'guide.figures': 'The figures',
+  'guide.figures.body':
+    'A reference sheet rather than something to read through. Every figure here is the plain one: every post filled, no tools, nobody experienced, nobody ill and nothing carried far. Real output is lower than the table says, and the bonuses raise it again.',
+  'guide.figures.buildings': 'Every building, in a year',
+  'guide.figures.building': 'Building',
+  'guide.figures.makes': 'Makes a year',
+  'guide.figures.uses': 'Uses a year',
+  'guide.figures.workers': 'Workers',
+  'guide.figures.timber': 'timber, as the wood allows',
+  'guide.figures.buildingsNote':
+    'Not everything a building is worth arrives as goods: a Healer shortens an illness, a Temple lifts the settlement, a School teaches a trade, a store holds what the others make. Those rows are empty because there is no yearly figure to give, not because the building is idle.',
+  'guide.figures.land': 'What the land gives up',
+  'guide.figures.work': 'Work',
+  'guide.figures.yield': 'Yield',
+  'guide.figures.tree': 'Felling one tree',
+  'guide.figures.deposit': 'Working out one rock face',
+  'guide.figures.landNote':
+    'Clearing ground to build on salvages nothing: a tree pushed aside for a storehouse leaves no logs.',
+  'guide.figures.people': 'What living costs',
+  'guide.figures.draw': 'Goods',
+  'guide.figures.aYearColumn': 'A year, each',
+  'guide.figures.who': 'Paid by',
+  'guide.figures.everyone': 'every villager',
+  'guide.figures.everyoneHoused': 'every villager under a roof, on freezing days only',
+  'guide.figures.everyWorker': 'every villager at work',
+  'guide.figures.yearNote': 'days to the year, four seasons of twelve.',
+  'guide.figures.freezingNote': 'of them freeze.',
+
   'resource.logs.purpose':
     'Felled trees. Almost everything is built from them, and firewood is split from them.',
   'resource.firewood.purpose': 'Burned on freezing days to keep houses warm.',
@@ -927,6 +955,34 @@ export const ES: Messages = {
   'guide.fellsOwn': 'tala el bosque a su alrededor mientras falten en los almacenes',
   'guide.perVillagerYear': 'al año, por aldeano',
   'guide.perHousedYear': 'al año, por aldeano con techo',
+
+  'guide.figures': 'Las cifras',
+  'guide.figures.body':
+    'Una hoja de consulta, no algo que leer de corrido. Todas las cifras son las simples: todos los puestos ocupados, sin herramientas, sin experiencia, nadie enfermo y nada acarreado desde lejos. Lo que el asentamiento produce de verdad es menos de lo que dice la tabla, y los bonificadores lo vuelven a subir.',
+  'guide.figures.buildings': 'Cada edificio, en un año',
+  'guide.figures.building': 'Edificio',
+  'guide.figures.makes': 'Produce al año',
+  'guide.figures.uses': 'Consume al año',
+  'guide.figures.workers': 'Trabajadores',
+  'guide.figures.timber': 'madera, según el bosque que tenga cerca',
+  'guide.figures.buildingsNote':
+    'No todo lo que aporta un edificio llega en forma de bienes: un Sanador acorta las enfermedades, un Templo levanta el ánimo, una Escuela enseña un oficio, un almacén guarda lo que hacen los demás. Esas filas están vacías porque no hay cifra anual que dar, no porque el edificio esté parado.',
+  'guide.figures.land': 'Lo que da la tierra',
+  'guide.figures.work': 'Trabajo',
+  'guide.figures.yield': 'Rendimiento',
+  'guide.figures.tree': 'Talar un árbol',
+  'guide.figures.deposit': 'Picar una casilla de roca',
+  'guide.figures.landNote':
+    'Despejar terreno para construir no aprovecha nada: un árbol apartado para levantar un almacén no deja troncos.',
+  'guide.figures.people': 'Lo que cuesta vivir',
+  'guide.figures.draw': 'Bien',
+  'guide.figures.aYearColumn': 'Al año, cada uno',
+  'guide.figures.who': 'Lo paga',
+  'guide.figures.everyone': 'cada aldeano',
+  'guide.figures.everyoneHoused': 'cada aldeano con techo, y solo en días de helada',
+  'guide.figures.everyWorker': 'cada aldeano que trabaja',
+  'guide.figures.yearNote': 'días tiene el año, cuatro estaciones de doce.',
+  'guide.figures.freezingNote': 'de ellos hielan.',
 
   'resource.logs.purpose':
     'Árboles talados. Casi todo se construye con ellos, y de ellos se parte la leña.',

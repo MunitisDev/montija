@@ -48,3 +48,26 @@ export function signedSeason(perDay: number): string {
   const total = perSeason(perDay);
   return total > 0 ? `+${total}` : String(total);
 }
+
+/**
+ * A yearly total, as a figure a reader can hold in their head.
+ *
+ * Whole from ten upwards, one decimal below it. Tool wear is 2.4 a worker a
+ * year and rounding it to 2 understates it by a fifth; a quarry's 1234 stone
+ * gains nothing from a decimal point. The threshold is where those two
+ * pressures cross.
+ *
+ * A real but tiny figure keeps a decimal rather than rounding to `0`, for the
+ * same reason {@link perSeason} keeps its sign: a cost the settlement really
+ * pays should not be printed as no cost at all.
+ */
+export function yearFigure(perYear: number): string {
+  if (perYear === 0) {
+    return '0';
+  }
+  if (Math.abs(perYear) >= 10) {
+    return String(Math.round(perYear));
+  }
+  const rounded = Math.round(perYear * 10) / 10;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}

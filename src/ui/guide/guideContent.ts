@@ -24,18 +24,22 @@ import {
   type BuildingDefinition,
   type BuildingId,
 } from '@/data/buildings';
-import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
-import { annualProduction } from '@/ui/hud/productionModel';
+import { LOGS_PER_TREE, RESOURCE_IDS, STONE_PER_DEPOSIT, type ResourceId } from '@/data/resources';
+import { annualProduction, type AnnualRate } from '@/ui/hud/productionModel';
 import {
   DAYS_PER_SEASON,
+  DAYS_PER_YEAR,
   SEASONS,
   TICKS_PER_DAY,
   yearStateAt,
 } from '@/simulation/seasons/SeasonClock';
 import {
+  CLOTHING_PER_VILLAGER_PER_COLD_DAY,
   FIREWOOD_PER_VILLAGER_PER_COLD_DAY,
   FOOD_PER_VILLAGER_PER_DAY,
+  TOOLS_PER_WORKER_PER_DAY,
 } from '@/simulation/seasons/SurvivalSystem';
+import { yearFigure } from '@/ui/format/rates';
 import type { MessageKey } from '@/ui/i18n/messages';
 
 /** Looks a string up. The guide never touches `I18n` directly, so it tests. */
@@ -64,13 +68,57 @@ export interface GuideEntry {
   readonly output: string | null;
 }
 
+/**
+ * One line of a reference table: a heading cell and the figures beside it.
+ *
+ * `values` lines up with its table's `columns` from the second onwards. A blank
+ * is {@link BLANK} rather than an empty string, because a table whose empty
+ * cells are invisible reads as a table with missing rows.
+ */
+export interface GuideTableRow {
+  readonly label: string;
+  readonly values: readonly string[];
+}
+
+/**
+ * A block of figures, as opposed to a list of explanations.
+ *
+ * **A different shape from {@link GuideEntry} because it answers a different
+ * kind of question.** An entry says what a thing is, in a sentence. A table says
+ * what a thing *costs*, in a column a reader can run their eye down and compare.
+ * "Which of these two feeds more people" is not a question prose can answer.
+ *
+ * Generated from the same tables the simulation runs on, like everything else in
+ * this file, so the figures cannot drift from the game.
+ */
+export interface GuideTable {
+  readonly id: string;
+  readonly caption: string;
+  /** Column headings. The first names the row-label column. */
+  readonly columns: readonly string[];
+  readonly rows: readonly GuideTableRow[];
+  /**
+   * A line under the table, for the caveat a column cannot hold.
+   *
+   * `null` when there is nothing to add. Used for the length of the year and
+   * the count of freezing days, which every figure in the household table is
+   * derived from and neither of which is a row.
+   */
+  readonly note: string | null;
+}
+
 export interface GuideSection {
   readonly id: string;
   readonly title: string;
   /** An opening paragraph, for the sections that are prose rather than a list. */
   readonly body: string | null;
   readonly entries: readonly GuideEntry[];
+  /** The figures, for the one section that is a reference sheet. */
+  readonly tables: readonly GuideTable[];
 }
+
+/** What goes in a cell with nothing in it. An em dash, so the row still reads. */
+export const BLANK = '—';
 
 /** The order the guide reads in. Answers "what am I doing?" before "how?". */
 export const SECTION_IDS = [
@@ -83,6 +131,9 @@ export const SECTION_IDS = [
   'hardship',
   'resources',
   'buildings',
+  // Last, and deliberately: it is a reference sheet, not something to read
+  // through. A player comes back to it with a question about a number.
+  'figures',
 ] as const;
 
 export type SectionId = (typeof SECTION_IDS)[number];
@@ -193,19 +244,28 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
         };
       }),
     }),
+    section('figures', t, {
+      body: t('guide.figures.body'),
+      tables: [buildingLedger(t), landYields(t), householdDraw(t)],
+    }),
   ];
 }
 
 function section(
   id: SectionId,
   t: Translate,
-  parts: { body?: string; entries?: readonly GuideEntry[] },
+  parts: {
+    body?: string;
+    entries?: readonly GuideEntry[];
+    tables?: readonly GuideTable[];
+  },
 ): GuideSection {
   return {
     id,
     title: t(`guide.${id}` as MessageKey),
     body: parts.body ?? null,
     entries: parts.entries ?? [],
+    tables: parts.tables ?? [],
   };
 }
 
@@ -333,5 +393,128 @@ function describeCost(definition: BuildingDefinition, t: Translate): string {
   }
   return definition.constructionCost
     .map((entry) => `${entry.amount} ${t(`hud.${entry.resource}` as MessageKey)}`)
+    .join(', ');
+}
+
+/**
+ * Every building's year, side by side.
+ *
+ * **Asked for, and the one thing the guide could not previously answer.** The
+ * buildings section says what each building makes on its own line, which is
+ * enough to understand a building and useless for choosing between two. Down a
+ * column, "which of these feeds the settlement" takes a second to see.
+ *
+ * Every building appears, including the ones that make nothing: that a Cemetery
+ * produces nothing is a fact worth being able to check, and a table that quietly
+ * dropped the rows with no figures would leave the reader wondering whether they
+ * had missed something.
+ *
+ * The plain figure throughout — full staff, no tools, no experience, nobody
+ * ill — because a baseline that folded in modifiers could not be compared
+ * against anything. The section says so once, above.
+ */
+function buildingLedger(t: Translate): GuideTable {
+  return {
+    id: 'buildings',
+    caption: t('guide.figures.buildings'),
+    columns: [
+      t('guide.figures.building'),
+      t('guide.figures.makes'),
+      t('guide.figures.uses'),
+      t('guide.figures.workers'),
+    ],
+    rows: BUILDING_IDS.map((id) => {
+      const definition = buildingDefinition(id);
+      const { outputs, inputs } = annualProduction(id);
+      // A Feller's Hut and a Forester's Lodge produce timber without a recipe,
+      // by felling what stands near them. No yearly figure can reach that — it
+      // depends on the wood — so the cell says as much rather than reading as a
+      // building that produces nothing.
+      const timber = definition.felling || definition.forestry ? t('guide.figures.timber') : BLANK;
+      return {
+        label: t(`building.${id}` as MessageKey),
+        values: [
+          outputs.length > 0 ? amounts(outputs, t) : timber,
+          inputs.length > 0 ? amounts(inputs, t) : BLANK,
+          definition.workerSlots > 0 ? String(definition.workerSlots) : BLANK,
+        ],
+      };
+    }),
+    // A Healer with two posts and nothing in the "makes" column would read as a
+    // building that does nothing. Said once, under the table, rather than
+    // inventing a unit for kindness.
+    note: t('guide.figures.buildingsNote'),
+  };
+}
+
+/**
+ * What the land itself gives up, per tree and per deposit.
+ *
+ * Small, and the section would be incomplete without it: the first two hours of
+ * every game are spent felling and quarrying, and a player working out how many
+ * trees a house costs needs the conversion. Eight logs is two trees, which is
+ * not obvious until somebody says that a tree is four.
+ */
+function landYields(t: Translate): GuideTable {
+  const name = (resource: ResourceId): string =>
+    t(`hud.${resource}` as MessageKey).toLocaleLowerCase();
+  return {
+    id: 'land',
+    caption: t('guide.figures.land'),
+    columns: [t('guide.figures.work'), t('guide.figures.yield')],
+    rows: [
+      { label: t('guide.figures.tree'), values: [`${LOGS_PER_TREE} ${name('logs')}`] },
+      { label: t('guide.figures.deposit'), values: [`${STONE_PER_DEPOSIT} ${name('stone')}`] },
+    ],
+    note: t('guide.figures.landNote'),
+  };
+}
+
+/**
+ * What living costs, per person and per year.
+ *
+ * **The other half of the buildings table, and worthless without it.** A
+ * Gatherer Hut's yearly food figure says nothing on its own, because nothing
+ * anywhere said what a villager eats. Put beside it, the two tables are a plan:
+ * this many mouths, that many huts.
+ *
+ * Each row names who pays it, because they differ and the difference is the
+ * game. Food is every mouth every day of the year. Firewood is only the housed,
+ * and only on the days it freezes — sleeping rough costs nothing in fuel, which
+ * is the cruel half of that rule. Coats are everybody in the cold. Tools are
+ * worn by whoever is working, so an idle settlement wears none.
+ */
+function householdDraw(t: Translate): GuideTable {
+  const freezing = freezingDaysPerYear();
+  const draw = (resource: ResourceId, perYear: number, who: MessageKey): GuideTableRow => ({
+    label: t(`hud.${resource}` as MessageKey),
+    values: [yearFigure(perYear), t(who)],
+  });
+
+  return {
+    id: 'people',
+    caption: t('guide.figures.people'),
+    columns: [t('guide.figures.draw'), t('guide.figures.aYearColumn'), t('guide.figures.who')],
+    rows: [
+      draw('food', FOOD_PER_VILLAGER_PER_DAY * DAYS_PER_YEAR, 'guide.figures.everyone'),
+      draw(
+        'firewood',
+        FIREWOOD_PER_VILLAGER_PER_COLD_DAY * freezing,
+        'guide.figures.everyoneHoused',
+      ),
+      draw('clothing', CLOTHING_PER_VILLAGER_PER_COLD_DAY * freezing, 'guide.figures.everyone'),
+      draw('tools', TOOLS_PER_WORKER_PER_DAY * DAYS_PER_YEAR, 'guide.figures.everyWorker'),
+    ],
+    note: `${DAYS_PER_YEAR} ${t('guide.figures.yearNote')} ${freezing} ${t('guide.figures.freezingNote')}`,
+  };
+}
+
+/** A list of yearly amounts, as "48 food, 12 hides". */
+function amounts(rates: readonly AnnualRate[], t: Translate): string {
+  return rates
+    .map(
+      (rate) =>
+        `${yearFigure(rate.perYear)} ${t(`hud.${rate.resource}` as MessageKey).toLocaleLowerCase()}`,
+    )
     .join(', ');
 }

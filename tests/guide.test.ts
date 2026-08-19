@@ -16,10 +16,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { BUILDING_IDS, buildingDefinition } from '@/data/buildings';
-import { RESOURCE_IDS } from '@/data/resources';
-import { SEASONS } from '@/simulation/seasons/SeasonClock';
+import { LOGS_PER_TREE, RESOURCE_IDS, STONE_PER_DEPOSIT } from '@/data/resources';
+import { DAYS_PER_YEAR, SEASONS } from '@/simulation/seasons/SeasonClock';
+import { FOOD_PER_VILLAGER_PER_DAY } from '@/simulation/seasons/SurvivalSystem';
 import { EN, ES, type MessageKey } from '@/ui/i18n/messages';
-import { SECTION_IDS, buildGuide, type Translate } from '@/ui/guide/guideContent';
+import { BLANK, SECTION_IDS, buildGuide, type Translate } from '@/ui/guide/guideContent';
 import { annualProduction } from '@/ui/hud/productionModel';
 
 const CATALOGUES = { en: EN, es: ES } as const;
@@ -61,6 +62,27 @@ describe('the guide, in every language', () => {
         expect(entry.detail.trim(), `${section.id}/${entry.term}`).not.toBe('');
         if (entry.meta !== null) {
           expect(entry.meta.trim(), `${section.id}/${entry.term} meta`).not.toBe('');
+        }
+      }
+      // A blank cell in a table of figures is worse than a missing table: the
+      // reader concludes the game has no answer rather than that the guide has
+      // a hole. Every cell, in both languages.
+      for (const table of section.tables) {
+        expect(table.caption.trim(), `${table.id} caption`).not.toBe('');
+        for (const column of table.columns) {
+          expect(column.trim(), `${table.id} column`).not.toBe('');
+        }
+        for (const row of table.rows) {
+          expect(row.label.trim(), `${table.id} row label`).not.toBe('');
+          expect(row.values, `${table.id}/${row.label} width`).toHaveLength(
+            table.columns.length - 1,
+          );
+          for (const value of row.values) {
+            expect(value.trim(), `${table.id}/${row.label} cell`).not.toBe('');
+          }
+        }
+        if (table.note !== null) {
+          expect(table.note.trim(), `${table.id} note`).not.toBe('');
         }
       }
     }
@@ -219,6 +241,99 @@ describe('what the guide says about a building', () => {
   });
 });
 
+/**
+ * The reference tables, asked for by a player who could not plan a settlement.
+ *
+ * The guide could already say what one building makes. What it could not do was
+ * let two be compared, or answer "and what does that feed?" — and neither
+ * question can be answered by prose, only by a column.
+ */
+describe('the figures at the end', () => {
+  it('gives every building a row, including the ones that make nothing', () => {
+    // Every building, deliberately: that a Cemetery produces nothing is a fact
+    // worth being able to check, and a table that dropped its empty rows would
+    // leave the reader wondering whether they had missed one.
+    const table = tableNamed('figures', 'buildings');
+    expect(table.rows).toHaveLength(BUILDING_IDS.length);
+    expect(table.rows.map((row) => row.label)).toEqual(
+      BUILDING_IDS.map((id) => EN[`building.${id}` as MessageKey]),
+    );
+  });
+
+  it('quotes the yearly figures from the same model the panels use', () => {
+    const table = tableNamed('figures', 'buildings');
+    const row = table.rows[BUILDING_IDS.indexOf('woodcutter')]!;
+    const yearly = annualProduction('woodcutter');
+
+    expect(row.values[0]).toContain(String(Math.round(yearly.outputs[0]!.perYear)));
+    expect(row.values[1]).toContain(String(Math.round(yearly.inputs[0]!.perYear)));
+    expect(row.values[2]).toBe(String(buildingDefinition('woodcutter').workerSlots));
+  });
+
+  it('says a felling building makes timber rather than nothing', () => {
+    // A Feller's Hut has no recipe, so `annualProduction` has nothing to say
+    // about it. Left blank the table would read as "this building is useless".
+    const table = tableNamed('figures', 'buildings');
+    const feller = table.rows[BUILDING_IDS.indexOf('feller')]!;
+    expect(feller.values[0]).toBe(EN['guide.figures.timber']);
+
+    const house = table.rows[BUILDING_IDS.indexOf('house')]!;
+    expect(house.values[0]).toBe(BLANK);
+  });
+
+  it('says what a tree and a rock face give up', () => {
+    // The conversion the first hour of every game needs: eight logs is two
+    // trees, which nothing anywhere said.
+    const table = tableNamed('figures', 'land');
+    expect(table.rows[0]!.values[0]).toContain(String(LOGS_PER_TREE));
+    expect(table.rows[1]!.values[0]).toContain(String(STONE_PER_DEPOSIT));
+  });
+
+  it('says what a year of living draws, and who pays each cost', () => {
+    const table = tableNamed('figures', 'people');
+    const labels = table.rows.map((row) => row.label);
+    for (const resource of ['food', 'firewood', 'clothing', 'tools'] as const) {
+      expect(labels, `${resource} is missing`).toContain(EN[`hud.${resource}` as MessageKey]);
+    }
+
+    const food = table.rows[labels.indexOf(EN['hud.food'])]!;
+    expect(Number(food.values[0])).toBe(FOOD_PER_VILLAGER_PER_DAY * DAYS_PER_YEAR);
+    expect(food.values[1]).toBe(EN['guide.figures.everyone']);
+
+    // Firewood is only the housed, and only on freezing days, so it must come
+    // out well under the food figure rather than equal to it.
+    const firewood = table.rows[labels.indexOf(EN['hud.firewood'])]!;
+    expect(Number(firewood.values[0])).toBeGreaterThan(0);
+    expect(Number(firewood.values[0])).toBeLessThan(Number(food.values[0]));
+    expect(firewood.values[1]).toBe(EN['guide.figures.everyoneHoused']);
+
+    // A coat lasts years, so its yearly figure is a fraction. Rounded to a whole
+    // number it would print as `0` and read as free.
+    const clothing = table.rows[labels.indexOf(EN['hud.clothing'])]!;
+    expect(Number(clothing.values[0])).toBeGreaterThan(0);
+    expect(Number(clothing.values[0])).toBeLessThan(10);
+
+    // The length of the year and the count of freezing days: every figure above
+    // is derived from them and neither is a row.
+    expect(table.note).toContain(String(DAYS_PER_YEAR));
+  });
+
+  it('reads the same in Spanish, down to the row order', () => {
+    const spanish = buildGuide(strict('es')).find((section) => section.id === 'figures')!;
+    const english = tableNamed('figures', 'buildings');
+    const translated = spanish.tables.find((table) => table.id === 'buildings')!;
+
+    expect(translated.rows).toHaveLength(english.rows.length);
+    expect(translated.rows.map((row) => row.label)).toEqual(
+      BUILDING_IDS.map((id) => ES[`building.${id}` as MessageKey]),
+    );
+    // The figures are figures in any language; only the goods beside them change.
+    expect(translated.rows[BUILDING_IDS.indexOf('woodcutter')]!.values[0]).toContain(
+      ES['hud.firewood'].toLocaleLowerCase(),
+    );
+  });
+});
+
 // --- helpers ---------------------------------------------------------------
 
 function sectionNamed(id: string) {
@@ -227,6 +342,14 @@ function sectionNamed(id: string) {
     throw new Error(`No guide section called ${id}`);
   }
   return section;
+}
+
+function tableNamed(sectionId: string, tableId: string) {
+  const table = sectionNamed(sectionId).tables.find((candidate) => candidate.id === tableId);
+  if (!table) {
+    throw new Error(`No table called ${tableId} in ${sectionId}`);
+  }
+  return table;
 }
 
 function entryFor(sectionId: string, term: string) {

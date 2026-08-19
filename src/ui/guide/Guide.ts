@@ -13,7 +13,7 @@
  */
 
 import { type I18n } from '@/ui/i18n/I18n';
-import { buildGuide, type GuideSection } from './guideContent';
+import { buildGuide, type GuideSection, type GuideTable } from './guideContent';
 
 export class Guide {
   private readonly i18n: I18n;
@@ -96,10 +96,6 @@ function renderSection(section: GuideSection): HTMLElement {
     element.append(paragraph);
   }
 
-  if (section.entries.length === 0) {
-    return element;
-  }
-
   // A definition list, because that is what this is: a term and what it means.
   // Screen readers get the pairing for free, which a stack of divs would lose.
   const list = document.createElement('dl');
@@ -133,8 +129,85 @@ function renderSection(section: GuideSection): HTMLElement {
     list.append(term, detail);
   }
 
-  element.append(list);
+  if (section.entries.length > 0) {
+    element.append(list);
+  }
+  for (const table of section.tables) {
+    element.append(renderTable(table));
+  }
   return element;
+}
+
+/**
+ * A block of figures, as a real table.
+ *
+ * A `<table>` rather than a grid of divs because it *is* tabular data: the
+ * column a cell belongs to is part of its meaning, and a screen reader reading
+ * "12" without "firewood, a year" has been told nothing. `scope` on the headings
+ * is what buys that, and it costs one attribute.
+ *
+ * The wrapper scrolls sideways on a narrow phone rather than squeezing four
+ * columns into three hundred pixels. `touch-action` has to grant the horizontal
+ * pan back explicitly: the sheet grants only `pan-y`, so without this a table
+ * wider than the screen could not be reached on the device the game is aimed at.
+ */
+function renderTable(table: GuideTable): HTMLElement {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'guide__table-wrap';
+  wrapper.dataset['table'] = table.id;
+
+  const element = document.createElement('table');
+  element.className = 'guide__table';
+
+  const caption = document.createElement('caption');
+  caption.className = 'guide__caption';
+  caption.textContent = table.caption;
+  element.append(caption);
+
+  const head = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  for (const [index, column] of table.columns.entries()) {
+    const cell = document.createElement('th');
+    cell.scope = 'col';
+    // Everything after the first column is a figure or a short phrase; the
+    // first is what the row is about, and reads better left.
+    if (index > 0) {
+      cell.className = 'guide__cell--figure';
+    }
+    cell.textContent = column;
+    headRow.append(cell);
+  }
+  head.append(headRow);
+  element.append(head);
+
+  const body = document.createElement('tbody');
+  for (const row of table.rows) {
+    const line = document.createElement('tr');
+    const label = document.createElement('th');
+    label.scope = 'row';
+    label.className = 'guide__cell--label';
+    label.textContent = row.label;
+    line.append(label);
+
+    for (const value of row.values) {
+      const cell = document.createElement('td');
+      cell.className = 'guide__cell--figure';
+      cell.textContent = value;
+      line.append(cell);
+    }
+    body.append(line);
+  }
+  element.append(body);
+  wrapper.append(element);
+
+  if (table.note) {
+    const note = document.createElement('p');
+    note.className = 'guide__note';
+    note.textContent = table.note;
+    wrapper.append(note);
+  }
+
+  return wrapper;
 }
 
 function requireElement(root: HTMLElement, selector: string): HTMLElement {

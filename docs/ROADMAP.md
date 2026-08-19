@@ -1625,3 +1625,28 @@ thousand of them on the ground rather than only when the shelves are full.
 The Forester's Lodge no longer looks like the Gatherer Hut, which it did: both were a log cabin under
 thatch with the gable facing the same way. It is boarded, shingled, ridged the other way and stands on
 kept green ground.
+
+## PHASE 51 — The figures, written down — Implemented
+
+The guide could say what one building makes. It could not let two be compared, and it could not answer
+the question underneath every such comparison: _and what does that feed?_ Both are now at the end of
+the sheet as three reference tables, generated from the same data the simulation runs on.
+
+- **Every building, in a year** — what it makes, what it eats to do it, how many posts it has. Every
+  building appears, including the ones that make nothing: that a Cemetery produces nothing is a fact
+  worth being able to check. A Feller's Hut and a Forester's Lodge say _timber, as the wood allows_,
+  because no yearly figure can reach a building that fells what happens to stand near it.
+- **What the land gives up** — four logs a tree, six stone a rock face. The conversion the first hour of
+  every game needs, and one nothing anywhere stated.
+- **What living costs** — food per villager, firewood per villager _under a roof and only on freezing
+  days_, coats per villager, tools per villager _at work_. Beside the buildings table these two are a
+  plan: this many mouths, that many huts.
+
+Every figure is the plain one — full staff, no tools, no experience, nobody ill, nothing carried far —
+said once above the tables rather than repeated on every line. The length of the year (48 days) and the
+count of freezing days in it (14) are printed under the last table, because every figure in it is
+derived from them and neither is a row.
+
+The tables are `GuideTable` in `guideContent.ts`, tested headlessly like the rest of the guide: every
+building has a row, every cell is filled in both languages, and the yearly figures are read from
+`annualProduction` rather than typed in a second time.
