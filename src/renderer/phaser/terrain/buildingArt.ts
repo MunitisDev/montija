@@ -245,6 +245,24 @@ const MASS: Readonly<Record<BuildingId, BuildingMass>> = {
     ground: 'worn',
   },
 
+  // **Where the settlement's timber comes from.** A cutters' hut at the edge of
+  // the wood: log walls, a plain shingle roof, and a whole trunk up on trestles
+  // outside with the saw still in it. Nothing like the Woodcutter's split-wood
+  // pile — one of them fells trees and the other splits what is brought in, and
+  // the player has to be able to see which is which without tapping either.
+  feller: {
+    wallHeight: 18,
+    roofHeight: 20,
+    eaves: 7,
+    form: 'gable-left',
+    build: 'log',
+    cover: 'shingle',
+    windows: 1,
+    feature: { kind: 'trestle', u: 0.84, v: 0.14 },
+    inset: PLOT_FILL,
+    ground: 'worn',
+  },
+
   // A workshop, with the work happening in an open bay along the near wall and
   // the split logs stacked under it.
   woodcutter: {
@@ -481,6 +499,9 @@ export const BUILDING_COLOURS: Readonly<Record<BuildingId, BuildingPalette>> = {
   // Thatched, so the roof colour is barely used; the walls carry the identity.
   'gatherer-hut': { wall: 0x8d8a6c, roof: 0x4c5039, trim: 0x3b4030 },
   // A workshop: timber walls, dark shingles. Still a clear gap between them.
+  // Bark-brown log walls under weathered shingle: the roughest building the
+  // settlement raises, and the first one it needs.
+  feller: { wall: 0x74603f, roof: 0x574734, trim: 0x3a2f22 },
   woodcutter: { wall: 0x86714f, roof: 0x4a3b2a, trim: 0x362c20 },
   forester: { wall: 0x7f8058, roof: 0x44452f, trim: 0x33341f },
   // Cut rock, pale and cold, under slate.

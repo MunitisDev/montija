@@ -228,6 +228,7 @@ Definitions live in `src/data/buildings.ts`; the build menu is generated from th
 | Storage Yard | 6 logs           | —     | stores logs, stone, firewood         |
 | Food Storage | 6 logs, 2 stone  | —     | stores food, and keeps it            |
 | Gatherer Hut | 10 logs, 2 stone | 2     | forages food, scaled by the season   |
+| Feller's Hut | 6 logs, 2 stone  | 1     | fells the wood: logs on the ground   |
 | Woodcutter   | 8 logs, 4 stone  | 2     | 1 log → 4 firewood                   |
 
 Later buildings are listed under the systems they belong to. Two of them serve
@@ -266,9 +267,29 @@ settled village.
 | Herbalist's Hut | 8 herbs a day (summer)   | —               |
 | **Quarry**      | **10.3 stone a day**     | —               |
 | Mine            | 2.7 iron a day           | —               |
+| Feller's Hut    | logs, at the wood's pace | —               |
 | Woodcutter      | 16 firewood a day        | 4 logs          |
 | Blacksmith      | 6 tools a day            | 4 iron + 2 logs |
 | Tailor          | 4.4 clothing a day       | 6.5 hides       |
+
+**The wood is three buildings, not one — Implemented.** A **Feller's Hut** cuts, a **Woodcutter**
+splits, a **Forester's Lodge** plants. Felling used to be the Woodcutter's second trade, and that was
+one building doing two unrelated jobs where the player could see neither: a settlement with a
+Woodcutter standing and no timber had no way to tell whether it wanted more cutters, more splitters or
+more trees, and one with logs already on the shelf quietly stopped felling altogether — because a
+splitter with a full woodpile has no reason to cut, which is exactly the wrong rule for the
+settlement's only source of timber. It was reported from a real game as "nobody makes logs, do they?".
+
+The Feller's Hut costs **one pair of hands**, deliberately. Two was measured and it is the wrong
+price: three gatherer huts, a Woodcutter and a two-hand Feller is nine of ten villagers holding a post
+and nobody left to carry anything, and a settlement that cannot haul dies with full fields. One cutter
+fells about thirty trees a year at four logs each, several times what a settlement of ten burns and
+builds with.
+
+Its standing orders are **its own workers' work**, at the priority a workshop's own recipe gets.
+Posted as open work at ordinary priority they were never done at all: a settlement with a hundred loads
+on the ground always has something more urgent than cutting a tree, so four standing orders sat
+unworked for a measured two years and no timber ever came in.
 
 **The Forester's Lodge is not on that list, because it makes nothing.** It works on the map instead:
 it plants saplings and marks surplus trees for felling, keeping about 110 trees standing inside a
@@ -460,11 +481,53 @@ Natural spread stops at roughly a third of the map. Without a ceiling a wood's
 edge advances one cell at a time forever and eventually there is nothing to build
 on; it was measured over twelve simulated years before the ceiling went in.
 
+A **Feller's Hut** is where the settlement's timber comes from: standing orders inside a radius of
+14, capped at two unworked at a time, and it stops cutting once the yards hold 200 logs — a store
+figure rather than a rate, because at 200 the settlement has a year of building and splitting in hand
+and the wood is better left standing. What it crops grows back; only the player's own marks clear
+ground for good.
+
 A **Forester's Lodge** does the rest. Below its target density it plants; at or
 above it it fells. Its felling is posted as ordinary work, so its timber flows
 through the same fell → logs → haul → yard pipeline as anything the player marks
 themselves. Crucially it **plants past the natural ceiling**: the wilderness
 returns only so much, and anything beyond that is something you did on purpose.
+
+### A settlement may not wall itself in — Implemented
+
+**Reported from a real game, and the worst class of defect this project has had.** The screenshot
+showed materials all over the ground, villagers shuffling between two cells, and a banner saying the
+works had stopped for want of timber. Reproduced headlessly on an ordinary opening: by day twenty-four
+every villager in the settlement _and_ its only store were sealed into a four-cell pocket by the
+settlement's own buildings. Nobody could reach a job, a pile or a post ever again — the haul board grew
+from twelve jobs to a hundred and ninety-one, six hundred and seventy-six logs lay in the wood, and
+they starved with three hundred food in sight of the larder.
+
+Three separate things had to be true for that, and all three are fixed:
+
+- **Buildings could seal ground.** Placement now refuses a plot whose footprint would cut the ground
+  into pieces. The test is local and exact: blocking a set of cells can only separate two cells if
+  they were joined _only_ through that set, so it is enough to ask whether every walkable neighbour of
+  the footprint still reaches every other one once the footprint is gone. A flood fill that stops as
+  soon as it has found them all, which for a plot in open ground is a dozen cells.
+- **Nothing noticed anybody stranded.** A villager whose region holds no store's doorway now steps out
+  to the nearest cell that does — the sibling of the rescue that already existed for somebody standing
+  _inside_ a wall. Kept because a pocket can arise by other routes: a demolished bridge, a save from
+  an older version, any future change to the terrain.
+- **A villager offered work they could not walk to was offered the same work for ever.** The job board
+  is deterministic — same villager, same board, same answer — so one unreachable job is not a job
+  skipped but the only job that person will ever see. Reachability is now checked before a job is
+  offered, by region comparison rather than by pathfinding, and for **both** legs of a haul: checking
+  only the pickup produced a villager carrying a load to a yard behind a wall, failing to deliver,
+  putting it down where they stood, and being handed the same errand by the pile they had just made.
+
+**And a site takes only what it still owes.** A site's materials hold exactly its cost, so a load
+tipped in whole could fill the room another material needed: a Feller's Hut costing six logs and two
+stone was measured holding _eight logs_ and full, with its two stone lying on the doorstep and
+re-fetched for ever. The building could never be finished and nothing on screen said why. Deliveries
+are now bounded per resource at both the pickup and the doorstep, and when several buildings share a
+doorway — a free cell beside one building is a free cell beside its neighbour — the load goes to the
+one that actually owes it.
 
 ### Stone and iron — Implemented
 

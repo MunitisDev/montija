@@ -177,13 +177,35 @@ describe('what the guide says about a building', () => {
     expect(lodge.meta).toContain(String(forestry.targetTrees));
   });
 
-  it('says a Woodcutter fells its own timber when the stores run short', () => {
-    // The other half of the same question. A Woodcutter is not only a workshop:
-    // below its log target it posts felling of its own, which is why it keeps
-    // working in a settlement that has stopped marking trees.
+  it("says a Feller's Hut is what fells the wood, and a Woodcutter is not", () => {
+    // The other half of the same question, and the one a player got wrong in a
+    // real game: they had a Woodcutter standing, no timber, and no way to learn
+    // that felling is a different building's trade.
+    const feller = entryFor('buildings', EN['building.feller']);
+    expect(buildingDefinition('feller').felling).toBeDefined();
+    expect(feller.meta).toContain(EN['guide.fellsOwn']);
+
     const cutter = entryFor('buildings', EN['building.woodcutter']);
-    expect(buildingDefinition('woodcutter').felling).toBeDefined();
-    expect(cutter.meta).toContain(EN['guide.fellsOwn']);
+    expect(buildingDefinition('woodcutter').felling).toBeUndefined();
+    expect(cutter.meta).not.toContain(EN['guide.fellsOwn']);
+  });
+
+  it('says what a year of living costs, per villager', () => {
+    // The figure the whole game turns on, and the one nothing said. A player can
+    // read that a hut makes so much food a year and still not know whether that
+    // feeds ten people.
+    const food = entryFor('resources', EN['hud.food']);
+    expect(food.meta).toContain(EN['guide.perVillagerYear']);
+    expect(food.meta).toMatch(/\d+/);
+
+    // Firewood is only the housed, and only on the days it freezes, so its
+    // figure must be smaller than the food one rather than equal to it.
+    const firewood = entryFor('resources', EN['hud.firewood']);
+    expect(firewood.meta).toContain(EN['guide.perHousedYear']);
+    const burned = Number(/\d+/.exec(firewood.meta ?? '')?.[0]);
+    const eaten = Number(/\d+/.exec(food.meta ?? '')?.[0]);
+    expect(burned).toBeGreaterThan(0);
+    expect(burned).toBeLessThan(eaten);
   });
 
   it('costs match every definition, not just the ones spelled out above', () => {

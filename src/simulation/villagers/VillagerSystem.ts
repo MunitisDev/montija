@@ -46,6 +46,7 @@ import type { RandomState, SeededRandom } from '@/shared/math/random';
 import type { GridPoint } from '@/shared/types/geometry';
 import { recipe as findRecipe } from '@/data/recipes';
 import { resourceDefinition, type ResourceId } from '@/data/resources';
+import type { Building } from '@/simulation/buildings/Building';
 import type { Job } from '@/simulation/jobs/Job';
 import type { JobManager } from '@/simulation/jobs/JobManager';
 import type { StorageRegistry } from '@/simulation/logistics/Storage';
@@ -113,6 +114,15 @@ const WANDER_ATTEMPTS = 8;
 const SPAWN_SEARCH = 12;
 
 /** Neighbours checked when looking for somewhere to stand next to a job. */
+/**
+ * How far somebody walled into a pocket will look for a way back.
+ *
+ * Wide enough to cross any pocket a settlement's own buildings can make — the
+ * ones measured were four cells and one — and narrow enough that nobody is ever
+ * moved somewhere a player would not recognise as "just outside".
+ */
+const POCKET_ESCAPE = 10;
+
 const ADJACENT: readonly (readonly [number, number])[] = [
   [0, -1],
   [1, 0],
@@ -312,6 +322,11 @@ export class VillagerSystem {
       // Somebody merely walking past a wall is left alone — see `stepClear`.
       if (!villager.isMoving && !this.world.isWalkable(villager.cell)) {
         this.stepClear(villager);
+      } else if (!villager.isMoving && this.isCutOff?.(villager.cell) === true) {
+        // And anybody walled *into* a pocket climbs out of it — see
+        // `stepOutOfPocket`. The ground under them is fine; it is the ground
+        // between them and the settlement that has closed.
+        this.stepOutOfPocket(villager);
       }
 
       // Somebody unwell keeps to their bed. This is the whole cost of illness:
@@ -606,6 +621,15 @@ export class VillagerSystem {
    * board, none of which the villagers know about. They do the labour; the
    * simulation deals with the consequences.
    */
+  /**
+   * Asks whether somebody standing here can reach the settlement at all.
+   *
+   * A provider for the same reason as the others: the villagers do not know what
+   * a storage yard is, and nothing here may import one. `null` until the
+   * simulation sets it, which means "assume nobody is cut off".
+   */
+  public isCutOff: ((cell: GridPoint) => boolean) | null = null;
+
   public onDemolished: ((buildingId: number) => void) | null = null;
 
   /**
@@ -732,11 +756,29 @@ export class VillagerSystem {
     // Delivering. A construction site takes materials the same way a yard takes
     // goods — same inventories, same transfer, so "villagers physically deliver
     // construction materials" is enforced rather than merely intended.
-    const destination = this.deliveryInventory(job.deliverTo);
-    if (destination) {
-      villager.inventory.transferAll(destination);
-      this.storages.markChanged();
+    //
+    // **A site takes only what it still owes**, and getting that wrong killed
+    // buildings outright. A site's materials hold exactly its cost, so a load
+    // tipped in whole could fill the space another material needed: a Feller's
+    // Hut costing six logs and two stone was measured holding *eight logs* and
+    // full, with its two stone lying on the doorstep and re-fetched for ever.
+    // The building could never be finished and nothing on screen said why.
+    const site = job.deliverTo === null ? null : this.siteAwaiting(job.deliverTo, villager);
+    if (site) {
+      for (const { resource, amount } of [...villager.inventory.contents]) {
+        const room = Math.min(amount, site.stillNeeds(resource));
+        if (room > 0) {
+          villager.inventory.transfer(site.materials, resource, room);
+        }
+      }
       this.world.buildings.markChanged();
+    } else {
+      const destination = this.deliveryInventory(job.deliverTo);
+      if (destination) {
+        villager.inventory.transferAll(destination);
+        this.storages.markChanged();
+        this.world.buildings.markChanged();
+      }
     }
 
     if (!villager.inventory.isEmpty) {
@@ -844,6 +886,34 @@ export class VillagerSystem {
       (candidate) => candidate.cell.gx === cell.gx && candidate.cell.gy === cell.gy,
     );
     return storage?.inventory ?? null;
+  }
+
+  /**
+   * The half-built building at this doorway that wants what is being carried.
+   *
+   * **Doorways get shared.** A free cell beside one building is a free cell
+   * beside its neighbour too, and `buildingAtAccess` answers with whichever was
+   * found first — so a house site sharing its doorway with a finished workshop
+   * had every delivery handed to the workshop instead and stood unbuilt for
+   * ever. Asking for the one that actually owes the load settles it.
+   */
+  private siteAwaiting(cell: GridPoint, villager: Villager): Building | null {
+    let anySite: Building | null = null;
+    for (const building of this.world.buildings.all) {
+      if (building.isComplete) {
+        continue;
+      }
+      if (building.accessCell.gx !== cell.gx || building.accessCell.gy !== cell.gy) {
+        continue;
+      }
+      anySite ??= building;
+      for (const { resource } of villager.inventory.contents) {
+        if (building.stillNeeds(resource) > 0) {
+          return building;
+        }
+      }
+    }
+    return anySite;
   }
 
   /**
@@ -1034,6 +1104,28 @@ export class VillagerSystem {
    * half the map to forage for four seconds and walk back.
    */
   private mayWork(villager: Villager, job: Job): boolean {
+    // **Nothing they cannot walk to.** `claimBest` is deterministic: same
+    // villager, same board, same answer. So one job the taker cannot reach is
+    // not a job skipped — it is the only job they will ever be offered, handed
+    // back and re-offered every tick for the rest of their life. Measured on a
+    // two-year run, three of ten able adults were idle from day thirty-six with
+    // a hundred and ninety haul jobs standing and six hundred logs on the
+    // ground.
+    //
+    // A region comparison, not a path: it is an array lookup, it runs against
+    // every job on the board for every idle villager, and it answers exactly
+    // the question — the pathfinder is still what works out the route.
+    if (!this.canGetTo(villager, job)) {
+      return false;
+    }
+
+    // A job that belongs to a workshop belongs to *its* people. See
+    // `Job.employerId`: this is what makes felling a trade somebody is posted
+    // to rather than a chore that always loses to the day's hauling.
+    if (job.employerId !== undefined) {
+      return villager.employerId === job.employerId;
+    }
+
     if (job.type !== 'produce' && job.type !== 'plant-tree') {
       // Employees are not idled by having a job: they help with felling,
       // hauling and building like anyone else. Their own workshop's work is
@@ -1049,6 +1141,47 @@ export class VillagerSystem {
       return true;
     }
     return job.targetEntityId !== null && villager.employerId === job.targetEntityId;
+  }
+
+  /**
+   * `true` when this villager could walk to every leg of this job.
+   *
+   * A haul has two: the pile and the yard. Checking only the pickup is what
+   * produced the loop a player reported — carry the load to a yard on the far
+   * side of a wall, fail to deliver, put it down where you stand, and the pile
+   * that makes posts the same job straight back.
+   */
+  private canGetTo(villager: Villager, job: Job): boolean {
+    const region = this.world.navigation.regionAt(villager.cell.gx, villager.cell.gy);
+    if (region < 0) {
+      // Standing inside a wall. `stepClear` deals with that; until it does,
+      // nothing is reachable from here.
+      return false;
+    }
+    if (!this.worksFrom(region, job.target)) {
+      return false;
+    }
+    return job.deliverTo === null || this.worksFrom(region, job.deliverTo);
+  }
+
+  /**
+   * `true` when somebody in `region` could stand where this work is done.
+   *
+   * The same candidate set {@link findWorkingPosition} walks — the cell itself
+   * when it is walkable, and its neighbours when it is not, because a building
+   * site and a tree are worked from beside them rather than from on them.
+   */
+  private worksFrom(region: number, destination: GridPoint): boolean {
+    const nav = this.world.navigation;
+    if (nav.regionAt(destination.gx, destination.gy) === region) {
+      return true;
+    }
+    for (const [dx, dy] of ADJACENT) {
+      if (nav.regionAt(destination.gx + dx, destination.gy + dy) === region) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -1121,6 +1254,79 @@ export class VillagerSystem {
       villager.currentJobId = null;
     }
     villager.activity = 'idle';
+  }
+
+  /**
+   * Walks a villager out of a pocket the settlement has built around them.
+   *
+   * **The sibling of {@link stepClear}, and the worse of the two.** That one is
+   * for standing *inside* a wall; this is for standing somewhere perfectly
+   * legal that the settlement can no longer be reached from. Four houses put up
+   * shoulder to shoulder leave a four-cell yard between them, and whoever
+   * happens to be in it when the last one is finished never works again: every
+   * path out fails, so they cannot fell, haul, build or take a post, and they
+   * still eat.
+   *
+   * It was measured on a two-year run of an ordinary opening. From day
+   * thirty-six, three of ten able adults stood in a four-cell yard and a
+   * one-cell hole. The settlement's haul board grew from twelve jobs to a
+   * hundred and ninety-one, six hundred and seventy-six logs lay on the ground,
+   * and the banner said the works were stopped for want of timber — with the
+   * timber in sight of the yard the whole time.
+   *
+   * The rescue is deliberately blunt: they step to the nearest cell the
+   * settlement's stores can be reached from. A villager climbing a fence is a
+   * better story than a villager starving beside one, and it makes the whole
+   * class of bug survivable rather than fatal — a demolished bridge, a save from
+   * an older version and any future terrain change strand somebody the same way.
+   */
+  private stepOutOfPocket(villager: Villager): void {
+    const escape = this.wayOutOfPocket(villager.cell);
+    if (!escape) {
+      // Too deep in to help, or the settlement has no stores to measure
+      // against. Leaving them put beats teleporting them across the map.
+      return;
+    }
+
+    villager.position = gridToWorld(escape);
+    // Moved rather than travelled: without this the renderer interpolates a
+    // slide through the wall, which looks like a bug of its own.
+    villager.previousPosition = villager.position;
+    villager.path.length = 0;
+    villager.destination = null;
+
+    if (villager.currentJobId !== null) {
+      this.jobs.release(villager.currentJobId);
+      villager.currentJobId = null;
+    }
+    villager.activity = 'idle';
+  }
+
+  /**
+   * The nearest cell outside the pocket, searched ring by ring.
+   *
+   * Deliberately not `World.nearestReachable`: that is measured from a set the
+   * villager is a member of, so from inside a pocket every cell in the pocket
+   * looks like part of the settlement. See `Simulation.isCutOff`.
+   */
+  private wayOutOfPocket(from: GridPoint): GridPoint | null {
+    for (let ring = 1; ring <= POCKET_ESCAPE; ring += 1) {
+      for (let dy = -ring; dy <= ring; dy += 1) {
+        for (let dx = -ring; dx <= ring; dx += 1) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) {
+            continue;
+          }
+          const cell = { gx: from.gx + dx, gy: from.gy + dy };
+          if (!this.world.isWalkable(cell)) {
+            continue;
+          }
+          if (this.isCutOff?.(cell) === false) {
+            return cell;
+          }
+        }
+      }
+    }
+    return null;
   }
 
   /**

@@ -38,6 +38,7 @@ const REFUSAL_KEY: Readonly<Record<PlacementRefusal, MessageKey>> = {
   'needs-water': 'placement.needsWater',
   'needs-water-nearby': 'placement.needsWaterNearby',
   unreachable: 'placement.unreachable',
+  'would-seal': 'placement.wouldSeal',
 };
 
 export class BuildMenu {

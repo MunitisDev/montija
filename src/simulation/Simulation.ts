@@ -137,6 +137,8 @@ export type Advice =
   | 'freezing'
   /** Sites are standing half-built waiting for a material nobody has any of. */
   | 'siteStalled'
+  /** Nothing in the settlement fells trees, so no timber is ever coming. */
+  | 'noFeller'
   /** Goods are lying in the field with no yard that will take them. */
   | 'storageFull'
   /** The yards are nearly full, and will start turning goods away. */
@@ -411,6 +413,7 @@ export class Simulation {
       const building = this.world.buildings.getById(job.targetEntityId);
       return building ? SKILL_WORK_BONUS[villager.skillAt(building.definition.id)] : 1;
     };
+    this.villagers.isCutOff = (cell) => this.isCutOff(cell);
     this.villagers.onDemolished = (buildingId) => this.completeDemolition(buildingId);
     this.villagers.onTreeFelled = (cell, playerOrdered) => this.recordFelling(cell, playerOrdered);
     // A lodge planting on ground the player cleared reclaims it: the last thing
@@ -815,6 +818,15 @@ export class Simulation {
     // being built.
     const stalled = this.stalledMaterial();
     if (stalled) {
+      // **Say who cuts the wood, not just that the wood is missing.** "Nothing
+      // is being built without Logs" is true and useless: a player who has a
+      // Woodcutter standing reasonably believes somebody is already on it, and
+      // the settlement will wait for ever without either of them learning
+      // otherwise. This was reported from a real game — the works stopped for
+      // want of timber with a Woodcutter built and no Feller anywhere.
+      if (stalled === 'logs' && !this.hasFelling()) {
+        return 'noFeller';
+      }
       return 'siteStalled';
     }
 
@@ -868,6 +880,11 @@ export class Simulation {
       if (this.world.buildings.countOf('woodcutter') === 0) {
         return 'firewoodLow';
       }
+      // A Woodcutter with nothing to split is a building the player will watch
+      // idling all winter without ever being told why.
+      if (this.storages.totalOf('logs') <= 0 && !this.hasFelling()) {
+        return 'noFeller';
+      }
       if (firewoodDays < DAYS_PER_SEASON) {
         return 'firewoodShort';
       }
@@ -879,6 +896,31 @@ export class Simulation {
   /** The calendar at the current tick. */
   public get year(): YearState {
     return yearStateAt(this.currentTick);
+  }
+
+  /**
+   * `true` when something in the settlement is cutting trees down.
+   *
+   * A building with a `felling` order of its own — the Feller's Hut — or a Lodge
+   * thinning its wood, or the player's own standing marks. Any of the three is
+   * timber on its way; none of them is a settlement that will never see another
+   * log however long it waits.
+   */
+  private hasFelling(): boolean {
+    for (const building of this.world.buildings.all) {
+      if (!building.isComplete) {
+        continue;
+      }
+      if (building.definition.felling || building.definition.forestry) {
+        return true;
+      }
+    }
+    for (const job of this.jobs.all) {
+      if (job.type === 'chop-tree') {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -1301,7 +1343,7 @@ export class Simulation {
       // nobody said otherwise — see `recordFelling`.
       const felling = building.definition.felling;
       if (felling && this.storages.totalOf('logs') < felling.logTarget) {
-        this.cropTimber(building.accessCell, felling.radius, felling.outstanding);
+        this.cropTimber(building, felling.radius, felling.outstanding);
       }
 
       const forestry = building.definition.forestry;
@@ -1339,16 +1381,23 @@ export class Simulation {
   }
 
   /**
-   * Keeps a few felling orders standing near a workshop that cuts its own wood.
+   * Keeps a few felling orders standing for a workshop that cuts its own wood.
    *
-   * The same standing-order shape a lodge uses, and for the same reason: capping
-   * the *backlog* rather than the rate is what stops a workshop in a dense wood
-   * burying the map in crosses nobody can work through.
+   * **The orders belong to that workshop's own people**, at the priority their
+   * workshop's work gets. Posted as open work at ordinary priority they were
+   * never done: a settlement with a hundred loads lying about always has
+   * something more urgent than cutting a tree, so `chop-tree` sat `available` for
+   * ever, no timber came in, and the player was told the works had stopped for
+   * want of logs while a hut full of cutters stood idle. Measured on a two-year
+   * run: four standing orders, none of them ever worked.
    *
-   * Nearest first, so the settlement works outwards from the workshop rather
-   * than sending somebody across the valley for whatever the scan found first.
+   * The backlog is capped rather than the rate, which is what stops a hut in
+   * dense woodland burying the map in crosses nobody can work through. Nearest
+   * first, so the settlement works outwards from the hut rather than sending
+   * somebody across the valley for whatever the scan found first.
    */
-  private cropTimber(centre: GridPoint, radius: number, outstanding: number): void {
+  private cropTimber(workshop: Building, radius: number, outstanding: number): void {
+    const centre = workshop.accessCell;
     const standing = this.treesWithin(centre, radius);
 
     let live = 0;
@@ -1372,8 +1421,14 @@ export class Simulation {
       this.jobs.create({
         type: 'chop-tree',
         target: { gx: tree.gx, gy: tree.gy },
-        priority: JobPriority.normal,
+        // Its own workshop's work, so it wins the same way a recipe does. Posted
+        // as open work at ordinary priority it was never done at all: a
+        // settlement with a hundred loads on the ground always has something
+        // more urgent than cutting a tree, so four standing orders sat unworked
+        // for a measured two years and no timber ever came in.
+        priority: JobPriority.urgent,
         targetEntityId: tree.id,
+        employerId: workshop.id,
       });
     }
   }
@@ -2148,7 +2203,8 @@ export class Simulation {
       // this only ever fires where the alternative is nothing happening at all.
       // A site's materials inventory holds exactly what it still owes, so it
       // cannot be over-filled, and any remainder goes back on the ground.
-      const destination = storage?.cell ?? this.siteNeeding(pile.resource)?.accessCell;
+      const site = storage ? null : this.siteNeeding(pile.resource);
+      const destination = storage?.cell ?? site?.accessCell;
       if (!destination) {
         // Nowhere at all. Leave the pile be; a yard or a site may appear later.
         continue;
@@ -2158,6 +2214,12 @@ export class Simulation {
         type: 'haul',
         target: pile.cell,
         deliverTo: destination,
+        // Named when it is going to a site, so the load is capped at pickup to
+        // what that site still owes. Unnamed the hauler shouldered the whole
+        // pile, and a site's materials hold exactly its cost — so one material
+        // could fill the room another needed and the building was finished for
+        // ever. See `advanceHaul`.
+        ...(site === null ? {} : { haulSource: 'pile' as const, haulResource: pile.resource }),
         // Carrying goods in outranks cutting more down — while the settlement
         // wants the goods. At equal priority the nearest job won, so a marked
         // stand of trees buried the hauling and the settlement starved with fifty
@@ -2227,12 +2289,19 @@ export class Simulation {
   }
 
   /**
-   * Everywhere the settlement stands, for reachability questions.
+   * What "reachable" is measured from: the settlement's people and its stores.
    *
-   * Villagers first and stores after: a person is standing on ground by
-   * definition, whereas a store's cell can be built over. Both are wanted,
-   * because a settlement can quite legitimately be split across a river with a
-   * bridge between — and then both banks are "the settlement".
+   * **Stores alone was tried and it is self-referential.** A store's own cell is
+   * in the anchor set, so when a building is finished on that doorway the cell
+   * stops being walkable, the anchor set collapses to nothing, and every cell on
+   * the map reads as unreachable at once. Measured: every building's doorway
+   * then re-derived to a fallback near the store, three gatherer huts ended up
+   * sharing one cell, no site could be delivered to, and a settlement starved
+   * with three hundred food on the ground.
+   *
+   * Whether somebody is *cut off* is a different question and is asked
+   * separately — see {@link isCutOff} — precisely because it cannot be asked of
+   * a set that the asker is a member of.
    */
   private *reachAnchors(): Iterable<GridPoint> {
     for (const villager of this.villagers.all) {
@@ -2241,6 +2310,40 @@ export class Simulation {
     for (const storage of this.storages.all) {
       yield storage.cell;
     }
+  }
+
+  /**
+   * `true` when nobody standing here could walk to any of the settlement's stores.
+   *
+   * **The measurement `world.reaches` cannot make.** A villager is one of its
+   * anchors, so a villager walled into a four-cell yard makes that yard count as
+   * part of the settlement and nothing can tell they are stranded. Asked against
+   * the stores instead — which the villager is not — a pocket is a pocket.
+   *
+   * `false` for somebody standing inside a wall: that is `stepClear`'s business
+   * and rescuing them twice would fight over where they end up. `false` too when
+   * no store has a walkable doorway at all, because then the answer would be
+   * "everybody", which is not a rescue but a stampede.
+   */
+  private isCutOff(cell: GridPoint): boolean {
+    const nav = this.world.navigation;
+    const region = nav.regionAt(cell.gx, cell.gy);
+    if (region < 0) {
+      return false;
+    }
+
+    let anyStoreStanding = false;
+    for (const storage of this.storages.all) {
+      const at = nav.regionAt(storage.cell.gx, storage.cell.gy);
+      if (at < 0) {
+        continue;
+      }
+      if (at === region) {
+        return false;
+      }
+      anyStoreStanding = true;
+    }
+    return anyStoreStanding;
   }
 
   /** Frees any villager still holding a job that no longer exists. */

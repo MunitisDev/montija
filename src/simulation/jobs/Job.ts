@@ -117,6 +117,21 @@ export interface Job {
    * standing order treated as a workshop's, which is the harmless reading.
    */
   playerOrdered?: boolean;
+  /**
+   * The building whose own workers this job belongs to.
+   *
+   * **Set so that felling can be somebody's trade rather than everybody's
+   * chore.** Ordinary work is open to anyone, and priority decides what gets
+   * done first — which is right for hauling and building, and was wrong for
+   * felling: a settlement with a hundred loads on the ground always has
+   * something more urgent than cutting a tree, so the timber never came in and
+   * the wood pile never grew. Felling posted by a Feller's Hut is that hut's
+   * work, at the priority its own workshop's work gets, and nobody else's.
+   *
+   * Optional so a save written before there were fellers loads with every
+   * standing order open to anyone, which is what it was.
+   */
+  employerId?: number;
 }
 
 /** How long each kind of work takes, in ticks. Balance comes later. */

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { RECIPES, recipe } from '@/data/recipes';
 import { Simulation } from '@/simulation/Simulation';
 import type { Building } from '@/simulation/buildings/Building';
+import type { GridPoint } from '@/shared/types/geometry';
 
 const TICK = 0.1;
 const OPTIONS = { seed: 20260815, worldWidth: 48, worldHeight: 48, startingVillagers: 10 };
@@ -18,10 +19,19 @@ function clearArea(simulation: Simulation, origin: { gx: number; gy: number }, s
   }
 }
 
-/** Places a finished workshop, skipping construction so tests stay focused. */
-function standingBuilding(simulation: Simulation, id: 'gatherer-hut' | 'woodcutter'): Building {
-  clearArea(simulation, { gx: 30, gy: 30 });
-  const building = simulation.placeBuilding(id, { gx: 32, gy: 32 })!;
+/**
+ * Places a finished workshop, skipping construction so tests stay focused.
+ *
+ * `at` because a chain needs two of them standing at once, and the second must
+ * not be dropped on the first.
+ */
+function standingBuilding(
+  simulation: Simulation,
+  id: 'gatherer-hut' | 'woodcutter' | 'feller',
+  at: GridPoint = { gx: 32, gy: 32 },
+): Building {
+  clearArea(simulation, { gx: at.gx - 2, gy: at.gy - 2 });
+  const building = simulation.placeBuilding(id, at)!;
   simulation.world.buildings.complete(simulation.world, building);
   return building;
 }
@@ -74,20 +84,37 @@ describe('production', () => {
   });
 
   it('a woodcutter makes no firewood until logs exist', () => {
-    // **Rewritten when the woodcutter learned to fell its own timber.** The old
-    // version stripped the stores and asserted no firewood ever appeared, which
-    // stopped being true the moment the workshop could go and get wood — and it
-    // was testing the supply, not the rule. The rule is that a recipe cannot run
-    // without its inputs, and that is still exactly true: firewood may not
-    // appear before a log has.
+    // The rule is that a recipe cannot run without its inputs, and a Woodcutter
+    // with an empty settlement around it now has no way to get any: felling is
+    // the Feller's Hut's trade. So the honest claim is the strong one again —
+    // nothing appears at all.
     const simulation = new Simulation(OPTIONS);
     standingBuilding(simulation, 'woodcutter');
     simulation.storages.all[0]!.inventory.clear();
     simulation.storages.markChanged();
 
+    for (let tick = 1; tick <= 5000; tick += 1) {
+      simulation.update(tick, TICK);
+    }
+
+    const snapshot = simulation.snapshot();
+    expect(snapshot.stored.logs + snapshot.loose.logs).toBe(0);
+    expect(snapshot.stored.firewood + snapshot.loose.firewood).toBe(0);
+  });
+
+  it('a feller and a woodcutter together turn standing trees into firewood', () => {
+    // The chain the settlement actually runs on, end to end: one building fells,
+    // another splits, and neither does the other's job. Tested together because
+    // separately they each pass while the settlement freezes.
+    const simulation = new Simulation(OPTIONS);
+    standingBuilding(simulation, 'feller');
+    standingBuilding(simulation, 'woodcutter', { gx: 38, gy: 32 });
+    simulation.storages.all[0]!.inventory.clear();
+    simulation.storages.markChanged();
+
     let firstLog = Number.POSITIVE_INFINITY;
     let firstFirewood = Number.POSITIVE_INFINITY;
-    for (let tick = 1; tick <= 5000; tick += 1) {
+    for (let tick = 1; tick <= 12000; tick += 1) {
       simulation.update(tick, TICK);
       const snapshot = simulation.snapshot();
       if (firstLog === Number.POSITIVE_INFINITY && snapshot.stored.logs + snapshot.loose.logs > 0) {
@@ -101,6 +128,8 @@ describe('production', () => {
       }
     }
 
+    expect(firstLog).toBeLessThan(Number.POSITIVE_INFINITY);
+    expect(firstFirewood).toBeLessThan(Number.POSITIVE_INFINITY);
     expect(firstLog).toBeLessThan(firstFirewood);
   });
 

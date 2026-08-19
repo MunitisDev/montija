@@ -1513,3 +1513,41 @@ Three things were got wrong first and are worth remembering:
 - **The temple and the school were the same building in two greys** — same footprint, same cross
   gable, same pale walls. The temple is a long steep hall now, stone the whole way up under the
   heaviest roof in the settlement.
+
+## PHASE 48 — The settlement stops walling itself in, and somebody fells the trees — Implemented
+
+A player sent a screenshot: materials all over the ground, villagers shuffling between two cells, and
+a banner saying the works had stopped for want of timber. Reproduced headlessly on an ordinary opening
+and it was worse than it looked — by day twenty-four every villager in the settlement _and_ its only
+store were sealed into a four-cell pocket by the settlement's own buildings. The haul board grew from
+twelve jobs to a hundred and ninety-one, six hundred and seventy-six logs lay in the wood, and they
+starved with three hundred food in sight of the larder.
+
+Four defects, each independently fatal, all measured and all fixed. Placement now refuses a plot that
+would cut the ground into pieces; a villager stranded any other way steps out of the pocket; no job is
+offered to somebody who cannot walk to it, checked on **both** legs of a haul; and a construction site
+takes only what it still owes, so one material can no longer fill the room another needs — a Feller's
+Hut was measured holding eight logs and full, with its two stone on the doorstep being re-fetched for
+ever.
+
+The wood is three buildings now rather than one: a **Feller's Hut** cuts, a **Woodcutter** splits, a
+**Forester's Lodge** plants. Felling used to be the Woodcutter's second trade, which is one building
+doing two unrelated jobs where the player can see neither — and a splitter with a full woodpile has no
+reason to cut, which is exactly the wrong rule for the settlement's only source of timber. The
+Feller's orders are its own workers' work at its own workshop's priority; posted as open work they lost
+to the day's hauling for ever and no timber ever came in.
+
+Measured on the reference opening, before and after: firewood at the first frost 0 → 30, food banked
+133, population 10 → 11, every building finished instead of two standing half-built all year. Nobody
+stranded on any seed.
+
+Two findings recorded rather than fixed, because they are design decisions rather than bugs:
+
+- **The third gatherer hut now costs more than it earns** — 276 food banked on one hut, 623 on two,
+  361 on three, over twelve seeds. Three huts, a Feller and a Woodcutter is nine of ten villagers
+  holding a post, and the tenth cannot carry a settlement's harvest in alone. That the employment
+  system fills every slot it can find is the thing to change.
+- **Whether a settlement reaches winter with any firewood depends on what it built in autumn.** Over
+  twelve seeds the disciplined line came out at [0, 0, 10, 0, 0, 100, 0, 40, 0, 40, 0, 0] — the timber
+  went into the Quarry instead of the woodpile. A real decision, and the test now judges it across the
+  sweep rather than on one seed.

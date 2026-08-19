@@ -52,6 +52,8 @@ export interface CreateJobOptions {
   readonly reservationSlot?: number;
   /** `true` when the player asked for it. Only felling reads it — see `Job`. */
   readonly playerOrdered?: boolean;
+  /** The building whose workers own this job. See {@link Job.employerId}. */
+  readonly employerId?: number;
 }
 
 export class JobManager {
@@ -158,6 +160,7 @@ export class JobManager {
       ...(options.haulPileId === undefined ? {} : { haulPileId: options.haulPileId }),
       reservationSlot: slot,
       ...(options.playerOrdered === true ? { playerOrdered: true } : {}),
+      ...(options.employerId === undefined ? {} : { employerId: options.employerId }),
     };
 
     this.nextId += 1;

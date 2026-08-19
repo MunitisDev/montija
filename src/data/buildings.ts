@@ -14,6 +14,7 @@ export type BuildingId =
   | 'storage-yard'
   | 'food-storage'
   | 'gatherer-hut'
+  | 'feller'
   | 'woodcutter'
   | 'forester'
   | 'quarry'
@@ -43,12 +44,27 @@ export type BuildingId =
  * building makes food" is the question a player actually has.
  */
 export type BuildingCategory =
-  'shelter' | 'food' | 'materials' | 'workshops' | 'care' | 'settlement';
+  | 'shelter'
+  | 'food'
+  /**
+   * The wood trades, split out from `materials` when the Feller's Hut arrived.
+   *
+   * Five cards in a group is a scroller on a phone held upright, and the three
+   * wood buildings belong together anyway: one fells, one splits, one plants.
+   * Grouping them says the chain out loud, which is exactly what a player who
+   * had a Woodcutter and no timber needed to be told.
+   */
+  | 'woodland'
+  | 'materials'
+  | 'workshops'
+  | 'care'
+  | 'settlement';
 
 /** Menu order for the groups: what a settlement needs, roughly in that order. */
 export const BUILDING_CATEGORIES: readonly BuildingCategory[] = [
   'shelter',
   'food',
+  'woodland',
   'materials',
   'workshops',
   'care',
@@ -435,7 +451,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
   },
   forester: {
     id: 'forester',
-    category: 'materials',
+    category: 'woodland',
     name: "Forester's Lodge",
     // Not shown to a player — the guide and the build menu read the translated
     // string. Kept as the one-line summary of what the building is for.
@@ -453,9 +469,58 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     // builds this.
     forestry: { radius: 10, targetTrees: 110 },
   },
+  /*
+   * **The building that makes logs**, and the one the settlement was missing.
+   *
+   * Felling used to be a side effect of the Woodcutter, which is a workshop
+   * whose actual trade is splitting. That is one building doing two unrelated
+   * jobs, and the player could not see either of them: a settlement with a
+   * Woodcutter and no timber had no way to tell whether it wanted more cutters,
+   * more splitters or more trees, and one with logs already in store quietly
+   * stopped felling altogether — because a splitter with a full woodpile has no
+   * reason to cut, which is exactly the wrong rule for the settlement's only
+   * source of timber.
+   *
+   * So the chain is one building a step now: **Feller cuts, Woodcutter splits,
+   * Forester plants.** Each of the three is a post a player can staff or leave
+   * empty, and the shortage tells them which.
+   *
+   * The cheapest building in the game after the hut, because it is the first
+   * thing anybody needs and its cost is paid in the very thing it makes.
+   */
+  feller: {
+    id: 'feller',
+    category: 'woodland',
+    name: "Feller's Hut",
+    description: 'Fells the wood around it. Logs on the ground, for hauling in.',
+    footprint: { width: 2, height: 2 },
+    constructionCost: [
+      { resource: 'logs', amount: 6 },
+      { resource: 'stone', amount: 2 },
+    ],
+    buildTicks: 90,
+    // **One axe.** Two was measured and it is the wrong price: three gatherer
+    // huts, a woodcutter and a two-hand feller is every one of ten villagers
+    // employed and nobody left to carry anything, and a settlement that cannot
+    // haul dies with full fields. One cutter fells about thirty trees a year at
+    // four logs each, which is several times what a settlement of ten burns and
+    // builds with — the shortage this building answers was never a shortage of
+    // hands at the tree.
+    workerSlots: 1,
+    // A wider reach than the old woodcutter's and a deeper backlog, because
+    // this is now the settlement's whole supply rather than one workshop
+    // topping itself up. The standing-order cap is what stops a hut in dense
+    // woodland burying the map in crosses nobody can work through.
+    //
+    // `logTarget` is a **store** figure, not a rate: at two hundred logs in the
+    // yards the settlement has a year of building and splitting in hand and the
+    // wood is better left standing. Well above the old forty, which stopped the
+    // cutting the moment the woodpile looked healthy.
+    felling: { radius: 14, outstanding: 2, logTarget: 200 },
+  },
   woodcutter: {
     id: 'woodcutter',
-    category: 'materials',
+    category: 'woodland',
     name: 'Woodcutter',
     description: 'Splits logs into firewood.',
     footprint: { width: 2, height: 2 },
@@ -465,12 +530,9 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     ],
     buildTicks: 100,
     workerSlots: 2,
+    // Splitting, and nothing else. What it used to do besides — crop its own
+    // timber — is the Feller's Hut now: see the note there.
     recipeId: 'split-firewood',
-    // Ten cells is about the reach of the lodge, and a handful of standing
-    // orders is the same standing-order rule foresters use: top up, and post
-    // nothing more until somebody has swung an axe. Forty logs is roughly a
-    // season of splitting — enough that a stocked yard leaves the wood alone.
-    felling: { radius: 10, outstanding: 3, logTarget: 40 },
   },
 
   /*
@@ -575,6 +637,7 @@ export const BUILDING_IDS: readonly BuildingId[] = [
   'storage-yard',
   'food-storage',
   'gatherer-hut',
+  'feller',
   'woodcutter',
   'forester',
   'quarry',

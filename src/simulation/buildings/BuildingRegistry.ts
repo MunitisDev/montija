@@ -22,7 +22,9 @@ export type PlacementRefusal =
   | 'needs-rock-face'
   | 'needs-water'
   | 'needs-water-nearby'
-  | 'unreachable';
+  | 'unreachable'
+  /** It would wall a piece of ground — and whoever is on it — off for good. */
+  | 'would-seal';
 
 export type PlacementCheck =
   { readonly ok: true } | { readonly ok: false; readonly reason: PlacementRefusal };
@@ -144,6 +146,27 @@ export class BuildingRegistry {
     // all, because by then both banks are the same ground.
     if (!this.reachable(world, origin, footprint)) {
       return { ok: false, reason: 'unreachable' };
+    }
+
+    // **And nobody may wall anybody in.** A building blocks its footprint, and
+    // four of them shoulder to shoulder leave a yard with no way out of it.
+    // Measured on an ordinary opening: by day twenty-four every villager in the
+    // settlement and its only store were sealed into a four-cell pocket, and
+    // they starved with three hundred food lying on the ground. A player placing
+    // a house has no way to see that coming, so the game refuses instead.
+    //
+    // Last of the checks because it is the most expensive, and there is no point
+    // flood-filling around a plot that is in the river.
+    if (definition.on === undefined) {
+      const cells: GridPoint[] = [];
+      for (let dy = 0; dy < footprint.height; dy += 1) {
+        for (let dx = 0; dx < footprint.width; dx += 1) {
+          cells.push({ gx: origin.gx + dx, gy: origin.gy + dy });
+        }
+      }
+      if (world.navigation.wouldSeal(cells)) {
+        return { ok: false, reason: 'would-seal' };
+      }
     }
 
     return { ok: true };

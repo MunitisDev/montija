@@ -354,7 +354,7 @@ legible from across the map:
 | Roof    | `cross`, `gable`, `gable-left`      | The silhouette, which reads first  |
 | Walls   | `boarded`, `framed`, `log`, `stone` | What the building is made of       |
 | Cover   | `shingle`, `thatch`, `slate`        | Depth at the eaves, course density |
-| Feature | thirteen, one a trade               | Which trade, without a label       |
+| Feature | fourteen, one a trade               | Which trade, without a label       |
 
 **No single-apex roof, anywhere.** Four planes meeting at a point is the same lozenge whatever it
 sits on. Every roof here hangs from a ridge _segment_:
@@ -408,7 +408,15 @@ Mass and colour get a building most of the way to recognisable and then stop. Th
 that says _which trade_, and it is drawn on the ground rather than on the walls so it survives the
 building being small: split logs and a chopping block with the axe still in it, a forge mouth with
 fire in it, a hide stretched in its frame, cloth on a line, a nursery row of saplings, a timbered
-mine mouth, sacks on staddle stones, a bell in its frame.
+mine mouth, sacks on staddle stones, a bell in its frame, and a whole trunk up on trestles with the
+saw still in it.
+
+That last one is the Feller's Hut, and it is worth a note on how features earn their keep: a Feller
+and a Woodcutter are both a timber box under a pitched roof, so the _only_ thing telling them apart is
+what is lying outside. One is a tree that was standing this morning, bark still on, being cut into
+lengths; the other is a stack of split wood beside a chopping block. Drawn long and thin the trunk
+read as a stray plank leaning on the wall — a trunk has to be thick enough to be a **tree**, which at
+this size means shortening it rather than thinning the trestles.
 
 Features are placed in **plot coordinates** — `u` and `v` running -1 at the back corner to 1 at the
 front one — not in pixels, because `(0.84, 0.1)` means "out beside the near-right wall" on a 2x2 plot

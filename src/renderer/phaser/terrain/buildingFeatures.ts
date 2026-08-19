@@ -26,6 +26,7 @@ import { polygon, shade, type Point } from './shading';
 /** What a building keeps on its plot. One per trade, and each says the trade. */
 export type FeatureKind =
   | 'logpile'
+  | 'trestle'
   | 'saplings'
   | 'baskets'
   | 'granary'
@@ -151,6 +152,9 @@ export function drawFeature(
     case 'logpile':
       drawLogpile(graphics, at, s);
       return;
+    case 'trestle':
+      drawTrestle(graphics, at, s);
+      return;
     case 'saplings':
       drawSaplings(graphics, at, s);
       return;
@@ -216,6 +220,90 @@ function drawLogpile(graphics: Phaser.GameObjects.Graphics, at: Point, s: number
     { x: head.x + 3 * s, y: head.y + 2.5 * s },
     { x: head.x - 1 * s, y: head.y + 3 * s },
   ]);
+}
+
+/**
+ * A whole trunk up on trestles with the saw still in it, and the rounds off it.
+ *
+ * The Feller's mark, and deliberately nothing like the Woodcutter's. That one
+ * is a stack of *split* wood beside a chopping block; this is a tree that was
+ * standing this morning, bark still on, being cut into lengths.
+ */
+function drawTrestle(graphics: Phaser.GameObjects.Graphics, at: Point, s: number): void {
+  // Short and fat. The first pass was long and thin and read as a stray plank
+  // leaning on the wall: a trunk has to be thick enough to be a *tree*, and at
+  // this size that means shortening it rather than thinning the trestles.
+  const head = { x: at.x - 9 * s, y: at.y - 1 * s };
+  const foot = { x: at.x + 7 * s, y: at.y + 7 * s };
+  const lift = 7 * s;
+  const girth = 9 * s;
+
+  // The two trestles under it, drawn first so the trunk lies on them.
+  for (const t of [0.22, 0.76]) {
+    const base = {
+      x: head.x + (foot.x - head.x) * t,
+      y: head.y + (foot.y - head.y) * t,
+    };
+    graphics.fillStyle(shade(TIMBER, 0.88), 1);
+    for (const dir of [-1, 1] as const) {
+      polygon(
+        graphics,
+        strip(
+          { x: base.x + dir * 4 * s, y: base.y + 2 * s },
+          { x: base.x, y: base.y - lift },
+          2 * s,
+        ),
+      );
+    }
+  }
+
+  const barkTop = { x: head.x, y: head.y - lift };
+  const barkEnd = { x: foot.x, y: foot.y - lift };
+  graphics.fillStyle(shade(LOG_BARK, 1.08), 1);
+  polygon(graphics, strip(barkTop, barkEnd, girth));
+  graphics.fillStyle(shade(LOG_BARK, 0.74), 1);
+  polygon(
+    graphics,
+    strip(
+      { x: barkTop.x, y: barkTop.y + girth * 0.3 },
+      { x: barkEnd.x, y: barkEnd.y + girth * 0.3 },
+      girth * 0.4,
+    ),
+  );
+  // The sawn round at the near end, which is what says *cut this morning*.
+  graphics.fillStyle(shade(LOG_END, 1.04), 1);
+  polygon(graphics, [
+    { x: barkEnd.x, y: barkEnd.y - girth / 2 },
+    { x: barkEnd.x + 2.8 * s, y: barkEnd.y - girth * 0.3 },
+    { x: barkEnd.x + 2.8 * s, y: barkEnd.y + girth * 0.3 },
+    { x: barkEnd.x, y: barkEnd.y + girth / 2 },
+  ]);
+
+  // The saw, standing in the cut. Kept short and dull: a long bright blade reads
+  // as a shard of something rather than as a tool.
+  const cut = {
+    x: head.x + (foot.x - head.x) * 0.55,
+    y: head.y + (foot.y - head.y) * 0.55 - lift,
+  };
+  graphics.fillStyle(0x6d757a, 1);
+  polygon(graphics, [
+    { x: cut.x - 1 * s, y: cut.y - 8 * s },
+    { x: cut.x + 4 * s, y: cut.y - 9.5 * s },
+    { x: cut.x + 4 * s, y: cut.y - 7.5 * s },
+    { x: cut.x - 1 * s, y: cut.y - 4 * s },
+  ]);
+  graphics.fillStyle(shade(LOG_END, 0.78), 1);
+  polygon(
+    graphics,
+    strip(
+      { x: cut.x + 4 * s, y: cut.y - 9.5 * s },
+      { x: cut.x + 6.4 * s, y: cut.y - 10 * s },
+      2.4 * s,
+    ),
+  );
+
+  // Two rounds already off it, on the ground.
+  isoLogStack(graphics, { x: at.x + 13 * s, y: at.y + 10 * s }, 10 * s);
 }
 
 /** A nursery row: young trees under their stakes, and a bundle of spares. */

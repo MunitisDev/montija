@@ -24,6 +24,24 @@ const PAVED_ENTRY_COST = Math.max(1, Math.round(ROAD_COST_MULTIPLIER * COST_SCAL
 /** Marks a cell nothing can enter. */
 const BLOCKED = 0;
 
+/**
+ * The eight ways off a cell.
+ *
+ * Eight because that is what both the region map and the pathfinder use: a
+ * connectivity test that disagreed with the pathfinder would refuse placements
+ * that are fine, or allow ones that are not.
+ */
+const NEIGHBOURS: readonly (readonly [number, number])[] = [
+  [0, -1],
+  [1, 0],
+  [0, 1],
+  [-1, 0],
+  [1, -1],
+  [1, 1],
+  [-1, 1],
+  [-1, -1],
+];
+
 export class NavigationGrid {
   public readonly width: number;
   public readonly height: number;
@@ -192,6 +210,83 @@ export class NavigationGrid {
     }
     const regions = this.regions ?? this.mapRegions();
     return regions[gy * this.width + gx] ?? -1;
+  }
+
+  /**
+   * `true` when blocking these cells would cut the ground into pieces.
+   *
+   * **The rule that stops a settlement walling itself in.** Buildings block
+   * their footprints, and four of them raised shoulder to shoulder leave a yard
+   * between them with no way out. Measured on an ordinary opening: by day
+   * twenty-four every villager in the settlement *and* its only store were
+   * sealed into a four-cell pocket, nobody could reach a job or a pile again,
+   * and they starved with three hundred food on the ground and the works
+   * reported stopped for want of timber. A player who has just placed a house
+   * has no way to see that coming, so the game has to refuse.
+   *
+   * The test is local and exact. Blocking a set can only separate two cells if
+   * they were joined *only* through that set — so it is enough to ask whether
+   * every walkable neighbour of the footprint still reaches every other one once
+   * the footprint is gone. If they do, any route that went through it can go
+   * round it, and nothing anywhere is cut off.
+   *
+   * The search is a flood fill that stops the moment it has found all of them,
+   * which for an ordinary plot in open ground is a dozen cells.
+   */
+  public wouldSeal(cells: readonly GridPoint[]): boolean {
+    const inside = new Set(cells.map((cell) => cell.gy * this.width + cell.gx));
+
+    // The walkable ring around the footprint, which is what has to stay joined.
+    const ring: number[] = [];
+    for (const cell of cells) {
+      for (const [dx, dy] of NEIGHBOURS) {
+        const gx = cell.gx + dx;
+        const gy = cell.gy + dy;
+        if (!this.isWalkable(gx, gy)) {
+          continue;
+        }
+        const index = gy * this.width + gx;
+        if (inside.has(index) || ring.includes(index)) {
+          continue;
+        }
+        ring.push(index);
+      }
+    }
+    if (ring.length <= 1) {
+      // Nothing, or one cell: there is no pair to separate. A plot with no
+      // walkable ground beside it at all is refused elsewhere, for being
+      // unreachable.
+      return false;
+    }
+
+    const wanted = new Set(ring);
+    const start = ring[0]!;
+    wanted.delete(start);
+
+    const seen = new Set<number>([start]);
+    const queue = [start];
+    while (queue.length > 0 && wanted.size > 0) {
+      const index = queue.pop()!;
+      const gx = index % this.width;
+      const gy = (index - gx) / this.width;
+      for (const [dx, dy] of NEIGHBOURS) {
+        const nx = gx + dx;
+        const ny = gy + dy;
+        if (!this.isWalkable(nx, ny)) {
+          continue;
+        }
+        const next = ny * this.width + nx;
+        // Round the footprint, not through it: it is about to be built on.
+        if (inside.has(next) || seen.has(next)) {
+          continue;
+        }
+        seen.add(next);
+        wanted.delete(next);
+        queue.push(next);
+      }
+    }
+
+    return wanted.size > 0;
   }
 
   /** `true` when a villager standing on one cell could reach the other. */

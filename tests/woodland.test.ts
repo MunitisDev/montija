@@ -166,12 +166,16 @@ describe('the woodland growing back', () => {
   });
 });
 
-describe('a woodcutter with an axe of its own', () => {
+describe("a feller's hut", () => {
   it('marks trees near it without being asked', () => {
     // The whole point: splitting logs into firewood is useless without logs, and
     // the only way to get them was to mark trees by hand, every winter, for ever.
+    //
+    // Felling used to be the Woodcutter's second trade, which is a workshop
+    // doing two unrelated jobs where the player can see neither. It is the
+    // Feller's Hut now, and the Woodcutter only splits.
     const simulation = new Simulation(OPTIONS);
-    const shop = raise(simulation, 'woodcutter');
+    const shop = raise(simulation, 'feller');
     expect(shop).not.toBeNull();
     simulation.storages.all[0]!.inventory.clear();
     simulation.storages.markChanged();
@@ -182,14 +186,30 @@ describe('a woodcutter with an axe of its own', () => {
     expect(felling.length).toBeGreaterThan(0);
     // And nothing it ordered is the player's, so the wood grows back.
     expect(felling.every((job) => job.playerOrdered !== true)).toBe(true);
+    // Its own people's work, not everybody's chore: posted as open work at
+    // ordinary priority it lost to the day's hauling for ever and no timber
+    // ever came in. See `Job.employerId`.
+    expect(felling.every((job) => job.employerId === shop!.id)).toBe(true);
+  });
+
+  it('is the only building that fells — a Woodcutter splits and nothing else', () => {
+    expect(buildingDefinition('woodcutter').felling).toBeUndefined();
+    const simulation = new Simulation(OPTIONS);
+    raise(simulation, 'woodcutter');
+    simulation.storages.all[0]!.inventory.clear();
+    simulation.storages.markChanged();
+
+    runDays(simulation, 2);
+
+    expect(simulation.jobs.all.filter((job) => job.type === 'chop-tree')).toHaveLength(0);
   });
 
   it('stops once the yard has logs enough', () => {
     // A workshop with a full yard has no business emptying the wood. This is
     // what stops an automatic woodcutter stripping the map.
     const simulation = new Simulation(OPTIONS);
-    raise(simulation, 'woodcutter');
-    const target = buildingDefinition('woodcutter').felling!.logTarget;
+    raise(simulation, 'feller');
+    const target = buildingDefinition('feller').felling!.logTarget;
     simulation.storages.all[0]!.inventory.add('logs', target * 2);
     simulation.storages.markChanged();
 
@@ -200,11 +220,11 @@ describe('a woodcutter with an axe of its own', () => {
 
   it('never keeps more orders standing than it can work through', () => {
     const simulation = new Simulation(OPTIONS);
-    raise(simulation, 'woodcutter');
+    raise(simulation, 'feller');
     simulation.storages.all[0]!.inventory.clear();
     simulation.storages.markChanged();
 
-    const cap = buildingDefinition('woodcutter').felling!.outstanding;
+    const cap = buildingDefinition('feller').felling!.outstanding;
     for (let day = 0; day < 6; day += 1) {
       runDays(simulation, 1);
       const unworked = simulation.jobs.all.filter(

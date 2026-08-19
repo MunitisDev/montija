@@ -24,9 +24,18 @@ import {
   type BuildingDefinition,
   type BuildingId,
 } from '@/data/buildings';
-import { RESOURCE_IDS } from '@/data/resources';
+import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
 import { annualProduction } from '@/ui/hud/productionModel';
-import { SEASONS } from '@/simulation/seasons/SeasonClock';
+import {
+  DAYS_PER_SEASON,
+  SEASONS,
+  TICKS_PER_DAY,
+  yearStateAt,
+} from '@/simulation/seasons/SeasonClock';
+import {
+  FIREWOOD_PER_VILLAGER_PER_COLD_DAY,
+  FOOD_PER_VILLAGER_PER_DAY,
+} from '@/simulation/seasons/SurvivalSystem';
 import type { MessageKey } from '@/ui/i18n/messages';
 
 /** Looks a string up. The guide never touches `I18n` directly, so it tests. */
@@ -163,7 +172,7 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
       entries: RESOURCE_IDS.map((resource) => ({
         term: t(`hud.${resource}` as MessageKey),
         detail: t(`resource.${resource}.purpose` as MessageKey),
-        meta: null,
+        meta: describeYearlyDraw(resource, t),
         output: null,
       })),
     }),
@@ -198,6 +207,51 @@ function section(
     body: parts.body ?? null,
     entries: parts.entries ?? [],
   };
+}
+
+/**
+ * How many freezing days a year there are, counted rather than written down.
+ *
+ * The temperature eases between one season's mean and the next, so how long the
+ * settlement burns firewood is a property of that curve and not a number
+ * anybody chose. Written down it would be a figure the guide states and the
+ * game disagrees with the first time a season's mean is retuned.
+ */
+function freezingDaysPerYear(): number {
+  let days = 0;
+  for (let day = 0; day < SEASONS.length * DAYS_PER_SEASON; day += 1) {
+    if (yearStateAt(day * TICKS_PER_DAY).isFreezing) {
+      days += 1;
+    }
+  }
+  return days;
+}
+
+/**
+ * What a year of ordinary living takes out of the stores, per person.
+ *
+ * **Asked for, and it is the number the whole game turns on.** A player can read
+ * that a Gatherer Hut makes so much food a year and still have no idea whether
+ * that feeds ten people, because nothing anywhere said what ten people eat. Put
+ * beside the yearly output of every building, the two figures are a plan.
+ *
+ * Food is every mouth every day. Firewood is only the housed — somebody with no
+ * roof burns nothing, which is the cruel half of the rule — and only on the days
+ * it actually freezes. `null` for everything else: a made-up figure for iron
+ * would be worse than saying nothing.
+ */
+function describeYearlyDraw(resource: ResourceId, t: Translate): string | null {
+  const yearDays = SEASONS.length * DAYS_PER_SEASON;
+
+  if (resource === 'food') {
+    const perYear = Math.round(FOOD_PER_VILLAGER_PER_DAY * yearDays);
+    return `${perYear} ${t('guide.perVillagerYear')}`;
+  }
+  if (resource === 'firewood') {
+    const perYear = Math.round(FIREWOOD_PER_VILLAGER_PER_COLD_DAY * freezingDaysPerYear());
+    return `${perYear} ${t('guide.perHousedYear')}`;
+  }
+  return null;
 }
 
 /**

@@ -111,9 +111,12 @@ export const EN = {
   'building.food-storage.description': 'Keeps the settlement’s food through the winter.',
   'building.gatherer-hut': 'Gatherer Hut',
   'building.gatherer-hut.description': 'Workers forage the woods for food. Your only food source.',
+  'building.feller': "Feller's Hut",
+  'building.feller.description':
+    'Fells the wood around it and leaves the logs on the ground for hauling in. The settlement’s only source of timber, and what it crops grows back.',
   'building.woodcutter': 'Woodcutter',
   'building.woodcutter.description':
-    'Fells its own timber and splits it into firewood. What it crops grows back.',
+    'Splits logs into firewood. It fells nothing itself — the logs come from a Feller’s Hut, or from trees you mark by hand.',
   'building.forester': "Forester's Lodge",
   'building.forester.description':
     'Keeps a working wood around it: plants where the trees are thin, marks the surplus for felling where they are thick. It makes no goods of its own — what it produces is logs on the ground and a wood that never runs out.',
@@ -156,6 +159,7 @@ export const EN = {
   'build.open': 'Build',
   'build.shelter': 'Shelter',
   'build.food': 'Food',
+  'build.woodland': 'Wood',
   'build.materials': 'Materials',
   'build.workshops': 'Workshops',
   'build.care': 'Care',
@@ -174,6 +178,7 @@ export const EN = {
   'placement.needsWater': 'must be built on the water',
   'placement.needsWaterNearby': 'must stand beside the river or a ditch',
   'placement.unreachable': 'nobody can walk there — bridge the river first',
+  'placement.wouldSeal': 'it would wall the ground behind it in',
 
   'warning.foodLow': 'Nobody is gathering food — build a Gatherer Hut',
   'warning.needMoreHuts': 'One hut cannot feed everyone — build another Gatherer Hut',
@@ -185,6 +190,7 @@ export const EN = {
   'warning.larderFilling': 'The food stores are nearly full — build another Food Storage',
   'warning.foodSpoiling': 'Food is rotting in the open — build a Food Storage',
   'warning.firewoodLow': 'No firewood for the winter — build a Woodcutter',
+  'warning.noFeller': 'Nobody is felling timber — build a Feller’s Hut',
   'warning.firewoodShort': 'Not enough firewood to last the winter',
   'warning.starving': 'People are starving',
 
@@ -445,7 +451,9 @@ export const EN = {
   'guide.tendsWithin': 'tends the wood within',
   'guide.cells': 'cells',
   'guide.treesKept': 'trees kept standing',
-  'guide.fellsOwn': 'fells its own logs when the stores run low',
+  'guide.fellsOwn': 'fells the wood around it while the stores are low',
+  'guide.perVillagerYear': 'eaten a year, per villager',
+  'guide.perHousedYear': 'burned a year, per villager under a roof',
 
   'resource.logs.purpose':
     'Felled trees. Almost everything is built from them, and firewood is split from them.',
@@ -592,9 +600,12 @@ export const ES: Messages = {
   'building.gatherer-hut': 'Cabaña de recolección',
   'building.gatherer-hut.description':
     'Los trabajadores recolectan comida del bosque. Tu única fuente de comida.',
+  'building.feller': 'Cabaña del talador',
+  'building.feller.description':
+    'Tala el bosque a su alrededor y deja los troncos en el suelo para que los acarreen. Es la única fuente de madera del asentamiento, y lo que corta vuelve a crecer.',
   'building.woodcutter': 'Leñador',
   'building.woodcutter.description':
-    'Tala su propia madera y la parte en leña. Lo que corta vuelve a crecer.',
+    'Parte troncos en leña. No tala nada por su cuenta: los troncos vienen de una Cabaña del talador, o de árboles que marques a mano.',
   'building.forester': 'Casa del guarda',
   'building.forester.description':
     'Mantiene un bosque de trabajo a su alrededor: planta donde los árboles escasean y marca para talar donde sobran. No fabrica nada propio: lo que produce son troncos en el suelo y un bosque que no se agota.',
@@ -638,6 +649,7 @@ export const ES: Messages = {
   'build.open': 'Construir',
   'build.shelter': 'Cobijo',
   'build.food': 'Comida',
+  'build.woodland': 'Madera',
   'build.materials': 'Materiales',
   'build.workshops': 'Talleres',
   'build.care': 'Cuidados',
@@ -656,6 +668,7 @@ export const ES: Messages = {
   'placement.needsWater': 'debe construirse sobre el agua',
   'placement.needsWaterNearby': 'debe estar junto al río o a una acequia',
   'placement.unreachable': 'nadie puede llegar — cruza el río con un puente',
+  'placement.wouldSeal': 'dejaría encerrado el terreno de detrás',
 
   'warning.foodLow': 'Nadie recolecta comida: construye una Cabaña de recolección',
   'warning.needMoreHuts': 'Una cabaña no alimenta a todos: construye otra Cabaña de recolección',
@@ -667,6 +680,7 @@ export const ES: Messages = {
   'warning.larderFilling': 'Las despensas están casi llenas: construye otra Despensa',
   'warning.foodSpoiling': 'La comida se pudre a la intemperie: construye una Despensa',
   'warning.firewoodLow': 'No hay leña para el invierno: construye un Leñador',
+  'warning.noFeller': 'Nadie tala madera: construye una Cabaña del talador',
   'warning.firewoodShort': 'No hay leña suficiente para pasar el invierno',
   'warning.starving': 'La gente está pasando hambre',
 
@@ -910,7 +924,9 @@ export const ES: Messages = {
   'guide.tendsWithin': 'cuida el bosque en',
   'guide.cells': 'casillas',
   'guide.treesKept': 'árboles en pie',
-  'guide.fellsOwn': 'tala sus propios troncos cuando faltan en los almacenes',
+  'guide.fellsOwn': 'tala el bosque a su alrededor mientras falten en los almacenes',
+  'guide.perVillagerYear': 'al año, por aldeano',
+  'guide.perHousedYear': 'al año, por aldeano con techo',
 
   'resource.logs.purpose':
     'Árboles talados. Casi todo se construye con ellos, y de ellos se parte la leña.',

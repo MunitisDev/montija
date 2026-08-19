@@ -188,31 +188,34 @@ describe('iron and tools', () => {
       }
       // There has to be work, or both runs complete nothing and the comparison
       // is between two zeroes.
-      for (const tree of [...simulation.world.trees.all].slice(0, 60)) {
+      for (const tree of [...simulation.world.trees.all].slice(0, 200)) {
         simulation.designateTreeForFelling({ gx: tree.gx, gy: tree.gy });
       }
-      for (let tick = 1; tick <= TICKS_PER_DAY * 12; tick += 1) {
+      for (let tick = 1; tick <= TICKS_PER_DAY * 24; tick += 1) {
         simulation.update(tick, TICK);
       }
       return simulation.snapshot().jobsCompleted;
     };
 
-    // Summed across seeds, because one settlement is too coarse to measure
-    // this with. The bonus applies to *work* ticks and most of a villager's
-    // day is travel, so twelve days of one settlement separates the two runs
-    // by about one completed job — well inside the noise, and on one seed they
-    // came out exactly equal while three others showed the gain. Four
-    // settlements make the difference clear without making the claim weaker.
+    // **Summed across eight settlements over twenty-four days, and the
+    // resolution matters.** The bonus applies to *work* ticks and most of a
+    // villager's day is travel, so the whole gain over twelve days on four seeds
+    // came to about one completed job — which duly landed on a tie, 23 against
+    // 23, and failed a claim that is perfectly true. Twice the days, twice the
+    // seeds and enough standing orders that nobody runs out of work separates
+    // them cleanly: measured at 157 against 160.
     let bare = 0;
     let equipped = 0;
-    for (const seed of [20260815, 2024, 991, 7]) {
+    for (const seed of [20260815, 2024, 991, 7, 313, 4242, 55, 8181]) {
       bare += runFor(false, seed);
       equipped += runFor(true, seed);
     }
 
     expect(equipped).toBeGreaterThan(bare);
     expect(TOOL_WORK_BONUS).toBeGreaterThan(0);
-  });
+    // Sixteen settlements of twenty-four days each; the default five seconds is
+    // for tests that do not simulate a month.
+  }, 60_000);
 
   it('leaves an unequipped settlement running at exactly its old speed', () => {
     // Tools are a bonus, never a tax. A player who never builds a forge must
