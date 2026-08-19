@@ -27,6 +27,7 @@ import { FOUNDING_YARD_RADIUS, Simulation, type SimulationSnapshot } from '@/sim
 import { SimulationClock, type SimulationSpeed } from '@/simulation/SimulationClock';
 import type { InputIntentSink } from '@/input/types';
 import { gridToScene, isInsideGrid, sceneToGrid } from '@/shared/math/isometric';
+import { cellLine } from '@/shared/math/gridLine';
 import type { GridPoint, ScreenPoint } from '@/shared/types/geometry';
 import type { TerrainType } from '@/data/terrain';
 import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
@@ -209,6 +210,26 @@ export interface GameContext {
    */
   adjustWorkersAt(buildingId: number, delta: number): boolean;
 
+  /**
+   * The run of road being aimed, or `null` when nothing is being drawn.
+   *
+   * Its own mode rather than part of {@link placement}, because it is a
+   * different interaction: a building is framed with the camera and committed
+   * from a button, and a road is drawn from one cell to another by tapping the
+   * far end. Sharing the state would have meant one of the two pretending to be
+   * the other.
+   */
+  readonly roadLine: RoadLineState | null;
+  /** Increments whenever the run is started, re-aimed, laid or dropped. */
+  readonly roadLineVersion: number;
+  /** Starts a run at the selected cell. `false` when it cannot be paved. */
+  beginRoadLine(): boolean;
+  /** Moves the far end. The near end never moves once the run has begun. */
+  aimRoadLine(cell: GridPoint): void;
+  /** Orders every payable cell of the run. Returns how many were ordered. */
+  confirmRoadLine(): number;
+  cancelRoadLine(): void;
+
   /** The building being placed, or `null` when not in placement mode. */
   readonly placement: PlacementState | null;
   /** Increments whenever placement state changes. */
@@ -234,6 +255,21 @@ export interface GameContext {
    * saved.
    */
   readonly loadVersion: number;
+}
+
+/**
+ * A run of road being drawn, from the cell it started at to the cell aimed at.
+ *
+ * `cells` is the whole staircase and `payable` is the part of it that will
+ * actually be ordered — a run crossing a house, a tree or the river keeps those
+ * cells in the preview and leaves them out of the order, so the player can see
+ * *why* the line they drew is not the road they get.
+ */
+export interface RoadLineState {
+  readonly from: GridPoint;
+  readonly to: GridPoint;
+  readonly cells: readonly GridPoint[];
+  readonly payable: readonly GridPoint[];
 }
 
 /** Where the placement ghost is and whether it may be committed. */
@@ -286,6 +322,8 @@ export class Game implements GameContext, InputIntentSink {
   private selectionChanges = 0;
   private currentPlacement: PlacementState | null = null;
   private placementChanges = 0;
+  private currentRoadLine: RoadLineState | null = null;
+  private roadLineChanges = 0;
   private readonly saveStore: SaveStore;
   private lastSaveStatus = '';
   private saveStatusChanges = 0;
@@ -324,6 +362,7 @@ export class Game implements GameContext, InputIntentSink {
     this.selectionChanges += 1;
     this.currentPlacement = null;
     this.placementChanges += 1;
+    this.cancelRoadLine();
     this.ticksUntilAutosave = AUTOSAVE_INTERVAL_TICKS;
     // On the camp rather than the middle of the map. The first thing the player
     // should see is their own people, not an empty acre of the interior with
@@ -409,6 +448,113 @@ export class Game implements GameContext, InputIntentSink {
     this.camera.stopMotion();
     this.currentPlacement = this.describePlacement(buildingId, this.viewCentreCell());
     this.placementChanges += 1;
+  }
+
+  public get roadLine(): RoadLineState | null {
+    return this.currentRoadLine;
+  }
+
+  public get roadLineVersion(): number {
+    return this.roadLineChanges;
+  }
+
+  /**
+   * Begins a run of road at the selected cell.
+   *
+   * **Asked for: paving was one cell per tap.** A track from the stores to the
+   * quarry was fifteen taps and fifteen menus, which is not an interaction. Now
+   * the first cell opens a run, the next tap says how far it goes, and one
+   * button lays the lot.
+   *
+   * The run begins one cell long, so a player who wanted exactly the cell they
+   * tapped taps it again and gets exactly that — the whole of "and if you press
+   * the same starting cell, only that one".
+   *
+   * @returns `false` when the selected cell cannot take a road at all
+   */
+  public beginRoadLine(): boolean {
+    const selection = this.currentSelection;
+    if (!selection || !this.simulation.world.canPave(selection.cell)) {
+      return false;
+    }
+
+    // Momentum would slide the map out from under a run the player is aiming,
+    // exactly as it would slide a building's ghost.
+    this.camera.stopMotion();
+    this.currentRoadLine = this.describeRoadLine(selection.cell, selection.cell);
+    this.roadLineChanges += 1;
+    return true;
+  }
+
+  /**
+   * Moves the far end of the run.
+   *
+   * The near end is fixed once the run has begun: a player drawing from the
+   * stores to the quarry has already said where it starts, and re-anchoring it
+   * on every tap would make the second tap undo the first.
+   */
+  public aimRoadLine(cell: GridPoint): void {
+    const line = this.currentRoadLine;
+    if (!line || (line.to.gx === cell.gx && line.to.gy === cell.gy)) {
+      return;
+    }
+    this.currentRoadLine = this.describeRoadLine(line.from, cell);
+    this.roadLineChanges += 1;
+  }
+
+  /**
+   * Orders the run paved.
+   *
+   * Only the payable cells: a run drawn across the river orders the banks and
+   * skips the water, rather than refusing the whole line over one bad cell.
+   * Villagers still have to walk out and beat each one — this posts the work, it
+   * does not lay the road.
+   *
+   * @returns how many cells were ordered, `0` when none could be
+   */
+  public confirmRoadLine(): number {
+    const line = this.currentRoadLine;
+    if (!line) {
+      return 0;
+    }
+
+    let ordered = 0;
+    for (const cell of line.payable) {
+      if (this.simulation.designateRoad(cell)) {
+        ordered += 1;
+      }
+    }
+
+    this.currentRoadLine = null;
+    this.roadLineChanges += 1;
+    // The panel for the cell the player started from is now out of date: it was
+    // offering to pave a cell that has just been ordered.
+    if (this.currentSelection) {
+      this.refreshSelection(this.currentSelection.cell);
+    }
+    return ordered;
+  }
+
+  public cancelRoadLine(): void {
+    if (!this.currentRoadLine) {
+      return;
+    }
+    this.currentRoadLine = null;
+    this.roadLineChanges += 1;
+  }
+
+  private describeRoadLine(from: GridPoint, to: GridPoint): RoadLineState {
+    const cells = cellLine(from, to);
+    return {
+      from,
+      to,
+      cells,
+      // Already-ordered cells are payable in the sense the preview cares about:
+      // they are part of the road the player is drawing, and `designateRoad`
+      // refuses the duplicate itself. What is left out is ground no road can go
+      // on — water, rock, a building, a standing tree.
+      payable: cells.filter((cell) => this.simulation.world.canPave(cell)),
+    };
   }
 
   public cancelPlacement(): void {
@@ -543,6 +689,10 @@ export class Game implements GameContext, InputIntentSink {
       this.clock.restore(result.save.simulationTime, this.clock.speed);
       this.currentSelection = null;
       this.selectionChanges += 1;
+      // A run being aimed refers to cells in the settlement that has just been
+      // replaced. Laying it after the load would pave a line the player drew on
+      // a different map.
+      this.cancelRoadLine();
       this.loadsCompleted += 1;
       this.setSaveStatus('Loaded');
       return true;
@@ -633,6 +783,21 @@ export class Game implements GameContext, InputIntentSink {
     }
 
     const cell = this.screenToGrid(point);
+
+    // **A tap while drawing a road aims it, and a second tap on the same cell
+    // lays it.** Two taps rather than one because the player has to be able to
+    // see the run before buying it, and the run they are looking at is the one
+    // under the cell they last touched — so touching it again is the natural
+    // "yes, that one". The Confirm button does the same thing for anyone who
+    // would rather press a button than tap a cell twice.
+    if (this.currentRoadLine && cell) {
+      if (this.currentRoadLine.to.gx === cell.gx && this.currentRoadLine.to.gy === cell.gy) {
+        this.confirmRoadLine();
+      } else {
+        this.aimRoadLine(cell);
+      }
+      return;
+    }
 
     if (!cell) {
       // Tapping off-map clears the selection rather than leaving a stale one.

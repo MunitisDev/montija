@@ -1688,3 +1688,24 @@ mechanic for the sake of a list. Two cemeteries show the same names.
 
 The roll shares its formatter with the closing page — one roll, formatted one way, whether it is read
 during the game or after it — and a cemetery with nobody in it says so rather than showing an empty box.
+
+## PHASE 54 — A road drawn in one gesture — Implemented
+
+Paving was one cell per tap: select a cell, press Lay road, select the next cell, press Lay road. A
+track from the stores to the quarry is fifteen of those, which is not an interaction — and a player
+who gives up on roads loses the one bonus in the game that costs nothing but labour.
+
+Now a run: tap a cell, press **Lay road**, tap where it should end. The line appears as green cells over
+the terrain, the bar reports how long it is, and a second tap on that end cell — or the Confirm
+button — lays the lot. The run begins one cell long, so tapping the cell you started on paves exactly
+that one, which is what was asked for.
+
+Two properties of the line are load-bearing. It is **orthogonally continuous**: a diagonal run takes the
+corner cell between each step, because `NavigationGrid` refuses to cut a corner and two cells joined at
+a corner are not a road — so a diagonal run costs more cells than the distance suggests, and the bar
+says so before the player commits. And a **bad cell costs that cell rather than the line**: water, rock,
+a building and standing trees show red in the preview and are left out of the order, with a count of how
+many. Refusing the whole run over one tree would mean drawing it again by hand.
+
+`cellLine` in `shared/math/gridLine.ts` is pure grid geometry — nothing in it knows what is being laid
+or that a renderer exists — so the preview, the order and the tests all read the same line.

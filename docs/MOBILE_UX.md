@@ -412,6 +412,39 @@ Three behaviours worth recording:
 
 Verified at 1180×820, 830×412 and 412×830, in both languages.
 
+## Drawing a road — Implemented
+
+**Paving was one cell per tap.** A track from the stores to the quarry is fifteen cells, so it was
+fifteen taps and fifteen menus — data entry rather than an interaction, and a player who gives up on
+it loses the one bonus in the game that costs nothing but labour.
+
+The gesture now: tap a cell, press **Lay road**, tap where the road should end. The run appears as a
+line of green cells, the bar reports its length — _Lay road — 17 cells_ — and either a second tap on
+that same end cell or the **Confirm** button lays the lot. A player who wanted only the cell they
+started on taps it again and gets exactly that, because the run begins one cell long.
+
+Four decisions worth recording:
+
+- **Two taps, not one.** The far end has to be visible before it is bought, and the thing being
+  bought is up to twenty cells of somebody's day. Confirm and Cancel are there for anyone who would
+  rather press a button than tap a cell twice.
+- **The near end never moves.** Re-aiming moves the far end only; a run that re-anchored on every tap
+  would make each tap undo the last.
+- **A run is orthogonally continuous.** A diagonal line takes the corner cell between each step,
+  because the pathfinder refuses to cut a corner — two cells joined at a corner are not a road. A
+  diagonal run is therefore longer than the distance suggests, and the bar's count says so before the
+  player commits.
+- **A bad cell costs that cell, not the line.** Water, rock, a building or a standing tree shows red
+  in the preview and is left out of the order; the bar says how many. Refusing the whole run over one
+  tree would mean re-drawing it by hand.
+
+While a run is being aimed the tile panel's own land buttons stand down — the panel still says which
+cell the run starts from, which is useful, but its buttons would start a second thing on top of the
+first. On short and narrow screens the road bar takes the build bar's row, exactly as the placement
+bar does.
+
+Verified at 1180×820 with a seventeen-cell diagonal run and a run drawn into the river.
+
 ## Settings — Implemented
 
 **If it is not about the settlement, it is not on the screen.** Resources, the calendar, the build

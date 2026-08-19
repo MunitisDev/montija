@@ -131,6 +131,7 @@ export class WorldScene extends Phaser.Scene {
     this.syncSeason(delta);
     this.designationRenderer.sync(this.context.simulation.jobs);
     this.connectorRenderer.sync(this.context.simulation.world);
+    this.connectorRenderer.syncRoadLine(this.context.roadLine, this.context.roadLineVersion);
     this.resourceRenderer.sync(
       this.context.simulation.world.piles,
       this.context.simulation.storages,

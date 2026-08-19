@@ -53,6 +53,11 @@ interface HudElements {
   readonly selectionRoad: HTMLButtonElement;
   readonly selectionDitch: HTMLButtonElement;
   readonly selectionBridge: HTMLButtonElement;
+  readonly roadLineBar: HTMLElement;
+  readonly roadLineLabel: HTMLElement;
+  readonly roadLineHint: HTMLElement;
+  readonly roadLineConfirm: HTMLButtonElement;
+  readonly roadLineCancel: HTMLButtonElement;
   readonly season: HTMLElement;
   readonly day: HTMLElement;
   readonly temperature: HTMLElement;
@@ -97,6 +102,7 @@ export class Hud {
   private lastRenderedSpeed: SimulationSpeed | null = null;
   private lastRenderedPopulation = -1;
   private lastRenderedSelection = -1;
+  private lastRenderedRoadLine = -1;
   /** Stored totals last written to the DOM, so unchanged values are skipped. */
   private readonly lastRenderedTotals = new Map<ResourceId, number>();
   /** Loose totals last written, tracked apart from stored ones. */
@@ -266,6 +272,11 @@ export class Hud {
     if (this.context.selectionVersion !== this.lastRenderedSelection) {
       this.renderSelection();
       this.lastRenderedSelection = this.context.selectionVersion;
+    }
+
+    if (this.context.roadLineVersion !== this.lastRenderedRoadLine) {
+      this.renderRoadLine();
+      this.lastRenderedRoadLine = this.context.roadLineVersion;
     }
   }
 
@@ -684,6 +695,46 @@ export class Hud {
     return parts.join(' · ');
   }
 
+  /**
+   * The bar for the run of road being drawn, and how long it is.
+   *
+   * **Asked for: draw a road along a line instead of one cell at a time.** The
+   * bar reports the length because that is the decision — fifteen cells of
+   * paving is a day of somebody's work, and the player should be able to see the
+   * size of what they are ordering before they order it.
+   *
+   * While a run is being aimed the tile panel's own land buttons stand down. The
+   * panel still describes the cell the run starts from, which is useful; its
+   * buttons would start a second thing on top of the first, which is not.
+   */
+  private renderRoadLine(): void {
+    const line = this.context.roadLine;
+    this.elements.roadLineBar.hidden = line === null;
+    this.root.classList.toggle('is-drawing', line !== null);
+    this.elements.selection.classList.toggle('is-drawing', line !== null);
+
+    if (!line) {
+      return;
+    }
+
+    const paving = line.payable.length;
+    this.elements.roadLineLabel.textContent = `${this.i18n.t('action.pave')} — ${
+      paving === 1 ? this.i18n.t('roadline.oneCell') : `${paving} ${this.i18n.t('roadline.cells')}`
+    }`;
+    this.elements.roadLineConfirm.textContent = this.i18n.t('action.confirm');
+    this.elements.roadLineConfirm.disabled = paving === 0;
+    this.elements.roadLineCancel.textContent = this.i18n.t('action.cancel');
+
+    // A run crossing the river, a wall of rock or a standing tree keeps those
+    // cells in the preview and leaves them out of the order. Saying how many is
+    // the difference between "the game ignored part of my line" and "that part
+    // cannot take a road".
+    const skipped = line.cells.length - paving;
+    this.elements.roadLineHint.textContent =
+      skipped > 0 ? `${skipped} ${this.i18n.t('roadline.skipped')}` : this.i18n.t('roadline.hint');
+    this.elements.roadLineHint.classList.toggle('is-refusal', skipped > 0);
+  }
+
   private renderSelection(): void {
     this.renderBuildingPanel();
     const selection = this.context.selection;
@@ -798,7 +849,21 @@ export class Hud {
 
   private bindRoadAction(): void {
     this.elements.selectionRoad.addEventListener('click', () => {
-      this.context.toggleSelectedRoad();
+      // **Laying opens a run; undoing is still one tap.** A player lifting a
+      // road or taking an order back means that cell and no other, and making
+      // them confirm a one-cell run to undo one cell would be worse than what
+      // was there before. Only paving is worth drawing.
+      if (!this.context.beginRoadLine()) {
+        this.context.toggleSelectedRoad();
+      }
+      this.update();
+    });
+    this.elements.roadLineConfirm.addEventListener('click', () => {
+      this.context.confirmRoadLine();
+      this.update();
+    });
+    this.elements.roadLineCancel.addEventListener('click', () => {
+      this.context.cancelRoadLine();
       this.update();
     });
     this.elements.selectionDitch.addEventListener('click', () => {
@@ -932,6 +997,7 @@ export class Hud {
   private invalidateAll(): void {
     this.lastRenderedPopulation = -1;
     this.lastRenderedSelection = -1;
+    this.lastRenderedRoadLine = -1;
     this.lastRenderedSpeed = null;
     this.lastRenderedSeason = '';
     this.lastRenderedDay = '';
@@ -980,6 +1046,11 @@ function collectElements(root: HTMLElement): HudElements {
     selectionRoad: requireElement(root, '[data-hud="selection-road"]') as HTMLButtonElement,
     selectionDitch: requireElement(root, '[data-hud="selection-ditch"]') as HTMLButtonElement,
     selectionBridge: requireElement(root, '[data-hud="selection-bridge"]') as HTMLButtonElement,
+    roadLineBar: requireElement(root, '[data-hud="roadline"]'),
+    roadLineLabel: requireElement(root, '[data-hud="roadline-label"]'),
+    roadLineHint: requireElement(root, '[data-hud="roadline-hint"]'),
+    roadLineConfirm: requireElement(root, '[data-hud="roadline-confirm"]') as HTMLButtonElement,
+    roadLineCancel: requireElement(root, '[data-hud="roadline-cancel"]') as HTMLButtonElement,
     season: requireElement(root, '[data-hud="season"]'),
     day: requireElement(root, '[data-hud="day"]'),
     temperature: requireElement(root, '[data-hud="temperature"]'),

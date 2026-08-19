@@ -47,6 +47,11 @@ export const EN = {
   'action.fell': 'Fell',
   'action.mine': 'Mine',
   'action.pave': 'Lay road',
+  'action.confirm': 'Confirm',
+  'roadline.hint': 'Tap where it should end, then tap the same cell again to lay it.',
+  'roadline.oneCell': 'one cell',
+  'roadline.cells': 'cells',
+  'roadline.skipped': 'cells of the line cannot take a road',
   'action.liftRoad': 'Lift road',
   'action.cancel': 'Cancel',
   'action.demolish': 'Demolish',
@@ -415,7 +420,7 @@ export const EN = {
     'Every map has one, and it cuts the map in two. Nothing can be built on the far bank until you bridge it.',
   'guide.land.road': 'Roads',
   'guide.land.road.detail':
-    'Beaten earth, and free but for the work. Villagers walk about twice as fast on one, and every problem this settlement has is a hauling problem.',
+    'Beaten earth, and free but for the work. Villagers walk about twice as fast on one, and every problem this settlement has is a hauling problem. Tap a cell, press Lay road, then tap where the road should end: the whole run is drawn at once.',
   'guide.land.ditch': 'Ditches',
   'guide.land.ditch.detail':
     'A channel dug from water that is already there, one cell at a time, and about two days of somebody’s work each. An Orchard has to stand on water, so a ditch is how you decide where the orchard goes.',
@@ -609,6 +614,11 @@ export const ES: Messages = {
   'action.fell': 'Talar',
   'action.mine': 'Picar',
   'action.pave': 'Trazar camino',
+  'action.confirm': 'Confirmar',
+  'roadline.hint': 'Toca dónde debe acabar y vuelve a tocar esa casilla para trazarlo.',
+  'roadline.oneCell': 'una casilla',
+  'roadline.cells': 'casillas',
+  'roadline.skipped': 'casillas de la línea no admiten camino',
   'action.liftRoad': 'Levantar camino',
   'action.cancel': 'Cancelar',
   'action.demolish': 'Demoler',
@@ -955,7 +965,7 @@ export const ES: Messages = {
     'Todos los mapas tienen uno, y parte el mapa en dos. No se puede construir en la otra orilla hasta cruzarlo con un puente.',
   'guide.land.road': 'Caminos',
   'guide.land.road.detail':
-    'Tierra pisada, gratis salvo el trabajo. Se camina casi el doble de rápido, y aquí todos los problemas son problemas de acarreo.',
+    'Tierra pisada, gratis salvo el trabajo. Se camina casi el doble de rápido, y aquí todos los problemas son problemas de acarreo. Toca una casilla, pulsa Trazar camino y luego toca dónde debe acabar: se traza el tramo entero de una vez.',
   'guide.land.ditch': 'Acequias',
   'guide.land.ditch.detail':
     'Un canal cavado desde el agua que ya hay, casilla a casilla, y unos dos días de trabajo cada una. El huerto tiene que estar junto al agua, así que la acequia es cómo decides dónde va el huerto.',

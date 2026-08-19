@@ -790,9 +790,21 @@
  * straight back.
  */
 @media (max-height: 520px), (max-width: 760px) {
-  #hud.is-placing .build-bar {
+  #hud.is-placing .build-bar,
+  #hud.is-drawing .build-bar {
     display: none;
   }
+}
+
+/*
+ * The tile panel's land buttons stand down while a run of road is being drawn.
+ *
+ * The panel still says which cell the run starts from, which is worth knowing.
+ * Its buttons would start a second road, a ditch or a bridge on top of the run
+ * already in progress, which is not.
+ */
+.tile-panel.is-drawing .tile-panel__action {
+  display: none;
 }
 
 /*

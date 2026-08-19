@@ -498,6 +498,28 @@
             <div class="build-panel" data-hud="build-panel" hidden></div>
             <div class="build-bar" data-hud="build-bar" role="group" aria-label="Build menu"></div>
 
+            <!--
+              Road-drawing controls, shown only while a run is being aimed.
+
+              The placement bar's own class, because it is the same kind of
+              thing in the same place: something is being aimed, and there is a
+              button to commit it and a button to drop it.
+            -->
+            <div class="placement-bar" data-hud="roadline" hidden>
+              <span class="placement-bar__label" data-hud="roadline-label"></span>
+              <span class="placement-bar__hint" data-hud="roadline-hint"></span>
+              <button
+                type="button"
+                class="placement-bar__confirm"
+                data-hud="roadline-confirm"
+              ></button>
+              <button
+                type="button"
+                class="placement-bar__cancel"
+                data-hud="roadline-cancel"
+              ></button>
+            </div>
+
             <!-- Placement controls, shown only while positioning a building. -->
             <div class="placement-bar" data-hud="placement" hidden>
               <span class="placement-bar__label" data-hud="placement-label"></span>

@@ -16,6 +16,8 @@ import { RoadGrid, ROAD_COST_MULTIPLIER, ROAD_SPEED_MULTIPLIER } from '@/simulat
 import { findPath } from '@/simulation/pathfinding/AStar';
 import { restore, serialise } from '@/simulation/save/serialise';
 import { validateSave } from '@/simulation/save/SaveGame';
+import { Game } from '@/game/Game';
+import { gridToScene } from '@/shared/math/isometric';
 import type { GridPoint } from '@/shared/types/geometry';
 
 const OPTIONS = { seed: 20260815, worldWidth: 48, worldHeight: 48, startingVillagers: 10 };
@@ -522,4 +524,186 @@ function openCellNear(simulation: Simulation, near: GridPoint): GridPoint | null
     }
   }
   return null;
+}
+
+/**
+ * Drawing a run of road in one gesture.
+ *
+ * **Asked for after a track from the stores to the quarry took fifteen taps and
+ * fifteen menus.** Paving one cell at a time is not an interaction, it is data
+ * entry, and a player who has to do it fifteen times stops laying roads — which
+ * costs them the one bonus that only takes labour.
+ *
+ * The rules being held here are the ones the player will notice: the near end
+ * never moves, the run is one cell until it is aimed, the second tap on the same
+ * cell lays it, and a line drawn across water orders the banks rather than
+ * refusing the whole thing.
+ */
+describe('drawing a run of road', () => {
+  it('begins one cell long, so tapping the same cell paves only it', () => {
+    // Literally what was asked for: "and if you press the same starting cell,
+    // only that one".
+    const { game, cell } = gameOnPavableCell();
+    expect(game.beginRoadLine()).toBe(true);
+
+    const line = game.roadLine!;
+    expect(line.from).toEqual(cell);
+    expect(line.to).toEqual(cell);
+    expect(line.cells).toEqual([cell]);
+
+    expect(game.confirmRoadLine()).toBe(1);
+    expect(game.roadLine).toBeNull();
+    expect(game.simulation.isRoadDesignated(cell)).toBe(true);
+  });
+
+  it('refuses to begin on ground no road can go on', () => {
+    // Water, rock, a standing tree. The button falls back to the old one-cell
+    // behaviour when this happens, which for those cells is "nothing".
+    const game = new Game({ seed: 20260815 });
+    const wet = cellWhere(game, (candidate) => !game.simulation.world.canPave(candidate));
+    selectCell(game, wet);
+    expect(game.beginRoadLine()).toBe(false);
+    expect(game.roadLine).toBeNull();
+  });
+
+  it('keeps its near end while the far end moves', () => {
+    // The second tap must not re-anchor the run: the player has already said
+    // where it starts, and re-anchoring would make each tap undo the last.
+    const { game, cell } = gameOnPavableCell();
+    game.beginRoadLine();
+
+    game.aimRoadLine({ gx: cell.gx + 4, gy: cell.gy });
+    expect(game.roadLine!.from).toEqual(cell);
+    expect(game.roadLine!.cells).toHaveLength(5);
+
+    game.aimRoadLine({ gx: cell.gx + 2, gy: cell.gy });
+    expect(game.roadLine!.from).toEqual(cell);
+    expect(game.roadLine!.cells).toHaveLength(3);
+  });
+
+  it('orders every payable cell of the run and skips the rest', () => {
+    const { game, cell } = gameOnPavableCell();
+    game.beginRoadLine();
+    game.aimRoadLine({ gx: cell.gx + 6, gy: cell.gy });
+
+    const line = game.roadLine!;
+    const ordered = game.confirmRoadLine();
+    expect(ordered).toBe(line.payable.length);
+    for (const paved of line.payable) {
+      expect(game.simulation.isRoadDesignated(paved), `${paved.gx},${paved.gy}`).toBe(true);
+    }
+    // And nothing was ordered on the cells no road can go on, which is what
+    // keeps one tree in the way from costing the player the whole line.
+    for (const skipped of line.cells.filter((candidate) => !line.payable.includes(candidate))) {
+      expect(game.simulation.isRoadDesignated(skipped)).toBe(false);
+    }
+  });
+
+  it('aims with a tap and lays it with a second tap on the same cell', () => {
+    // The whole gesture, as the player performs it: press Road, tap the far
+    // end, tap it again. Two taps rather than one because a run has to be
+    // visible before it is bought.
+    const { game, cell } = gameOnPavableCell();
+    game.beginRoadLine();
+
+    const far = { gx: cell.gx + 3, gy: cell.gy };
+    tapCell(game, far);
+    expect(game.roadLine!.to).toEqual(far);
+    expect(game.simulation.isRoadDesignated(far)).toBe(false);
+
+    tapCell(game, far);
+    expect(game.roadLine).toBeNull();
+    expect(game.simulation.isRoadDesignated(far)).toBe(true);
+    expect(game.simulation.isRoadDesignated(cell)).toBe(true);
+  });
+
+  it('leaves the selection alone while a run is being aimed', () => {
+    // The tile panel goes on describing the cell the run starts from, which is
+    // useful. A panel that followed the far end would be describing a cell the
+    // player is only pointing through.
+    const { game, cell } = gameOnPavableCell();
+    game.beginRoadLine();
+    tapCell(game, { gx: cell.gx + 2, gy: cell.gy });
+    expect(game.selection!.cell).toEqual(cell);
+  });
+
+  it('bumps its version whenever the run changes, and only then', () => {
+    // Every renderer in the game syncs off a version counter. A preview that
+    // redrew every frame would be the one overlay in the game that does.
+    const { game, cell } = gameOnPavableCell();
+    const start = game.roadLineVersion;
+
+    game.beginRoadLine();
+    expect(game.roadLineVersion).toBe(start + 1);
+
+    game.aimRoadLine({ gx: cell.gx + 3, gy: cell.gy });
+    expect(game.roadLineVersion).toBe(start + 2);
+
+    // Aiming at the cell it is already aimed at is not a change.
+    game.aimRoadLine({ gx: cell.gx + 3, gy: cell.gy });
+    expect(game.roadLineVersion).toBe(start + 2);
+
+    game.cancelRoadLine();
+    expect(game.roadLineVersion).toBe(start + 3);
+    game.cancelRoadLine();
+    expect(game.roadLineVersion).toBe(start + 3);
+  });
+
+  it('drops the run when the settlement is replaced', () => {
+    // The cells it refers to belong to a valley that no longer exists.
+    const { game } = gameOnPavableCell();
+    game.beginRoadLine();
+    game.startNewSettlement(20260901);
+    expect(game.roadLine).toBeNull();
+  });
+});
+
+// --- helpers ---------------------------------------------------------------
+
+/** A game with a pavable cell selected, and that cell. */
+function gameOnPavableCell(): { game: Game; cell: GridPoint } {
+  const game = new Game({ seed: 20260815 });
+  const cell = cellWhere(game, (candidate) => {
+    // Room for a run of six to the east, so the aiming tests have somewhere to
+    // aim that is not off the map.
+    for (let step = 0; step <= 6; step += 1) {
+      if (!game.simulation.world.canPave({ gx: candidate.gx + step, gy: candidate.gy })) {
+        return false;
+      }
+    }
+    return true;
+  });
+  selectCell(game, cell);
+  return { game, cell };
+}
+
+/** The first cell of this game's world that satisfies a predicate. */
+function cellWhere(game: Game, wanted: (cell: GridPoint) => boolean): GridPoint {
+  const world = game.simulation.world;
+  for (let gy = 1; gy < world.height - 8; gy += 1) {
+    for (let gx = 1; gx < world.width - 8; gx += 1) {
+      if (wanted({ gx, gy })) {
+        return { gx, gy };
+      }
+    }
+  }
+  throw new Error('no such cell in this world');
+}
+
+/** Taps a cell without asserting what it selected: frame it, tap the middle. */
+function tapCell(game: Game, cell: GridPoint): void {
+  game.camera.centreOn(gridToScene(cell));
+  const { width, height } = game.camera.viewportSize;
+  game.onSelect({ sx: width / 2, sy: height / 2 });
+}
+
+/** Selects a cell the way a tap does: frame it, then tap the middle. */
+function selectCell(game: Game, cell: GridPoint): void {
+  game.camera.centreOn(gridToScene(cell));
+  const { width, height } = game.camera.viewportSize;
+  game.onSelect({ sx: width / 2, sy: height / 2 });
+  const chosen = game.selection;
+  if (!chosen || chosen.cell.gx !== cell.gx || chosen.cell.gy !== cell.gy) {
+    throw new Error(`tap landed on ${JSON.stringify(chosen?.cell)} rather than on the cell`);
+  }
 }

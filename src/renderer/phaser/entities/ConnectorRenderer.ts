@@ -19,12 +19,23 @@
  */
 
 import type Phaser from 'phaser';
-import { RenderLayer, depthFor } from '@/renderer/phaser/sorting';
+import { RenderLayer, depthFor, overlayDepth } from '@/renderer/phaser/sorting';
 import { connectorMask } from '@/renderer/phaser/terrain/connectors';
 import { TextureKeys, type ConnectorKind } from '@/renderer/phaser/terrain/tileTextures';
 import { WET_TERRAIN } from '@/data/terrain';
 import { gridToScene } from '@/shared/math/isometric';
+import type { RoadLineState } from '@/game/Game';
 import type { World } from '@/simulation/world/World';
+
+/**
+ * The preview's two colours, shared with the building ghost on purpose.
+ *
+ * A player has already learned from placing buildings that green means "this
+ * will happen here" and red means "not here". Teaching them a second palette for
+ * the same idea would be a worse road tool, not a prettier one.
+ */
+const WILL_PAVE_TINT = 0x7fb069;
+const CANNOT_PAVE_TINT = 0xc0584a;
 
 /** What is drawn on one cell, and which of the sixteen shapes it takes. */
 interface Piece {
@@ -38,6 +49,9 @@ export class ConnectorRenderer {
   private readonly tiles = new Map<number, { image: Phaser.GameObjects.Image; piece: Piece }>();
   private renderedRoadVersion = -1;
   private renderedTerrainVersion = -1;
+  /** The run being aimed, as ghost tiles. Empty whenever nothing is drawn. */
+  private readonly preview: Phaser.GameObjects.Image[] = [];
+  private renderedRoadLineVersion = -1;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -91,6 +105,49 @@ export class ConnectorRenderer {
   }
 
   /**
+   * Draws the run of road the player is aiming, cell by cell.
+   *
+   * Green for the cells that will be paved and red for the ones that cannot be —
+   * a run drawn across the river shows both, which is how the player learns that
+   * the line they drew is not quite the road they will get.
+   *
+   * The same ghost tile the building placement uses, and for the same reason: it
+   * sits above the terrain, so a run drawn through a wood is not lost behind the
+   * trees.
+   *
+   * Synced off the run's version, so this costs one comparison a frame while
+   * nobody is drawing anything.
+   */
+  public syncRoadLine(line: RoadLineState | null, version: number): void {
+    if (this.renderedRoadLineVersion === version) {
+      return;
+    }
+    this.renderedRoadLineVersion = version;
+
+    for (const cell of this.preview) {
+      cell.destroy();
+    }
+    this.preview.length = 0;
+
+    if (!line) {
+      return;
+    }
+
+    const payable = new Set(line.payable.map((cell) => `${cell.gx},${cell.gy}`));
+    for (const cell of line.cells) {
+      const position = gridToScene(cell);
+      this.preview.push(
+        this.scene.add
+          .image(position.px, position.py, TextureKeys.ghostCell)
+          .setOrigin(0.5, 0.5)
+          .setTint(payable.has(`${cell.gx},${cell.gy}`) ? WILL_PAVE_TINT : CANNOT_PAVE_TINT)
+          .setAlpha(0.75)
+          .setDepth(overlayDepth(cell.gx, cell.gy)),
+      );
+    }
+  }
+
+  /**
    * What every laid cell should look like right now.
    *
    * A road joins other roads; a channel joins the water, which includes the
@@ -134,7 +191,12 @@ export class ConnectorRenderer {
       tile.image.destroy();
     }
     this.tiles.clear();
+    for (const cell of this.preview) {
+      cell.destroy();
+    }
+    this.preview.length = 0;
     this.renderedRoadVersion = -1;
     this.renderedTerrainVersion = -1;
+    this.renderedRoadLineVersion = -1;
   }
 }

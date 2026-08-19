@@ -899,12 +899,20 @@ first decision the player makes about the **shape** of a settlement rather than 
 
 - Tap any open tile and the panel offers to lay a road there. Tap again to cancel the order, or to
   lift a road once it exists.
+- **Laying draws a run, not a cell.** Pressing Lay road opens a run at that cell; tapping where the
+  road should end draws the whole line in green and reports its length, and a second tap on that end
+  cell — or the Confirm button — orders the lot. The run begins one cell long, so tapping the cell you
+  started on paves exactly that one. A diagonal run takes the corner cell between each step, because
+  the pathfinder will not cut a corner and two cells joined at a corner are not a road. Cells no road
+  can go on show red and are left out of the order rather than refusing the whole line.
 - Laying one is a job like any other: a villager walks over and beats the track flat. Nothing is
   built by decree.
 - It costs **labour and no materials**. A beaten track is work, not goods — so nothing here has to
   invent a resource transfer that never physically happened.
-- It runs at the lowest priority in the game. A settlement must never pave a path while its food
-  sits in the field, and this is the rule that guarantees it.
+- It is posted at **normal** priority, alongside felling. At `low` it was never picked up at all — a
+  running settlement always has a tree marked or a load to carry, so not one road was ever laid, and
+  it was reported as "nobody makes roads". It still loses to hauling, which is the rule that actually
+  mattered: a settlement must never pave a path while its food sits in the field.
 - A road cell is roughly **half** the cost to cross. Enough that a long haul along one is visibly
   quicker and worth planning around, and not so much that a settlement without roads feels broken —
   the game has to remain winnable by someone who never lays one.
