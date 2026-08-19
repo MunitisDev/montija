@@ -135,6 +135,53 @@ function entryFor(record: DeathRecord, t: Translate): EndGameEntry {
 }
 
 /**
+ * How many graves the cemetery's panel shows before it stops counting.
+ *
+ * A settlement that lasts twenty years buries dozens of people, and the panel it
+ * would have to grow to in order to list all of them is a panel that covers the
+ * settlement. The newest are the ones a player is looking for — somebody died
+ * *just now* and they want to know who — so the roll is newest-first and the
+ * older graves are counted rather than drawn.
+ */
+export const BURIAL_ROLL_LIMIT = 24;
+
+export interface BurialRoll {
+  /** Newest first: the death a player is asking about is the last one. */
+  readonly entries: readonly EndGameEntry[];
+  /** Graves beyond the limit. `0` when the roll is complete. */
+  readonly more: number;
+  /** The whole count, including the ones not listed. */
+  readonly total: number;
+}
+
+/**
+ * Who lies in the settlement's ground, for the Cemetery's own panel.
+ *
+ * **Asked for: a death should leave a name somewhere.** People died and simply
+ * stopped being in the list — the end screen read the roll out afterwards, which
+ * is exactly too late to be any use. A cemetery is where a settlement keeps its
+ * dead, so it is where the game should be able to name them.
+ *
+ * The settlement's dead rather than this cemetery's: nothing in the simulation
+ * records *which* ground somebody went into, and inventing that to split one
+ * roll across two cemeteries would be a mechanic for the sake of a list. Two
+ * cemeteries therefore show the same names, which is the honest reading of a
+ * settlement burying its people rather than a plot register.
+ *
+ * Shares `entryFor` with the end screen deliberately: one roll, formatted one
+ * way, whether it is read during the game or after it.
+ */
+export function burialRoll(simulation: Simulation, t: Translate): BurialRoll {
+  const records = simulation.necrology.all;
+  const newest = [...records].reverse();
+  return {
+    entries: newest.slice(0, BURIAL_ROLL_LIMIT).map((record) => entryFor(record, t)),
+    more: Math.max(0, newest.length - BURIAL_ROLL_LIMIT),
+    total: newest.length,
+  };
+}
+
+/**
  * Deaths by cause, for the ledger's chronicle page while the game is still on.
  *
  * The same question as the end screen's, asked at a point where the player can

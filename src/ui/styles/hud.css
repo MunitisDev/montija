@@ -1463,6 +1463,91 @@
   display: none;
 }
 
+/*
+ * The roll of the dead, under a cemetery.
+ *
+ * A full-width row of the building panel, like the cards, but scrolling
+ * *downwards* rather than sideways: a name and an age is a line, not a chip, and
+ * a settlement of twenty years has more of them than any panel can be tall.
+ *
+ * `touch-action: pan-y` grants the vertical drag back — the body suppresses touch
+ * scrolling so gestures belong to the camera, and without it the roll could be
+ * read only as far as its first four names on the device the game is aimed at.
+ */
+.buried {
+  display: flex;
+  flex: 1 0 100%;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 2px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(216, 203, 168, 0.1);
+}
+
+.buried[hidden] {
+  display: none;
+}
+
+.buried__title {
+  font-size: 0.78rem;
+  color: var(--colour-ink-dim);
+}
+
+.buried__roll {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  /* Four or five names deep. Enough to see who the winter took; the rest is a
+     drag away. */
+  max-height: min(26vh, 160px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  font-size: 0.8rem;
+}
+
+.buried__entry {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0 12px;
+  padding: 3px 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.buried__entry:last-child {
+  border-bottom: 0;
+}
+
+.buried__who {
+  color: var(--colour-ink);
+}
+
+.buried__age {
+  color: var(--colour-ink);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.buried__how,
+.buried__when {
+  font-size: 0.74rem;
+  color: var(--colour-ink-dim);
+}
+
+.buried__when {
+  text-align: right;
+}
+
+.buried__more {
+  font-size: 0.74rem;
+  color: var(--colour-ink-dim);
+}
+
+.buried__more:empty {
+  display: none;
+}
+
 .card {
   display: flex;
   align-items: center;

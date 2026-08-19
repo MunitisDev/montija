@@ -239,6 +239,9 @@ export const EN = {
 
   'end.stats': 'What this place was',
   'end.causes': 'What took them',
+  'cemetery.buried': 'Buried here:',
+  'cemetery.empty': 'Nobody lies here yet.',
+  'cemetery.older': 'older graves',
   'end.roll': 'Everyone who lived here',
   'end.averageAge': 'Average age at death',
   'end.wereIll': 'of them were ill at the end.',
@@ -778,6 +781,9 @@ export const ES: Messages = {
 
   'end.stats': 'Lo que fue este lugar',
   'end.causes': 'De qué murieron',
+  'cemetery.buried': 'Aquí descansan:',
+  'cemetery.empty': 'Aún no descansa nadie aquí.',
+  'cemetery.older': 'tumbas más antiguas',
   'end.roll': 'Todos los que vivieron aquí',
   'end.averageAge': 'Edad media al morir',
   'end.wereIll': 'de ellos estaban enfermos al final.',

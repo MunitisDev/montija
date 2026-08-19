@@ -30,7 +30,7 @@ import type { ResourceId } from '@/data/resources';
 const STRIP_RESOURCES: readonly ResourceId[] = ['food', 'logs', 'firewood', 'stone'];
 import type { GameContext } from '@/game/Game';
 import { hidesGroundPanel } from '@/game/selection';
-import { buildEndGame, type EndGameStat } from '@/ui/endgame/endGameModel';
+import { buildEndGame, burialRoll, type EndGameStat } from '@/ui/endgame/endGameModel';
 import { cardsFor, type PersonCard } from './cardModel';
 import { perSeason } from '@/ui/format/rates';
 import { productionSummary, type ProductionRate } from './productionModel';
@@ -63,6 +63,10 @@ interface HudElements {
   readonly buildingState: HTMLElement;
   readonly buildingDetail: HTMLElement;
   readonly buildingCards: HTMLElement;
+  readonly buildingBuried: HTMLElement;
+  readonly buriedTitle: HTMLElement;
+  readonly buriedRoll: HTMLElement;
+  readonly buriedMore: HTMLElement;
   readonly workerControl: HTMLElement;
   readonly workerCount: HTMLElement;
   readonly workerLabel: HTMLElement;
@@ -362,6 +366,7 @@ export class Hud {
       this.elements.workerControl.hidden = true;
       this.elements.demolish.hidden = true;
       this.elements.tradeControl.hidden = true;
+      this.elements.buildingBuried.hidden = true;
       return;
     }
 
@@ -398,6 +403,9 @@ export class Hud {
     );
 
     this.renderCards(building.complete ? building.id : null);
+    // A cemetery answers a different question from every other building: not
+    // what it makes or who works it, but who is in it.
+    this.renderBuried(building.buildingId === 'cemetery' && building.complete);
 
     if (!building.complete) {
       const percent = Math.round(building.progress * 100);
@@ -603,6 +611,50 @@ export class Hud {
 
         card.append(portrait, who);
         return card;
+      }),
+    );
+  }
+
+  /**
+   * The roll of the dead, under a cemetery.
+   *
+   * **The answer to "somebody died — who?"**, which the game could previously
+   * only give once the settlement had failed. Newest first, because the death a
+   * player is asking about is the one that just happened.
+   *
+   * Rebuilt on selection rather than per frame, like the cards. A death changes
+   * the roll and a death also changes the selection version — the panel is
+   * re-read whenever anything about the settlement's people moves.
+   */
+  private renderBuried(show: boolean): void {
+    this.elements.buildingBuried.hidden = !show;
+    if (!show) {
+      this.elements.buriedRoll.replaceChildren();
+      return;
+    }
+
+    const roll = burialRoll(this.context.simulation, (key) => this.i18n.t(key));
+    // A new cemetery says so rather than showing an empty box, which reads as a
+    // panel that failed to load.
+    this.elements.buriedTitle.textContent =
+      roll.total === 0
+        ? this.i18n.t('cemetery.empty')
+        : `${this.i18n.t('cemetery.buried')} ${roll.total}`;
+    this.elements.buriedMore.textContent =
+      roll.more === 0 ? '' : `+${roll.more} ${this.i18n.t('cemetery.older')}`;
+
+    const years = this.i18n.t('end.years');
+    this.elements.buriedRoll.replaceChildren(
+      ...roll.entries.map((entry) => {
+        const line = document.createElement('li');
+        line.className = 'buried__entry';
+        line.append(
+          span('buried__who', entry.note ? `${entry.name} — ${entry.note}` : entry.name),
+          span('buried__age', `${entry.age} ${years}`),
+          span('buried__how', entry.cause),
+          span('buried__when', entry.when),
+        );
+        return line;
       }),
     );
   }
@@ -938,6 +990,10 @@ function collectElements(root: HTMLElement): HudElements {
     buildingState: requireElement(root, '[data-hud="building-state"]'),
     buildingDetail: requireElement(root, '[data-hud="building-detail"]'),
     buildingCards: requireElement(root, '[data-hud="building-cards"]'),
+    buildingBuried: requireElement(root, '[data-hud="building-buried"]'),
+    buriedTitle: requireElement(root, '[data-hud="buried-title"]'),
+    buriedRoll: requireElement(root, '[data-hud="buried-roll"]'),
+    buriedMore: requireElement(root, '[data-hud="buried-more"]'),
     workerControl: requireElement(root, '[data-hud="worker-control"]'),
     workerCount: requireElement(root, '[data-hud="worker-count"]'),
     workerLabel: requireElement(root, '[data-hud="worker-label"]'),

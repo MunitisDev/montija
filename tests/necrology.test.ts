@@ -21,7 +21,12 @@ import { restore, serialise } from '@/simulation/save/serialise';
 import { TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
 import type { Villager } from '@/simulation/villagers/Villager';
 import { EN, type MessageKey } from '@/ui/i18n/messages';
-import { buildEndGame, deathsByCause } from '@/ui/endgame/endGameModel';
+import {
+  BURIAL_ROLL_LIMIT,
+  buildEndGame,
+  burialRoll,
+  deathsByCause,
+} from '@/ui/endgame/endGameModel';
 
 const OPTIONS = { seed: 20260816, worldWidth: 48, worldHeight: 48, startingVillagers: 10 };
 
@@ -209,6 +214,64 @@ describe('the ledger, mid-game', () => {
     const causes = deathsByCause(simulation, t);
     expect(causes.map((entry) => entry.cause)).toContain('hunger');
     expect(causes.every((entry) => Number(entry.value) > 0)).toBe(true);
+  });
+});
+
+/**
+ * The cemetery's own roll, asked for so that a death leaves a name somewhere.
+ *
+ * The end screen already read the roll out, which is exactly too late to be any
+ * use: the player wants to know who the winter took while there is still a
+ * settlement to do something about it.
+ */
+describe("the cemetery's roll", () => {
+  it('says nobody lies there yet on a settlement that has lost no one', () => {
+    const roll = burialRoll(new Simulation(OPTIONS), t);
+    expect(roll.total).toBe(0);
+    expect(roll.entries).toEqual([]);
+    expect(roll.more).toBe(0);
+  });
+
+  it('names the dead, newest first', () => {
+    const simulation = new Simulation(OPTIONS);
+    starve(simulation);
+
+    const roll = burialRoll(simulation, t);
+    const records = simulation.necrology.all;
+    expect(roll.total).toBe(records.length);
+    expect(roll.total).toBeGreaterThan(0);
+
+    // Newest first: the death a player is asking about is the last one.
+    expect(roll.entries[0]!.name).toBe(records[records.length - 1]!.name);
+
+    // Every line carries the four things that make it worth reading.
+    for (const entry of roll.entries) {
+      expect(entry.name.trim()).not.toBe('');
+      expect(Number(entry.age)).toBeGreaterThanOrEqual(0);
+      expect(entry.cause.trim()).not.toBe('');
+      expect(entry.when).toContain(EN['time.yearShort']);
+    }
+  });
+
+  it('counts the older graves rather than drawing all of them', () => {
+    // A twenty-year settlement buries dozens. The panel it would have to grow to
+    // in order to list them all is a panel that covers the settlement.
+    const simulation = new Simulation({ ...OPTIONS, startingVillagers: 40 });
+    starve(simulation);
+
+    const roll = burialRoll(simulation, t);
+    expect(roll.total).toBeGreaterThan(BURIAL_ROLL_LIMIT);
+    expect(roll.entries).toHaveLength(BURIAL_ROLL_LIMIT);
+    expect(roll.more).toBe(roll.total - BURIAL_ROLL_LIMIT);
+  });
+
+  it('reads the same roll the closing page does', () => {
+    // One roll, formatted one way, whether it is read during the game or after.
+    const simulation = new Simulation(OPTIONS);
+    starve(simulation);
+    const [first] = burialRoll(simulation, t).entries;
+    const closing = buildEndGame(simulation, t).roll[0]!;
+    expect(first).toEqual(closing);
   });
 });
 

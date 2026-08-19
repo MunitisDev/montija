@@ -1670,3 +1670,21 @@ A player who read them as requirements would build a Temple before a Gatherer Hu
 
 Spanish now writes its decimals with a comma. A coat's yearly cost is 0.7, the first fractional figure
 the game ever had to print, and `0.7` in a Spanish sheet reads as machine translation.
+
+## PHASE 53 — The cemetery remembers — Implemented
+
+People died and stopped being in the list. The closing page read the roll out afterwards, which is
+exactly too late to be any use to a player who wants to know what the winter took while there is still
+a settlement to do something about it.
+
+A finished Cemetery's panel now lists the settlement's dead: **name, trade and rank, age, cause, and the
+year and season it happened in.** Newest first, because the death being asked about is the one that just
+happened. Twenty-four graves are drawn and the rest are counted — a twenty-year settlement buries dozens
+of people, and the panel that would list all of them is a panel that covers the settlement.
+
+It is the settlement's dead rather than that cemetery's: nothing in the simulation records which ground
+somebody went into, and inventing a plot register to split one roll across two cemeteries would be a
+mechanic for the sake of a list. Two cemeteries show the same names.
+
+The roll shares its formatter with the closing page — one roll, formatted one way, whether it is read
+during the game or after it — and a cemetery with nobody in it says so rather than showing an empty box.
