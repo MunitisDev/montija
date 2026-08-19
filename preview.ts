@@ -12,6 +12,8 @@
  */
 
 import { BUILDING_IDS, type BuildingId } from './src/data/buildings';
+import { RESOURCE_IDS } from './src/data/resources';
+import { drawPile } from './src/renderer/phaser/terrain/pileArt';
 import {
   BUILDING_COLOURS,
   artVariants,
@@ -93,6 +95,35 @@ class CanvasGraphics {
 
 const params = new URLSearchParams(location.search);
 const scale = Number(params.get('scale') ?? 3);
+
+/**
+ * The ground heaps, on their own board.
+ *
+ * One per good, and the whole point is to look at them side by side: each has to
+ * answer "what is that" at gameplay zoom, and the only way to know whether two
+ * of them read as the same thing is to put them next to each other.
+ */
+if (params.get('id') === 'piles') {
+  const box = { width: 64, height: 40 };
+  const canvas = document.getElementById('sheet') as HTMLCanvasElement;
+  const gutter = 10;
+  canvas.width = (box.width + gutter) * RESOURCE_IDS.length * scale;
+  canvas.height = (box.height + 26) * scale;
+  const ctx = canvas.getContext('2d')!;
+  ctx.scale(scale, scale);
+  ctx.imageSmoothingEnabled = false;
+  const graphics = new CanvasGraphics(ctx);
+  RESOURCE_IDS.forEach((resource, index) => {
+    ctx.save();
+    ctx.translate((box.width + gutter) * index, 4);
+    drawPile(graphics as never, resource, box);
+    ctx.restore();
+    ctx.fillStyle = '#ddd6c2';
+    ctx.font = '9px system-ui, sans-serif';
+    ctx.fillText(resource, (box.width + gutter) * index + 6, box.height + 18);
+  });
+  throw new Error('piles drawn');
+}
 const wanted = params.get('id') ?? 'house';
 const gap = 16;
 

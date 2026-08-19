@@ -166,5 +166,5 @@ export class ResourceRenderer {
 }
 
 function textureFor(resource: ResourceId): string {
-  return resource === 'stone' ? TextureKeys.stonePile : TextureKeys.logPile;
+  return TextureKeys.pile(resource);
 }

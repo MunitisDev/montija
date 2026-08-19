@@ -772,6 +772,23 @@ export class VillagerSystem {
         }
       }
       this.world.buildings.markChanged();
+
+      // **Anything the site cannot take goes on to a yard, in their hands.**
+      // Not down on the doorstep: a heap of stone outside a half-built house is
+      // exactly what a player reads as the works being stuck, and it is only
+      // there because somebody else's load arrived first while this one was
+      // walking. Measured before this: a pile sat on some site's doorway for one
+      // tick in forty of an ordinary year.
+      if (!villager.inventory.isEmpty) {
+        const carried = villager.inventory.contents[0];
+        const yard = carried
+          ? this.storages.findNearestAccepting(villager.cell, carried.resource)
+          : null;
+        if (yard) {
+          job.deliverTo = yard.cell;
+          return false;
+        }
+      }
     } else {
       const destination = this.deliveryInventory(job.deliverTo);
       if (destination) {

@@ -1551,3 +1551,23 @@ Two findings recorded rather than fixed, because they are design decisions rathe
   twelve seeds the disciplined line came out at [0, 0, 10, 0, 0, 100, 0, 40, 0, 40, 0, 0] — the timber
   went into the Quarry instead of the woodpile. A real decision, and the test now judges it across the
   sweep rather than on one seed.
+
+## PHASE 49 — A heap for every good, and nothing left at the works — Implemented
+
+"Why was all the material on the ground?" There were two answers, and one of them was that it was not
+all the same material: the settlement had a log pile and a stone pile, and everything else was drawn as
+timber. Three hundred and sixty food and a hundred and thirty firewood read as a scatter of logs. Nine
+heaps now, each built from a shape nothing else in the settlement uses — a basket, sawn rounds, split
+wedges, rubble, ingots, helves and blades, folded pelts, bolts of cloth, tied stems — with colour
+separating them a second time. Drawn on the ground only; a yard shows its goods on its own deck and a
+larder is a shut granary.
+
+The other answer was the sealed pocket of PHASE 48, plus one more thing the player was right to
+notice: a load a site could not take was set down on the site's own doorway. That is exactly what reads
+as "the works are stuck", and it happens only because another hauler's load landed first while this one
+was walking. The remainder is carried on to a yard now — measured at one tick in forty of an ordinary
+year before, and none after.
+
+`tests/pile-art.test.ts` holds the set together: no heap may draw outside its sprite, float above the
+ground line, or share a silhouette with another. It caught a three-pixel clip on the old log pile's
+contact shadow that had been there since the day it was written.

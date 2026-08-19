@@ -509,6 +509,52 @@ makes a re-tint a data change rather than an art rewrite.
 
 It is muted and earthy on purpose. Even the prototype should never read as a bright toy.
 
+### A heap for every good — Implemented
+
+There used to be two: a log pile and a stone pile, and everything else — food,
+firewood, iron, hides, tools, clothing, herbs — was drawn as timber. A player sent
+a screenshot of a stalled settlement asking why there was so much _material_
+lying about; three hundred and sixty of it was food and a hundred and thirty was
+firewood, and all of it looked like a scatter of logs.
+
+The piles are the visible half of this game's core resource rule — what is on the
+ground is genuinely there until somebody carries it away — and a rule the player
+cannot read is not doing its job.
+
+Each heap has to answer one question at forty pixels: _what is that_. So each is
+built from a shape nothing else in the settlement uses, and colour separates them
+a second time. Neither alone would be enough:
+
+| Good     | Shape                                            |
+| -------- | ------------------------------------------------ |
+| Food     | a woven basket, produce heaped over the rim      |
+| Logs     | round sawn ends, pale faces catching the light   |
+| Firewood | split billets in courses — wedges, not rounds    |
+| Stone    | rubble blocks, every one a different size        |
+| Iron     | cast ingots, flat and identical, one bright edge |
+| Tools    | helves stood up in a corner, iron on the ends    |
+| Hides    | folded pelts, soft edges, a flap and a leg       |
+| Clothing | bolts of dyed cloth, folded square               |
+| Herbs    | bundles tied at the stem                         |
+
+Two pairs needed the most work, because they are the two a player would confuse.
+**Firewood beside logs**: the difference in the world is a tree cut across against
+a tree cut along, so firewood is wedges with a long pale split face and a shake
+down it, stacked in courses. Drawn as long billets with a strap round them it read
+as a bundle of sawn boards. **Hides beside clothing**: cloth has four straight
+edges and a skin has none, so the pelts are offset rather than concentric — piled
+symmetrically they read as a tiered cake — with a flap off one side and a leg off
+the other.
+
+They are drawn on the ground only. A storage yard shows its own goods on its deck,
+and a larder is a shut granary, because that is what those buildings _are_.
+
+`tests/pile-art.test.ts` fails the build if any heap draws outside its sprite,
+floats above the ground line, or comes out with the same silhouette as another —
+which is exactly the bug the whole set was written to fix. It caught one on the
+way in: the old log pile's contact shadow had been clipped by three pixels since
+the day it was written.
+
 ### Where the placeholder art lives
 
 | File                  | Draws                                                      |

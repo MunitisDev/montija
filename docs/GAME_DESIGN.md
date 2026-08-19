@@ -521,6 +521,13 @@ Three separate things had to be true for that, and all three are fixed:
   only the pickup produced a villager carrying a load to a yard behind a wall, failing to deliver,
   putting it down where they stood, and being handed the same errand by the pile they had just made.
 
+**Nothing is left standing on a site's doorstep.** A load the site cannot take used to be set down
+where the hauler stood, which is the site's own doorway — and it only happens because somebody else's
+load arrived first while this one was walking. A heap of stone outside a half-built house is exactly
+what a player reads as the works being stuck. The remainder goes on to a yard in the hauler's hands
+instead: measured before the fix, a heap sat on some site's doorway for one tick in forty of an
+ordinary year, and now for none.
+
 **And a site takes only what it still owes.** A site's materials hold exactly its cost, so a load
 tipped in whole could fill the room another material needed: a Feller's Hut costing six logs and two
 stone was measured holding _eight logs_ and full, with its two stone lying on the doorstep and

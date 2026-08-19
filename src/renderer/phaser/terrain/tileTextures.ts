@@ -22,6 +22,7 @@ import type Phaser from 'phaser';
 import { TERRAIN_TYPES, type TerrainType } from '@/data/terrain';
 import { TILE_HEIGHT, TILE_WIDTH } from '@/shared/math/isometric';
 import { BUILDING_IDS, type BuildingId } from '@/data/buildings';
+import { RESOURCE_IDS } from '@/data/resources';
 import { SEASONS, type Season } from '@/simulation/seasons/SeasonClock';
 import { drawGroundTile, TERRAIN_VARIANTS } from './groundArt';
 import {
@@ -32,6 +33,7 @@ import {
 } from './connectors';
 import { contactShadow, shade } from './shading';
 import { PERSON_COLOURS, VILLAGER_LOOKS, type VillagerLook } from '@/shared/appearance';
+import { drawPile } from './pileArt';
 import { drawTree, TREE_HEIGHT, TREE_SHAPES, TREE_WIDTH } from './treeArt';
 import { BUILDING_COLOURS, artVariants, buildingTextureSpec, drawBuilding } from './buildingArt';
 
@@ -53,8 +55,14 @@ export const TextureKeys = {
   villagerAtlas: 'villager-atlas',
   villagerRing: 'villager-ring',
   designation: 'designation-mark',
-  logPile: 'pile-logs',
-  stonePile: 'pile-stone',
+  /**
+   * A heap of one good, lying on the ground.
+   *
+   * One per resource. There used to be two — logs and stone — and everything
+   * else was drawn as timber, so a stalled settlement's three hundred food and
+   * hundred-odd firewood read as a scatter of logs. See `pileArt.ts`.
+   */
+  pile: (resource: string): string => `pile-${resource}`,
   /**
    * A building's art. `variant` picks between the textures a building has more
    * than one of — today only the yard, whose goods follow how full it is.
@@ -157,15 +165,13 @@ export function createPlaceholderTextures(scene: Phaser.Scene): void {
     graphics.clear();
   }
 
-  if (!scene.textures.exists(TextureKeys.logPile)) {
-    drawLogPile(graphics);
-    graphics.generateTexture(TextureKeys.logPile, TILE_WIDTH, PILE_HEIGHT);
-    graphics.clear();
-  }
-
-  if (!scene.textures.exists(TextureKeys.stonePile)) {
-    drawStonePile(graphics);
-    graphics.generateTexture(TextureKeys.stonePile, TILE_WIDTH, PILE_HEIGHT);
+  for (const resource of RESOURCE_IDS) {
+    const key = TextureKeys.pile(resource);
+    if (scene.textures.exists(key)) {
+      continue;
+    }
+    drawPile(graphics, resource, { width: TILE_WIDTH, height: PILE_HEIGHT });
+    graphics.generateTexture(key, TILE_WIDTH, PILE_HEIGHT);
     graphics.clear();
   }
 
@@ -714,83 +720,6 @@ function strokeCross(graphics: Phaser.GameObjects.Graphics, cx: number, cy: numb
   graphics.moveTo(cx + 11, cy - 11);
   graphics.lineTo(cx - 11, cy + 11);
   graphics.strokePath();
-}
-
-/** A stack of cut logs, seen end-on, with sawn faces catching the light. */
-function drawLogPile(graphics: Phaser.GameObjects.Graphics): void {
-  const cx = TILE_WIDTH / 2;
-  const base = PILE_HEIGHT;
-
-  graphics.fillStyle(0x000000, 0.24);
-  graphics.fillEllipse(cx, base - 3, 34, 12);
-
-  const bark = 0x4a3b2a;
-  const cut = 0x8a7150;
-  const rows = [
-    { y: base - 9, xs: [-12, -4, 4, 12] },
-    { y: base - 17, xs: [-8, 0, 8] },
-    { y: base - 25, xs: [-4, 4] },
-  ];
-  for (const row of rows) {
-    for (const x of row.xs) {
-      // Bark ring, lit above and shaded below.
-      graphics.fillStyle(shade(bark, 1.08), 1);
-      graphics.fillEllipse(cx + x, row.y, 9.5, 8.5);
-      graphics.fillStyle(shade(bark, 0.78), 1);
-      graphics.fillEllipse(cx + x, row.y + 1.2, 9.5, 6);
-      // The sawn face, which is the pale thing the eye actually picks out.
-      graphics.fillStyle(cut, 1);
-      graphics.fillEllipse(cx + x, row.y, 5, 4.5);
-      graphics.fillStyle(shade(cut, 0.82), 1);
-      graphics.fillEllipse(cx + x, row.y + 1, 5, 2.6);
-      // Two growth rings. Small, but they read as wood rather than as beads.
-      graphics.fillStyle(shade(cut, 1.16), 1);
-      graphics.fillEllipse(cx + x, row.y - 0.4, 2, 1.8);
-    }
-  }
-}
-
-/** A heap of quarried stone: blocks with a top, a lit face and a shaded one. */
-function drawStonePile(graphics: Phaser.GameObjects.Graphics): void {
-  const cx = TILE_WIDTH / 2;
-  const base = PILE_HEIGHT;
-
-  graphics.fillStyle(0x000000, 0.24);
-  graphics.fillEllipse(cx, base - 3, 32, 12);
-
-  const blocks = [
-    { x: -11, y: base - 7, w: 13, h: 9, c: 0x5a5750 },
-    { x: 2, y: base - 7, w: 14, h: 10, c: 0x646159 },
-    { x: -5, y: base - 16, w: 12, h: 9, c: 0x6d6a61 },
-    { x: 5, y: base - 19, w: 10, h: 7, c: 0x5f5c55 },
-  ];
-  for (const b of blocks) {
-    const top = b.y - b.h;
-    // Top face, brightest: the light comes from above and to the left.
-    graphics.fillStyle(shade(b.c, 1.3), 1);
-    polygonAt(graphics, [
-      [cx + b.x, top],
-      [cx + b.x + b.w * 0.5, top - 3.5],
-      [cx + b.x + b.w, top],
-      [cx + b.x + b.w * 0.5, top + 3.5],
-    ]);
-    // Left face.
-    graphics.fillStyle(shade(b.c, 1.02), 1);
-    polygonAt(graphics, [
-      [cx + b.x, top],
-      [cx + b.x + b.w * 0.5, top + 3.5],
-      [cx + b.x + b.w * 0.5, b.y + 3.5],
-      [cx + b.x, b.y],
-    ]);
-    // Right face, away from the key light.
-    graphics.fillStyle(shade(b.c, 0.74), 1);
-    polygonAt(graphics, [
-      [cx + b.x + b.w, top],
-      [cx + b.x + b.w * 0.5, top + 3.5],
-      [cx + b.x + b.w * 0.5, b.y + 3.5],
-      [cx + b.x + b.w, b.y],
-    ]);
-  }
 }
 
 /**

@@ -172,4 +172,54 @@ describe('a construction site', () => {
 
     expect(site!.isComplete).toBe(true);
   }, 30_000);
+
+  it('never leaves a heap standing on its own doorstep', () => {
+    // **What a player reads as "the works are stuck".** A load the site cannot
+    // take used to be set down where the hauler stood, which is the site's own
+    // doorway — and it only happens because somebody else's load arrived first
+    // while this one was walking. Measured before the fix: a heap sat on some
+    // site's doorway for one tick in forty of an ordinary year. The remainder
+    // goes on to a yard in the hauler's hands now, so nothing lands there at all.
+    const simulation = new Simulation(OPTIONS);
+    const camp = simulation.world.landfallCell;
+
+    let ordered = 0;
+    for (let ring = 2; ring < 12 && ordered < 6; ring += 1) {
+      for (let dx = -ring; dx <= ring && ordered < 6; dx += 1) {
+        for (let dy = -ring; dy <= ring && ordered < 6; dy += 1) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) {
+            continue;
+          }
+          const cell = { gx: camp.gx + dx, gy: camp.gy + dy };
+          if (
+            simulation.canPlaceBuilding('house', cell).ok &&
+            simulation.placeBuilding('house', cell)
+          ) {
+            ordered += 1;
+          }
+        }
+      }
+    }
+    expect(ordered).toBeGreaterThan(2);
+
+    let ticksWithAHeapAtADoor = 0;
+    for (let tick = 1; tick <= 60 * 20; tick += 1) {
+      simulation.update(tick, 0.1);
+      for (const building of simulation.world.buildings.all) {
+        if (building.isComplete) {
+          continue;
+        }
+        for (const pile of simulation.world.piles.all) {
+          if (pile.isEmpty) {
+            continue;
+          }
+          if (pile.cell.gx === building.accessCell.gx && pile.cell.gy === building.accessCell.gy) {
+            ticksWithAHeapAtADoor += 1;
+          }
+        }
+      }
+    }
+
+    expect(ticksWithAHeapAtADoor).toBe(0);
+  }, 30_000);
 });
