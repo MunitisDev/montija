@@ -1709,3 +1709,20 @@ many. Refusing the whole run over one tree would mean drawing it again by hand.
 
 `cellLine` in `shared/math/gridLine.ts` is pure grid geometry — nothing in it knows what is being laid
 or that a renderer exists — so the preview, the order and the tests all read the same line.
+
+## PHASE 55 — The guide shows the buildings — Implemented
+
+Asked for with a reasonable worry attached: _"can you put thumbnails of the buildings in the help, or is
+that too much trouble?"_ It was one call, and the reason is worth recording — **the building art never
+depended on Phaser.** Every routine takes a `Graphics` and calls a dozen of its methods, so the
+stand-in the drawing board already used draws the same building onto a plain 2D canvas.
+
+Each of the twenty-one buildings now carries its own picture beside its entry, drawn at 76×52 into an
+offscreen canvas at twice that density and cached as a `data:` URL. Nothing was exported and no asset
+was checked in: a change to a roof changes the guide with it, which is the only version of this
+feature worth having. A guide illustrated with stale pictures of buildings would be worse than one
+with none.
+
+The split holds: `guideContent` names _which_ building the picture is of and stays DOM-free so it can
+go on being tested under Node, and `Guide.ts` decides what a building looks like — the same division
+the people cards already make between naming a portrait and drawing one.

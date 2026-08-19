@@ -13,7 +13,18 @@
  */
 
 import { type I18n } from '@/ui/i18n/I18n';
-import { buildGuide, type GuideSection, type GuideTable } from './guideContent';
+import { buildingThumbnail } from './buildingThumbnail';
+import { buildGuide, type GuideEntry, type GuideSection, type GuideTable } from './guideContent';
+
+/**
+ * How big a building's picture is in the guide, in CSS pixels.
+ *
+ * Wide enough to tell a Storage Yard from a House at a glance, which is the
+ * whole job, and small enough that twenty-one of them do not turn the buildings
+ * section into a gallery the reader has to scroll past to reach the words. The
+ * canvas is drawn at twice this and scaled down, so it stays sharp on a tablet.
+ */
+const THUMBNAIL = { width: 76, height: 52 } as const;
 
 export class Guide {
   private readonly i18n: I18n;
@@ -102,26 +113,7 @@ function renderSection(section: GuideSection): HTMLElement {
   list.className = 'guide__list';
 
   for (const entry of section.entries) {
-    const term = document.createElement('dt');
-    term.className = 'guide__term';
-    term.textContent = entry.term;
-
-    if (entry.meta) {
-      const meta = document.createElement('span');
-      meta.className = 'guide__meta';
-      meta.textContent = entry.meta;
-      term.append(meta);
-    }
-
-    // Its own line under the cost, and a shade brighter: what a building makes
-    // is the reason to build it, and it should not read as more small print.
-    if (entry.output) {
-      const output = document.createElement('span');
-      output.className = 'guide__meta guide__meta--output';
-      output.textContent = entry.output;
-      term.append(output);
-    }
-
+    const term = renderTerm(entry);
     const detail = document.createElement('dd');
     detail.className = 'guide__detail';
     detail.textContent = entry.detail;
@@ -135,6 +127,65 @@ function renderSection(section: GuideSection): HTMLElement {
   for (const table of section.tables) {
     element.append(renderTable(table));
   }
+  return element;
+}
+
+/**
+ * The name of a thing, its figures, and — for a building — a picture of it.
+ *
+ * **The picture was asked for, and the worry was that it would be a lot of
+ * trouble.** It is one call: the building art draws onto a plain canvas as
+ * happily as onto a Phaser scene, so the guide shows the *same* building the map
+ * does rather than an illustration of it that could fall out of date.
+ *
+ * The words keep their own column beside it. A picture above a name would make
+ * every row twice as tall, and the buildings section is twenty-one rows long.
+ */
+function renderTerm(entry: GuideEntry): HTMLElement {
+  const term = document.createElement('dt');
+  term.className = 'guide__term';
+
+  const words = document.createElement('span');
+  words.className = 'guide__words';
+  words.append(span('guide__name', entry.term));
+
+  if (entry.meta) {
+    words.append(span('guide__meta', entry.meta));
+  }
+
+  // Its own line under the cost, and a shade brighter: what a building makes is
+  // the reason to build it, and it should not read as more small print.
+  if (entry.output) {
+    words.append(span('guide__meta guide__meta--output', entry.output));
+  }
+
+  if (entry.art === null) {
+    term.append(words);
+    return term;
+  }
+
+  term.classList.add('guide__term--illustrated');
+  const source = buildingThumbnail(entry.art, THUMBNAIL);
+  if (source !== '') {
+    const image = document.createElement('img');
+    image.className = 'guide__thumb';
+    image.src = source;
+    image.width = THUMBNAIL.width;
+    image.height = THUMBNAIL.height;
+    // The name beside it says what it is; the picture repeating that is noise to
+    // anybody listening to the page rather than looking at it.
+    image.alt = '';
+    image.setAttribute('aria-hidden', 'true');
+    term.append(image);
+  }
+  term.append(words);
+  return term;
+}
+
+function span(className: string, text: string): HTMLElement {
+  const element = document.createElement('span');
+  element.className = className;
+  element.textContent = text;
   return element;
 }
 

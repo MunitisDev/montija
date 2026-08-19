@@ -725,3 +725,24 @@ Three rules hold the set together:
 All forty-eight frames live in one atlas (`connector-atlas`, kind across and mask down), for the same
 reason the terrain does: the depth-sorted display list interleaves them, and a texture change between
 two adjacent objects breaks the GPU batch.
+
+## The art draws without Phaser — Implemented
+
+Every drawing routine in `renderer/phaser/terrain` takes a Phaser `Graphics` and calls about a dozen
+of its methods. None of them touches a scene, a texture, a camera or WebGL — so
+`renderer/canvas/CanvasGraphics.ts` forwards those dozen calls to a plain 2D context and the **same
+code** draws the same building anywhere a `<canvas>` can be had.
+
+Two surfaces use that, and neither of them is a copy of the art:
+
+- **the drawing board** (`preview.ts`, development only): every building side by side, or one building
+  in all its variants, at any scale. `?id=all`, `?id=house&scale=4`, `?id=piles`.
+- **the guide's thumbnails**: each building's entry in the instructions carries a picture of that
+  building, drawn at 76×52 into an offscreen canvas and cached as a `data:` URL. Nothing is exported,
+  no asset is checked in, and a change to a roof changes the picture in the guide with it. A guide
+  illustrated with stale pictures would be worse than one with none.
+
+The stand-in is not a Phaser type and never will be: the art's parameter is structurally typed against
+`Graphics`, which has a hundred methods this has not, so callers pass it through `as never`. That is
+the honest admission — it stands in for the handful of calls the art actually makes, and the check that
+it still does is the art coming out right rather than the compiler.

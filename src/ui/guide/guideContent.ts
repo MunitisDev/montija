@@ -67,6 +67,17 @@ export interface GuideEntry {
    */
   readonly meta: string | null;
   /**
+   * Which building's art belongs beside this entry, or `null` for prose.
+   *
+   * A building id rather than a picture, for the same reason a person's card
+   * names a portrait rather than drawing one: this half of the guide has to keep
+   * running under Node with no DOM, and a canvas is the least portable thing
+   * there is. The renderer decides what a building looks like; the content only
+   * says which building the reader is looking at.
+   */
+  readonly art: BuildingId | null;
+
+  /**
    * What a building makes in a year, when there is anything to say.
    *
    * A second line rather than more of {@link meta}, because it answers a
@@ -208,6 +219,7 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
         detail: t(`guide.loop.${step}.detail` as MessageKey),
         meta: null,
         output: null,
+        art: null,
       })),
     }),
     section('controls', t, {
@@ -216,6 +228,7 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
         detail: t(`guide.control.${control}.detail` as MessageKey),
         meta: null,
         output: null,
+        art: null,
       })),
     }),
     section('land', t, {
@@ -225,6 +238,7 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
         detail: t(`guide.land.${feature}.detail` as MessageKey),
         meta: null,
         output: null,
+        art: null,
       })),
     }),
     section('seasons', t, {
@@ -233,6 +247,7 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
         detail: t(`guide.season.${season}` as MessageKey),
         meta: null,
         output: null,
+        art: null,
       })),
     }),
     section('needs', t, {
@@ -241,6 +256,7 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
         detail: t(`guide.need.${need}` as MessageKey),
         meta: null,
         output: null,
+        art: null,
       })),
     }),
     section('hardship', t, {
@@ -249,6 +265,7 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
         detail: t(`guide.hardship.${cause}.detail` as MessageKey),
         meta: null,
         output: null,
+        art: null,
       })),
     }),
     section('resources', t, {
@@ -257,6 +274,7 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
         detail: t(`resource.${resource}.purpose` as MessageKey),
         meta: describeYearlyDraw(resource, t),
         output: null,
+        art: null,
       })),
     }),
     section('buildings', t, {
@@ -273,6 +291,9 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
           detail: t(`building.${id}.description` as MessageKey),
           meta: describeBuilding(definition, t),
           output: describeYearlyOutput(id, t),
+          // The one section with pictures: a building is a thing you look at, and
+          // "which of these is the Tailor" is a question a name answers slowly.
+          art: id,
         };
       }),
     }),
@@ -283,6 +304,7 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
         detail: t(`guide.bonus.${bonus}.detail` as MessageKey),
         meta: bonusFigures(bonus, t),
         output: null,
+        art: null,
       })),
     }),
     section('figures', t, {

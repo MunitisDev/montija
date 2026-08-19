@@ -231,6 +231,28 @@ describe('what the guide says about a building', () => {
     expect(burned).toBeLessThan(eaten);
   });
 
+  it('names the building whose art belongs beside it, and only there', () => {
+    // The thumbnail was asked for with "or is that too much trouble?". It is one
+    // call, because the building art draws onto a plain canvas as happily as onto
+    // a Phaser scene — so the guide shows the same building the map does. What
+    // this half promises is only *which* building; the picture is the renderer's.
+    const buildings = sectionNamed('buildings');
+    for (const [index, id] of BUILDING_IDS.entries()) {
+      expect(buildings.entries[index]!.art, `${id} art`).toBe(id);
+    }
+
+    // Nothing else claims a picture: there is no art for "Zoom" or for hunger,
+    // and an entry that asked for one would draw a broken image.
+    for (const section of buildGuide(strict('en'))) {
+      if (section.id === 'buildings') {
+        continue;
+      }
+      for (const entry of section.entries) {
+        expect(entry.art, `${section.id}/${entry.term}`).toBeNull();
+      }
+    }
+  });
+
   it('costs match every definition, not just the ones spelled out above', () => {
     const buildings = sectionNamed('buildings');
     for (const [index, id] of BUILDING_IDS.entries()) {

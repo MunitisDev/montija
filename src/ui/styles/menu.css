@@ -261,8 +261,12 @@ body.is-menu-open #hud {
    * Term and detail side by side where there is room, stacked where there is
    * not. `minmax(0, …)` on both tracks stops a long building name forcing the
    * grid wider than the sheet.
+   *
+   * Wide enough for a thumbnail *and* the cost beside it. At 15rem the picture
+   * left the figures about eight characters, so "6 Logs, 2 Stone · 1 workers"
+   * came out as four ragged lines.
    */
-  grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 21rem) minmax(0, 1fr);
   gap: 6px 18px;
   margin: 0;
 }
@@ -283,6 +287,47 @@ body.is-menu-open #hud {
   flex-direction: column;
   gap: 2px;
   font-size: 0.92rem;
+  color: var(--colour-ink);
+}
+
+/*
+ * A building's entry: its own art, then its name and figures beside it.
+ *
+ * A row rather than a stack, because the buildings section is twenty-one entries
+ * long and a picture above each name would double the height of every one of
+ * them. `align-items: start` keeps the name level with the top of the picture
+ * instead of floating in the middle of it.
+ */
+.guide__term--illustrated {
+  flex-direction: row;
+  align-items: start;
+  gap: 10px;
+}
+
+.guide__words {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/*
+ * The picture: the same art the map draws, on the same ground it stands on.
+ *
+ * `image-rendering: pixelated` because the art is drawn at a fixed size and
+ * scaled down — smoothing it turns crisp timber into a smear. The tint is the
+ * one the world uses at rest, so a thumbnail does not read as a brighter
+ * building than the one the player will get.
+ */
+.guide__thumb {
+  flex: 0 0 auto;
+  width: 76px;
+  height: 52px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.guide__name {
   color: var(--colour-ink);
 }
 
