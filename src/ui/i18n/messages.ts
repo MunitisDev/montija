@@ -455,6 +455,42 @@ export const EN = {
   'guide.perVillagerYear': 'eaten a year, per villager',
   'guide.perHousedYear': 'burned a year, per villager under a roof',
 
+  'guide.bonuses': 'What makes a settlement better',
+  'guide.bonuses.body':
+    'Every one of these is a bonus and none of them is a penalty. A settlement with no tools, nobody experienced and no temple works at exactly the rate the figures below quote — the rest is collected on top of it. None of it is needed to survive; all of it makes surviving easier.',
+  'guide.bonus.tools': 'Tools',
+  'guide.bonus.tools.detail':
+    'A villager with a tool in their hand works faster at everything. The bonus follows how much of the settlement is equipped, so a handful of tools is a fraction of it — and it is spent rather than kept: tools wear out, and a Blacksmith has to keep making them.',
+  'guide.bonus.experience': 'Experience',
+  'guide.bonus.experience.detail':
+    'Years at one trade, and only that trade. A master woodcutter moved to a quarry is a beginner again, with her woodcutting still on record for the day another woodcutter is built. A master\u2019s child starts their working life as an apprentice.',
+  'guide.bonus.spirit': 'Spirit',
+  'guide.bonus.spirit.detail':
+    'How settled the people are. Ground for the dead and somewhere to sit with them lift it; every death lowers it for everybody. It moves slowly, so a Temple finished today is felt over the following weeks rather than the following morning.',
+  'guide.bonus.coats': 'Coats',
+  'guide.bonus.coats.detail':
+    'Clothing carries part of a villager\u2019s warmth, so a well-dressed settlement lives through a freeze that would kill a bare one. Worn on freezing days only, which is why a Tailor can wait until the first autumn.',
+  'guide.bonus.roads': 'Roads',
+  'guide.bonus.roads.detail':
+    'A road nearly halves the cost of a step. Most of a villager\u2019s day is walking, so a road between the stores and the work is worth more than it looks — and it costs only the labour of laying it.',
+  'guide.bonus.care': 'Care',
+  'guide.bonus.care.detail':
+    'A staffed Healer\u2019s House with herbs on the shelf shortens an illness rather than curing it. Shorter illnesses cost fewer years of life, so how long your villagers live is something you build.',
+  'guide.bonus.fullyEquipped': 'with the settlement fully equipped',
+  'guide.bonus.perWorkerYear': 'worn a year, per worker',
+  'guide.bonus.atPeace': 'at full spirit',
+  'guide.bonus.perDeath': 'spirit for everybody, per death',
+  'guide.bonus.ofWarmth': 'of a villager\u2019s warmth',
+  'guide.bonus.perVillagerYear': 'a year, per villager',
+  'guide.bonus.walkingSpeed': 'walking speed on a road',
+  'guide.bonus.ofAnIllness': 'of an illness taken off',
+  'guide.bonus.daysUntended': 'days in bed untended',
+  'guide.bonus.perPatientDay': 'per patient a day',
+  'guide.bonus.answers': 'answers',
+  'guide.bonus.year': 'year',
+  'guide.bonus.years': 'years',
+
+  'format.decimal': '.',
   'guide.figures': 'The figures',
   'guide.figures.body':
     'A reference sheet rather than something to read through. Every figure here is the plain one: every post filled, no tools, nobody experienced, nobody ill and nothing carried far. Real output is lower than the table says, and the bonuses raise it again.',
@@ -956,6 +992,42 @@ export const ES: Messages = {
   'guide.perVillagerYear': 'al año, por aldeano',
   'guide.perHousedYear': 'al año, por aldeano con techo',
 
+  'guide.bonuses': 'Lo que mejora al asentamiento',
+  'guide.bonuses.body':
+    'Todo esto son bonificadores y ninguno es un castigo. Un asentamiento sin herramientas, sin nadie con experiencia y sin templo trabaja exactamente al ritmo que dicen las cifras de abajo; lo demás se suma encima. Nada de esto hace falta para sobrevivir, pero todo ello lo hace más fácil.',
+  'guide.bonus.tools': 'Herramientas',
+  'guide.bonus.tools.detail':
+    'Un aldeano con una herramienta en la mano trabaja más rápido en todo. El bonificador sigue a la parte del asentamiento que está equipada, así que un puñado de herramientas es una fracción de él, y se gasta en vez de guardarse: las herramientas se desgastan y una Herrería tiene que seguir haciéndolas.',
+  'guide.bonus.experience': 'Experiencia',
+  'guide.bonus.experience.detail':
+    'Años en un oficio, y solo en ese oficio. Una maestra leñadora trasladada a una cantera vuelve a ser principiante, con su oficio anotado para el día en que se levante otra leñería. El hijo de un maestro empieza a trabajar como aprendiz.',
+  'guide.bonus.spirit': 'Ánimo',
+  'guide.bonus.spirit.detail':
+    'Lo asentada que está la gente. Tener tierra para los muertos y un sitio donde acompañarlos lo levanta; cada muerte lo baja para todos. Se mueve despacio, así que un Templo terminado hoy se nota en las semanas siguientes, no a la mañana siguiente.',
+  'guide.bonus.coats': 'Ropa',
+  'guide.bonus.coats.detail':
+    'La ropa cubre parte del abrigo de un aldeano, así que un asentamiento bien vestido aguanta una helada que mataría a uno desabrigado. Solo se gasta en días de helada, y por eso un Sastre puede esperar al primer otoño.',
+  'guide.bonus.roads': 'Caminos',
+  'guide.bonus.roads.detail':
+    'Un camino casi reduce a la mitad el coste de cada paso. La mayor parte del día de un aldeano es andar, así que un camino entre los almacenes y el trabajo vale más de lo que parece, y solo cuesta el trabajo de trazarlo.',
+  'guide.bonus.care': 'Cuidados',
+  'guide.bonus.care.detail':
+    'Una Casa del Sanador con gente y con hierbas en la estantería acorta la enfermedad en lugar de curarla. Las enfermedades cortas cuestan menos años de vida, así que lo que viven tus aldeanos también se construye.',
+  'guide.bonus.fullyEquipped': 'con el asentamiento bien equipado',
+  'guide.bonus.perWorkerYear': 'gastadas al año, por trabajador',
+  'guide.bonus.atPeace': 'con el ánimo al máximo',
+  'guide.bonus.perDeath': 'de ánimo para todos, por cada muerte',
+  'guide.bonus.ofWarmth': 'del abrigo de un aldeano',
+  'guide.bonus.perVillagerYear': 'al año, por aldeano',
+  'guide.bonus.walkingSpeed': 'de velocidad a pie por camino',
+  'guide.bonus.ofAnIllness': 'menos de enfermedad',
+  'guide.bonus.daysUntended': 'días en cama sin atender',
+  'guide.bonus.perPatientDay': 'por paciente y día',
+  'guide.bonus.answers': 'cubre',
+  'guide.bonus.year': 'año',
+  'guide.bonus.years': 'años',
+
+  'format.decimal': ',',
   'guide.figures': 'Las cifras',
   'guide.figures.body':
     'Una hoja de consulta, no algo que leer de corrido. Todas las cifras son las simples: todos los puestos ocupados, sin herramientas, sin experiencia, nadie enfermo y nada acarreado desde lejos. Lo que el asentamiento produce de verdad es menos de lo que dice la tabla, y los bonificadores lo vuelven a subir.',

@@ -17,8 +17,9 @@ import { describe, expect, it } from 'vitest';
 
 import { BUILDING_IDS, buildingDefinition } from '@/data/buildings';
 import { LOGS_PER_TREE, RESOURCE_IDS, STONE_PER_DEPOSIT } from '@/data/resources';
+import { SKILL_THRESHOLD_YEARS, SKILL_WORK_BONUS } from '@/data/skills';
 import { DAYS_PER_YEAR, SEASONS } from '@/simulation/seasons/SeasonClock';
-import { FOOD_PER_VILLAGER_PER_DAY } from '@/simulation/seasons/SurvivalSystem';
+import { FOOD_PER_VILLAGER_PER_DAY, TOOL_WORK_BONUS } from '@/simulation/seasons/SurvivalSystem';
 import { EN, ES, type MessageKey } from '@/ui/i18n/messages';
 import { BLANK, SECTION_IDS, buildGuide, type Translate } from '@/ui/guide/guideContent';
 import { annualProduction } from '@/ui/hud/productionModel';
@@ -238,6 +239,66 @@ describe('what the guide says about a building', () => {
         expect(entry.meta, `${id} cost`).toContain(String(cost.amount));
       }
     }
+  });
+});
+
+/**
+ * The bonuses, asked for in as many words: "put them in the help".
+ *
+ * Every one of them was already in the game and none was anywhere a player could
+ * see. A settlement that had kept the same woodcutter for five years was working
+ * half again as fast with no way to know it.
+ */
+describe('what the guide says about the bonuses', () => {
+  it('gives every bonus a name, an explanation and its figures', () => {
+    const bonuses = sectionNamed('bonuses');
+    expect(bonuses.entries.length).toBeGreaterThanOrEqual(6);
+    for (const entry of bonuses.entries) {
+      expect(entry.meta, `${entry.term} has no figures`).not.toBeNull();
+      expect(entry.meta).toMatch(/\d/);
+    }
+  });
+
+  it('quotes the tool bonus and the whole experience ladder from the data', () => {
+    const tools = entryFor('bonuses', EN['guide.bonus.tools']);
+    expect(tools.meta).toContain(`+${Math.round(TOOL_WORK_BONUS * 100)}%`);
+
+    // All three levels, with the years each takes. A ladder with a rung missing
+    // is worse than no ladder: the player plans around the two they can see.
+    const experience = entryFor('bonuses', EN['guide.bonus.experience']);
+    for (const level of ['apprentice', 'expert', 'master'] as const) {
+      expect(experience.meta).toContain(EN[`skill.${level}`]);
+      expect(experience.meta).toContain(String(SKILL_THRESHOLD_YEARS[level]));
+      expect(experience.meta).toContain(`+${Math.round((SKILL_WORK_BONUS[level] - 1) * 100)}%`);
+    }
+  });
+
+  it("says what a Temple answers, read from the building's own definition", () => {
+    const spirit = entryFor('bonuses', EN['guide.bonus.spirit']);
+    const temple = buildingDefinition('temple').solace!.share;
+    expect(spirit.meta).toContain(`${Math.round(temple * 100)}%`);
+    expect(spirit.meta).toContain(EN['building.temple']);
+  });
+
+  it('says a year, not years, for the one-year rung', () => {
+    // 1 year, 2 years, 5 years. A single plural form prints "1 years" in both
+    // languages the game speaks.
+    const experience = entryFor('bonuses', EN['guide.bonus.experience']);
+    expect(experience.meta).toContain(`1 ${EN['guide.bonus.year']}`);
+    expect(experience.meta).toContain(`2 ${EN['guide.bonus.years']}`);
+  });
+
+  it('writes a decimal the way each language writes it', () => {
+    // A coat lasts years, so its yearly cost is a fraction — the first
+    // fractional figure in the game, and Spanish writes it with a comma.
+    const english = entryFor('bonuses', EN['guide.bonus.coats']);
+    expect(english.meta).toMatch(/\d\.\d/);
+
+    const spanish = buildGuide(strict('es'))
+      .find((section) => section.id === 'bonuses')!
+      .entries.find((entry) => entry.term === ES['guide.bonus.coats'])!;
+    expect(spanish.meta).toMatch(/\d,\d/);
+    expect(spanish.meta).not.toMatch(/\d\.\d/);
   });
 });
 

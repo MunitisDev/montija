@@ -1650,3 +1650,23 @@ derived from them and neither is a row.
 The tables are `GuideTable` in `guideContent.ts`, tested headlessly like the rest of the guide: every
 building has a row, every cell is filled in both languages, and the yearly figures are read from
 `annualProduction` rather than typed in a second time.
+
+## PHASE 52 — The bonuses, where the player can see them — Implemented
+
+Six things make a settlement better than the plain rate, all of them already in the game and none of
+them anywhere a player could see. A village that had kept the same woodcutter for five years was
+working half again as fast with no way to find that out.
+
+They are now a section of the guide, with the figures read off the constants that produce them: **tools**
+(+50% fully equipped, 2.4 worn a worker a year), **experience** (apprentice at one year +10%, expert at
+two +25%, master at five +50%, at that trade only), **spirit** (+25% at full, a Cemetery answers 35% of
+it and a Temple 65%, −6 for everybody per death), **coats** (45% of a villager's warmth), **roads**
+(×1.8 walking speed) and **care** (75% off an eight-day illness, half a bundle of herbs a patient a
+day).
+
+The framing is the load-bearing part: **every one is a bonus and none is a penalty.** A settlement with
+no tools, nobody experienced and no temple works at exactly the rate every figure in the guide quotes.
+A player who read them as requirements would build a Temple before a Gatherer Hut.
+
+Spanish now writes its decimals with a comma. A coat's yearly cost is 0.7, the first fractional figure
+the game ever had to print, and `0.7` in a Spanish sheet reads as machine translation.

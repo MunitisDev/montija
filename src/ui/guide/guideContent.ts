@@ -25,6 +25,13 @@ import {
   type BuildingId,
 } from '@/data/buildings';
 import { LOGS_PER_TREE, RESOURCE_IDS, STONE_PER_DEPOSIT, type ResourceId } from '@/data/resources';
+import { SKILL_THRESHOLD_YEARS, SKILL_WORK_BONUS } from '@/data/skills';
+import {
+  CARE_RECOVERY_SHARE,
+  HERBS_PER_PATIENT_PER_DAY,
+  ILLNESS_DAYS,
+} from '@/simulation/population/IllnessSystem';
+import { ROAD_SPEED_MULTIPLIER } from '@/simulation/world/RoadGrid';
 import { annualProduction, type AnnualRate } from '@/ui/hud/productionModel';
 import {
   DAYS_PER_SEASON,
@@ -35,9 +42,13 @@ import {
 } from '@/simulation/seasons/SeasonClock';
 import {
   CLOTHING_PER_VILLAGER_PER_COLD_DAY,
+  CLOTHING_WARMTH_SHARE,
   FIREWOOD_PER_VILLAGER_PER_COLD_DAY,
   FOOD_PER_VILLAGER_PER_DAY,
+  SPIRIT_LOST_PER_DEATH,
+  SPIRIT_WORK_BONUS,
   TOOLS_PER_WORKER_PER_DAY,
+  TOOL_WORK_BONUS,
 } from '@/simulation/seasons/SurvivalSystem';
 import { yearFigure } from '@/ui/format/rates';
 import type { MessageKey } from '@/ui/i18n/messages';
@@ -131,6 +142,9 @@ export const SECTION_IDS = [
   'hardship',
   'resources',
   'buildings',
+  // After the buildings, because every one of these multiplies what a building
+  // makes, and before the figures, which are the same buildings with none of it.
+  'bonuses',
   // Last, and deliberately: it is a reference sheet, not something to read
   // through. A player comes back to it with a question about a number.
   'figures',
@@ -165,6 +179,24 @@ const LAND = ['river', 'road', 'ditch', 'bridge'] as const;
  * will build a Temple before a Gatherer Hut.
  */
 const NEEDS = ['hunger', 'warmth', 'health', 'spirit'] as const;
+
+/**
+ * The things that make a settlement better than the plain rate.
+ *
+ * **Every one of them is a bonus and none of them is a penalty**, which is the
+ * single most important thing about this list and the reason it is worth a
+ * section. A settlement with no tools, nobody experienced and no temple works at
+ * exactly the speed the game has always run at; the rest is collected. A player
+ * who reads these as requirements will build a Temple before a Gatherer Hut.
+ *
+ * Two of the six are not work at all — a coat is warmth and a healer is years of
+ * life — and they are in the same list because from the player's side they are
+ * the same kind of thing: something the settlement can be given that makes it
+ * harder to kill.
+ */
+const BONUSES = ['tools', 'experience', 'spirit', 'coats', 'roads', 'care'] as const;
+
+type Bonus = (typeof BONUSES)[number];
 
 export function buildGuide(t: Translate): readonly GuideSection[] {
   return [
@@ -243,6 +275,15 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
           output: describeYearlyOutput(id, t),
         };
       }),
+    }),
+    section('bonuses', t, {
+      body: t('guide.bonuses.body'),
+      entries: BONUSES.map((bonus) => ({
+        term: t(`guide.bonus.${bonus}` as MessageKey),
+        detail: t(`guide.bonus.${bonus}.detail` as MessageKey),
+        meta: bonusFigures(bonus, t),
+        output: null,
+      })),
     }),
     section('figures', t, {
       body: t('guide.figures.body'),
@@ -397,6 +438,118 @@ function describeCost(definition: BuildingDefinition, t: Translate): string {
 }
 
 /**
+ * The figures behind one bonus, read off the constants that produce it.
+ *
+ * **Asked for directly: "put the bonuses in the help".** Every one of these was
+ * already in the game and none of them was anywhere a player could see. A
+ * settlement that had kept the same woodcutter for five years was working half
+ * again as fast and had no way to know it, which makes the mechanic invisible
+ * rather than subtle.
+ *
+ * Generated, like every other figure in this file. A percentage typed into a
+ * sentence is a percentage that will be wrong the first time somebody retunes
+ * the multiplier, and this is exactly the kind of number that gets retuned.
+ */
+function bonusFigures(bonus: Bonus, t: Translate): string {
+  const goods = (resource: ResourceId): string =>
+    t(`hud.${resource}` as MessageKey).toLocaleLowerCase();
+
+  switch (bonus) {
+    case 'tools':
+      return [
+        `${plus(TOOL_WORK_BONUS)} ${t('guide.bonus.fullyEquipped')}`,
+        `${figure(TOOLS_PER_WORKER_PER_DAY * DAYS_PER_YEAR, t)} ${goods('tools')} ${t('guide.bonus.perWorkerYear')}`,
+      ].join(' · ');
+
+    case 'experience':
+      // Each level with the years it takes and what it is worth. Both halves
+      // matter: a master is a big number and five years of somebody staying put.
+      return (['apprentice', 'expert', 'master'] as const)
+        .map(
+          (level) =>
+            `${t(`skill.${level}` as MessageKey)} ${years(SKILL_THRESHOLD_YEARS[level], t)}: ${plus(
+              SKILL_WORK_BONUS[level] - 1,
+            )}`,
+        )
+        .join(' · ');
+
+    case 'spirit':
+      return [
+        `${plus(SPIRIT_WORK_BONUS)} ${t('guide.bonus.atPeace')}`,
+        `${t('building.cemetery')} ${t('guide.bonus.answers')} ${percent(solaceShare('cemetery'))}`,
+        `${t('building.temple')} ${t('guide.bonus.answers')} ${percent(solaceShare('temple'))}`,
+        `−${SPIRIT_LOST_PER_DEATH} ${t('guide.bonus.perDeath')}`,
+      ].join(' · ');
+
+    case 'coats':
+      return [
+        `${percent(CLOTHING_WARMTH_SHARE)} ${t('guide.bonus.ofWarmth')}`,
+        `${figure(CLOTHING_PER_VILLAGER_PER_COLD_DAY * freezingDaysPerYear(), t)} ${goods(
+          'clothing',
+        )} ${t('guide.bonus.perVillagerYear')}`,
+      ].join(' · ');
+
+    case 'roads':
+      return `×${decimal(ROAD_SPEED_MULTIPLIER.toFixed(1), t)} ${t('guide.bonus.walkingSpeed')}`;
+
+    case 'care':
+      return [
+        `${percent(CARE_RECOVERY_SHARE)} ${t('guide.bonus.ofAnIllness')}`,
+        `${ILLNESS_DAYS} ${t('guide.bonus.daysUntended')}`,
+        `${decimal(String(HERBS_PER_PATIENT_PER_DAY), t)} ${goods('herbs')} ${t('guide.bonus.perPatientDay')}`,
+      ].join(' · ');
+  }
+}
+
+/**
+ * How much of the settlement's need for solace one building answers.
+ *
+ * Read off the definition rather than written down, so a retuned Temple retunes
+ * the guide with it. `0` for anything that offers none, which cannot happen for
+ * the two buildings this is called with but is the honest default.
+ */
+function solaceShare(id: BuildingId): number {
+  return buildingDefinition(id).solace?.share ?? 0;
+}
+
+/**
+ * A yearly figure with the language's own decimal mark.
+ *
+ * Spanish writes 2,4 and English 2.4, and the guide is the first place in the
+ * game with a fractional figure to print — a coat lasts years, so its yearly
+ * cost is a fraction, and printing it English-style in a Spanish sheet is the
+ * kind of small wrongness that makes a page look machine-made.
+ */
+function figure(perYear: number, t: Translate): string {
+  return yearFigure(perYear).replace('.', t('format.decimal'));
+}
+
+/** The same, for a number that is already written out. */
+function decimal(value: string, t: Translate): string {
+  return value.replace('.', t('format.decimal'));
+}
+
+/** A multiplier as a signed percentage: `0.5` reads as `+50%`. */
+function plus(fraction: number): string {
+  return `+${Math.round(fraction * 100)}%`;
+}
+
+/** A share as a plain percentage: `0.45` reads as `45%`. */
+function percent(fraction: number): string {
+  return `${Math.round(fraction * 100)}%`;
+}
+
+/**
+ * A count of years, pluralised.
+ *
+ * Worth the two keys: the thresholds are one, two and five, so a single plural
+ * form would print "1 years" in both languages the game speaks.
+ */
+function years(count: number, t: Translate): string {
+  return `${count} ${count === 1 ? t('guide.bonus.year') : t('guide.bonus.years')}`;
+}
+
+/**
  * Every building's year, side by side.
  *
  * **Asked for, and the one thing the guide could not previously answer.** The
@@ -488,7 +641,7 @@ function householdDraw(t: Translate): GuideTable {
   const freezing = freezingDaysPerYear();
   const draw = (resource: ResourceId, perYear: number, who: MessageKey): GuideTableRow => ({
     label: t(`hud.${resource}` as MessageKey),
-    values: [yearFigure(perYear), t(who)],
+    values: [figure(perYear, t), t(who)],
   });
 
   return {
@@ -514,7 +667,7 @@ function amounts(rates: readonly AnnualRate[], t: Translate): string {
   return rates
     .map(
       (rate) =>
-        `${yearFigure(rate.perYear)} ${t(`hud.${rate.resource}` as MessageKey).toLocaleLowerCase()}`,
+        `${figure(rate.perYear, t)} ${t(`hud.${rate.resource}` as MessageKey).toLocaleLowerCase()}`,
     )
     .join(', ');
 }
