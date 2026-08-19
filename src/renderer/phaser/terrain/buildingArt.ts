@@ -101,6 +101,14 @@ interface BuildingMass {
   /** Set for worked land rather than a structure: furrows, or fruit trees. */
   readonly field?: 'crop' | 'orchard' | 'graves';
   /**
+   * Set for the well, which is neither a structure nor a field.
+   *
+   * A hole in the ground with a wall round it: no walls to raise, no roof to
+   * cover and no crop to fence. It gets its own branch rather than borrowing the
+   * field's, because a field's rails round a well would read as a pen.
+   */
+  readonly wellhead?: true;
+  /**
    * What the building keeps on its plot, and where.
    *
    * Mass and colour get a building most of the way to being recognisable, and
@@ -423,6 +431,13 @@ const MASS: Readonly<Record<BuildingId, BuildingMass>> = {
   // field for the same reason: a cemetery is worked ground, not a structure.
   cemetery: { wallHeight: 5, roofHeight: 0, eaves: 0, field: 'graves' },
 
+  // **A hole in the ground with a wall round it**, which is what a well is. No
+  // roof and no walls to draw: worn earth where the buckets are set down, a low
+  // stone kerb, and the frame over it. Drawn as a field for the same reason the
+  // cemetery is — it is a piece of worked ground, not a structure — and it wants
+  // to sit *low* between the houses rather than compete with them.
+  well: { wallHeight: 6, roofHeight: 0, eaves: 0, wellhead: true, ground: 'worn' },
+
   // The one building meant to outlast the people who raised it: stone the whole
   // way up, under the heaviest roof in the settlement, and taller than anything
   // else. Its silhouette should read as reaching upwards from across the map.
@@ -511,6 +526,9 @@ export const BUILDING_COLOURS: Readonly<Record<BuildingId, BuildingPalette>> = {
   // `0x45483c` the sward read as a hole cut in the meadow rather than as ground
   // that had been let go.
   cemetery: { wall: 0x5d6350, roof: 0x9a978c, trim: 0x565c48 },
+  // Wet stone and dark water: the only cold, damp thing the settlement builds.
+  // `wall` is the kerb, `roof` the timber frame, `trim` the trodden ground.
+  well: { wall: 0x8d8b83, roof: 0x6b5a3f, trim: 0x6a6047 },
   // Limewashed like a house, under the darkest slate in the settlement: the
   // one roof that should read as heavy.
   temple: { wall: 0xada598, roof: 0x4c4740, trim: 0x37332c },
@@ -880,6 +898,11 @@ export function drawBuilding(
   // Planted rather than floating, and softly: see `contactShadow`.
   contactShadow(graphics, { x: cx, y: groundY }, halfW * SHADOW_FIT, halfH * SHADOW_FIT);
 
+  if (mass.wellhead) {
+    drawWellhead(graphics, { palette, cx, groundY, halfW: plotW, halfH: plotH });
+    return;
+  }
+
   if (mass.field) {
     drawField(graphics, { palette, cx, groundY, halfW, halfH, kind: mass.field });
     return;
@@ -1085,6 +1108,72 @@ export function chimneyMouth(id: BuildingId): { dx: number; dy: number } | null 
     return null;
   }
   return { dx: stack.dx, dy: stack.dy - STRUCTURE_CHIMNEY_HEIGHT };
+}
+
+/**
+ * The well: worn ground, a stone kerb and the frame over it.
+ *
+ * Everything here is small on purpose. A well stands *between* the houses and
+ * has to read as a thing people walk to rather than as a building of its own, so
+ * the tallest part of it is shorter than a cottage door.
+ *
+ * The mouth is the darkest thing in the settlement, which is the whole trick:
+ * without it the kerb reads as a stone table.
+ */
+function drawWellhead(
+  graphics: Phaser.GameObjects.Graphics,
+  options: {
+    palette: BuildingPalette;
+    cx: number;
+    groundY: number;
+    halfW: number;
+    halfH: number;
+  },
+): void {
+  const { palette, cx, groundY, halfW } = options;
+
+  // Sized off the plot but kept small: a well is a thing people walk to, not a
+  // building of its own, and its frame has to stay under a cottage door.
+  const radius = Math.max(9, halfW * 0.3);
+  const kerbHeight = 6;
+  const lip = groundY - kerbHeight;
+
+  graphics.fillStyle(0x000000, 0.2);
+  graphics.fillEllipse(cx + 1.5, groundY + 1.5, radius * 2.5, radius * 1.25);
+
+  // The kerb's near face, dropped from the lip to the ground.
+  graphics.fillStyle(shade(palette.wall, 0.62), 1);
+  graphics.fillRect(cx - radius, lip, radius * 2, kerbHeight);
+  graphics.fillEllipse(cx, groundY, radius * 2, radius);
+
+  // The coping, and the mouth cut into it. The mouth is the darkest thing in the
+  // settlement, which is the whole trick — without it the kerb reads as a table.
+  graphics.fillStyle(palette.wall, 1);
+  graphics.fillEllipse(cx, lip, radius * 2, radius);
+  graphics.fillStyle(shade(palette.wall, 1.16), 1);
+  graphics.fillEllipse(cx - radius * 0.14, lip - 0.6, radius * 1.5, radius * 0.75);
+  graphics.fillStyle(0x14181a, 1);
+  graphics.fillEllipse(cx, lip, radius * 1.35, radius * 0.68);
+  // Water, well down the shaft: a sliver of sky caught on it.
+  graphics.fillStyle(0x2c4148, 1);
+  graphics.fillEllipse(cx, lip + 1.4, radius * 0.9, radius * 0.42);
+
+  // Two posts and a beam over the mouth, with a bucket on its rope. The frame is
+  // what makes it a well rather than a cistern at any zoom.
+  const postHeight = 15;
+  graphics.fillStyle(shade(palette.roof, 0.85), 1);
+  for (const side of [-1, 1] as const) {
+    graphics.fillRect(cx + side * radius * 0.78 - 1.2, lip - postHeight, 2.4, postHeight + 2);
+  }
+  graphics.fillStyle(palette.roof, 1);
+  graphics.fillRect(cx - radius * 0.78 - 1.2, lip - postHeight - 2.4, radius * 1.56 + 2.4, 2.6);
+  // The rope and the bucket, hanging just inside the mouth.
+  graphics.fillStyle(shade(palette.roof, 0.6), 1);
+  graphics.fillRect(cx - 0.5, lip - postHeight, 1, 5.5);
+  graphics.fillStyle(shade(palette.roof, 1.2), 1);
+  graphics.fillRect(cx - 2.4, lip - postHeight + 5, 4.8, 4);
+  graphics.fillStyle(shade(palette.roof, 0.75), 1);
+  graphics.fillRect(cx - 2.4, lip - postHeight + 5, 4.8, 1.1);
 }
 
 /**

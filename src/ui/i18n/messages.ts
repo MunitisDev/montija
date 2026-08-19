@@ -156,6 +156,9 @@ export const EN = {
   'building.school.description':
     'The children walk here when there is one. It teaches them nothing yet.',
 
+  'building.well': 'Well',
+  'building.well.description':
+    'Water where the river is not. A house with water within ten cells is a household that is not carrying every bucket from the bank — and when a roof catches, water within reach is what puts it out.',
   'building.cemetery': 'Cemetery',
   'building.cemetery.description':
     'Ground for the dead. A settlement with nowhere to bury them grieves harder.',
@@ -202,6 +205,9 @@ export const EN = {
 
   'event.born': 'A child was born',
   'event.arrived': 'Newcomers have arrived',
+  'event.fire': 'Fire!',
+  'event.fireSaved': 'the fire was put out',
+  'event.fireLost': 'a building burned down',
   'event.merchant': 'A merchant has arrived',
   'event.fellIll': 'Someone has fallen ill',
   'event.recovered': 'Someone has recovered',
@@ -451,6 +457,9 @@ export const EN = {
   'guide.hardship.age': 'Old age',
   'guide.hardship.age.detail':
     'Villagers grow old and die. Houses let families raise children, which is the only way the settlement lasts.',
+  'guide.hardship.fire': 'Fire',
+  'guide.hardship.fire.detail':
+    'A lit hearth can set its own roof alight on a freezing night, and a working forge any day of the year. The tighter the settlement is packed, the likelier it is. Water within ten cells — the river, a channel or a Well — puts it out and the building stands; without it the building and everything in it are gone, and the fire may take the next one along unless a road, a ditch or the water itself lies between them. Nobody is ever hurt.',
   'guide.resources': 'Resources',
   'guide.buildings': 'Buildings',
   'guide.buildings.body':
@@ -721,6 +730,9 @@ export const ES: Messages = {
   'building.school.description':
     'Los niños vienen aquí cuando hay una. Todavía no les enseña nada.',
 
+  'building.well': 'Pozo',
+  'building.well.description':
+    'Agua donde no llega el río. Una casa con agua a menos de diez casillas es una casa que no acarrea cada cubo desde la orilla, y cuando un tejado prende, el agua cerca es lo que lo apaga.',
   'building.cemetery': 'Cementerio',
   'building.cemetery.description':
     'Tierra para los muertos. Un asentamiento sin dónde enterrarlos lo lleva peor.',
@@ -767,6 +779,9 @@ export const ES: Messages = {
 
   'event.born': 'Ha nacido un niño',
   'event.arrived': 'Han llegado nuevos pobladores',
+  'event.fire': '¡Fuego!',
+  'event.fireSaved': 'se ha apagado el fuego',
+  'event.fireLost': 'un edificio ha ardido',
   'event.merchant': 'Ha llegado un mercader',
   'event.fellIll': 'Alguien ha enfermado',
   'event.recovered': 'Alguien se ha recuperado',
@@ -999,6 +1014,9 @@ export const ES: Messages = {
   'guide.hardship.age': 'Vejez',
   'guide.hardship.age.detail':
     'Los aldeanos envejecen y mueren. Las casas permiten criar hijos, que es lo único que hace durar al asentamiento.',
+  'guide.hardship.fire': 'Fuego',
+  'guide.hardship.fire.detail':
+    'Un hogar encendido puede prender su propio tejado en noche de helada, y una fragua en marcha cualquier día del año. Cuanto más apretado esté el asentamiento, más probable es. Con agua a menos de diez casillas —el río, una acequia o un Pozo— se apaga y el edificio queda en pie; sin ella se pierde el edificio y todo lo que hubiera dentro, y el fuego puede saltar al siguiente si no hay un camino, una acequia o el agua de por medio. Nunca hay heridos.',
   'guide.resources': 'Recursos',
   'guide.buildings': 'Edificios',
   'guide.buildings.body':

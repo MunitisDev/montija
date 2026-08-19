@@ -27,6 +27,7 @@ export type BuildingId =
   | 'herbalist'
   | 'healer'
   | 'school'
+  | 'well'
   | 'cemetery'
   | 'temple'
   | 'bridge';
@@ -182,6 +183,31 @@ export interface BuildingDefinition {
   readonly adjacentTo?: readonly TerrainType[];
 
   /**
+   * Set for a building that puts water within reach of the settlement.
+   *
+   * **Water is comfort every day and insurance on the bad one.** A house with
+   * water near it is a household that is not carrying every bucket from the
+   * river, which is worth something in spirit; and when a hearth sets a roof
+   * alight, water within reach is the difference between a fire that is put out
+   * and a building that is gone. The river and a dug channel answer the same
+   * way — a settlement that went to the trouble of digging one has earned it.
+   *
+   * `radius` is in cells, measured from the building's own doorway.
+   */
+  readonly water?: { readonly radius: number };
+
+  /**
+   * What in this building could set it alight, if anything.
+   *
+   * **The risk is a consequence of what the building does, not a die roll on the
+   * settlement.** A `hearth` burns only on the nights it is lit — freezing ones —
+   * so a summer village cannot burn down; a `forge` is hot whenever somebody is
+   * working it. Everything else in the settlement is timber and will happily
+   * catch from a neighbour, but nothing else starts a fire on its own.
+   */
+  readonly fireRisk?: 'hearth' | 'forge';
+
+  /**
    * Set for a building that keeps the settlement's spirits up.
    *
    * Not a recipe and not care: what these produce is **solace**, which is not
@@ -232,6 +258,9 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     buildTicks: 120,
     workerSlots: 0,
     housing: 4,
+    // A lit hearth on a freezing night is the only thing in a house that could
+    // start a fire, which is why a summer settlement cannot burn down.
+    fireRisk: 'hearth',
   },
   'storage-yard': {
     id: 'storage-yard',
@@ -432,6 +461,8 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     buildTicks: 150,
     workerSlots: 2,
     recipeId: 'forge-tools',
+    // The one fire in the settlement that burns whatever the season is.
+    fireRisk: 'forge',
   },
   /*
    * **The building that makes logs**, and the one the settlement was missing.
@@ -543,6 +574,33 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
    * worth more than twice as much, because sitting with the dead takes
    * somebody who is not doing anything else.
    */
+  /*
+   * **Water, which is comfort every day and insurance on the bad one.**
+   *
+   * The river already decided where a settlement could put an orchard. This is
+   * what lets it decide the rest: a house with water within ten cells is a
+   * household not carrying every bucket from the bank, and when a hearth sets a
+   * roof alight, water within reach is the difference between a fire that is put
+   * out and a building that is gone.
+   *
+   * Cheap, unstaffed and mostly stone — it is a hole in the ground with a wall
+   * round it — because it has to be affordable in the first year, which is the
+   * year a settlement is most likely to be built somewhere awkward.
+   */
+  well: {
+    id: 'well',
+    category: 'care',
+    name: 'Well',
+    description: 'Water where the river is not. Comfort every day, and the answer to a fire.',
+    footprint: { width: 2, height: 2 },
+    constructionCost: [
+      { resource: 'stone', amount: 8 },
+      { resource: 'logs', amount: 2 },
+    ],
+    buildTicks: 80,
+    workerSlots: 0,
+    water: { radius: 10 },
+  },
   cemetery: {
     id: 'cemetery',
     category: 'settlement',
@@ -614,6 +672,7 @@ export const BUILDING_IDS: readonly BuildingId[] = [
   'trading-post',
   'herbalist',
   'healer',
+  'well',
   'cemetery',
   'temple',
   // Last, because it is the last thing a settlement builds: the way home.

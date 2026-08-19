@@ -555,9 +555,19 @@ describe('trying to play it better than `prepared` does', () => {
   });
 
   it('wastes far less timber', () => {
-    // Marking only what is needed works: 87 logs left over against 212. This is
-    // the mechanical part of the discipline, and it does what it should.
-    expect(runYear(disciplined).log.at(-1)!.logs).toBeLessThan(runYear(prepared).log.at(-1)!.logs);
+    // Marking only what is needed works: **62 logs left over against 91**, meaned
+    // across the sweep. This is the mechanical part of the discipline, and it does
+    // what it should.
+    //
+    // **Judged across the seeds rather than on the reference one**, which is the
+    // lesson this file has had to learn twice. On that single seed the two lines
+    // now come out at 115 against 110 — the disciplined settlement is contented
+    // enough to work faster than its own restraint saves, because its houses stand
+    // by the river and water is a comfort. That is a true fact about one valley
+    // and the opposite of the general one.
+    const wasted = (script: PlayerScript): number =>
+      total(acrossSeeds(script), (run) => run.log.at(-1)?.logs ?? 0) / AGGREGATE_SEEDS;
+    expect(wasted(disciplined)).toBeLessThan(wasted(prepared));
   });
 
   it('gets shelter up for everybody before the cold', () => {

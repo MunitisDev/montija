@@ -950,6 +950,47 @@ would be ceremony rather than a decision.
 
 ---
 
+## Water, and fire — Implemented
+
+The river already decided where an orchard could go. Water now decides rather more, and a **Well** is how
+a settlement puts it where the river is not: eight stone and two logs, unstaffed, serving ten cells.
+
+**Water is comfort every day.** A house with water within reach is a household not carrying every bucket
+from the bank, and the share of the settlement's people living that way is worth up to **25%** of its
+spirit — beside a Cemetery's 35% and a Temple's 65%. Collected, never owed: a village built on the dry
+side of the valley is not punished, it simply has not taken a comfort that was there for eight stone.
+It is deliberately the cheapest of the three, so the early settlement has a comfort it can afford and
+the Temple is still worth an autumn later on.
+
+**And insurance on the bad day.** A lit hearth can set its own roof alight on a freezing night, and a
+working forge on any day of the year. Nothing else in the settlement starts a fire, which is the whole
+point: a summer village cannot burn down, and a village with no forge and no winter has no risk at all.
+
+Every part of a fire is a decision the player made:
+
+| What                      | Decided by                                                              |
+| ------------------------- | ----------------------------------------------------------------------- |
+| Whether one starts        | What the buildings do — hearths in winter, a staffed forge any day      |
+| How likely                | How tightly it is built: every neighbour within 2 cells adds half again |
+| Whether it costs anything | Water within 10 cells — the river, a channel, or a Well                 |
+| How far it goes           | What lies between: a road, a ditch or the water breaks the line         |
+
+A fire burns for a whole **day**, so the player watches it happen rather than reading about it
+afterwards — and there is nothing to do in that moment, because what settles it was decided seasons ago.
+At the next day boundary: water in reach and the building stands, having lost only what was stored
+inside it; no water and the building and its contents are gone, and the fire may take **one** neighbour,
+which burns the following day. One ignition a night, and never while something is already alight: a
+settlement that could lose three buildings in a night is one nobody can plan against.
+
+**Nobody is ever hurt.** This game has enough ways to kill people and none of them is a dice roll. A fire
+takes buildings, which can be rebuilt.
+
+Measured over twenty simulated years with six houses: **five fires, all of them put out**, because that
+settlement stood by the river. That is the intended shape — the river is safety, and building away from
+it is the decision a Well answers.
+
+---
+
 ## Survival — Implemented
 
 Supplies are consumed once a day, at the day boundary, and shared evenly: a half-fed settlement

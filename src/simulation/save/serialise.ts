@@ -104,6 +104,7 @@ export function serialise(simulation: Simulation, savedAt: string): SaveGame {
       input: toRecord(building.input),
       storageId: building.storageId,
       desiredWorkers: building.desiredWorkers,
+      burning: building.burning,
     })),
 
     // Jobs are already plain data — that design choice in Phase 4 is what
@@ -190,6 +191,7 @@ export function restore(simulation: Simulation, save: SaveGame): void {
     // a finished storage building then simply opens its yard on the next tick.
     building.storageId = saved.storageId ?? null;
     building.desiredWorkers = saved.desiredWorkers ?? building.definition.workerSlots;
+    building.burning = saved.burning === true;
     fillInventory(building.materials, saved.materials);
     fillInventory(building.input, saved.input);
     if (saved.complete) {
@@ -278,7 +280,7 @@ export function restore(simulation: Simulation, save: SaveGame): void {
   }
   // Older saves have no chronicle and restore at zero: a settlement whose
   // history was never written down, honestly reported as such.
-  simulation.restoreChronicle(save.chronicle ?? newChronicle());
+  simulation.restoreChronicle({ ...newChronicle(), ...(save.chronicle ?? {}) });
   // Cast rather than validated: the fields are written by this same serialiser,
   // and a save from another version is already rejected by the version check.
   simulation.restoreNecrology((save.necrology ?? []) as readonly DeathRecord[]);

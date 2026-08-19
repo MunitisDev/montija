@@ -1828,3 +1828,37 @@ ten it started with on all eight worlds, and the test said so; with the maker ca
 in and the wood coming back on its own, one world in eight now finds a single extra pair of hands. One
 birth across eight settlements is not a settlement growing, so the claim is now "at most one of them" —
 which is what standing still looks like when it is measured rather than assumed.
+
+## PHASE 59 — Water, and the night a settlement finds out whether it has any — Implemented
+
+A **Well**: eight stone, two logs, nobody to staff it, ten cells of reach. It does two jobs, and the
+second one is the reason the first is worth having.
+
+**Comfort, every day.** The share of a settlement's people whose homes have water within reach is worth
+up to a quarter of its spirit, beside a Cemetery's 35% and a Temple's 65% — collected, never owed, and
+deliberately the cheapest of the three so that an early settlement has a comfort it can afford.
+
+**Fire, on the bad day.** A lit hearth can set its own roof alight on a freezing night, a staffed forge
+on any day of the year, and nothing else starts a fire at all. Crowding raises the odds, water within
+reach puts it out, and a road, a ditch or the river between two buildings stops it spreading. A fire
+burns for a whole day where the player can see it and resolves at the next boundary; one at a time,
+never while something is already alight, and **never a life** — this game has enough ways to kill people
+and none of them is a die roll.
+
+Measured over twenty years with six houses: five fires, every one of them put out, because that
+settlement stood by the river. That is the shape intended — the river is safety and the Well is what
+buys it anywhere else.
+
+What it did to the year, over the same twenty-four worlds the balance suite always uses: deaths on the
+disciplined line **54 → 47**, food banked before the frost **235 → 258**, settlements surviving 20 of 24
+either way. The gain is the comfort rather than the fire: most settlements stand by the river, so most
+of them collect the water share and work a little faster for it.
+
+One balance claim moved from the reference seed to the sweep. "The disciplined line wastes less timber"
+is true across the seeds (62 logs left over against 91) and false on that one valley (115 against 110),
+where the settlement is contented enough to work faster than its own restraint saves. The file has had
+to learn twice that a single seed is not a measurement.
+
+A bug the tests caught before it ever reached a player: resolving fires while walking the live building
+registry let a fire jump to its neighbour and then immediately burn _that_ down too, chaining across a
+settlement in one night. What catches tonight burns tomorrow.

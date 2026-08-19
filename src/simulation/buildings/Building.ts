@@ -58,6 +58,16 @@ export class Building {
    */
   public storageId: number | null = null;
   /**
+   * `true` while this building is alight.
+   *
+   * A fire is a whole day long, so the player sees it happen rather than reading
+   * about it afterwards — and there is nothing to do about it in that moment,
+   * because the decision that settles it was made seasons ago when they put a
+   * well up or did not. See `events/FireSystem.ts`.
+   */
+  public burning = false;
+
+  /**
    * Recipe inputs delivered here.
    *
    * A woodcutter cannot split logs it does not have, and those logs have to be

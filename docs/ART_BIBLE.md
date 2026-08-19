@@ -768,3 +768,19 @@ they misread costs them three years. The renderer is told a tree grew by the tre
 counter, which is bumped only on the days when one actually crossed a threshold — a tree crosses twice
 in its life, so growth costs two comparisons per tree per day and no sprite work at all on the
 thousands of days when nothing changed.
+
+## The well — Implemented
+
+Neither a structure nor a field, so it gets its own branch: worn ground, a round stone kerb, dark water
+down the shaft and a timber frame with a bucket on it. Everything about it is small — the frame stands
+lower than a cottage door — because a well is a thing people walk _to_, and one that competed with the
+houses around it would read as a building rather than as the middle of a neighbourhood.
+
+The mouth is the darkest thing in the settlement, and that is the whole trick: without it the kerb reads
+as a stone table. The water in it is the one cold colour on the map.
+
+## A building alight — Implemented
+
+Two signals, because one is never enough at gameplay zoom: the building takes a **warm tint** — the only
+one outside a forge — and it smokes **dark and fast**, four times a hearth's rate in a colour no cooking
+fire ever has. A fire and a chimney must not be mistakable for one another from across a valley.

@@ -324,6 +324,17 @@ export class Hud {
       this.announceOnce(this.i18n.t('event.merchant'));
     }
 
+    // Fire is the one event that happens *to* the settlement rather than in it,
+    // and it is announced in three parts because they are three different
+    // things: something is alight, the water reached it, or it is gone.
+    if (snapshot.fire.started !== null) {
+      this.announceOnce(this.i18n.t('event.fire'), 'is-loss');
+    }
+    this.announce('event.fireSaved', snapshot.fire.saved.length);
+    for (let index = 0; index < snapshot.fire.lost.length; index += 1) {
+      this.announceOnce(this.i18n.t('event.fireLost'), 'is-loss');
+    }
+
     this.announce('event.born', population.births);
     this.announce('event.arrived', population.arrivals);
     // Sickness costs the settlement a pair of hands for over a week, and there
@@ -336,9 +347,9 @@ export class Hud {
   }
 
   /** Puts one already-worded line on the notice stack. */
-  private announceOnce(text: string): void {
+  private announceOnce(text: string, modifier?: string): void {
     const notice = document.createElement('div');
-    notice.className = 'events__notice';
+    notice.className = modifier ? `events__notice ${modifier}` : 'events__notice';
     notice.textContent = text;
     this.elements.events.append(notice);
     notice.addEventListener('animationend', () => notice.remove());

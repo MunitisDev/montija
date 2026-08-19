@@ -27,6 +27,7 @@ import {
 import { LOGS_PER_TREE, RESOURCE_IDS, STONE_PER_DEPOSIT, type ResourceId } from '@/data/resources';
 import { SKILL_THRESHOLD_YEARS, SKILL_WORK_BONUS } from '@/data/skills';
 import { MATURE_YEARS } from '@/simulation/world/TreeGrowth';
+import { WATER_SOLACE_SHARE } from '@/simulation/Simulation';
 import {
   CARE_RECOVERY_SHARE,
   HERBS_PER_PATIENT_PER_DAY,
@@ -172,7 +173,7 @@ export type SectionId = (typeof SECTION_IDS)[number];
  */
 const LOOP_STEPS = ['designate', 'work', 'haul', 'store'] as const;
 const CONTROLS = ['pan', 'zoom', 'select', 'build', 'speed', 'save'] as const;
-const HARDSHIPS = ['hunger', 'cold', 'illness', 'age'] as const;
+const HARDSHIPS = ['hunger', 'cold', 'illness', 'age', 'fire'] as const;
 
 /**
  * What the player can do to the ground itself, as opposed to build on it.
@@ -501,6 +502,8 @@ function bonusFigures(bonus: Bonus, t: Translate): string {
         `${plus(SPIRIT_WORK_BONUS)} ${t('guide.bonus.atPeace')}`,
         `${t('building.cemetery')} ${t('guide.bonus.answers')} ${percent(solaceShare('cemetery'))}`,
         `${t('building.temple')} ${t('guide.bonus.answers')} ${percent(solaceShare('temple'))}`,
+        // Water is the third comfort and the first one a settlement can afford.
+        `${t('building.well')} ${t('guide.bonus.answers')} ${percent(WATER_SOLACE_SHARE)}`,
         `−${SPIRIT_LOST_PER_DEATH} ${t('guide.bonus.perDeath')}`,
       ].join(' · ');
 

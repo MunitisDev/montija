@@ -41,6 +41,12 @@ const SMOKE_DEPTH = SKY_BAND;
 /** Wood smoke: pale, warm, and never white. */
 const SMOKE_COLOUR = 0xb9b3a4;
 
+/** A building burning: dirty, dark, and unmistakable from across the map. */
+const BLAZE_COLOUR = 0x4a4038;
+
+/** How much faster a blaze smokes than a hearth. */
+const BLAZE_RATE = 4;
+
 /**
  * How far off screen a fire keeps burning.
  *
@@ -56,6 +62,14 @@ interface Hearth {
   readonly y: number;
   /** Seconds until this chimney's next puff. */
   countdown: number;
+  /**
+   * `true` when this is not a hearth at all but a building alight.
+   *
+   * The same machinery, three settings apart: the smoke comes off the middle of
+   * the roof rather than the chimney, it comes faster, and it is dark. A fire and
+   * a cooking fire must never be mistakable for one another across a valley.
+   */
+  readonly blaze: boolean;
 }
 
 export class HearthRenderer {
@@ -78,25 +92,30 @@ export class HearthRenderer {
     const live = new Set<number>();
     for (const building of buildings.all) {
       // An unfinished building has no fire in it. Smoke rising from a
-      // half-built shell would tell the player it was working.
-      if (!building.isComplete) {
+      // half-built shell would tell the player it was working. A site that has
+      // caught, on the other hand, is very much alight.
+      if (!building.isComplete && !building.burning) {
         continue;
       }
-      const mouth = chimneyMouth(building.definition.id);
-      if (!mouth) {
+      const mouth = building.burning ? null : chimneyMouth(building.definition.id);
+      if (!mouth && !building.burning) {
         continue;
       }
 
       live.add(building.id);
-      if (this.hearths.has(building.id)) {
+      const existing = this.hearths.get(building.id);
+      if (existing && existing.blaze === building.burning) {
         continue;
       }
 
       const anchor = footprintCentre(building);
       this.hearths.set(building.id, {
-        x: anchor.px + mouth.dx,
-        y: anchor.py + mouth.dy,
+        x: anchor.px + (mouth?.dx ?? 0),
+        // A blaze comes off the whole roof, so it is anchored a little above the
+        // building's own middle rather than at a chimney it may not have.
+        y: anchor.py + (mouth?.dy ?? -18),
         countdown: 0,
+        blaze: building.burning,
       });
     }
 
@@ -130,7 +149,7 @@ export class HearthRenderer {
       }
       // Reset before the visibility test, so an off-screen fire does not build
       // up a debt of puffs and then fire them all at once when it pans in.
-      hearth.countdown = interval;
+      hearth.countdown = hearth.blaze ? interval / BLAZE_RATE : interval;
 
       const visible =
         hearth.x > view.x - OFF_SCREEN_MARGIN &&
@@ -141,7 +160,7 @@ export class HearthRenderer {
         continue;
       }
 
-      this.particles.push(emit(hearth.x, hearth.y, random));
+      this.particles.push({ ...emit(hearth.x, hearth.y, random), dark: hearth.blaze });
     }
 
     advanceSmoke(this.particles, deltaSeconds);
@@ -157,7 +176,10 @@ export class HearthRenderer {
   private draw(): void {
     this.graphics.clear();
     for (const particle of this.particles) {
-      this.graphics.fillStyle(SMOKE_COLOUR, puffAlpha(particle));
+      this.graphics.fillStyle(
+        particle.dark === true ? BLAZE_COLOUR : SMOKE_COLOUR,
+        puffAlpha(particle),
+      );
       this.graphics.fillCircle(particle.x, particle.y, puffRadius(particle));
     }
   }

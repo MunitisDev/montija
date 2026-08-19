@@ -31,6 +31,10 @@ export interface Chronicle {
   coldest: number;
   /** Days anybody spent a freezing night without a roof. */
   roughNights: number;
+  /** Fires the settlement's water put out. The buildings still stand. */
+  firesFought: number;
+  /** Buildings lost to a fire nobody could reach with water. */
+  firesLost: number;
 }
 
 /**
@@ -52,6 +56,8 @@ export function newChronicle(): Chronicle {
     firewoodBurned: 0,
     coldest: Number.POSITIVE_INFINITY,
     roughNights: 0,
+    firesFought: 0,
+    firesLost: 0,
   };
 }
 

@@ -66,6 +66,8 @@ import {
   type IllnessReport,
 } from './population/IllnessSystem';
 import { NO_SPOILAGE, runSpoilage, type SpoilageReport } from './resources/SpoilageSystem';
+import { NO_FIRE, runFire, type FireReport } from './events/FireSystem';
+import { waterWithinReach } from './world/Water';
 import {
   EMPTY_REPORT,
   runDay,
@@ -155,6 +157,17 @@ export type Advice =
 export const STORAGE_WARNING_FRACTION = 0.9;
 
 /**
+ * How much of the settlement's comfort water accounts for.
+ *
+ * A quarter, against a Cemetery's 0.35 and a Temple's 0.65. Deliberately not
+ * enough to reach full spirit on its own and easily enough to matter: a well is
+ * eight stone in the first year, where a Temple is a settlement's whole autumn,
+ * so the cheap comfort has to be the smaller one or nobody would ever build the
+ * expensive one.
+ */
+export const WATER_SOLACE_SHARE = 0.25;
+
+/**
  * Days a heap may lie on the ground before carrying it beats making more.
  *
  * Twelve, which is a season — the player's own figure, and the right one: it is
@@ -223,6 +236,8 @@ export interface SimulationSnapshot {
   readonly population: PopulationReport;
   /** Saplings that took root overnight, so a recovering wood is legible. */
   readonly forest: ForestReport;
+  /** What caught fire, what the water saved and what is gone. */
+  readonly fire: FireReport;
   /** Who is employed where, so the HUD can show labourers and vacancies. */
   readonly employment: EmploymentReport;
   /** What the merchant did today, and whether one is here at all. */
@@ -320,6 +335,7 @@ export class Simulation {
   private lastSpoilage: SpoilageReport = NO_SPOILAGE;
   private lastPopulation: PopulationReport = NO_POPULATION_CHANGE;
   private lastForest: ForestReport = NO_FOREST_CHANGE;
+  private lastFire: FireReport = NO_FIRE;
   private lastEmployment: EmploymentReport = NO_EMPLOYMENT_CHANGE;
   private lastTrade: TradeReport = NO_TRADE;
   private lastIllness: IllnessReport = NO_ILLNESS;
@@ -359,6 +375,14 @@ export class Simulation {
    * survives contact with new features if the streams stay apart.
    */
   private readonly forestRandom: SeededRandom;
+  /**
+   * Fire's own stream, kept apart from the forest's and the villagers'.
+   *
+   * A settlement replayed from its seed has to burn on the same night, and it
+   * would not if the roll came out of a stream that a felled tree or a birth also
+   * draws from.
+   */
+  private readonly fireRandom: SeededRandom;
   /** Sickness gets its own stream, for the same reason the woods do. */
   private readonly illnessRandom: SeededRandom;
 
@@ -385,6 +409,7 @@ export class Simulation {
     });
 
     this.forestRandom = new SeededRandom(deriveSeed(this.seed, 'forest'));
+    this.fireRandom = new SeededRandom(deriveSeed(this.seed, 'fire'));
     this.illnessRandom = new SeededRandom(deriveSeed(this.seed, 'illness'));
     this.jobs = new JobManager();
 
@@ -550,6 +575,7 @@ export class Simulation {
       spoiled: this.lastSpoilage,
       population: this.lastPopulation,
       forest: this.lastForest,
+      fire: this.lastFire,
       employment: this.lastEmployment,
       trade: this.lastTrade,
       illness: this.lastIllness,
@@ -782,6 +808,7 @@ export class Simulation {
     this.lastSpoilage = NO_SPOILAGE;
     this.lastPopulation = NO_POPULATION_CHANGE;
     this.lastForest = NO_FOREST_CHANGE;
+    this.lastFire = NO_FIRE;
     this.lastEmployment = NO_EMPLOYMENT_CHANGE;
     this.lastTrade = NO_TRADE;
     this.tradeOrder = AUTOMATIC_TRADE;
@@ -1039,7 +1066,44 @@ export class Simulation {
       }
       share += solace.share;
     }
+
+    // **Water is the third comfort, and the first one a settlement can afford.**
+    // A household with a well or the river within reach is not carrying every
+    // bucket from the bank, and a village whose houses all stand by water is a
+    // more contented one. Collected rather than owed, like the other two: a
+    // settlement built up on the dry side of the valley is not being punished, it
+    // simply has not taken a comfort that was there for eight stone.
+    share += WATER_SOLACE_SHARE * this.wateredShare();
     return Math.min(1, share);
+  }
+
+  /**
+   * The share of housed villagers whose home has water within reach, in `0..1`.
+   *
+   * Counted by people rather than by houses: a well beside the one cottage that
+   * holds six people is worth more than a well beside an empty one, and it is
+   * people whose spirits this is about. Zero when nobody is housed at all, which
+   * is the honest answer for a settlement sleeping in the open.
+   */
+  private wateredShare(): number {
+    let housed = 0;
+    let watered = 0;
+    for (const villager of this.villagers.all) {
+      if (villager.homeId === null) {
+        continue;
+      }
+      housed += 1;
+      const home = this.world.buildings.getById(villager.homeId);
+      if (home && this.waterAt(home.accessCell)) {
+        watered += 1;
+      }
+    }
+    return housed === 0 ? 0 : watered / housed;
+  }
+
+  /** `true` when water can be fetched to this cell. See `world/Water.ts`. */
+  public waterAt(cell: GridPoint): boolean {
+    return waterWithinReach(this.world, cell);
   }
 
   /**
@@ -1081,6 +1145,32 @@ export class Simulation {
     // Sickness, after people have eaten and burned: whether somebody is hungry
     // or cold today is what decides whether they fall ill today.
     this.lastIllness = this.runSickness();
+
+    // Fire, before the woods and after the eating: a settlement that lost its
+    // larder tonight should feel it tomorrow rather than today, and a building
+    // that burns is not owed the day's production it never finished.
+    this.lastFire = runFire({
+      world: this.world,
+      random: this.fireRandom,
+      isFreezing: this.year.isFreezing,
+      waterAt: (cell) => this.waterAt(cell),
+    });
+    // The renderers watch the registry's version, and a building catching fire
+    // is a change they have to see: it takes the fire's colour and starts
+    // smoking. Nothing else about the building moved, so nothing else would.
+    if (this.lastFire.started !== null || this.lastFire.saved.length > 0) {
+      this.world.buildings.markChanged();
+    }
+    this.chronicle.firesFought += this.lastFire.saved.length;
+    this.chronicle.firesLost += this.lastFire.lost.length;
+    for (const id of this.lastFire.lost) {
+      const building = this.world.buildings.getById(id);
+      if (building) {
+        // Nothing is salvaged and nothing is tipped out: what was inside has
+        // burned with it, which is the whole cost of having no water in reach.
+        this.retireBuilding(building, { salvage: false });
+      }
+    }
 
     // The trees are a day older, which for two of them a year is the day they
     // change size. Before the wild spread, so a tree that came of age this
@@ -1600,7 +1690,19 @@ export class Simulation {
    * that misses any of them leaves a ghost the player cannot see and cannot
    * fix.
    */
-  private retireBuilding(building: Building): void {
+  private retireBuilding(
+    building: Building,
+    options: {
+      /**
+       * Whether what was inside survives.
+       *
+       * A yard pulled down tips its goods onto the plot — somebody carried every
+       * one of those in. A yard that **burned** does not: the goods went with it,
+       * and that is the whole cost of having had no water within reach.
+       */
+      readonly salvage: boolean;
+    } = { salvage: true },
+  ): void {
     for (const job of this.jobs.all) {
       const aimedHere =
         job.targetEntityId === building.id &&
@@ -1631,19 +1733,23 @@ export class Simulation {
     }
 
     // A yard being torn down tips its contents onto the plot rather than
-    // deleting them. Somebody carried every one of those in.
+    // deleting them. Somebody carried every one of those in — unless it burned.
     if (building.storageId !== null) {
       const storage = this.storages.getById(building.storageId);
       if (storage) {
-        for (const { resource, amount } of storage.inventory.contents) {
-          this.world.dropNear(building.accessCell, resource, amount);
+        if (options.salvage) {
+          for (const { resource, amount } of storage.inventory.contents) {
+            this.world.dropNear(building.accessCell, resource, amount);
+          }
         }
         this.storages.remove(storage.id);
       }
     }
 
-    for (const { resource, amount } of building.input.contents) {
-      this.world.dropNear(building.accessCell, resource, amount);
+    if (options.salvage) {
+      for (const { resource, amount } of building.input.contents) {
+        this.world.dropNear(building.accessCell, resource, amount);
+      }
     }
 
     this.world.buildings.demolish(this.world, building.id);

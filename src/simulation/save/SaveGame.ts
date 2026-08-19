@@ -129,7 +129,14 @@ export interface SavedBuilding {
    * Absent in saves written before quotas existed, which restore with every
    * slot filled — what those settlements were already doing.
    */
-  readonly desiredWorkers?: number;
+  readonly desiredWorkers?: number; /**
+   * `true` when it was alight at the moment of saving.
+   *
+   * A fire is a whole day long and resolves at the next day boundary, so a save
+   * taken mid-fire has to remember it. Absent in older saves, which restore with
+   * nothing burning — which is what was true of them.
+   */
+  readonly burning?: boolean;
 }
 
 export interface SavedTree {
@@ -212,6 +219,9 @@ export interface SaveGame {
     readonly firewoodBurned: number;
     readonly coldest: number;
     readonly roughNights: number;
+    /** Absent in saves written before the settlement could catch fire. */
+    readonly firesFought?: number;
+    readonly firesLost?: number;
   };
   /**
    * The roll of the dead: a line each, with an age and a cause.

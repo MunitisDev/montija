@@ -34,6 +34,14 @@ export interface SmokeParticle {
   rise: number;
   /** Radius at birth, in pixels. */
   size: number;
+  /**
+   * `true` for the smoke off a building that is alight.
+   *
+   * Carried on the particle rather than on the fire it came from, because the
+   * two kinds of plume share one list and one draw call — and a fire that is put
+   * out should not turn its own smoke pale on the way up.
+   */
+  dark?: boolean;
 }
 
 /**

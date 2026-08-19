@@ -25,6 +25,15 @@ import type { StorageRegistry } from '@/simulation/logistics/Storage';
 import { artVariants, yardFillVariant } from '@/renderer/phaser/terrain/buildingArt';
 
 const VALID_TINT = 0x7fb069;
+
+/**
+ * A building alight.
+ *
+ * The one warm tint in the settlement outside a forge, and applied over the
+ * season's own — a fire in winter has to read as a fire and not as a slightly
+ * odd house. Smoke does the rest; see `effects/HearthRenderer.ts`.
+ */
+const BURNING_TINT = 0xd97038;
 const INVALID_TINT = 0xc0584a;
 
 interface BuildingSprites {
@@ -113,6 +122,10 @@ export class BuildingRenderer {
         this.sprites.set(building.id, this.createSprites(building));
         continue;
       }
+
+      // Alight, so it takes the fire's colour rather than the season's until it
+      // is either put out or gone.
+      existing.body.setTint(building.burning ? BURNING_TINT : this.seasonTint);
 
       if (existing.complete !== building.isComplete) {
         // The roof went on: swap the frame for the finished building.
@@ -210,8 +223,10 @@ export class BuildingRenderer {
 
     const body = this.scene.add
       .image(anchor.px, anchor.py, texture)
-      // A building finished in winter stands in winter's light straight away.
-      .setTint(this.seasonTint)
+      // A building finished in winter stands in winter's light straight away —
+      // and one that is alight when it is first drawn is alight, which happens
+      // whenever a settlement is loaded mid-fire.
+      .setTint(building.burning ? BURNING_TINT : this.seasonTint)
       // Anchored on the *drawn ground line*, not the bottom of the image, and
       // placed at the centre of the footprint. Anchoring at the image edge and
       // nudging by a guessed offset put buildings a whole tile from the cells
