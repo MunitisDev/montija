@@ -27,7 +27,6 @@ import { polygon, shade, type Point } from './shading';
 export type FeatureKind =
   | 'logpile'
   | 'trestle'
-  | 'saplings'
   | 'baskets'
   | 'granary'
   | 'blocks'
@@ -154,9 +153,6 @@ export function drawFeature(
       return;
     case 'trestle':
       drawTrestle(graphics, at, s);
-      return;
-    case 'saplings':
-      drawSaplings(graphics, at, s);
       return;
     case 'baskets':
       drawBaskets(graphics, at, s);
@@ -304,38 +300,6 @@ function drawTrestle(graphics: Phaser.GameObjects.Graphics, at: Point, s: number
 
   // Two rounds already off it, on the ground.
   isoLogStack(graphics, { x: at.x + 13 * s, y: at.y + 10 * s }, 10 * s);
-}
-
-/** A nursery row: young trees under their stakes, and a bundle of spares. */
-function drawSaplings(graphics: Phaser.GameObjects.Graphics, at: Point, s: number): void {
-  for (const [dx, dy, h] of [
-    [-9, 1, 13],
-    [0, 4, 16],
-    [9, 7, 12],
-  ] as const) {
-    const foot = { x: at.x + dx * s, y: at.y + dy * s };
-    graphics.fillStyle(shade(LOG_BARK, 1.04), 1);
-    polygon(graphics, strip(foot, { x: foot.x, y: foot.y - h * s }, 1.4 * s));
-    graphics.fillStyle(shade(GREEN, 1.08), 1);
-    polygon(graphics, [
-      { x: foot.x, y: foot.y - (h + 6) * s },
-      { x: foot.x + 4 * s, y: foot.y - (h - 2) * s },
-      { x: foot.x, y: foot.y - (h - 4) * s },
-      { x: foot.x - 4 * s, y: foot.y - (h - 2) * s },
-    ]);
-  }
-
-  // A bundle of stakes leaning together, tied.
-  const tie = { x: at.x + 16 * s, y: at.y - 9 * s };
-  graphics.fillStyle(shade(LOG_END, 0.9), 1);
-  for (const dx of [-3, 0, 3]) {
-    polygon(graphics, strip({ x: at.x + (16 + dx * 1.4) * s, y: at.y + 9 * s }, tie, 1.5 * s));
-  }
-  graphics.fillStyle(IRON, 1);
-  polygon(
-    graphics,
-    strip({ x: tie.x - 4 * s, y: tie.y + 3 * s }, { x: tie.x + 4 * s, y: tie.y + 3 * s }, 1.6 * s),
-  );
 }
 
 /** Two baskets of gathered food, and a low frame with more drying on it. */

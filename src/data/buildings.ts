@@ -16,7 +16,6 @@ export type BuildingId =
   | 'gatherer-hut'
   | 'feller'
   | 'woodcutter'
-  | 'forester'
   | 'quarry'
   | 'mine'
   | 'blacksmith'
@@ -116,21 +115,6 @@ export interface BuildingDefinition {
   readonly recipeId?: string;
 
   /**
-   * Set for a building that manages the woodland around it.
-   *
-   * Not a recipe, because forestry is not a transformation — it is work done on
-   * the map itself, at cells rather than at a workbench. Its workers plant when
-   * the wood is thin and fell when it is thick, which is what turns timber from
-   * a finite deposit into something the player tends.
-   */
-  readonly forestry?: {
-    /** How far from the lodge its workers range, in cells. */
-    readonly radius: number;
-    /** Trees the lodge tries to keep standing inside that range. */
-    readonly targetTrees: number;
-  };
-
-  /**
    * Set for a building that fells its own timber.
    *
    * **The Woodcutter's answer to the one job the player was doing by hand.**
@@ -139,9 +123,9 @@ export interface BuildingDefinition {
    * workshop that cuts what it needs is a workshop; one that waits to be fed by
    * hand is a chore.
    *
-   * Its felling is *cropping*, not clearing: those trees grow back in five
-   * years. Only the player's own marks clear ground for good. See
-   * `simulation/world/Woodland.ts`.
+   * Its felling is *cropping*, not clearing: a sapling stands on the cell it cut
+   * the same afternoon and grows back over three years. Only the player's own
+   * marks clear ground for good. See `simulation/world/TreeGrowth.ts`.
    */
   readonly felling?: {
     /** How far its cutters range, in cells. */
@@ -449,26 +433,6 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     workerSlots: 2,
     recipeId: 'forge-tools',
   },
-  forester: {
-    id: 'forester',
-    category: 'woodland',
-    name: "Forester's Lodge",
-    // Not shown to a player — the guide and the build menu read the translated
-    // string. Kept as the one-line summary of what the building is for.
-    description: 'Plants where the wood is thin and fells where it is thick.',
-    footprint: { width: 2, height: 2 },
-    constructionCost: [
-      { resource: 'logs', amount: 12 },
-      { resource: 'stone', amount: 2 },
-    ],
-    buildTicks: 110,
-    workerSlots: 2,
-    // A wide range and a density well under a natural wood's. The lodge is
-    // meant to keep a working coppice, not to reforest the map: a player who
-    // wants dense woodland leaves it alone, and one who wants a steady supply
-    // builds this.
-    forestry: { radius: 10, targetTrees: 110 },
-  },
   /*
    * **The building that makes logs**, and the one the settlement was missing.
    *
@@ -481,9 +445,10 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
    * reason to cut, which is exactly the wrong rule for the settlement's only
    * source of timber.
    *
-   * So the chain is one building a step now: **Feller cuts, Woodcutter splits,
-   * Forester plants.** Each of the three is a post a player can staff or leave
-   * empty, and the shortage tells them which.
+   * So the chain is one building a step now: **the Feller cuts and the Woodcutter
+   * splits**, each a post a player can staff or leave empty, and the shortage
+   * tells them which. Nobody plants: the wood does that itself, in the open, over
+   * three years — see `simulation/world/TreeGrowth.ts`.
    *
    * The cheapest building in the game after the hut, because it is the first
    * thing anybody needs and its cost is paid in the very thing it makes.
@@ -639,7 +604,6 @@ export const BUILDING_IDS: readonly BuildingId[] = [
   'gatherer-hut',
   'feller',
   'woodcutter',
-  'forester',
   'quarry',
   'mine',
   'blacksmith',

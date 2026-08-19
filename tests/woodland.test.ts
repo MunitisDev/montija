@@ -6,17 +6,16 @@
  * **clearing a site** and **cutting timber** — indistinguishable, and it left the
  * player marking trees one at a time, every winter, to keep a Woodcutter fed.
  *
- * Three rules replace it, and this file is about the seam between them:
+ * Two rules replace it, and this file is about the seam between them:
  *
- * - a workshop's own felling leaves a stump, back in five years;
- * - the player's felling clears the ground for good;
- * - unless a forester's lodge stands within reach, which reprieves everything
- *   around it.
+ * - a workshop's own felling leaves a **sapling standing on the cell**, which
+ *   grows back over three years where the player can see it;
+ * - the player's own felling clears the ground for good.
  *
- * The stump clock is long — 240 days — so most of what follows drives the
- * `Woodland` ledger directly rather than simulating five years of a settlement.
- * The end-to-end tests are the ones that matter and the ones that are slow; both
- * kinds are here.
+ * The ledger of stumps that used to hold the first half is gone, along with the
+ * Forester's Lodge: a felled cell that owed a tree in five years was a fact only
+ * the save file knew, and a sapling standing on it is a fact the player can act
+ * on. How a single tree grows is `tree-growth.test.ts`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -27,56 +26,26 @@ import type { Building } from '@/simulation/buildings/Building';
 import { Simulation } from '@/simulation/Simulation';
 import { restore, serialise } from '@/simulation/save/serialise';
 import { TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
-import { REGROWTH_DAYS, REGROWTH_YEARS, Woodland } from '@/simulation/world/Woodland';
+import { Woodland } from '@/simulation/world/Woodland';
+import { HALF_GROWN_DAYS, MATURE_DAYS } from '@/simulation/world/TreeGrowth';
 
 const OPTIONS = { seed: 20260816, worldWidth: 64, worldHeight: 64, startingVillagers: 10 };
 
-describe('the ledger of what was felled', () => {
-  it('brings a cropped tree back after five years and not before', () => {
-    const woodland = new Woodland();
-    woodland.stump({ gx: 5, gy: 5 }, 100);
-
-    expect(woodland.due(100 + REGROWTH_DAYS - 1)).toEqual([]);
-    expect(woodland.due(100 + REGROWTH_DAYS)).toEqual([{ gx: 5, gy: 5, day: 100 + REGROWTH_DAYS }]);
-  });
-
-  it('counts five years in the game’s own years', () => {
-    expect(REGROWTH_DAYS).toBe(REGROWTH_YEARS * 48);
-  });
-
-  it('hands a stump over once and then forgets it', () => {
-    const woodland = new Woodland();
-    woodland.stump({ gx: 1, gy: 1 }, 0);
-    expect(woodland.due(REGROWTH_DAYS)).toHaveLength(1);
-    expect(woodland.due(REGROWTH_DAYS)).toHaveLength(0);
-  });
-
-  it('remembers ground cleared for good, and owes it nothing', () => {
+describe('the ledger of cleared ground', () => {
+  it('remembers ground cleared for good', () => {
     const woodland = new Woodland();
     woodland.clear({ gx: 2, gy: 3 });
-
     expect(woodland.isBarren({ gx: 2, gy: 3 })).toBe(true);
-    expect(woodland.due(100000)).toEqual([]);
   });
 
-  it('lets clearing cancel a stump, and a stump cancel a clearing', () => {
-    // The last thing done to a cell is what it remembers. Both directions,
-    // because a cell can be cleared, replanted and cleared again.
+  it('lets woodland reclaim a clearing', () => {
+    // The last thing done to a cell is what it remembers. A workshop cutting
+    // timber on ground the player once cleared is that ground being worked as a
+    // wood again, so it stops being a permanent clearing.
     const woodland = new Woodland();
-    woodland.stump({ gx: 4, gy: 4 }, 0);
     woodland.clear({ gx: 4, gy: 4 });
-    expect(woodland.due(100000)).toEqual([]);
-
-    woodland.stump({ gx: 4, gy: 4 }, 0);
+    woodland.reclaim({ gx: 4, gy: 4 });
     expect(woodland.isBarren({ gx: 4, gy: 4 })).toBe(false);
-  });
-
-  it('forgets everything about a cell a forester planted on', () => {
-    const woodland = new Woodland();
-    woodland.clear({ gx: 7, gy: 7 });
-    woodland.planted({ gx: 7, gy: 7 });
-
-    expect(woodland.isBarren({ gx: 7, gy: 7 })).toBe(false);
   });
 
   it('keeps its cells apart', () => {
@@ -102,12 +71,16 @@ describe('a settlement felling trees', () => {
     return new Simulation(OPTIONS).woodland.barrenCount;
   }
 
-  it('leaves a stump where a workshop cropped', () => {
+  it('leaves a sapling standing where a workshop cropped', () => {
     const simulation = new Simulation(OPTIONS);
-    const tree = firstTree(simulation);
-    fellNow(simulation, tree, false);
+    const cell = firstTree(simulation);
+    fellNow(simulation, cell, false);
 
-    expect(simulation.woodland.stumpCount).toBe(1);
+    // A tree on the cell again the same afternoon, and a small one: this is the
+    // whole of what replaced the ledger of stumps.
+    const sapling = simulation.world.trees.getAt(cell);
+    expect(sapling).not.toBeNull();
+    expect(simulation.world.trees.stage(sapling!)).toBe('sapling');
     expect(simulation.woodland.barrenCount).toBe(barrenBefore());
   });
 
@@ -118,41 +91,42 @@ describe('a settlement felling trees', () => {
 
     expect(simulation.woodland.barrenCount).toBe(barrenBefore() + 1);
     expect(simulation.woodland.isBarren(tree)).toBe(true);
-    expect(simulation.woodland.stumpCount).toBe(0);
+    // Nothing standing there: the player marked it to make room, and a sapling
+    // turning up where they meant to put a house is the game undoing their work.
+    expect(simulation.world.trees.has(tree)).toBe(false);
   });
 
-  it('spares even the player’s felling when a forester is watching', () => {
-    // What a lodge is for: the woods around it recover from anything.
+  it('gives timber for a grown tree and nothing for a young one', () => {
+    // What makes "leave it another year" a decision rather than a rounding
+    // error: cutting a tree early is not a smaller harvest, it is no harvest.
     const simulation = new Simulation(OPTIONS);
-    const lodge = raise(simulation, 'forester');
-    expect(lodge).not.toBeNull();
+    const cell = firstTree(simulation);
+    fellNow(simulation, cell, false);
+    const afterTheTree = looseLogs(simulation);
+    expect(afterTheTree).toBeGreaterThan(0);
 
-    const radius = buildingDefinition('forester').forestry!.radius;
-    const near = nearestTreeWithin(simulation, lodge!.accessCell, radius);
-    expect(near).not.toBeNull();
-
-    fellNow(simulation, near!, true);
-    expect(simulation.woodland.barrenCount).toBe(barrenBefore());
-    expect(simulation.woodland.stumpCount).toBe(1);
+    // Now fell the sapling that took its place.
+    fellNow(simulation, cell, false);
+    expect(looseLogs(simulation)).toBe(afterTheTree);
   });
 });
 
 describe('the woodland growing back', () => {
-  it('puts a tree back on a stump when its time comes', () => {
-    // Driven through the simulation's own daily pass, so the clock, the ledger
-    // and the planting all have to agree.
+  it('grows a cropped cell back to full timber in three years', () => {
+    // Driven through the simulation's own daily pass, so the clock, the tree and
+    // the felling all have to agree.
     const simulation = new Simulation(OPTIONS);
     const cell = firstTree(simulation);
     fellNow(simulation, cell, false);
-    expect(simulation.world.trees.has(cell)).toBe(false);
-    // And somebody carried the timber off. A stump under its own woodpile does
-    // not sprout, which is the right rule and not the one under test — this
-    // tree stands on the far bank of the river, where no hauler will ever reach
-    // it until the settlement builds a bridge.
-    carryOff(simulation, cell);
 
-    runDays(simulation, REGROWTH_DAYS + 2);
-    expect(simulation.world.trees.has(cell)).toBe(true);
+    const tree = () => simulation.world.trees.getAt(cell)!;
+    expect(simulation.world.trees.stage(tree())).toBe('sapling');
+
+    runDays(simulation, HALF_GROWN_DAYS + 1);
+    expect(simulation.world.trees.stage(tree())).toBe('young');
+
+    runDays(simulation, MATURE_DAYS - HALF_GROWN_DAYS);
+    expect(simulation.world.trees.stage(tree())).toBe('mature');
   });
 
   it('leaves cleared ground bare for as long as anybody watches', () => {
@@ -160,7 +134,7 @@ describe('the woodland growing back', () => {
     const cell = firstTree(simulation);
     fellNow(simulation, cell, true);
 
-    runDays(simulation, REGROWTH_DAYS + 2);
+    runDays(simulation, MATURE_DAYS + 2);
     expect(simulation.world.trees.has(cell)).toBe(false);
     expect(simulation.woodland.isBarren(cell)).toBe(true);
   });
@@ -236,7 +210,7 @@ describe("a feller's hut", () => {
 });
 
 describe('a settlement that remembers', () => {
-  it('carries its stumps and its clearings through a save', () => {
+  it('carries its clearings and the age of its trees through a save', () => {
     const simulation = new Simulation(OPTIONS);
     const cropped = firstTree(simulation);
     fellNow(simulation, cropped, false);
@@ -246,9 +220,11 @@ describe('a settlement that remembers', () => {
     const loaded = new Simulation(OPTIONS);
     restore(loaded, serialise(simulation, 'now'));
 
-    expect(loaded.woodland.stumpCount).toBe(simulation.woodland.stumpCount);
     expect(loaded.woodland.isBarren(cleared)).toBe(true);
     expect(loaded.woodland.isBarren(cropped)).toBe(false);
+    // And the sapling comes back a sapling rather than a full tree, which is the
+    // difference between a wood that was spent and one that was not.
+    expect(loaded.world.trees.stage(loaded.world.trees.getAt(cropped)!)).toBe('sapling');
   });
 
   it('reads an older save as a settlement that never cleared anything', () => {
@@ -259,7 +235,6 @@ describe('a settlement that remembers', () => {
     const loaded = new Simulation(OPTIONS);
     restore(loaded, older as typeof save);
     expect(loaded.woodland.barrenCount).toBe(0);
-    expect(loaded.woodland.stumpCount).toBe(0);
   });
 });
 
@@ -295,38 +270,16 @@ function fellNow(
   simulation.jobs.cancel(job.id);
 }
 
+/** Logs lying on the ground, which is where felled timber lands. */
+function looseLogs(simulation: Simulation): number {
+  return simulation.world.piles.totalOf('logs');
+}
+
 function firstTree(simulation: Simulation): { gx: number; gy: number } {
   for (const tree of simulation.world.trees.all) {
     return { gx: tree.gx, gy: tree.gy };
   }
   throw new Error('A generated world with no trees at all');
-}
-
-function nearestTreeWithin(
-  simulation: Simulation,
-  centre: { gx: number; gy: number },
-  radius: number,
-): { gx: number; gy: number } | null {
-  for (let dy = -radius; dy <= radius; dy += 1) {
-    for (let dx = -radius; dx <= radius; dx += 1) {
-      const cell = { gx: centre.gx + dx, gy: centre.gy + dy };
-      if (simulation.world.trees.getAt(cell)) {
-        return cell;
-      }
-    }
-  }
-  return null;
-}
-
-/** Takes whatever is lying on a cell away, as a hauler would. */
-function carryOff(simulation: Simulation, cell: { gx: number; gy: number }): void {
-  for (;;) {
-    const pile = simulation.world.piles.anyAt(cell);
-    if (!pile) {
-      return;
-    }
-    simulation.world.piles.remove(pile.id);
-  }
 }
 
 function runDays(simulation: Simulation, days: number): void {

@@ -29,6 +29,7 @@ import type { ResourceId } from '@/data/resources';
  */
 const STRIP_RESOURCES: readonly ResourceId[] = ['food', 'logs', 'firewood', 'stone'];
 import type { GameContext } from '@/game/Game';
+import type { TreeStage } from '@/simulation/world/TreeGrowth';
 import { hidesGroundPanel } from '@/game/selection';
 import { buildEndGame, burialRoll, type EndGameStat } from '@/ui/endgame/endGameModel';
 import { cardsFor, type PersonCard } from './cardModel';
@@ -758,7 +759,7 @@ export class Hud {
     // is showing. Tying the two together made a tree with someone standing
     // beside it impossible to designate.
     const actionable = selection.treeId !== null || selection.isStoneDeposit;
-    this.renderSelectionAction(actionable, selection.designated, selection.treeId !== null);
+    this.renderSelectionAction(actionable, selection.designated, selection.treeStage);
     this.renderRoadAction(selection);
     this.renderDitchAction(selection);
     this.renderBridgeAction(selection);
@@ -780,10 +781,21 @@ export class Hud {
     }
 
     if (selection.treeId !== null) {
-      this.elements.selectionTerrain.textContent = this.i18n.t('terrain.tree');
+      // Named by its size, because that is what decides what it is worth: only a
+      // grown tree carries timber, and a player looking at a stand of young ones
+      // should be able to read that off the panel rather than off the yield.
+      this.elements.selectionTerrain.textContent = this.i18n.t(
+        selection.treeStage === 'mature'
+          ? 'terrain.tree'
+          : selection.treeStage === 'young'
+            ? 'terrain.youngTree'
+            : 'terrain.sapling',
+      );
       this.elements.selectionCell.textContent = `${selection.cell.gx}, ${selection.cell.gy}`;
       this.elements.selectionFlags.textContent = selection.designated
-        ? this.i18n.t('status.markedForFelling')
+        ? this.i18n.t(
+            selection.treeStage === 'mature' ? 'status.markedForFelling' : 'status.markedToClear',
+          )
         : '';
       return;
     }
@@ -954,12 +966,22 @@ export class Hud {
     this.elements.selectionBridge.textContent = `${this.i18n.t('action.bridge')} · ${price}`;
   }
 
-  private renderSelectionAction(actionable: boolean, designated: boolean, isTree: boolean): void {
+  private renderSelectionAction(
+    actionable: boolean,
+    designated: boolean,
+    treeStage: TreeStage | null,
+  ): void {
     this.elements.selectionAction.hidden = !actionable;
     if (!actionable) {
       return;
     }
-    const verb = this.i18n.t(isTree ? 'action.fell' : 'action.mine');
+    // **Fell a grown tree, clear a young one.** The work is the same order and
+    // the outcome is not: a grown tree gives four logs, a young one gives none
+    // and is quick. Offering to "fell" a sapling would promise timber that is not
+    // coming, which is the kind of small lie a player only finds out by waiting.
+    const verb = this.i18n.t(
+      treeStage === null ? 'action.mine' : treeStage === 'mature' ? 'action.fell' : 'action.clear',
+    );
     this.elements.selectionAction.textContent = designated ? this.i18n.t('action.cancel') : verb;
     this.elements.selectionAction.classList.toggle('is-cancel', designated);
   }

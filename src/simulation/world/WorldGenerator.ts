@@ -12,6 +12,7 @@
  */
 
 import { type TerrainType } from '@/data/terrain';
+import { MATURE_DAYS } from './TreeGrowth';
 import { ValueNoise2D } from '@/shared/math/noise';
 import { SeededRandom, deriveSeed, type RandomSource } from '@/shared/math/random';
 import type { GridPoint } from '@/shared/types/geometry';
@@ -26,6 +27,14 @@ export interface TreeInstance {
   readonly variant: number;
   /** 0.85-1.15; keeps a forest from looking like stamped copies. */
   readonly scale: number;
+  /**
+   * The settlement day this tree took root, which is what its size is read from.
+   *
+   * Negative for the wood the map was generated with: those trees were standing
+   * before anybody arrived, so they are planted `-MATURE_DAYS` and are full-grown
+   * on day one. See `TreeGrowth.ts`.
+   */
+  readonly planted: number;
 }
 
 export interface WorldGenerationOptions {
@@ -240,6 +249,8 @@ function placeTrees(terrain: TerrainGrid, random: RandomSource): TreeInstance[] 
         gy,
         variant: random.int(0, TREE_VARIANTS),
         scale: random.float(0.85, 1.15),
+        // Standing before the settlers arrived, so full-grown on their first day.
+        planted: -MATURE_DAYS,
       });
       nextId += 1;
     }

@@ -1,11 +1,14 @@
 /**
- * Woodland that grows back, and the lodge that manages it.
+ * Woodland that spreads on its own.
  *
  * The property worth protecting is not "trees appear" — it is the shape of the
  * ceiling. A wood that never stops spreading swallows the map over a long game,
  * and a wood that stops too eagerly leaves a clear-felled settlement with no way
  * back. Both failures take years of simulated time to show up in play and about
  * a second to catch here.
+ *
+ * How a single tree grows from a sapling to something worth felling is
+ * `tree-growth.test.ts`; what a felled cell owes is `woodland.test.ts`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -18,11 +21,9 @@ import {
   runForestRegrowth,
 } from '@/simulation/world/ForestSystem';
 import { SeededRandom } from '@/shared/math/random';
-import { TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
 import type { GridPoint } from '@/shared/types/geometry';
 
 const OPTIONS = { seed: 20260815, worldWidth: 64, worldHeight: 64, startingVillagers: 0 };
-const TICK = 0.1;
 
 function newWorld(): World {
   return new World({ width: 64, height: 64, seed: 20260815 });
@@ -204,81 +205,6 @@ describe('natural regrowth', () => {
   });
 });
 
-describe("a forester's lodge", () => {
-  it('plants when its range is thin', () => {
-    const simulation = new Simulation({ ...OPTIONS, startingVillagers: 6 });
-    const origin = clearArea(simulation);
-    expect(origin).not.toBeNull();
-    if (!origin) {
-      return;
-    }
-
-    const lodge = simulation.placeBuilding('forester', origin);
-    expect(lodge).not.toBeNull();
-    if (!lodge) {
-      return;
-    }
-    simulation.world.buildings.complete(simulation.world, lodge);
-
-    const before = simulation.world.trees.count;
-    for (let tick = 1; tick <= TICKS_PER_DAY * 20; tick += 1) {
-      simulation.update(tick, TICK);
-    }
-
-    // Some of that is natural spread; what matters is that the lodge posted
-    // planting work at all and that villagers carried it out.
-    const planted = simulation.jobs.all.filter((job) => job.type === 'plant-tree');
-    expect(planted.length).toBeGreaterThan(0);
-    expect(simulation.world.trees.count).toBeGreaterThan(before);
-  });
-
-  it('never puts two saplings on the same cell', () => {
-    const simulation = new Simulation({ ...OPTIONS, startingVillagers: 6 });
-    const origin = clearArea(simulation);
-    if (!origin) {
-      return;
-    }
-    const lodge = simulation.placeBuilding('forester', origin);
-    if (!lodge) {
-      return;
-    }
-    simulation.world.buildings.complete(simulation.world, lodge);
-
-    for (let tick = 1; tick <= TICKS_PER_DAY * 10; tick += 1) {
-      simulation.update(tick, TICK);
-
-      const live = simulation.jobs.all.filter(
-        (job) => job.type === 'plant-tree' && job.state !== 'complete' && job.state !== 'cancelled',
-      );
-      const cells = live.map((job) => `${job.target.gx},${job.target.gy}`);
-      expect(new Set(cells).size, `tick ${tick}`).toBe(cells.length);
-    }
-  });
-
-  it('fells rather than plants once its range is full', () => {
-    const simulation = new Simulation({ ...OPTIONS, startingVillagers: 6 });
-    // Deep in the woods, where the lodge's range is already over its target.
-    const origin = findBuildable(simulation, (cell) => treesAround(simulation, cell, 10) > 130);
-    expect(origin).not.toBeNull();
-    if (!origin) {
-      return;
-    }
-
-    const lodge = simulation.placeBuilding('forester', origin);
-    if (!lodge) {
-      return;
-    }
-    simulation.world.buildings.complete(simulation.world, lodge);
-
-    for (let tick = 1; tick <= TICKS_PER_DAY * 6; tick += 1) {
-      simulation.update(tick, TICK);
-    }
-
-    expect(simulation.jobs.all.some((job) => job.type === 'chop-tree')).toBe(true);
-    expect(simulation.jobs.all.some((job) => job.type === 'plant-tree')).toBe(false);
-  });
-});
-
 // --- helpers ---------------------------------------------------------------
 
 function findCell(world: World, matches: (cell: GridPoint) => boolean): GridPoint | null {
@@ -312,18 +238,6 @@ function treeNeighbours(world: World, cell: GridPoint): number {
   return count;
 }
 
-function treesAround(simulation: Simulation, centre: GridPoint, radius: number): number {
-  let count = 0;
-  for (let dy = -radius; dy <= radius; dy += 1) {
-    for (let dx = -radius; dx <= radius; dx += 1) {
-      if (simulation.world.trees.has({ gx: centre.gx + dx, gy: centre.gy + dy })) {
-        count += 1;
-      }
-    }
-  }
-  return count;
-}
-
 /** Every tree id standing in a box around a point. */
 function treeIdsAround(simulation: Simulation, centre: GridPoint, radius: number): Set<number> {
   const ids = new Set<number>();
@@ -348,78 +262,3 @@ function findBuildable(
     (cell) => simulation.canPlaceBuilding('house', cell).ok && extra(cell),
   );
 }
-
-/** Buildable ground with few trees around it, so a lodge there will plant. */
-function clearArea(simulation: Simulation): GridPoint | null {
-  return findBuildable(simulation, (cell) => treesAround(simulation, cell, 10) < 40);
-}
-
-describe("a lodge's standing orders", () => {
-  /** Plants a finished lodge in the thickest wood it can find. */
-  function lodgeInTheWoods(): Simulation {
-    const simulation = new Simulation({ ...OPTIONS, startingVillagers: 10 });
-
-    let best = { gx: 0, gy: 0, trees: -1 };
-    for (let gy = 0; gy < simulation.world.height; gy += 2) {
-      for (let gx = 0; gx < simulation.world.width; gx += 2) {
-        if (!simulation.canPlaceBuilding('forester', { gx, gy }).ok) {
-          continue;
-        }
-        let trees = 0;
-        for (const tree of simulation.world.trees.all) {
-          if (Math.abs(tree.gx - gx) <= 10 && Math.abs(tree.gy - gy) <= 10) {
-            trees += 1;
-          }
-        }
-        if (trees > best.trees) {
-          best = { gx, gy, trees };
-        }
-      }
-    }
-
-    const lodge = simulation.placeBuilding('forester', { gx: best.gx, gy: best.gy });
-    if (lodge) {
-      simulation.world.buildings.complete(simulation.world, lodge);
-    }
-    return simulation;
-  }
-
-  function fellingMarks(simulation: Simulation): number {
-    return simulation.jobs.all.filter(
-      (job) => job.type === 'chop-tree' && job.state !== 'complete' && job.state !== 'cancelled',
-    ).length;
-  }
-
-  it('never buries the map in felling marks', () => {
-    // The regression, found by a player looking at their phone. A lodge in a
-    // dense wood used to add three felling orders every two and a half seconds
-    // for as long as it stood, and villagers cut far slower than that — so the
-    // marks piled up without bound and it looked exactly as though the trees
-    // were being felled on their own. Measured before the fix: 158 marks
-    // standing by day 30, essentially none of them being worked.
-    const simulation = lodgeInTheWoods();
-
-    for (let day = 1; day <= 30; day += 1) {
-      for (let tick = 1; tick <= TICKS_PER_DAY; tick += 1) {
-        simulation.update(simulation.tick + 1, TICK);
-      }
-      expect(fellingMarks(simulation), `day ${day}`).toBeLessThanOrEqual(6);
-    }
-  });
-
-  it('still clears its surplus rather than doing nothing', () => {
-    // The other half. A cap that stopped the lodge working at all would be a
-    // worse bug than the one it fixed.
-    const simulation = lodgeInTheWoods();
-    let everMarked = 0;
-
-    for (let day = 1; day <= 20; day += 1) {
-      for (let tick = 1; tick <= TICKS_PER_DAY; tick += 1) {
-        simulation.update(simulation.tick + 1, TICK);
-      }
-      everMarked = Math.max(everMarked, fellingMarks(simulation));
-    }
-
-    expect(everMarked).toBeGreaterThan(0);
-  });
-});

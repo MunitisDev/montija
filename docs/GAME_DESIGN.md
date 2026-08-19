@@ -272,8 +272,9 @@ settled village.
 | Blacksmith      | 6 tools a day            | 4 iron + 2 logs |
 | Tailor          | 4.4 clothing a day       | 6.5 hides       |
 
-**The wood is three buildings, not one — Implemented.** A **Feller's Hut** cuts, a **Woodcutter**
-splits, a **Forester's Lodge** plants. Felling used to be the Woodcutter's second trade, and that was
+**The wood is two buildings and a clock — Implemented.** A **Feller's Hut** cuts, a **Woodcutter**
+splits, and nobody plants: the wood grows back on its own, in the open, over three years — see _What
+the ground remembers_ below. Felling used to be the Woodcutter's second trade, and that was
 one building doing two unrelated jobs where the player could see neither: a settlement with a
 Woodcutter standing and no timber had no way to tell whether it wanted more cutters, more splitters or
 more trees, and one with logs already on the shelf quietly stopped felling altogether — because a
@@ -290,11 +291,6 @@ Its standing orders are **its own workers' work**, at the priority a workshop's 
 Posted as open work at ordinary priority they were never done at all: a settlement with a hundred loads
 on the ground always has something more urgent than cutting a tree, so four standing orders sat
 unworked for a measured two years and no timber ever came in.
-
-**The Forester's Lodge is not on that list, because it makes nothing.** It works on the map instead:
-it plants saplings and marks surplus trees for felling, keeping about 110 trees standing inside a
-radius of 10. Its yield is the wood still standing in ten years, which is not a number a day — so its
-panel quotes no rate rather than a misleading zero.
 
 Two figures worth comparing, since they are the ones the first winter turns on: a Quarry is 10.3 stone
 a day from three workers, and a Woodcutter turns 4 logs into 16 firewood a day from two. Ten villagers
@@ -487,11 +483,12 @@ figure rather than a rate, because at 200 the settlement has a year of building 
 and the wood is better left standing. What it crops grows back; only the player's own marks clear
 ground for good.
 
-A **Forester's Lodge** does the rest. Below its target density it plants; at or
-above it it fells. Its felling is posted as ordinary work, so its timber flows
-through the same fell → logs → haul → yard pipeline as anything the player marks
-themselves. Crucially it **plants past the natural ceiling**: the wilderness
-returns only so much, and anything beyond that is something you did on purpose.
+Nothing plants deliberately any more. **A tree a workshop cuts is replaced by a
+sapling on the cell it stood on**, the same afternoon, and that sapling takes
+three years to be worth cutting again — so a hut that works a stand at a time
+never runs out, and one that clear-fells its whole radius waits three years for
+its own nursery. That sapling is not wild spread and the ceiling does not bind
+it: the same wood being worked is not the map getting greener.
 
 ### The region map must agree with the pathfinder — Implemented
 
@@ -1144,7 +1141,8 @@ balance suite used as its reference, which is the only reason a well-played sett
 the four stone a Woodcutter costs. The river re-cut every map and took the luck away, and what came
 out of the re-measurement is a _different_ mechanism sitting behind the first:
 
-**In a settlement with three huts, a Woodcutter and a Forester, every adult is employed** — and an
+**In a settlement with three huts, a Woodcutter and a Forester's Lodge — the building the game had at
+the time — every adult is employed** — and an
 employee's own workshop always has an `urgent` job waiting, so ordinary `normal`-priority work never
 comes up at all. Two hundred and twenty-three standing mining orders were measured sitting on the
 board, unclaimed by anybody, for forty days, while the player was told nothing was wrong.
@@ -1235,8 +1233,9 @@ live orders put real firewood on the shelves for the first time — 163 units ac
 10 — while costing lives elsewhere, which says the mechanism is right and the tuning is not.
 
 The last one is not a code change at all: it is the best opening anybody has found, played by a script
-that marks stone first, gets a larder up on day four, roofs everybody before the cold and adds a
-Forester's Lodge and a Quarry afterwards — and orders felling **only when the yard is short of logs**,
+that marks stone first, gets a larder up on day four, roofs everybody before the cold and adds industry
+afterwards (a Forester's Lodge in the measurement, before the wood learned to grow back on its own, and
+a Quarry) — and orders felling **only when the yard is short of logs**,
 so the mining is not buried. It works exactly as intended in every measurable way except the one that
 counts: the larder finishes on day 8 instead of day 28, timber waste falls from 205 leftover logs to
 50 — and it still reaches winter with an empty woodshed, because the Woodcutter needs 4 stone. On the
@@ -1736,30 +1735,37 @@ reference settlement for exactly that reason.
 Every felled tree used to be the same felled tree. That made the two things a
 player fells for indistinguishable — **clearing a site** and **cutting timber** —
 and it left them marking trees one at a time, every winter, to keep a Woodcutter
-fed. Three rules replace it:
+fed. Two rules replace it:
 
-| Who felled it                         | What the ground does           |
-| ------------------------------------- | ------------------------------ |
-| A workshop, under its own orders      | Stump; a tree again in 5 years |
-| The player, marking a tree            | Cleared for good               |
-| The player, inside a forester's range | Stump; a tree again in 5 years |
+| Who felled it                    | What the ground does                     |
+| -------------------------------- | ---------------------------------------- |
+| A workshop, under its own orders | A sapling, standing on the cell that day |
+| The player, marking a tree       | Cleared for good                         |
 
-**The Woodcutter now fells its own timber.** It keeps three orders standing
-within ten cells while the yard holds fewer than forty logs, and stops when it
-does not — a workshop with a full yard has no business emptying the wood, and
-that cap is what stops an automatic woodcutter stripping the map. Its felling is
-cropping, so what it takes comes back.
+**A tree comes back where you can see it — Implemented.** What was here before was a ledger of stumps:
+a felled cell owed a tree five years later, and the difference between a wood being cropped
+sustainably and a wood being emptied was two numbers only the save file knew. A sapling standing on the
+cell says the same thing on the map, at a glance, and it is why the Forester's Lodge is gone — its
+whole job was to make felled ground come back, and the ground does that itself now.
 
-**Ground the player clears stays cleared**, and refuses the wild spread as well as
-its own stump. Marking a tree is how you make room to build, and a sapling
-appearing where you meant to put a house is the game undoing your work. A
-**forester's lodge overrides all of it**: anything felled inside its range leaves a
-stump, and a lodge planting on ground somebody cleared reclaims it. That is the
-same asymmetry the rest of the forestry has — the wilderness gives back only so
-much, and anything more is something you did on purpose.
+**Three sizes, three years.** A sapling at nought, a young tree at eighteen months, a full tree at
+three years — and **only a full tree gives timber**. Cutting a young one is not a smaller harvest, it is
+no harvest, which is what makes "leave that stand another year" a decision rather than a rounding
+error. A Feller's Hut only ever marks grown wood; a hut whose whole radius is nursery posts nothing and
+waits.
 
-Both the stumps and the cleared cells are saved; neither can be recomputed,
-because a cleared cell and a cell that never had a tree look identical.
+**A growing tree is still in the way**, and can be **cleared**: gone for good, no timber, and about a
+third of the work of felling — an axe and a wedge against a spade. Clearing ground for a house should
+not cost what harvesting the timber to build it does.
+
+**Ground the player clears stays cleared**, and refuses both the wild spread and a sapling of its own.
+Marking a tree is how you make room to build, and a sapling appearing where you meant to put a house is
+the game undoing your work. A workshop cutting timber on ground somebody once cleared reclaims it,
+because the last thing done to a cell is what it remembers.
+
+The cleared cells are saved, and so is the day each tree took root: a cleared cell and a cell that
+never had a tree look identical, and a reload that turned a spent wood back into a working one would be
+a worse lie than forgetting either.
 
 ### What it did to the opening — measured
 

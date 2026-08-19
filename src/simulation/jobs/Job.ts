@@ -32,7 +32,6 @@ export type JobType =
   | 'produce'
   | 'pave-road'
   | 'dig-ditch'
-  | 'plant-tree'
   | 'demolish';
 
 /**
@@ -165,8 +164,6 @@ export const JOB_WORK_TICKS: Readonly<Record<JobType, number>> = {
   // afternoon is not a decision — it is a tap. Compare a road at 20: beating a
   // track flat is an errand, cutting a channel is an undertaking.
   'dig-ditch': 120,
-  // Setting a sapling. Quick work; the waiting is done by the tree.
-  'plant-tree': 15,
   // Pulling a building down and stacking what is worth keeping. Slower than
   // raising a wall is fast, but far quicker than building it — tearing down is
   // always easier than putting up.

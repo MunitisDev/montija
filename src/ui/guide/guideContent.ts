@@ -26,6 +26,7 @@ import {
 } from '@/data/buildings';
 import { LOGS_PER_TREE, RESOURCE_IDS, STONE_PER_DEPOSIT, type ResourceId } from '@/data/resources';
 import { SKILL_THRESHOLD_YEARS, SKILL_WORK_BONUS } from '@/data/skills';
+import { MATURE_YEARS } from '@/simulation/world/TreeGrowth';
 import {
   CARE_RECOVERY_SHARE,
   HERBS_PER_PATIENT_PER_DAY,
@@ -180,7 +181,7 @@ const HARDSHIPS = ['hunger', 'cold', 'illness', 'age'] as const;
  * bridge are all offered on the panel for the cell you tapped — so a player who
  * only reads the menu would never learn that any of them exists.
  */
-const LAND = ['river', 'road', 'ditch', 'bridge'] as const;
+const LAND = ['wood', 'river', 'road', 'ditch', 'bridge'] as const;
 
 /**
  * The four meters on a villager, and how they differ.
@@ -236,7 +237,12 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
       entries: LAND.map((feature) => ({
         term: t(`guide.land.${feature}` as MessageKey),
         detail: t(`guide.land.${feature}.detail` as MessageKey),
-        meta: null,
+        // The wood carries the one figure this section has: how long a felled
+        // tree takes to be worth felling again. Read from the data, like the rest.
+        meta:
+          feature === 'wood'
+            ? `${MATURE_YEARS} ${t('guide.bonus.years')} ${t('guide.land.toGrow')}`
+            : null,
         output: null,
         art: null,
       })),
@@ -398,16 +404,11 @@ function describeBuilding(definition: BuildingDefinition, t: Translate): string 
     parts.push(`${t('guide.houses')} ${definition.housing}`);
   }
 
-  // **The two buildings that produce timber without a recipe.** A Forester's
-  // Lodge and a Woodcutter both put logs on the ground by felling trees, which no
-  // yearly figure can reach: it depends on how much wood is standing near them.
-  // Saying so is the difference between a building whose purpose is legible and
-  // one a player has to guess at — and "what did the lodge actually do?" was
-  // asked, which is the proof it was not legible.
-  if (definition.forestry) {
-    parts.push(`${t('guide.tendsWithin')} ${definition.forestry.radius} ${t('guide.cells')}`);
-    parts.push(`${definition.forestry.targetTrees} ${t('guide.treesKept')}`);
-  }
+  // **The one building that produces timber without a recipe.** A Feller's Hut
+  // puts logs on the ground by cutting trees down, which no yearly figure can
+  // reach: it depends on how much grown wood is standing near it. Saying so is the
+  // difference between a building whose purpose is legible and one a player has to
+  // guess at.
   if (definition.felling) {
     parts.push(t('guide.fellsOwn'));
   }
@@ -601,11 +602,11 @@ function buildingLedger(t: Translate): GuideTable {
     rows: BUILDING_IDS.map((id) => {
       const definition = buildingDefinition(id);
       const { outputs, inputs } = annualProduction(id);
-      // A Feller's Hut and a Forester's Lodge produce timber without a recipe,
-      // by felling what stands near them. No yearly figure can reach that — it
-      // depends on the wood — so the cell says as much rather than reading as a
-      // building that produces nothing.
-      const timber = definition.felling || definition.forestry ? t('guide.figures.timber') : BLANK;
+      // A Feller's Hut produces timber without a recipe, by cutting down what
+      // stands near it. No yearly figure can reach that — it depends on the wood —
+      // so the cell says as much rather than reading as a building that produces
+      // nothing.
+      const timber = definition.felling ? t('guide.figures.timber') : BLANK;
       return {
         label: t(`building.${id}` as MessageKey),
         values: [

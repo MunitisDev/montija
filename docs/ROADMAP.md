@@ -1786,3 +1786,45 @@ and a bend never buys a longer road, only a tidier one of the same length.
 world, so it knows nothing about buildings, rock or water: the caller asks about pavability and gets a
 route over pavable ground. Sixteen tests hold the properties that matter — no diagonal steps, both ends
 included, fewest bends, deterministic, and refusal rather than a best effort.
+
+## PHASE 58 — The wood grows back where you can see it — Implemented
+
+Three things the player asked for, and they are one change: **the Forester's Lodge is gone, felled wood
+grows back on its own in three years, and it does it through three visible sizes.**
+
+What the lodge existed for was to make felled ground come back. The ground does that itself now: a tree
+a workshop cuts leaves a **sapling standing on the same cell that afternoon**, which becomes a young
+tree at eighteen months and a full tree at three years. Only a full tree gives timber — cutting a young
+one is not a smaller harvest, it is no harvest — so a stand of small trees is a wood you have already
+spent, and it says so on the map.
+
+What that replaced was invisible: a ledger of stumps, each owing a full-grown tree five years later,
+and the difference between a wood being cropped sustainably and a wood being emptied was two numbers
+only the save file knew.
+
+- **Three sizes, drawn at 0.40, 0.70 and 1.00** of a grown tree, with each tree's own scale on top so a
+  wood still does not look like stamped copies. The gaps are wide because a stand the player misreads
+  costs them three years.
+- **A growing tree can be cleared**: gone for good, no timber, and a third of the work of felling — an
+  axe and a wedge against a spade. Clearing ground for a house should not cost what harvesting the
+  timber to build it does. The tile panel says _Sapling_ and _Clear_ rather than _Tree_ and _Fell_,
+  because offering to fell a sapling promises timber that is not coming.
+- **A Feller's Hut only marks grown wood.** A hut that cut its own nursery would spend its people's day
+  making its own wood poorer; one whose radius is all young trees posts nothing and waits, which is the
+  pressure the whole cycle is for.
+- **Ground the player clears stays cleared**, unchanged. Only a workshop's felling replants.
+- **The sapling takes root under the logs that just fell**, which is the one planting allowed over a
+  heap: the timber from that very tree is on the cell by definition, and a wood that could only come
+  back where nobody had left anything would not come back at all.
+
+The lodge's removal took `forestry` out of the building definitions, the `plant-tree` job out of the
+board, the stump ledger out of `Woodland`, and about 150 lines of planting and surplus-felling out of
+`Simulation`. A save with a lodge still standing **loads**: a building the game no longer has is
+dropped rather than crashing the load, which is the difference between "that building is gone" and
+"your settlement is gone".
+
+One balance claim had to be rewritten. A one-hut settlement used to end its first year with exactly the
+ten it started with on all eight worlds, and the test said so; with the maker carrying her own harvest
+in and the wood coming back on its own, one world in eight now finds a single extra pair of hands. One
+birth across eight settlements is not a settlement growing, so the claim is now "at most one of them" —
+which is what standing still looks like when it is measured rather than assumed.

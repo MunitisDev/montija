@@ -280,29 +280,6 @@ const MASS: Readonly<Record<BuildingId, BuildingMass>> = {
     ground: 'worn',
   },
 
-  // A lodge out among the trees: log walls, no stone to spare, and a nursery row
-  // of young trees outside, which is the one thing that tells it from the
-  // Woodcutter — the forester plants, the woodcutter cuts.
-  forester: {
-    // **Not the Gatherer Hut in green.** Both were a log cabin under thatch with
-    // the gable facing left, and at gameplay zoom that is the same building —
-    // reported, and fair. This one is boarded rather than logged, shingled rather
-    // than thatched, its ridge runs the other way, and it keeps a green plot
-    // rather than bare earth, because a forester's ground is the one piece of the
-    // settlement that is *meant* to be growing.
-    wallHeight: 19,
-    roofHeight: 22,
-    eaves: 6,
-    plinth: 3,
-    form: 'gable',
-    build: 'boarded',
-    cover: 'shingle',
-    windows: 1,
-    feature: { kind: 'saplings', u: 0.84, v: 0.2 },
-    inset: PLOT_FILL,
-    ground: 'garden',
-  },
-
   // A quarry is a shed over a hole, and most of what the player should read is
   // *cut rock*: stone walls, a slate roof, dressed blocks lying on the ground.
   quarry: {
@@ -510,9 +487,6 @@ export const BUILDING_COLOURS: Readonly<Record<BuildingId, BuildingPalette>> = {
   // settlement raises, and the first one it needs.
   feller: { wall: 0x74603f, roof: 0x574734, trim: 0x3a2f22 },
   woodcutter: { wall: 0x86714f, roof: 0x4a3b2a, trim: 0x362c20 },
-  // Weathered boards gone green-grey under moss, on a mossy shingle roof: the
-  // only building in the settlement whose own colour is a growing thing.
-  forester: { wall: 0x8b8a64, roof: 0x4f5638, trim: 0x35361f },
   // Cut rock, pale and cold, under slate.
   quarry: { wall: 0x8e8a7e, roof: 0x4a473e, trim: 0x37352f },
   mine: { wall: 0x807a70, roof: 0x413e37, trim: 0x2f2c28 },

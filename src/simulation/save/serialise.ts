@@ -6,7 +6,8 @@
  * the round-trip test in `tests/save.test.ts` exists to catch exactly that.
  */
 
-import type { BuildingId } from '@/data/buildings';
+import { BUILDINGS, type BuildingId } from '@/data/buildings';
+import { MATURE_DAYS } from '@/simulation/world/TreeGrowth';
 import type { ResourceId } from '@/data/resources';
 import type { Simulation } from '@/simulation/Simulation';
 import type { Inventory } from '@/simulation/resources/Inventory';
@@ -39,6 +40,7 @@ export function serialise(simulation: Simulation, savedAt: string): SaveGame {
         gy: tree.gy,
         variant: tree.variant,
         scale: tree.scale,
+        planted: tree.planted,
       })),
       roads: world.roads.all(),
     },
@@ -139,7 +141,10 @@ export function restore(simulation: Simulation, save: SaveGame): void {
   // whose roads were drawn but not routed over until the next one was laid.
   world.roads.restore(save.world.roads ?? []);
   world.navigation.rebuild(world.terrain);
-  world.trees.restore(save.world.trees);
+  // Trees written before growth existed restore as full-grown; see `SavedTree`.
+  world.trees.restore(
+    save.world.trees.map((tree) => ({ ...tree, planted: tree.planted ?? -MATURE_DAYS })),
+  );
 
   world.piles.clear();
   for (const pile of save.piles) {
@@ -170,6 +175,15 @@ export function restore(simulation: Simulation, save: SaveGame): void {
 
   world.buildings.clear();
   for (const saved of save.buildings) {
+    // **A building the game no longer has is dropped, not loaded.** Buildings are
+    // removed from the game from time to time — the Forester's Lodge went when the
+    // woods learned to grow back on their own — and a settlement saved with one
+    // standing must still open. Restoring it would look up a definition that is
+    // not there and take the whole save down with it, which turns "that building
+    // is gone" into "your settlement is gone".
+    if (!(saved.buildingId in BUILDINGS)) {
+      continue;
+    }
     const building = new Building(saved.id, saved.buildingId, { gx: saved.gx, gy: saved.gy });
     building.buildTicksRemaining = saved.buildTicksRemaining;
     // Saves written before yards were linked to their buildings carry nothing;

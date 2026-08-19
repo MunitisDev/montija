@@ -150,7 +150,7 @@ export function estimateFlows(simulation: Simulation): Flows {
     const recipeId = building.definition.recipeId;
     const recipe = recipeId === undefined ? undefined : findRecipe(recipeId);
     if (!recipe) {
-      // A forester plants and fells, a healer treats people. Neither turns one
+      // A Feller's Hut cuts trees down, a healer treats people. Neither turns one
       // resource into another, so neither belongs in a table of goods.
       continue;
     }

@@ -114,8 +114,8 @@ const prepared: PlayerScript = (sim, day) => {
  *
  * Everything the game rewards, in the order it rewards it: stone marked before
  * anything else, a larder up on day four so the salvaged rations stop rotting,
- * shelter before the cold, and industry — a Forester's Lodge and a Quarry — once
- * the settlement is standing. Felling is ordered **only when the yard is short of
+ * shelter before the cold, and industry — a third hut and a Quarry — once the
+ * settlement is standing. Felling is ordered **only when the yard is short of
  * logs**, which is the one thing `prepared` gets wrong: standing orders for
  * twenty-five more trees every five days bury the mining, because felling and
  * mining tie on priority and the nearest job wins.
@@ -142,7 +142,6 @@ const disciplined: PlayerScript = (sim, day) => {
     if (day === built && countOf(sim, 'house') < 3) buildNearby(sim, 'house');
   }
   if (day === 16 && countOf(sim, 'gatherer-hut') < 3) buildNearby(sim, 'gatherer-hut');
-  if (day === 20 && !ordered(sim, 'forester')) buildNearby(sim, 'forester');
   // A wider search than the default: a Quarry must touch a rock face, and on
   // some seeds the nearest one is well outside the settlement.
   if (day === 26 && !ordered(sim, 'quarry')) buildNearby(sim, 'quarry', 60);
@@ -344,14 +343,21 @@ describe('the first winter', () => {
     // asserts the thing that is actually true and actually matters: one hut feeds
     // the ten people who arrived and buys nothing beyond that.
     //
-    // Measured over eight worlds: seven survive, every one of them with **exactly
-    // the ten they started with**, banking 70 food where three huts bank 230. A
-    // settlement on one hut is not dying — it is standing still, which is a
-    // different and better kind of failure for a game to have.
+    // Measured over eight worlds: seven survive, banking 78 food where three huts
+    // bank 230. A settlement on one hut is not dying — it is standing still, which
+    // is a different and better kind of failure for a game to have.
+    //
+    // **Almost exactly the ten they started with.** It used to be all eight worlds
+    // ending on ten and the test asserted that; when a workshop's own people
+    // started carrying their harvest in and the wood began growing back on its
+    // own, one world in eight found a single extra pair of hands. One birth across
+    // eight settlements is not a settlement growing, so the claim is now "at most
+    // one of them", which is what standing still looks like when it is measured
+    // rather than assumed.
     const runs = acrossSeeds(oneHut);
 
     const grew = runs.filter((run) => run.survivors > STARTING_VILLAGERS).length;
-    expect(grew).toBe(0);
+    expect(grew).toBeLessThanOrEqual(1);
     // And a fraction of what a properly fed settlement banks.
     const banked = total(runs, (run) => run.atWinter.food) / runs.length;
     expect(banked).toBeLessThan(150);

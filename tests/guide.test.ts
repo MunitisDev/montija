@@ -187,19 +187,6 @@ describe('what the guide says about a building', () => {
     expect(entryFor('buildings', EN['building.storage-yard']).output).toBeNull();
   });
 
-  it("describes a Forester's Lodge by what it tends, since it makes nothing", () => {
-    // The question that prompted this: "what did the lodge actually do?" It has
-    // posts and no recipe, so no yearly figure can be quoted — what it produces is
-    // logs on the ground and a wood that does not run out, and the facts that make
-    // that legible are its reach and the count it holds the trees at.
-    const lodge = entryFor('buildings', EN['building.forester']);
-    const forestry = buildingDefinition('forester').forestry!;
-
-    expect(lodge.output).toBeNull();
-    expect(lodge.meta).toContain(String(forestry.radius));
-    expect(lodge.meta).toContain(String(forestry.targetTrees));
-  });
-
   it("says a Feller's Hut is what fells the wood, and a Woodcutter is not", () => {
     // The other half of the same question, and the one a player got wrong in a
     // real game: they had a Woodcutter standing, no timber, and no way to learn

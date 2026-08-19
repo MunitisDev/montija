@@ -10,10 +10,11 @@
  * The design this project takes is the one deep settlement sims settled on
  * decades ago, and it is an **asymmetry**:
  *
- * - **Timber is renewable, and rewards management.** Woods spread on their own
- *   into open ground, slowly. A settlement that fells everything within reach
- *   waits years for it back; one that leaves stands standing, or runs a
- *   forester, has wood forever.
+ * - **Timber is renewable, and rewards management.** A tree a workshop cuts is
+ *   replaced by a sapling on the same cell, which takes three years to be worth
+ *   cutting again — see `TreeGrowth.ts` — and woods also spread on their own into
+ *   open ground, slowly. A settlement that fells everything within reach waits
+ *   years for it back; one that cuts a stand at a time never runs out.
  * - **Minerals are not.** Surface deposits are consumed for good, and the only
  *   permanent supply is a quarry or a mine — which costs a large piece of land
  *   you never get back.
@@ -96,14 +97,14 @@ export const BUILDING_CLEARANCE = 2;
  * rather than merely slowing down. Measured: a neglected map reaches the
  * ceiling in about four years and then holds there indefinitely.
  *
- * The ceiling binds *natural* spread only. A forester's lodge plants past it,
- * which is the whole asymmetry in one line: the wilderness will only give you
- * so much back, and anything more is something you did on purpose.
+ * The ceiling binds the *wild* spread only. The sapling that follows a workshop's
+ * felling is not spread — it is the same wood being worked — so a settlement
+ * cropping its own stands is never held back by how green the rest of the map is.
  */
 export const WOODLAND_CAP_FRACTION = 0.3;
 
 /** Trees the renderer can draw. Kept in step with the generator's own count. */
-const TREE_VARIANTS = 6;
+export const TREE_VARIANTS = 6;
 
 export interface ForestReport {
   /** Saplings that took root today. */

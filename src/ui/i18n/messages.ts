@@ -40,11 +40,14 @@ export const EN = {
   'terrain.ditch': 'Ditch',
   'terrain.stone': 'Rock',
   'terrain.tree': 'Tree',
+  'terrain.youngTree': 'Young tree',
+  'terrain.sapling': 'Sapling',
   'terrain.stoneDeposit': 'Stone deposit',
   'terrain.impassable': 'impassable',
   'terrain.cannotBuild': 'cannot build',
 
   'action.fell': 'Fell',
+  'action.clear': 'Clear',
   'action.mine': 'Mine',
   'action.pave': 'Lay road',
   'action.confirm': 'Confirm',
@@ -62,6 +65,7 @@ export const EN = {
   'action.load': 'Load',
 
   'status.markedForFelling': 'marked for felling',
+  'status.markedToClear': 'marked to be cleared',
   'status.markedForMining': 'marked for mining',
   'status.road': 'road',
   'status.roadOrdered': 'road ordered',
@@ -122,9 +126,6 @@ export const EN = {
   'building.woodcutter': 'Woodcutter',
   'building.woodcutter.description':
     'Splits logs into firewood. It fells nothing itself — the logs come from a Feller’s Hut, or from trees you mark by hand.',
-  'building.forester': "Forester's Lodge",
-  'building.forester.description':
-    'Keeps a working wood around it: plants where the trees are thin, marks the surplus for felling where they are thick. It makes no goods of its own — what it produces is logs on the ground and a wood that never runs out.',
   'building.quarry': 'Quarry',
   'building.quarry.description': 'Cuts stone from a rock face for as long as it stands.',
   'building.mine': 'Mine',
@@ -415,6 +416,10 @@ export const EN = {
   'guide.land': 'The land itself',
   'guide.land.body':
     'Three things are done to the ground rather than built on it. Tap a cell and the panel offers whichever of them that cell will take.',
+  'guide.land.wood': 'The wood',
+  'guide.land.wood.detail':
+    'A tree cut by a Feller’s Hut leaves a sapling standing on the same cell, and it grows through three sizes: a sapling, a young tree at eighteen months, and a full tree at three years. Only a full tree gives timber — cut a young one and you get nothing — so a stand of small trees is a wood you have already spent. A tree you mark yourself is gone for good, because ground you cleared should stay cleared, and a young tree in the way can be cleared quickly to build or pave over it.',
+  'guide.land.toGrow': 'from sapling to timber',
   'guide.land.river': 'The river',
   'guide.land.river.detail':
     'Every map has one, and it cuts the map in two. Nothing can be built on the far bank until you bridge it.',
@@ -456,9 +461,7 @@ export const EN = {
   'guide.free': 'costs nothing',
   'guide.aYear': 'a year',
   'guide.using': 'using',
-  'guide.tendsWithin': 'tends the wood within',
   'guide.cells': 'cells',
-  'guide.treesKept': 'trees kept standing',
   'guide.fellsOwn': 'fells the wood around it while the stores are low',
   'guide.perVillagerYear': 'eaten a year, per villager',
   'guide.perHousedYear': 'burned a year, per villager under a roof',
@@ -607,11 +610,14 @@ export const ES: Messages = {
   'terrain.ditch': 'Acequia',
   'terrain.stone': 'Roca',
   'terrain.tree': 'Árbol',
+  'terrain.youngTree': 'Árbol joven',
+  'terrain.sapling': 'Brote',
   'terrain.stoneDeposit': 'Yacimiento de piedra',
   'terrain.impassable': 'intransitable',
   'terrain.cannotBuild': 'no se puede construir',
 
   'action.fell': 'Talar',
+  'action.clear': 'Limpiar',
   'action.mine': 'Picar',
   'action.pave': 'Trazar camino',
   'action.confirm': 'Confirmar',
@@ -629,6 +635,7 @@ export const ES: Messages = {
   'action.load': 'Cargar',
 
   'status.markedForFelling': 'marcado para talar',
+  'status.markedToClear': 'marcado para limpiar',
   'status.markedForMining': 'marcado para picar',
   'status.road': 'camino',
   'status.roadOrdered': 'camino encargado',
@@ -683,9 +690,6 @@ export const ES: Messages = {
   'building.woodcutter': 'Leñador',
   'building.woodcutter.description':
     'Parte troncos en leña. No tala nada por su cuenta: los troncos vienen de una Cabaña del talador, o de árboles que marques a mano.',
-  'building.forester': 'Casa del guarda',
-  'building.forester.description':
-    'Mantiene un bosque de trabajo a su alrededor: planta donde los árboles escasean y marca para talar donde sobran. No fabrica nada propio: lo que produce son troncos en el suelo y un bosque que no se agota.',
   'building.quarry': 'Cantera',
   'building.quarry.description': 'Saca piedra de una pared de roca mientras siga en pie.',
   'building.mine': 'Mina',
@@ -960,6 +964,10 @@ export const ES: Messages = {
   'guide.land': 'La tierra',
   'guide.land.body':
     'Tres cosas se hacen sobre el suelo en lugar de construirse encima. Toca una casilla y el panel te ofrece la que admita.',
+  'guide.land.wood': 'El bosque',
+  'guide.land.wood.detail':
+    'Un árbol talado por una Cabaña del talador deja un brote en la misma casilla, y crece en tres tamaños: brote, árbol joven al año y medio y árbol hecho a los tres años. Solo el árbol hecho da madera —talar uno joven no da nada—, así que una mancha de árboles pequeños es un bosque que ya has gastado. El árbol que marcas tú no vuelve, porque el terreno que despejas debe quedar despejado, y un árbol joven que estorbe se puede limpiar rápido para construir o trazar camino encima.',
+  'guide.land.toGrow': 'de brote a madera',
   'guide.land.river': 'El río',
   'guide.land.river.detail':
     'Todos los mapas tienen uno, y parte el mapa en dos. No se puede construir en la otra orilla hasta cruzarlo con un puente.',
@@ -1001,9 +1009,7 @@ export const ES: Messages = {
   'guide.free': 'no cuesta nada',
   'guide.aYear': 'al año',
   'guide.using': 'consumiendo',
-  'guide.tendsWithin': 'cuida el bosque en',
   'guide.cells': 'casillas',
-  'guide.treesKept': 'árboles en pie',
   'guide.fellsOwn': 'tala el bosque a su alrededor mientras falten en los almacenes',
   'guide.perVillagerYear': 'al año, por aldeano',
   'guide.perHousedYear': 'al año, por aldeano con techo',

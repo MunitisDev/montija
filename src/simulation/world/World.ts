@@ -286,7 +286,46 @@ export class World {
       this.navigation.refreshCell(this.terrain, cell.gx, cell.gy);
     }
 
-    this.dropNear(cell, 'logs', LOGS_PER_TREE);
+    // **Timber only from a grown tree.** Clearing a sapling is not a smaller
+    // harvest, it is no harvest — which is what makes leaving a stand another
+    // year a decision rather than a rounding error. See `TreeGrowth.ts`.
+    if (this.trees.isMature(tree)) {
+      this.dropNear(cell, 'logs', LOGS_PER_TREE);
+    }
+    return true;
+  }
+
+  /**
+   * Sets the sapling that follows a workshop's own felling.
+   *
+   * The one planting that goes ahead **over the logs that have just fallen on the
+   * cell**. Every other kind of planting refuses a cell with a heap on it, and
+   * rightly: the wild spread should not grow over the settlement's goods. But the
+   * timber from this very tree is lying here by definition, and a wood that could
+   * only come back where nobody had left anything would not come back at all.
+   *
+   * Everything else still applies — no second tree, no road, no building, and
+   * ground the ground itself refuses.
+   */
+  public regrowTree(cell: GridPoint, variant: number, scale: number): boolean {
+    if (!this.terrain.contains(cell.gx, cell.gy)) {
+      return false;
+    }
+    const type = this.terrain.getAt(cell);
+    if (type !== 'grass' && type !== 'meadow' && type !== 'forest') {
+      return false;
+    }
+    if (this.trees.has(cell) || this.roads.hasAt(cell) || this.buildings.getAt(cell) !== null) {
+      return false;
+    }
+
+    if (!this.trees.plant(cell.gx, cell.gy, variant, scale)) {
+      return false;
+    }
+    if (this.terrain.getAt(cell) !== 'forest') {
+      this.terrain.set(cell.gx, cell.gy, 'forest');
+      this.navigation.refreshCell(this.terrain, cell.gx, cell.gy);
+    }
     return true;
   }
 

@@ -76,40 +76,31 @@ import {
 import { VillagerSystem } from './villagers/VillagerSystem';
 import { CARRY_CAPACITY, type WorkPreference } from './villagers/Villager';
 import { World } from './world/World';
-import { NO_FOREST_CHANGE, runForestRegrowth, type ForestReport } from './world/ForestSystem';
+import {
+  NO_FOREST_CHANGE,
+  runForestRegrowth,
+  TREE_VARIANTS,
+  type ForestReport,
+} from './world/ForestSystem';
 import { Woodland } from './world/Woodland';
 import type { TreeInstance } from './world/WorldGenerator';
 
 /**
- * Ticks between forestry passes.
+ * Ticks between felling passes.
  *
- * Counting the trees in a lodge's range is the one genuinely superlinear thing
- * in this file, and no forestry decision changes meaningfully inside two and a
- * half seconds of play.
+ * Counting the trees around a hut is the one genuinely superlinear thing in this
+ * file, and no felling decision changes meaningfully inside two and a half
+ * seconds of play.
  */
-const FORESTRY_INTERVAL_TICKS = 25;
-
-/** Felling jobs a single lodge may post in one pass. */
-const FELLING_PER_PASS = 3;
+const FELLING_INTERVAL_TICKS = 25;
 
 /**
- * Unworked felling orders a lodge is allowed to have standing at once.
+ * Ticks of work to pull up a tree that has not grown yet.
  *
- * **This is the fix to a bug a player found by looking at the screen.** The
- * per-pass cap below limits the *rate* a lodge posts work at and says nothing
- * about the backlog, so a lodge in a dense wood — where the standing count is
- * three hundred against a target of a hundred and ten — added three more orders
- * every two and a half seconds for as long as it stood. Villagers fell far
- * slower than that, so the marks piled up without bound and the map filled with
- * felling crosses nobody had asked for. From the outside it looked exactly like
- * the trees were being cut down on their own.
- *
- * A standing order instead: top up to a handful, and post nothing more until
- * somebody has worked them. The lodge still clears its surplus at exactly the
- * rate the settlement can actually cut, which is the only rate that was ever
- * real.
+ * A third of felling a grown one. An axe and a wedge against a spade: clearing
+ * ground for a house should not cost what harvesting the timber to build it does.
  */
-const OUTSTANDING_FELLING_PER_LODGE = 4;
+const CLEARING_WORK_TICKS = 8;
 
 /** Ticks between employment passes. Nobody changes job inside two seconds. */
 const EMPLOYMENT_INTERVAL_TICKS = 25;
@@ -440,9 +431,6 @@ export class Simulation {
     this.villagers.isCutOff = (cell) => this.isCutOff(cell);
     this.villagers.onDemolished = (buildingId) => this.completeDemolition(buildingId);
     this.villagers.onTreeFelled = (cell, playerOrdered) => this.recordFelling(cell, playerOrdered);
-    // A lodge planting on ground the player cleared reclaims it: the last thing
-    // done to a cell is what it remembers.
-    this.villagers.onTreePlanted = (cell) => this.woodland.planted(cell);
     // Counted when the wall goes up rather than counted off the map later: a
     // building that was raised and then pulled down was still raised.
     this.world.buildings.onCompleted = () => {
@@ -473,7 +461,7 @@ export class Simulation {
     this.reconcileEmployment();
     this.createConstructionJobs();
     this.createProductionJobs();
-    this.createForestryJobs();
+    this.createFellingJobs();
     this.createHaulJobs();
     this.escalateStaleHauls();
     this.villagers.update(tickSeconds);
@@ -501,6 +489,11 @@ export class Simulation {
       // The player is clearing ground, not cropping a coppice. What that costs
       // the woodland is decided when the axe actually falls — see `onFelled`.
       playerOrdered: true,
+      // **Pulling up a sapling is not felling.** A grown tree is an axe and a
+      // wedge and half an afternoon; a young one is a spade. Charging the same
+      // for both would make clearing ground for a house cost the same as
+      // harvesting the timber to build it, which is the wrong way round.
+      ...(this.world.trees.isMature(tree) ? {} : { workTicks: CLEARING_WORK_TICKS }),
     });
 
     return job !== null;
@@ -927,7 +920,7 @@ export class Simulation {
    * `true` when something in the settlement is cutting trees down.
    *
    * A building with a `felling` order of its own — the Feller's Hut — or a Lodge
-   * thinning its wood, or the player's own standing marks. Any of the three is
+   * thinning its wood, or the player's own standing marks. Either is
    * timber on its way; none of them is a settlement that will never see another
    * log however long it waits.
    */
@@ -936,7 +929,7 @@ export class Simulation {
       if (!building.isComplete) {
         continue;
       }
-      if (building.definition.felling || building.definition.forestry) {
+      if (building.definition.felling) {
         return true;
       }
     }
@@ -1089,10 +1082,10 @@ export class Simulation {
     // or cold today is what decides whether they fall ill today.
     this.lastIllness = this.runSickness();
 
-    // Stumps first: a tree the settlement cropped five years ago is owed, and
-    // owing it before the wild spread runs means the returning wood counts
-    // towards the ceiling rather than competing with it.
-    this.runRegrowth();
+    // The trees are a day older, which for two of them a year is the day they
+    // change size. Before the wild spread, so a tree that came of age this
+    // morning counts as grown wood today.
+    this.world.trees.setDay(Math.floor(this.currentTick / TICKS_PER_DAY));
 
     // The woods creep back. Slowly, and never over the settlement itself.
     this.lastForest = runForestRegrowth(this.world, this.forestRandom, (cell) =>
@@ -1335,30 +1328,19 @@ export class Simulation {
   }
 
   /**
-   * Keeps production buildings supplied and working.
+   * Keeps a felling order or two standing for every workshop that cuts its own.
    *
-   * A workshop that needs logs gets them hauled in from storage first; only
-   * then is a production job posted. Nothing is produced from an empty store.
+   * Posted as ordinary `chop-tree` work rather than as something special, so a
+   * hut's timber flows through exactly the same fell → logs on the ground →
+   * haul → yard pipeline the player's own designations do. Nothing about the
+   * economy has to know a Feller's Hut exists.
+   *
+   * Run on a cadence rather than every tick: counting the trees in a radius is
+   * the one genuinely superlinear thing in this file, and no felling decision
+   * changes meaningfully inside two and a half seconds.
    */
-  /**
-   * Keeps every forester's lodge managing the wood around it.
-   *
-   * The rule is one line long and does the whole job: **below its target the
-   * lodge plants, at or above it the lodge fells.** No hysteresis and no state —
-   * the count of trees in range is the state, and it moves slowly enough that
-   * the two behaviours cannot chatter.
-   *
-   * Felling is posted as ordinary `chop-tree` work rather than as something
-   * special, so a forester's timber flows through exactly the same
-   * fell → logs on the ground → haul → yard pipeline the player's own
-   * designations do. Nothing about the economy has to know a lodge exists.
-   *
-   * Run on a cadence rather than every tick: counting trees in a radius is the
-   * one genuinely superlinear thing in this file, and forestry decisions do not
-   * change meaningfully inside two and a half seconds.
-   */
-  private createForestryJobs(): void {
-    if (this.currentTick % FORESTRY_INTERVAL_TICKS !== 0) {
+  private createFellingJobs(): void {
+    if (this.currentTick % FELLING_INTERVAL_TICKS !== 0) {
       return;
     }
 
@@ -1381,38 +1363,6 @@ export class Simulation {
       if (felling && this.logsInHand() < felling.logTarget) {
         this.cropTimber(building, felling.radius, felling.outstanding);
       }
-
-      const forestry = building.definition.forestry;
-      if (!forestry) {
-        continue;
-      }
-
-      const standing = this.treesWithin(building.accessCell, forestry.radius);
-      if (standing.length >= forestry.targetTrees) {
-        this.fellSurplus(standing, standing.length - forestry.targetTrees);
-        continue;
-      }
-
-      const slot = this.jobs.firstFreeSlot('plant-tree', building.id, building.workers.length);
-      if (slot === null) {
-        continue;
-      }
-
-      const cell = this.findPlantingCell(building.accessCell, forestry.radius);
-      if (!cell) {
-        continue;
-      }
-
-      this.jobs.create({
-        type: 'plant-tree',
-        target: cell,
-        // Above ordinary felling, below food and hauling. Planting is the work
-        // that keeps the settlement alive in ten years' time, and it must never
-        // be the reason it starves this winter.
-        priority: JobPriority.normal,
-        targetEntityId: building.id,
-        reservationSlot: slot,
-      });
     }
   }
 
@@ -1434,7 +1384,14 @@ export class Simulation {
    */
   private cropTimber(workshop: Building, radius: number, outstanding: number): void {
     const centre = workshop.accessCell;
-    const standing = this.treesWithin(centre, radius);
+    // **Grown wood only.** A sapling cut down is not a small harvest, it is no
+    // harvest — see `TreeGrowth.ts` — so a hut that marked its own nursery would
+    // be spending its people's day to make its own wood poorer. A hut whose
+    // ground is all young trees posts nothing and waits, which is the pressure
+    // the whole cycle is for.
+    const standing = this.treesWithin(centre, radius).filter((tree) =>
+      this.world.trees.isMature(tree),
+    );
 
     let live = 0;
     const free: TreeInstance[] = [];
@@ -1498,100 +1455,6 @@ export class Simulation {
       }
     }
     return found;
-  }
-
-  /**
-   * Posts felling work for a lodge that has more wood than it wants.
-   *
-   * Capped two ways, and the second one matters more than the first. The
-   * per-pass cap stops a lodge dumping forty jobs on the board at once; the
-   * standing-order cap stops it quietly adding three more every pass for ever.
-   * Without the second, a lodge in a dense wood marked trees far faster than
-   * anybody could cut them and buried the map in crosses — see
-   * {@link OUTSTANDING_FELLING_PER_LODGE}.
-   */
-  private fellSurplus(standing: readonly TreeInstance[], surplus: number): void {
-    // What this lodge already has out. Counted from the trees rather than from
-    // the job board, because a job does not record which lodge posted it — and
-    // trees in range with a live order against them is the same question.
-    let outstanding = 0;
-    for (const tree of standing) {
-      if (this.jobs.isTargetReserved('chop-tree', tree.id)) {
-        outstanding += 1;
-      }
-    }
-    if (outstanding >= OUTSTANDING_FELLING_PER_LODGE) {
-      return;
-    }
-
-    const room = Math.min(surplus, FELLING_PER_PASS, OUTSTANDING_FELLING_PER_LODGE - outstanding);
-
-    let posted = 0;
-    for (const tree of standing) {
-      if (posted >= room) {
-        return;
-      }
-      if (this.jobs.isTargetReserved('chop-tree', tree.id)) {
-        continue;
-      }
-      const job = this.jobs.create({
-        type: 'chop-tree',
-        target: { gx: tree.gx, gy: tree.gy },
-        priority: JobPriority.normal,
-        targetEntityId: tree.id,
-      });
-      if (job) {
-        posted += 1;
-      }
-    }
-  }
-
-  /**
-   * Somewhere inside a lodge's range for the next sapling.
-   *
-   * Spirals outward from the lodge so a new coppice fills in around it rather
-   * than appearing at the far edge of the range first — which reads as a wood
-   * growing, and also keeps the walk short while the lodge is young.
-   */
-  private findPlantingCell(centre: GridPoint, radius: number): GridPoint | null {
-    for (let ring = 1; ring <= radius; ring += 1) {
-      for (let dy = -ring; dy <= ring; dy += 1) {
-        for (let dx = -ring; dx <= ring; dx += 1) {
-          if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) {
-            continue;
-          }
-          const cell = { gx: centre.gx + dx, gy: centre.gy + dy };
-          if (!this.world.canGrowTree(cell)) {
-            continue;
-          }
-          // A cell somebody is already walking to plant is not a free cell.
-          const cellId = cell.gy * this.world.width + cell.gx;
-          if (this.jobs.isTargetReserved('plant-tree', cellId)) {
-            continue;
-          }
-          if (this.plantingPending(cell)) {
-            continue;
-          }
-          return cell;
-        }
-      }
-    }
-    return null;
-  }
-
-  /** `true` when a sapling is already on its way to this cell. */
-  private plantingPending(cell: GridPoint): boolean {
-    for (const job of this.jobs.all) {
-      if (
-        job.type === 'plant-tree' &&
-        job.target.gx === cell.gx &&
-        job.target.gy === cell.gy &&
-        !isFinished(job)
-      ) {
-        return true;
-      }
-    }
-    return false;
   }
 
   /**
@@ -1741,10 +1604,7 @@ export class Simulation {
     for (const job of this.jobs.all) {
       const aimedHere =
         job.targetEntityId === building.id &&
-        (job.type === 'produce' ||
-          job.type === 'build' ||
-          job.type === 'plant-tree' ||
-          job.type === 'demolish');
+        (job.type === 'produce' || job.type === 'build' || job.type === 'demolish');
       const deliveringHere =
         job.deliverTo !== null &&
         job.deliverTo.gx === building.accessCell.gx &&
@@ -1789,67 +1649,47 @@ export class Simulation {
     this.world.buildings.demolish(this.world, building.id);
   }
 
-  /** Pulls a finished building down and leaves salvage on the plot. */
   /**
    * Decides what the ground does after a tree comes off it.
    *
-   * The whole rule, in one place:
+   * The whole rule, in two lines:
    *
    * ```text
-   * a workshop's own felling        ──▶ stump, back in five years
-   * the player's felling            ──▶ cleared for good
-   *   …with a forester within reach ──▶ stump, back in five years
+   * a workshop's own felling ──▶ a sapling, standing the same afternoon
+   * the player's felling     ──▶ cleared for good
    * ```
    *
-   * The player marks trees to make room; ground they cleared should stay
-   * cleared, or a sapling turns up where they meant to put a house. A lodge
-   * changes that for everything in its range, which is what a lodge is for.
+   * **The sapling is real, and it is why the lodge is gone.** What was here
+   * before was a ledger of stumps: a felled cell was remembered and five years
+   * later a full-grown tree appeared out of nothing. It worked, and the player
+   * could not see any of it — a wood being cropped sustainably and a wood being
+   * emptied looked identical. A workshop's felling now leaves a young tree on the
+   * cell it cut, and that tree spends three years growing through three visible
+   * sizes. Management is a thing on the map: a stand of saplings is a wood you
+   * have already spent, and it says so.
+   *
+   * The player's own felling still clears for good. They mark trees to make room,
+   * and ground they cleared has to stay cleared or a sapling turns up where they
+   * meant to put a house.
    */
   private recordFelling(cell: GridPoint, playerOrdered: boolean): void {
-    const today = Math.floor(this.currentTick / TICKS_PER_DAY);
-    if (!playerOrdered || this.foresterWatches(cell)) {
-      this.woodland.stump(cell, today);
+    if (playerOrdered) {
+      this.woodland.clear(cell);
       return;
     }
-    this.woodland.clear(cell);
-  }
 
-  /** `true` when a finished forester's lodge has this cell inside its range. */
-  private foresterWatches(cell: GridPoint): boolean {
-    for (const building of this.world.buildings.all) {
-      const forestry = building.definition.forestry;
-      if (!forestry || !building.isComplete) {
-        continue;
-      }
-      const centre = building.accessCell;
-      if (
-        Math.abs(centre.gx - cell.gx) <= forestry.radius &&
-        Math.abs(centre.gy - cell.gy) <= forestry.radius
-      ) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Grows back everything whose five years are up.
-   *
-   * Run once a day with the rest of the slow world. A stump on ground that has
-   * since been built on, roaded or cleared for good simply misses its turn and
-   * is forgotten — the settlement moved on, and the tree does not get to argue.
-   */
-  private runRegrowth(): void {
-    const today = Math.floor(this.currentTick / TICKS_PER_DAY);
-    for (const stump of this.woodland.due(today)) {
-      const cell = { gx: stump.gx, gy: stump.gy };
-      if (this.woodland.isBarren(cell)) {
-        continue;
-      }
-      // From the forest's own stream, like the wild spread: a tree coming back
-      // is the woodland's business, not a villager's.
-      this.world.plantTree(cell, this.forestRandom.int(0, 6), this.forestRandom.float(0.6, 0.9));
-    }
+    // Ground the player cleared before now stops being barren: the last thing
+    // done to a cell is what it remembers, and a workshop cutting here means
+    // this is woodland being worked again.
+    this.woodland.reclaim(cell);
+    // From the forest's own stream, like the wild spread: a tree coming back is
+    // the woodland's business rather than any villager's. Shape and size only —
+    // the sapling's age is today by definition.
+    this.world.regrowTree(
+      cell,
+      this.forestRandom.int(0, TREE_VARIANTS),
+      this.forestRandom.float(0.6, 0.9),
+    );
   }
 
   private completeDemolition(buildingId: number): void {

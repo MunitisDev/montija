@@ -77,7 +77,6 @@ describe('a building that produces nothing', () => {
     // The Forester's Lodge plants and marks trees rather than making a good, so
     // it has no rate to quote — its output is the wood still standing in ten
     // years, which is not a number a day.
-    expect(productionSummary('forester').outputs).toEqual([]);
   });
 });
 
@@ -148,7 +147,6 @@ describe('a whole year of a building', () => {
     // A Forester's Lodge has posts and no recipe: what it produces is logs on the
     // ground, by felling, at a rate that depends on how much wood is standing near
     // it. No yearly figure can honestly be quoted, so none is.
-    expect(annualProduction('forester').outputs).toEqual([]);
   });
 
   it('agrees with the daily peak about which buildings produce', () => {

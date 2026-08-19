@@ -28,6 +28,7 @@ import { SimulationClock, type SimulationSpeed } from '@/simulation/SimulationCl
 import type { InputIntentSink } from '@/input/types';
 import { gridToScene, isInsideGrid, sceneToGrid } from '@/shared/math/isometric';
 import { cellLine, cellRoute } from '@/shared/math/gridLine';
+import type { TreeStage } from '@/simulation/world/TreeGrowth';
 import type { GridPoint, ScreenPoint } from '@/shared/types/geometry';
 import type { TerrainType } from '@/data/terrain';
 import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
@@ -85,6 +86,14 @@ export interface Selection {
   readonly villager: VillagerSelection | null;
   /** Set when a tree stands on the tapped cell. */
   readonly treeId: number | null;
+  /**
+   * How grown that tree is, or `null` when there is no tree.
+   *
+   * The panel needs it to know which verb to offer: a grown tree is **felled**
+   * for its timber and a young one is **cleared**, which gives none. Saying
+   * "fell" over a sapling would promise logs that are not coming.
+   */
+  readonly treeStage: TreeStage | null;
   /** `true` when the tapped cell is a stone deposit. */
   readonly isStoneDeposit: boolean;
   /** `true` when the tree or deposit is already marked for work. */
@@ -858,6 +867,7 @@ export class Game implements GameContext, InputIntentSink {
       buildable: world.isBuildable(cell),
       villager,
       treeId: tree?.id ?? null,
+      treeStage: tree ? world.trees.stage(tree) : null,
       isStoneDeposit,
       designated: tree
         ? this.simulation.isTreeDesignated(cell)

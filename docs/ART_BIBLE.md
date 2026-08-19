@@ -407,9 +407,8 @@ The pieces that earn their place at forty pixels tall, and nothing else does:
 Mass and colour get a building most of the way to recognisable and then stop. The feature is the part
 that says _which trade_, and it is drawn on the ground rather than on the walls so it survives the
 building being small: split logs and a chopping block with the axe still in it, a forge mouth with
-fire in it, a hide stretched in its frame, cloth on a line, a nursery row of saplings, a timbered
-mine mouth, sacks on staddle stones, a bell in its frame, and a whole trunk up on trestles with the
-saw still in it.
+fire in it, a hide stretched in its frame, cloth on a line, a timbered mine mouth, sacks on staddle
+stones, a bell in its frame, and a whole trunk up on trestles with the saw still in it.
 
 That last one is the Feller's Hut, and it is worth a note on how features earn their keep: a Feller
 and a Woodcutter are both a timber box under a pitched roof, so the _only_ thing telling them apart is
@@ -617,7 +616,7 @@ small object on the plot says which trade it is without a label.
 
 | Prop     | Where                           | What it reads as                 |
 | -------- | ------------------------------- | -------------------------------- |
-| Log pile | Woodcutter, Forester's Lodge    | Split rounds, pale on dark       |
+| Log pile | Woodcutter                      | Split rounds, pale on dark       |
 | Forge    | Blacksmith                      | The only warm colour on the map  |
 | Racks    | Herbalist's Hut, Hunter's Cabin | Bundles hung to dry              |
 | Cart     | Trading Post                    | The one object meaning "leaving" |
@@ -746,3 +745,26 @@ The stand-in is not a Phaser type and never will be: the art's parameter is stru
 `Graphics`, which has a hundred methods this has not, so callers pass it through `as never`. That is
 the honest admission — it stands in for the handful of calls the art actually makes, and the check that
 it still does is the art coming out right rather than the compiler.
+
+## Trees, in three sizes — Implemented
+
+The wood grows back where the player can see it, so a tree has to say how old it is from across the
+valley. Three stages, and the same silhouette at three scales against a grown tree's own size:
+
+| Stage   | Age             | Drawn at |
+| ------- | --------------- | -------- |
+| Sapling | felled today    | 0.40     |
+| Young   | eighteen months | 0.70     |
+| Mature  | three years     | 1.00     |
+
+**Scale rather than three drawings**, because the thing being read is size — "is that stand worth an
+axe yet?" — and a different silhouette would answer a different question. Each tree keeps its own
+`scale` on top of the stage's, which is the variety that stops a wood looking like stamped copies, so
+two saplings are still two different saplings.
+
+The gaps are wide on purpose. At 0.6 a sapling reads as a slightly smaller tree, which is worse than
+useless: the player has to be able to tell a spent wood from a working one at a glance, and a stand
+they misread costs them three years. The renderer is told a tree grew by the tree registry's version
+counter, which is bumped only on the days when one actually crossed a threshold — a tree crosses twice
+in its life, so growth costs two comparisons per tree per day and no sprite work at all on the
+thousands of days when nothing changed.

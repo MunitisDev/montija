@@ -56,15 +56,6 @@ import type { SeasonalProfile } from '@/simulation/seasons/SeasonClock';
 import type { World } from '@/simulation/world/World';
 import { Villager, type Sex } from './Villager';
 
-/**
- * How many tree shapes exist to choose from.
- *
- * Duplicated from the generator rather than imported, because it is a
- * presentation index the simulation merely stores — and the renderer takes it
- * modulo its own count anyway, so the two need only agree roughly.
- */
-const TREE_SHAPE_COUNT = 6;
-
 /** Maximum A* searches started per tick, across all villagers. */
 /**
  * How many villagers may look for work in one tick, at the very least.
@@ -685,15 +676,11 @@ export class VillagerSystem {
   /**
    * Called the moment a tree comes down, with the cell and who ordered it.
    *
-   * The woodland's memory is the settlement's business rather than this
-   * system's: whether that cell grows back in five years or stays cleared for
-   * good depends on a forester's lodge standing somewhere else entirely. See
-   * `world/Woodland.ts`.
+   * What the ground does next is the settlement's business rather than this
+   * system's: a workshop's felling leaves a sapling standing on the cell and the
+   * player's own clears it for good. See `world/Woodland.ts`.
    */
   public onTreeFelled: ((cell: GridPoint, playerOrdered: boolean) => void) | null = null;
-
-  /** Called when a forester sets a sapling, so the woodland can forget the cell. */
-  public onTreePlanted: ((cell: GridPoint) => void) | null = null;
 
   private workRate(): number {
     return this.workRateProvider ? this.workRateProvider() : 1;
@@ -742,20 +729,6 @@ export class VillagerSystem {
       case 'demolish':
         if (job.targetEntityId !== null) {
           this.onDemolished?.(job.targetEntityId);
-        }
-        break;
-      case 'plant-tree':
-        // Shape and size come from the villagers' own stream rather than the
-        // forest's: this sapling was planted by a person, and its look should
-        // not shift where the wild woods spread next.
-        if (
-          this.world.plantTree(
-            job.target,
-            this.randomSource.int(0, TREE_SHAPE_COUNT),
-            this.randomSource.float(0.55, 0.85),
-          )
-        ) {
-          this.onTreePlanted?.(job.target);
         }
         break;
       case 'build': {
@@ -1242,7 +1215,7 @@ export class VillagerSystem {
       return villager.employerId === job.employerId;
     }
 
-    if (job.type !== 'produce' && job.type !== 'plant-tree') {
+    if (job.type !== 'produce') {
       // Employees are not idled by having a job: they help with felling,
       // hauling and building like anyone else. Their own workshop's work is
       // `urgent`, so it always wins when there is any — which means the

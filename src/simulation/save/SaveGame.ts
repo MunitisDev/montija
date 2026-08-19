@@ -138,6 +138,15 @@ export interface SavedTree {
   readonly gy: number;
   readonly variant: number;
   readonly scale: number;
+  /**
+   * The day it took root, which is what its size is read from.
+   *
+   * Absent in saves written before trees grew, which restore as full-grown: every
+   * tree in those settlements was fellable when the save was written, and a reload
+   * that turned a working wood into a field of saplings would be a worse lie than
+   * forgetting an age.
+   */
+  readonly planted?: number;
 }
 
 export interface SaveGame {
@@ -225,17 +234,24 @@ export interface SaveGame {
     readonly level?: string;
   }[];
   /**
-   * What the settlement did to its woodland.
+   * The ground the player cleared for good.
    *
-   * `stumps` are trees cropped for timber and the day each grows back; `barren`
-   * is ground the player cleared for good. Neither can be recomputed from the
-   * map — a cleared cell and a cell that never had a tree look identical — so a
-   * save without them would grow trees back through the middle of a village.
-   * Absent in older saves, which restore with every clearing forgotten and the
-   * wild spread free to creep back in, as it was before.
+   * It cannot be recomputed from the map — a cleared cell and a cell that never
+   * had a tree look identical — so a save without it would let the wild spread
+   * creep back through the middle of a village. Absent in older saves, which
+   * restore with every clearing forgotten, as it was before.
+   *
+   * `stumps` is written by saves from when the Forester's Lodge existed and trees
+   * came back out of a ledger rather than growing where you could see them. It is
+   * read and ignored: those cells are standing wood or open ground either way,
+   * and the trees on the map are what the save actually recorded.
    */
   readonly woodland?: {
-    readonly stumps: readonly { readonly gx: number; readonly gy: number; readonly day: number }[];
+    readonly stumps?: readonly {
+      readonly gx: number;
+      readonly gy: number;
+      readonly day: number;
+    }[];
     readonly barren: readonly (readonly [number, number])[];
   };
   /**

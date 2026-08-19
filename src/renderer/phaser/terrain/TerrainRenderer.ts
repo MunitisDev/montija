@@ -14,6 +14,7 @@
  */
 
 import type Phaser from 'phaser';
+import type { TreeStage } from '@/simulation/world/TreeGrowth';
 import { gridToScene } from '@/shared/math/isometric';
 import type { GridPoint } from '@/shared/types/geometry';
 import type { World } from '@/simulation/world/World';
@@ -26,6 +27,23 @@ export interface TerrainRenderStats {
   readonly tileCount: number;
   readonly treeCount: number;
 }
+
+/**
+ * How big each growth stage is drawn, against a grown tree's own size.
+ *
+ * **The three sizes are the whole of what the player sees of the woodland
+ * cycle**, so the gaps between them have to be obvious at a tablet's viewing
+ * distance rather than merely correct. A sapling at 0.4 reads as scrub from
+ * across the valley; at 0.7 it reads as a young tree and not as a small one.
+ *
+ * Each tree keeps its own `scale` on top of this — the variety that stops a wood
+ * looking like stamped copies — so two saplings are still different saplings.
+ */
+const STAGE_SCALE: Readonly<Record<TreeStage, number>> = {
+  sapling: 0.4,
+  young: 0.7,
+  mature: 1,
+};
 
 /** A tree sprite, with the cell it stands on so its ground can be repainted. */
 interface TreeSprite {
@@ -49,6 +67,8 @@ export class TerrainRenderer {
   private paintedSeason: Season = 'spring';
   /** The tree variant each sprite was built from, for repainting. */
   private readonly treeVariants = new Map<number, number>();
+  /** The growth stage each sprite is currently drawn at, so a change is visible. */
+  private readonly treeStages = new Map<number, TreeStage>();
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -104,7 +124,16 @@ export class TerrainRenderer {
     const live = new Set<number>();
     for (const tree of world.trees.all) {
       live.add(tree.id);
-      if (this.treeSprites.has(tree.id)) {
+      const stage = world.trees.stage(tree);
+      const existing = this.treeSprites.get(tree.id);
+      if (existing) {
+        // **A tree that has grown, redrawn at its new size.** The sprite is not
+        // rebuilt: only its scale changes, which is the whole of what growth looks
+        // like — see `TreeGrowth.ts` for why three sizes and not ten.
+        if (this.treeStages.get(tree.id) !== stage) {
+          this.treeStages.set(tree.id, stage);
+          existing.image.setScale(tree.scale * STAGE_SCALE[stage]);
+        }
         continue;
       }
 
@@ -120,10 +149,11 @@ export class TerrainRenderer {
         // Anchored at the base, per the art bible: the trunk meets the ground
         // at the tile centre, and the canopy is free to overhang upwards.
         .setOrigin(0.5, 1)
-        .setScale(tree.scale)
+        .setScale(tree.scale * STAGE_SCALE[stage])
         .setDepth(depthFor(tree.gx, tree.gy, RenderLayer.Structure));
       this.treeSprites.set(tree.id, { image, cell });
       this.treeVariants.set(tree.id, tree.variant);
+      this.treeStages.set(tree.id, stage);
     }
 
     for (const [id, sprite] of this.treeSprites) {
@@ -133,6 +163,7 @@ export class TerrainRenderer {
       sprite.image.destroy();
       this.treeSprites.delete(id);
       this.treeVariants.delete(id);
+      this.treeStages.delete(id);
       // Felling turns forest into grass, so the ground it stood on needs
       // repainting. Doing it here keeps terrain and trees in step without the
       // scene having to track which cells changed.
@@ -183,6 +214,7 @@ export class TerrainRenderer {
 
   public destroy(): void {
     this.treeVariants.clear();
+    this.treeStages.clear();
     for (const sprite of this.tileSprites.values()) {
       sprite.destroy();
     }

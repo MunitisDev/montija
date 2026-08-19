@@ -12,6 +12,7 @@
  */
 
 import type { GridPoint } from '@/shared/types/geometry';
+import { treeStage, type TreeStage } from './TreeGrowth';
 import type { TreeInstance } from './WorldGenerator';
 
 export class TreeRegistry {
@@ -30,6 +31,15 @@ export class TreeRegistry {
    * still pointing at.
    */
   private nextId = 1;
+  /**
+   * The settlement day, so a tree can be asked how big it is.
+   *
+   * Held here rather than passed in at every call because a tree's size is asked
+   * for by the renderer, the job board and the panel, and threading a day through
+   * all three would put the same argument in twenty signatures. Set once a day by
+   * the simulation — see {@link setDay}.
+   */
+  private today = 0;
 
   constructor(width: number, trees: readonly TreeInstance[]) {
     this.width = width;
@@ -40,19 +50,64 @@ export class TreeRegistry {
     }
   }
 
+  /** The day the registry is answering questions about. */
+  public get day(): number {
+    return this.today;
+  }
+
+  /**
+   * Moves the calendar on, and reports whether any tree changed size.
+   *
+   * **The version is bumped only when a tree actually crosses a threshold**, which
+   * on most days is never: the renderer watches that integer instead of rescaling
+   * two thousand sprites, so a day where nothing grew has to cost nothing. A tree
+   * crosses at most twice in its life, so the two comparisons per tree per day are
+   * the whole price of visible growth.
+   */
+  public setDay(day: number): void {
+    if (day === this.today) {
+      return;
+    }
+    const before = this.today;
+    this.today = day;
+    for (const tree of this.byId.values()) {
+      if (treeStage(tree.planted, before) !== treeStage(tree.planted, day)) {
+        this.changeVersion += 1;
+        return;
+      }
+    }
+  }
+
+  /** How far along a tree is today. */
+  public stage(tree: TreeInstance): TreeStage {
+    return treeStage(tree.planted, this.today);
+  }
+
+  /** `true` when this tree would give timber. Nothing else may be felled for logs. */
+  public isMature(tree: TreeInstance): boolean {
+    return this.stage(tree) === 'mature';
+  }
+
   /**
    * Puts a new tree on a cell.
    *
    * The caller decides whether the ground will take one — the registry only
    * refuses to stack two trees on one cell, which is the invariant it owns.
    */
-  public plant(gx: number, gy: number, variant: number, scale: number): TreeInstance | null {
+  public plant(
+    gx: number,
+    gy: number,
+    variant: number,
+    scale: number,
+    /** The day it took root. Defaults to today, which is what planting means. */
+    planted: number = this.today,
+  ): TreeInstance | null {
     const index = this.cellIndex(gx, gy);
     if (this.byCell.has(index)) {
       return null;
     }
 
-    const tree: TreeInstance = { id: this.nextId, gx, gy, variant, scale };
+    const tree: TreeInstance = { id: this.nextId, gx, gy, variant, scale, planted };
     this.nextId += 1;
     this.byId.set(tree.id, tree);
     this.byCell.set(index, tree.id);
