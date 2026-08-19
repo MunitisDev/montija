@@ -434,6 +434,10 @@ Four decisions worth recording:
   because the pathfinder refuses to cut a corner — two cells joined at a corner are not a road. A
   diagonal run is therefore longer than the distance suggests, and the bar's count says so before the
   player commits.
+- **It bends round what is in the way.** Houses, rock, the river: the run is routed over ground a road
+  can take, by the way with fewest bends, up to twelve cells outside the two ends. Where no way round
+  exists the straight line is shown instead, so the obstacle is visible on the map rather than reported
+  as a refusal.
 - **A bad cell costs that cell, not the line.** Water, rock, a building or a standing tree shows red
   in the preview and is left out of the order; the bar says how many. Refusing the whole run over one
   tree would mean re-drawing it by hand.

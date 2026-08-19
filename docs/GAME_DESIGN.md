@@ -925,8 +925,14 @@ first decision the player makes about the **shape** of a settlement rather than 
   road should end draws the whole line in green and reports its length, and a second tap on that end
   cell — or the Confirm button — orders the lot. The run begins one cell long, so tapping the cell you
   started on paves exactly that one. A diagonal run takes the corner cell between each step, because
-  the pathfinder will not cut a corner and two cells joined at a corner are not a road. Cells no road
-  can go on show red and are left out of the order rather than refusing the whole line.
+  the pathfinder will not cut a corner and two cells joined at a corner are not a road.
+- **The run bends round what is in the way.** A house, a rock face, the river: the line is routed over
+  ground a road can actually take, preferring the fewest bends so it comes out the shape a person would
+  lay. A straight line is honest and useless in a dense settlement, which is exactly where roads are
+  worth having — the cells between two points are the ones with buildings on them. The detour is bounded
+  to twelve cells outside the two ends, because a road that comes back from the far side of a lake is
+  not the road the player drew; past that the straight line is shown instead, and the cells no road can
+  go on show red and are left out of the order rather than refusing the whole line.
 - Laying one is a job like any other: a villager walks over and beats the track flat. Nothing is
   built by decree.
 - It costs **labour and no materials**. A beaten track is work, not goods — so nothing here has to

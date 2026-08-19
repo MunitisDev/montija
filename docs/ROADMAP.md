@@ -1765,3 +1765,24 @@ pricing hauls of a plentiful good down to `low` cost twenty-three lives across t
 half the food banked before the frost, because "the yard already holds enough logs" stays true right up
 to the day a woodshed eats them. It stays inert, with the measurement recorded where the next reader
 will find it.
+
+## PHASE 57 — The road finds its way round — Implemented
+
+A drawn run went straight, which is honest and useless in a dense settlement — and a dense settlement is
+exactly where a road is worth laying, because the cells between two points are the ones with houses on
+them.
+
+The run is now **routed** over ground a road can take: an orthogonal shortest path with a small penalty
+per bend, so among the thousands of equally-long staircases between two corners it returns the one a
+person would actually lay, and the preview stops wobbling as the player re-aims. Where no route exists
+the straight line is shown instead, red cells and all, so the obstacle is something the player can see
+on the map rather than a refusal they have to interpret.
+
+Two bounds keep it a road rather than a plan of its own: the detour may not leave a box twelve cells
+outside the two ends — a road that comes back from the far side of a lake is not the road anybody drew —
+and a bend never buys a longer road, only a tidier one of the same length.
+
+`cellRoute` sits beside `cellLine` in `shared/math/gridLine.ts` and takes a predicate rather than a
+world, so it knows nothing about buildings, rock or water: the caller asks about pavability and gets a
+route over pavable ground. Sixteen tests hold the properties that matter — no diagonal steps, both ends
+included, fewest bends, deterministic, and refusal rather than a best effort.

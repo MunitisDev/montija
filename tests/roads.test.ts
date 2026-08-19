@@ -627,6 +627,64 @@ describe('drawing a run of road', () => {
     expect(game.selection!.cell).toEqual(cell);
   });
 
+  it('bends round a building instead of running through it', () => {
+    // **The other half of what was asked for.** A straight run is honest and
+    // useless in a dense settlement, which is exactly where roads are worth
+    // laying: the cells between two points are the ones with houses on them.
+    const game = new Game({ seed: 20260815 });
+    const world = game.simulation.world;
+    const house = somewhereToBuild(game, 'house');
+    const width = house.definition.footprint.width;
+
+    // Two cells on opposite sides of it, on the row through its middle.
+    const from = { gx: house.origin.gx - 2, gy: house.origin.gy };
+    const to = { gx: house.origin.gx + width + 1, gy: house.origin.gy };
+    expect(world.canPave(from)).toBe(true);
+    expect(world.canPave(to)).toBe(true);
+
+    selectCell(game, from);
+    expect(game.beginRoadLine()).toBe(true);
+    game.aimRoadLine(to);
+
+    const line = game.roadLine!;
+    // Every cell of the run can take a road, so none of them is in the house.
+    expect(line.payable).toHaveLength(line.cells.length);
+    const footprint = new Set(house.cells().map((cell) => `${cell.gx},${cell.gy}`));
+    for (const cell of line.cells) {
+      expect(footprint.has(`${cell.gx},${cell.gy}`), `${cell.gx},${cell.gy}`).toBe(false);
+    }
+    // And it is longer than the straight line it could not use.
+    expect(line.cells.length).toBeGreaterThan(width + 3);
+  });
+
+  it('shows the straight line when there is no way round', () => {
+    // The run is drawn into the river, which no detour reaches the far side of
+    // within the margin. The player sees red cells on the water rather than being
+    // told the whole run is impossible.
+    const game = new Game({ seed: 20260815 });
+    const world = game.simulation.world;
+    const start = cellWhere(game, (candidate) => {
+      if (!world.canPave(candidate)) {
+        return false;
+      }
+      // Water four cells away, with the two cells beyond it wet as well: a spur
+      // the router cannot simply step around.
+      for (let step = 3; step <= 5; step += 1) {
+        if (world.canPave({ gx: candidate.gx + step, gy: candidate.gy })) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    selectCell(game, start);
+    expect(game.beginRoadLine()).toBe(true);
+    game.aimRoadLine({ gx: start.gx + 4, gy: start.gy });
+
+    const line = game.roadLine!;
+    expect(line.payable.length).toBeLessThan(line.cells.length);
+  });
+
   it('bumps its version whenever the run changes, and only then', () => {
     // Every renderer in the game syncs off a version counter. A preview that
     // redrew every frame would be the one overlay in the game that does.
@@ -688,6 +746,34 @@ function cellWhere(game: Game, wanted: (cell: GridPoint) => boolean): GridPoint 
     }
   }
   throw new Error('no such cell in this world');
+}
+
+/** A finished building of this kind, put up wherever the ground allows. */
+function somewhereToBuild(game: Game, id: 'house') {
+  const world = game.simulation.world;
+  const from = world.landfallCell;
+  for (let radius = 4; radius < 24; radius += 1) {
+    for (let dx = -radius; dx <= radius; dx += 1) {
+      for (let dy = -radius; dy <= radius; dy += 1) {
+        const origin = { gx: from.gx + dx, gy: from.gy + dy };
+        const placed = world.buildings.place(world, id, origin);
+        if (!placed) {
+          continue;
+        }
+        world.buildings.complete(world, placed);
+        const width = placed.definition.footprint.width;
+        // Only useful with open ground on both sides to draw between.
+        if (
+          world.canPave({ gx: origin.gx - 2, gy: origin.gy }) &&
+          world.canPave({ gx: origin.gx + width + 1, gy: origin.gy })
+        ) {
+          return placed;
+        }
+        world.buildings.demolish(world, placed.id);
+      }
+    }
+  }
+  throw new Error(`nowhere to put a ${id} with room either side`);
 }
 
 /** Taps a cell without asserting what it selected: frame it, tap the middle. */

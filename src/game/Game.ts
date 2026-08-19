@@ -27,7 +27,7 @@ import { FOUNDING_YARD_RADIUS, Simulation, type SimulationSnapshot } from '@/sim
 import { SimulationClock, type SimulationSpeed } from '@/simulation/SimulationClock';
 import type { InputIntentSink } from '@/input/types';
 import { gridToScene, isInsideGrid, sceneToGrid } from '@/shared/math/isometric';
-import { cellLine } from '@/shared/math/gridLine';
+import { cellLine, cellRoute } from '@/shared/math/gridLine';
 import type { GridPoint, ScreenPoint } from '@/shared/types/geometry';
 import type { TerrainType } from '@/data/terrain';
 import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
@@ -544,7 +544,14 @@ export class Game implements GameContext, InputIntentSink {
   }
 
   private describeRoadLine(from: GridPoint, to: GridPoint): RoadLineState {
-    const cells = cellLine(from, to);
+    const canPave = (cell: GridPoint): boolean => this.simulation.world.canPave(cell);
+    // **Round the houses, not through them.** A straight line is honest and
+    // useless in a dense settlement — which is exactly where roads are worth
+    // laying — because the cells it wants are the ones with buildings on them.
+    // Where a route exists it is the road; where none does, the straight line is
+    // shown instead, so the player can see on the map what is in the way rather
+    // than being told the run is impossible.
+    const cells = cellRoute(from, to, canPave) ?? cellLine(from, to);
     return {
       from,
       to,
@@ -552,8 +559,10 @@ export class Game implements GameContext, InputIntentSink {
       // Already-ordered cells are payable in the sense the preview cares about:
       // they are part of the road the player is drawing, and `designateRoad`
       // refuses the duplicate itself. What is left out is ground no road can go
-      // on — water, rock, a building, a standing tree.
-      payable: cells.filter((cell) => this.simulation.world.canPave(cell)),
+      // on — water, rock, a building, a standing tree. A routed run is payable
+      // throughout by construction; a fallen-back straight line is where this
+      // earns its keep.
+      payable: cells.filter(canPave),
     };
   }
 

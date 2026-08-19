@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { cellLine } from '@/shared/math/gridLine';
+import { cellLine, cellRoute } from '@/shared/math/gridLine';
 import type { GridPoint } from '@/shared/types/geometry';
 
 describe('a line of cells', () => {
@@ -86,6 +86,96 @@ describe('a line of cells', () => {
     const once = cellLine({ gx: 4, gy: 4 }, { gx: 11, gy: 8 });
     const again = cellLine({ gx: 4, gy: 4 }, { gx: 11, gy: 8 });
     expect(again).toEqual(once);
+  });
+});
+
+/**
+ * A run that bends round what is in the way.
+ *
+ * **Asked for after the straight line proved useless where it matters.** Roads
+ * are worth laying in a dense settlement, and in a dense settlement the cells
+ * between two points have houses on them.
+ */
+describe('a route round obstacles', () => {
+  it('is the straight run when nothing is in the way', () => {
+    const route = cellRoute({ gx: 2, gy: 5 }, { gx: 7, gy: 5 }, () => true)!;
+    expect(route).toEqual(cellLine({ gx: 2, gy: 5 }, { gx: 7, gy: 5 }));
+  });
+
+  it('goes round a wall instead of stopping at it', () => {
+    // A wall across the direct line with one way past it. The straight line would
+    // have put four of its seven cells inside a building.
+    const wall = (cell: GridPoint): boolean => !(cell.gx === 5 && cell.gy <= 8);
+    const route = cellRoute({ gx: 2, gy: 5 }, { gx: 8, gy: 5 }, wall)!;
+
+    expect(route[0]).toEqual({ gx: 2, gy: 5 });
+    expect(route[route.length - 1]).toEqual({ gx: 8, gy: 5 });
+    for (const cell of route) {
+      expect(wall(cell), `${cell.gx},${cell.gy} is in the wall`).toBe(true);
+    }
+    // It had to go round, so it is longer than the straight run would have been.
+    expect(route.length).toBeGreaterThan(7);
+  });
+
+  it('never takes a diagonal step, so the road it lays is walkable', () => {
+    const blocked = new Set(['4,4', '4,5', '4,6', '5,6', '6,6']);
+    const route = cellRoute(
+      { gx: 2, gy: 5 },
+      { gx: 8, gy: 7 },
+      (cell) => !blocked.has(`${cell.gx},${cell.gy}`),
+    )!;
+    for (let index = 1; index < route.length; index += 1) {
+      expect(distance(route[index - 1]!, route[index]!)).toBe(1);
+    }
+  });
+
+  it('prefers the run with fewest bends among equally long ones', () => {
+    // Thousands of staircases between two corners are the same length. Without a
+    // turn penalty the search returns any of them and the preview wobbles as the
+    // player re-aims; with one it returns the shape a person would lay.
+    const route = cellRoute({ gx: 0, gy: 0 }, { gx: 6, gy: 4 }, () => true)!;
+    let bends = 0;
+    for (let index = 2; index < route.length; index += 1) {
+      const before = route[index - 1]!;
+      const first = route[index - 2]!;
+      const next = route[index]!;
+      if (next.gx - before.gx !== before.gx - first.gx) {
+        bends += 1;
+      }
+    }
+    expect(bends).toBe(1);
+  });
+
+  it('refuses when there is no way through at all', () => {
+    // `null` rather than a best effort: the caller shows the straight line so the
+    // player can see what is in the way on the map.
+    const walled = (cell: GridPoint): boolean => cell.gx !== 5;
+    expect(cellRoute({ gx: 2, gy: 5 }, { gx: 8, gy: 5 }, walled)).toBeNull();
+  });
+
+  it('refuses when either end is ground no road can take', () => {
+    const notThere = (cell: GridPoint): boolean => !(cell.gx === 8 && cell.gy === 5);
+    expect(cellRoute({ gx: 2, gy: 5 }, { gx: 8, gy: 5 }, notThere)).toBeNull();
+    expect(cellRoute({ gx: 8, gy: 5 }, { gx: 2, gy: 5 }, notThere)).toBeNull();
+  });
+
+  it('will not wander far outside the two ends to find a way round', () => {
+    // A road that leaves the box between its ends and comes back from the far
+    // side of a lake is not the road the player drew. Beyond the margin it gives
+    // up and the straight line is shown instead.
+    const gap = (cell: GridPoint): boolean => cell.gx !== 5 || cell.gy === 40;
+    expect(cellRoute({ gx: 2, gy: 5 }, { gx: 8, gy: 5 }, gap)).toBeNull();
+  });
+
+  it('is the same route every time it is asked', () => {
+    const blocked = new Set(['4,4', '4,5', '4,6', '5,6']);
+    const takes = (cell: GridPoint): boolean => !blocked.has(`${cell.gx},${cell.gy}`);
+    const once = cellRoute({ gx: 1, gy: 5 }, { gx: 9, gy: 8 }, takes);
+    expect(cellRoute({ gx: 1, gy: 5 }, { gx: 9, gy: 8 }, takes)).toEqual(once);
+  });
+
+  it('is a single cell when both ends are the same', () => {
+    expect(cellRoute({ gx: 3, gy: 3 }, { gx: 3, gy: 3 }, () => true)).toEqual([{ gx: 3, gy: 3 }]);
   });
 });
 
