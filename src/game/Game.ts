@@ -164,6 +164,14 @@ export interface BuildingSelection {
    * could not decide about.
    */
   readonly upgrade: { readonly cost: readonly ResourceAmount[] } | null;
+  /**
+   * The good whose ceiling has stopped this workshop, or `null`.
+   *
+   * Carried so the panel can tell "the player asked me to stop" apart from
+   * "nobody is working here", which look identical on the map and want opposite
+   * responses from the player.
+   */
+  readonly atLimit: ResourceId | null;
   /** `true` while that improvement is being built. */
   readonly upgrading: boolean;
   /** `true` once it is built. */
@@ -954,6 +962,7 @@ export class Game implements GameContext, InputIntentSink {
         .length,
       demolitionOrdered: this.simulation.isDemolitionOrdered(building.id),
       upgrade: definition.upgrade && !building.improved ? { cost: definition.upgrade.cost } : null,
+      atLimit: this.simulation.productionHaltedBy(building.id),
       upgrading: building.upgrading,
       improved: building.improved,
     };
@@ -996,6 +1005,8 @@ export class Game implements GameContext, InputIntentSink {
       contents: inventoryAmounts(yard.inventory),
       housing: 0,
       residents: 0,
+      // Nothing is made here, so nothing can be at its ceiling.
+      atLimit: null,
       // The founding yard has no Building behind it, so there is nothing to
       // pull down — and it is the settlement's only store on day one, which
       // makes offering to demolish it a trap rather than a choice.

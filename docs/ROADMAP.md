@@ -1888,3 +1888,21 @@ player taps again. That is right for a tile and wrong for a building — a house
 saying "waiting for 6 stone" long after the masons had finished, and a construction site never showed
 its progress move at all. An open building panel now refreshes off the registry's own version, twice a
 second, so a settlement where nothing is being built still costs one comparison a frame.
+
+## PHASE 61 — Enough — Implemented
+
+Three things, one of which is a feature and two of which are the game finally saying what it means.
+
+**A stock limit** the player sets per good, in the stores drawer. See `GAME_DESIGN.md`; the ladder the
+stepper walks is in `ui/hud/stockLimit.ts` and is a pure function so the awkward part — which rung the
+first tap lands on — is tested without a browser. It lands on the first rung at or above what the
+settlement already has, because a player with 180 stone means "about this much" rather than 2000 and
+eleven more taps.
+
+**The quarry cuts half as much.** Measured over eight worlds and three years: at four stone a cut,
+settlements finished with 523 stone apiece on the shelves. Two a cut leaves 292, raises no fewer
+buildings, and costs no lives — it saves them, because the masons were cutting rock nobody needed and
+the hauling it generated was competing with the harvest.
+
+**Fire is drawn as fire**, an improved house is stone rather than a paler chimney, and a field no longer
+looks like an orchard. See `ART_BIBLE.md`.

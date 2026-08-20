@@ -1910,3 +1910,32 @@ hands are spread across two hundred standing orders.
 That is a **hauling** failure, not a storage one and not the stone one. It is not
 fixed, and it is not the same problem as the one above — both are real, and the
 one a player meets first depends on how they open.
+
+## Stock limits — Implemented
+
+The player can say **enough**. Open the stores from the resource strip and every good carries a
+stepper: _Keep at most_ — no limit, or a rung on a coarse ladder from nothing to two thousand.
+
+What a limit does is deliberately narrow:
+
+- a workshop whose **every** output has reached its limit posts no work, so its staff are handed back
+  to the settlement exactly as they are when a crop is out of season — and pick the work up again on
+  their own when the stores fall;
+- carrying more of that good into a store drops to the bottom of the job board, the same way it does
+  above the settlement's own appetite for it;
+- a Feller's Hut cropping its own timber stops at the lower of its own target and the player's.
+
+What it does **not** do is touch anything the player asked for by hand. A tree marked for felling is
+an order, not a suggestion, and a limit that quietly cancelled orders would be the game arguing with
+the player rather than carrying out a standing instruction.
+
+Every output rather than any: a recipe that yields two goods is worth running for either of them, so
+a Hunter whose meat is capped keeps hunting while it is the settlement's only source of hides.
+
+The figure is measured against what is **on the shelves**, because that is the number the player was
+looking at when they set it. Four hundred logs lying in the wood are not a reason to stop the sawmill;
+they are a reason to carry them in.
+
+A capped workshop says so in its panel — _Stopped — the settlement has enough stone_ — because on the
+map a building the player told to stop and a building nobody is working look identical, and they want
+opposite responses.

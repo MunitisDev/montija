@@ -274,6 +274,7 @@ export const EN = {
   /** Said of the settlement's stores of that kind, not of this one shed. */
   'building.full': 'full',
   'building.idleNoWorkers': 'Nobody is working here',
+  'building.atLimit': 'Stopped — the settlement has enough',
   /** A ceiling at full staff, not a forecast — see `productionModel.ts`. */
   'building.atBest': 'At best',
   /** Rates are quoted for a whole season — twelve days. See `format/rates.ts`. */
@@ -308,6 +309,12 @@ export const EN = {
   'stock.yards': 'Yards',
   'stock.larders': 'Larders',
   'stock.none': 'none built',
+  'stock.limit': 'Keep at most',
+  'stock.noLimit': 'No limit',
+  'stock.lower': 'Lower the limit',
+  'stock.raise': 'Raise the limit',
+  'stock.atLimit': 'at the limit',
+  'stock.limitFoot': 'A limit stops the workshops that make a good, and frees their people.',
 
   'ledger.title': 'Ledger',
   'ledger.tab.people': 'People',
@@ -462,6 +469,8 @@ export const EN = {
   'guide.hardship.fire.detail':
     'A lit hearth can set its own roof alight on a freezing night, and a working forge any day of the year. The tighter the settlement is packed, the likelier it is. Water within ten cells — the river, a channel or a Well — puts it out and the building stands; without it the building and everything in it are gone, and the fire may take the next one along unless a road, a ditch or the water itself lies between them. Nobody is ever hurt.',
   'guide.resources': 'Resources',
+  'guide.resources.body':
+    'Open the stores from the bar at the top and you can set how much of anything to keep. Once a good reaches its limit the workshops that make it stop, and their people go and do whatever the settlement needs more — until the stores fall again, when they go back to it on their own. Nothing you marked by hand is affected: a tree you ordered felled is still felled.',
   'guide.buildings': 'Buildings',
   'guide.buildings.body':
     'The yearly figures are the plain ones: every post filled, no tools, nobody experienced, nobody ill and nothing walked a long way. Tools and a practised worker raise them; a bad site, a long haul and a hard winter lower them. Gathering follows the year, so its total already has an empty winter in it.',
@@ -835,6 +844,7 @@ export const ES: Messages = {
   'building.empty': 'vacío',
   'building.full': 'lleno',
   'building.idleNoWorkers': 'Nadie trabaja aquí',
+  'building.atLimit': 'Parado — el asentamiento ya tiene suficiente',
   'building.atBest': 'Como máximo',
   'building.perSeason': 'por estación',
   'building.consuming': 'gasta',
@@ -868,6 +878,12 @@ export const ES: Messages = {
   'stock.yards': 'Almacenes',
   'stock.larders': 'Despensas',
   'stock.none': 'ninguna',
+  'stock.limit': 'Guardar como máximo',
+  'stock.noLimit': 'Sin límite',
+  'stock.lower': 'Bajar el límite',
+  'stock.raise': 'Subir el límite',
+  'stock.atLimit': 'en el límite',
+  'stock.limitFoot': 'Un límite detiene los talleres que lo producen y libera a su gente.',
 
   'ledger.title': 'Registro',
   'ledger.tab.people': 'Gente',
@@ -1022,6 +1038,8 @@ export const ES: Messages = {
   'guide.hardship.fire.detail':
     'Un hogar encendido puede prender su propio tejado en noche de helada, y una fragua en marcha cualquier día del año. Cuanto más apretado esté el asentamiento, más probable es. Con agua a menos de diez casillas —el río, una acequia o un Pozo— se apaga y el edificio queda en pie; sin ella se pierde el edificio y todo lo que hubiera dentro, y el fuego puede saltar al siguiente si no hay un camino, una acequia o el agua de por medio. Nunca hay heridos.',
   'guide.resources': 'Recursos',
+  'guide.resources.body':
+    'Abre las reservas desde la barra de arriba y podrás fijar cuánto quieres guardar de cada cosa. Cuando algo llega a su límite, los talleres que lo producen se paran y su gente se va a lo que el asentamiento necesite más — hasta que las reservas bajen, y entonces vuelven solos. Lo que hayas marcado a mano no se toca: un árbol que mandaste talar se tala igual.',
   'guide.buildings': 'Edificios',
   'guide.buildings.body':
     'Las cifras anuales son las simples: todos los puestos ocupados, sin herramientas, sin experiencia, nadie enfermo y nada acarreado desde lejos. Las herramientas y un trabajador veterano las suben; un mal sitio, un acarreo largo y un invierno duro las bajan. La recolección sigue el año, así que su total ya lleva dentro un invierno vacío.',

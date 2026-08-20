@@ -206,6 +206,16 @@ export interface SaveGame {
    */
   readonly wear?: readonly (readonly [string, number])[];
   /**
+   * The ceilings the player set on their stores, as pairs.
+   *
+   * Player intent, so it is saved for the same reason a building's staffing is:
+   * it cannot be recomputed from anything, and a settlement that forgot it on
+   * reload would quietly start cutting stone again. Absent in saves written
+   * before limits existed, which restore with none — which is exactly what those
+   * settlements had.
+   */
+  readonly stockLimits?: readonly (readonly [string, number])[];
+  /**
    * Lifetime totals.
    *
    * Saved rather than recomputed because they are about the past, and a

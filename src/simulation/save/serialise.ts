@@ -114,6 +114,7 @@ export function serialise(simulation: Simulation, savedAt: string): SaveGame {
     jobs: simulation.jobs.all.map((job) => ({ ...job })),
     deaths: simulation.snapshot().deaths,
     wear: simulation.wearDebt.map(([resource, owed]) => [resource, owed] as const),
+    stockLimits: simulation.stockLimits.all.map(([resource, limit]) => [resource, limit] as const),
     chronicle: { ...simulation.snapshot().chronicle },
     necrology: simulation.necrology.all.map((record) => ({ ...record })),
     woodland: simulation.woodland.state(),
@@ -292,6 +293,12 @@ export function restore(simulation: Simulation, save: SaveGame): void {
   simulation.restoreWearDebt(
     (save.wear ?? []).map(([resource, owed]) => [resource as ResourceId, owed] as const),
   );
+  // Lifted first, so loading a settlement that had no ceilings into a session
+  // that did leaves the loaded settlement's own instructions standing.
+  simulation.stockLimits.clear();
+  for (const [resource, limit] of save.stockLimits ?? []) {
+    simulation.stockLimits.set(resource as ResourceId, limit);
+  }
   simulation.restoreClock(save.simulationTime, save.deaths);
 }
 

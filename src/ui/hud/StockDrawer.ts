@@ -24,6 +24,7 @@ import { signedSeason } from '@/ui/format/rates';
 import type { I18n } from '@/ui/i18n/I18n';
 import type { MessageKey } from '@/ui/i18n/messages';
 import { estimateFlows, totalDemand } from '@/ui/ledger/ledgerModel';
+import { atCeiling, atFloor, nextLimit } from './stockLimit';
 
 /**
  * The four that are always listed, whatever the settlement has.
@@ -53,7 +54,18 @@ export class StockDrawer {
   private readonly foot: HTMLElement;
   private readonly rows = new Map<
     ResourceId,
-    { row: HTMLElement; value: HTMLElement; note: HTMLElement }
+    {
+      row: HTMLElement;
+      value: HTMLElement;
+      note: HTMLElement;
+      /** The limit stepper, built here rather than written out nine times. */
+      cap: {
+        label: HTMLElement;
+        value: HTMLElement;
+        lower: HTMLButtonElement;
+        raise: HTMLButtonElement;
+      };
+    }
   >();
 
   private renderedLanguageVersion = -1;
@@ -70,7 +82,7 @@ export class StockDrawer {
       const value = root.querySelector<HTMLElement>(`[data-drawer="${resource}"]`);
       const note = root.querySelector<HTMLElement>(`[data-drawer-note="${resource}"]`);
       if (row && value && note) {
-        this.rows.set(resource, { row, value, note });
+        this.rows.set(resource, { row, value, note, cap: this.buildCap(row, resource) });
       }
     }
 
@@ -115,6 +127,11 @@ export class StockDrawer {
     if (this.i18n.changeVersion !== this.renderedLanguageVersion) {
       this.renderedLanguageVersion = this.i18n.changeVersion;
       this.toggle.setAttribute('aria-label', this.i18n.t('hud.stores'));
+      for (const { cap } of this.rows.values()) {
+        cap.label.textContent = this.i18n.t('stock.limit');
+        cap.lower.setAttribute('aria-label', this.i18n.t('stock.lower'));
+        cap.raise.setAttribute('aria-label', this.i18n.t('stock.raise'));
+      }
     }
     if (!this.isOpen) {
       return;
@@ -130,7 +147,7 @@ export class StockDrawer {
     if (this.context.simulation.storages.hasLarder) {
       fills.push(this.describeFill('food', 'stock.larders'));
     }
-    this.foot.textContent = `${fills.join(' · ')} — ${this.i18n.t('stock.foot')}`;
+    this.foot.textContent = `${fills.join(' · ')} — ${this.i18n.t('stock.foot')} ${this.i18n.t('stock.limitFoot')}`;
 
     const snapshot = this.context.snapshot();
     const flows = estimateFlows(this.context.simulation);
@@ -140,6 +157,7 @@ export class StockDrawer {
       const loose = snapshot.loose[resource];
       const made = flows.production.get(resource) ?? 0;
       const spent = totalDemand(flows, resource);
+      this.renderCap(resource, elements.cap, stored);
 
       // A good the settlement has never seen is not "0", it is not part of the
       // game yet. Hiding the row keeps the drawer a list of what exists.
@@ -156,6 +174,77 @@ export class StockDrawer {
       elements.note.textContent = parts.join(' · ');
       elements.note.classList.toggle('is-bad', spent > made);
     }
+  }
+
+  /**
+   * Builds one row's limit stepper.
+   *
+   * Generated rather than written into the page nine times over: it is the same
+   * four elements for every good, and a hand-written copy per resource is nine
+   * places to forget an `aria-label`.
+   */
+  private buildCap(
+    row: HTMLElement,
+    resource: ResourceId,
+  ): {
+    label: HTMLElement;
+    value: HTMLElement;
+    lower: HTMLButtonElement;
+    raise: HTMLButtonElement;
+  } {
+    const wrap = document.createElement('div');
+    wrap.className = 'stock__cap';
+
+    const label = document.createElement('span');
+    label.className = 'stock__capLabel';
+    label.textContent = this.i18n.t('stock.limit');
+
+    const step = (direction: 1 | -1, glyph: string, hint: string): HTMLButtonElement => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'stock__step';
+      button.textContent = glyph;
+      button.setAttribute('aria-label', this.i18n.t(hint as MessageKey));
+      button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const simulation = this.context.simulation;
+        const now = simulation.stockLimits.get(resource);
+        simulation.setStockLimit(
+          resource,
+          nextLimit(now, direction, simulation.storages.totalOf(resource)),
+        );
+        this.update();
+      });
+      return button;
+    };
+
+    const lower = step(-1, '−', 'stock.lower');
+    const value = document.createElement('span');
+    value.className = 'stock__capValue';
+    const raise = step(1, '+', 'stock.raise');
+
+    wrap.append(label, lower, value, raise);
+    row.append(wrap);
+    return { label, value, lower, raise };
+  }
+
+  /** Writes one row's limit, and greys the button that would do nothing. */
+  private renderCap(
+    resource: ResourceId,
+    cap: {
+      value: HTMLElement;
+      lower: HTMLButtonElement;
+      raise: HTMLButtonElement;
+    },
+    stored: number,
+  ): void {
+    const limit = this.context.simulation.stockLimits.get(resource);
+    cap.value.textContent = limit === null ? this.i18n.t('stock.noLimit') : String(limit);
+    cap.lower.disabled = atFloor(limit);
+    cap.raise.disabled = atCeiling(limit);
+    // Marked once the stores have actually reached it, because that is the
+    // moment the limit stops being a note and starts stopping work.
+    cap.value.classList.toggle('is-capped', limit !== null && stored >= limit);
   }
 
   /**

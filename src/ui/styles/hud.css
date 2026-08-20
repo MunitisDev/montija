@@ -1925,6 +1925,65 @@
   color: var(--colour-alarm);
 }
 
+/*
+ * The limit stepper: label, minus, value, plus, on its own row under the note.
+ *
+ * Two buttons rather than a number field, because the game is played with a
+ * thumb on a tablet and a text field means an on-screen keyboard over the
+ * settlement. See `hud/stockLimit.ts` for the ladder they step along.
+ */
+.stock__cap {
+  display: flex;
+  grid-column: 1 / -1;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 2px;
+}
+
+.stock__capLabel {
+  margin-right: auto;
+  font-size: 0.68rem;
+  color: var(--colour-ink-dim);
+}
+
+.stock__capValue {
+  min-width: 3.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--colour-ink-dim);
+  text-align: center;
+}
+
+/* Reached, so the limit is no longer a note — it is stopping work. */
+.stock__capValue.is-capped {
+  color: var(--colour-accent);
+}
+
+/*
+ * Generous for a thumb, and square so the pair reads as one control. 28px is
+ * under the usual 44px target, but these sit inside a drawer the player has
+ * already opened deliberately and a 44px pair per row would double its height.
+ */
+.stock__step {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--colour-ink);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--colour-panel-edge);
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.stock__step:disabled {
+  color: var(--colour-ink-dim);
+  opacity: 0.4;
+  cursor: default;
+}
+
 .stock-drawer__foot {
   margin: 10px 0 0;
   font-size: 0.68rem;

@@ -15,12 +15,14 @@ import { SeededRandom, deriveSeed, type RandomSource } from '@/shared/math/rando
 import { STARTING_RESOURCES } from '@/app/config';
 import type { BuildingId } from '@/data/buildings';
 import { recipe as findRecipe } from '@/data/recipes';
+import type { Recipe } from '@/data/recipes';
 import { RESOURCE_IDS, resourceDefinition, type ResourceId } from '@/data/resources';
 import { SKILL_WORK_BONUS } from '@/data/skills';
 import type { Building } from './buildings/Building';
 import type { PlacementCheck } from './buildings/BuildingRegistry';
 import { isFinished, JobPriority } from './jobs/Job';
 import { JobManager } from './jobs/JobManager';
+import { StockLimits } from './logistics/StockLimits';
 import { StorageRegistry } from './logistics/Storage';
 import {
   AUTOMATIC_TRADE,
@@ -328,6 +330,15 @@ export class Simulation {
   public readonly villagers: VillagerSystem;
   public readonly jobs: JobManager;
   public readonly storages = new StorageRegistry();
+  /**
+   * How much of each good the player wants kept, and no more.
+   *
+   * Public because it is player intent rather than derived state: the UI reads
+   * it to draw the stepper and writes it through {@link setStockLimit}. See
+   * `logistics/StockLimits.ts` for what a limit does and, more importantly, what
+   * it deliberately does not.
+   */
+  public readonly stockLimits = new StockLimits();
 
   private readonly seed: number;
   private readonly tickRandom: RandomSource;
@@ -1531,7 +1542,14 @@ export class Simulation {
       // ground are a thousand logs; the wood is better left standing until
       // somebody has carried them in.
       const felling = building.definition.felling;
-      if (felling && this.logsInHand() < felling.logTarget) {
+      // The lower of the hut's own restraint and the player's ceiling. A hut
+      // that went on cropping past a limit the player had set would be the one
+      // building in the settlement ignoring them.
+      const target = Math.min(
+        felling?.logTarget ?? 0,
+        this.stockLimits.get('logs') ?? Number.POSITIVE_INFINITY,
+      );
+      if (felling && this.logsInHand() < target) {
         this.cropTimber(building, felling.radius, felling.outstanding);
       }
     }
@@ -1923,6 +1941,66 @@ export class Simulation {
     return true;
   }
 
+  /**
+   * Sets or lifts the ceiling on a good.
+   *
+   * A command, like every other player intent: the UI states a wish and the
+   * simulation decides what happens to it. Standing production work is taken off
+   * the board the moment a ceiling is lowered past what is already stored, so
+   * the quarry stops on the tap rather than at the end of whatever batch its
+   * masons had started.
+   */
+  public setStockLimit(resource: ResourceId, limit: number | null): boolean {
+    if (!this.stockLimits.set(resource, limit)) {
+      return false;
+    }
+
+    for (const building of this.world.buildings.all) {
+      const id = building.definition.recipeId;
+      const recipe = id ? findRecipe(id) : null;
+      if (recipe && recipe.outputs.some((output) => output.resource === resource)) {
+        if (this.outputsAtLimit(recipe)) {
+          this.cancelProductionAt(building.id);
+        }
+      }
+    }
+    this.world.buildings.markChanged();
+    return true;
+  }
+
+  /**
+   * `true` when everything a recipe makes is at its ceiling.
+   *
+   * Every output, not any: a recipe that yields two goods is worth running for
+   * either of them, and stopping a Hunter because the larder is full would take
+   * the settlement's hides with it.
+   */
+  /**
+   * The good whose ceiling has stopped a workshop, or `null` if nothing has.
+   *
+   * For the panel. A workshop standing idle because the player told it to is
+   * indistinguishable from a broken one, and "nobody is working here" would be
+   * the wrong explanation and the wrong fix.
+   */
+  public productionHaltedBy(buildingId: number): ResourceId | null {
+    const building = this.world.buildings.getById(buildingId);
+    const id = building?.definition.recipeId;
+    const recipe = id ? findRecipe(id) : null;
+    if (!building?.isComplete || !recipe || !this.outputsAtLimit(recipe)) {
+      return null;
+    }
+    return recipe.outputs[0]?.resource ?? null;
+  }
+
+  private outputsAtLimit(recipe: Recipe): boolean {
+    if (recipe.outputs.length === 0) {
+      return false;
+    }
+    return recipe.outputs.every((output) =>
+      this.stockLimits.reached(output.resource, this.storages.totalOf(output.resource)),
+    );
+  }
+
   private createProductionJobs(): void {
     for (const building of this.world.buildings.all) {
       if (!building.isComplete || !building.definition.recipeId) {
@@ -1944,6 +2022,17 @@ export class Simulation {
         // new ones is not enough: a job posted on the last day of autumn stays
         // on the board, and being the highest priority in the game it is the
         // first thing an employee picks up in January.
+        this.cancelProductionAt(building.id);
+        continue;
+      }
+
+      // **Enough is enough.** Every output at the player's ceiling means this
+      // workshop is making goods the settlement asked it to stop making, so its
+      // work comes off the board and its staff are handed back for the day —
+      // the same treatment, and the same reasoning, as a crop out of season. Any
+      // output still wanted keeps it running: a Hunter whose meat is capped is
+      // still the settlement's only source of hides.
+      if (this.outputsAtLimit(recipe)) {
         this.cancelProductionAt(building.id);
         continue;
       }
@@ -2194,7 +2283,11 @@ export class Simulation {
     const people = Math.max(1, this.villagers.all.length);
     const enough = new Set<ResourceId>();
     for (const resource of RESOURCE_IDS) {
-      const wanted = resourceDefinition(resource).wantedPerVillager * people;
+      // The player's ceiling wins where they have set one: it is a statement
+      // about this settlement, and the per-villager figure is only a default for
+      // settlements that have not said anything.
+      const wanted =
+        this.stockLimits.get(resource) ?? resourceDefinition(resource).wantedPerVillager * people;
       if (this.storages.totalOf(resource) >= wanted) {
         enough.add(resource);
       }

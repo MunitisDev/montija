@@ -122,6 +122,7 @@ function building(
       housing: 0,
       residents: 0,
       demolitionOrdered: false,
+      atLimit: null,
       upgrade: null,
       upgrading: false,
       improved: false,
@@ -185,6 +186,7 @@ function onBuilding(cell: GridPoint, id: number): Selection {
     residents: 0,
     demolitionOrdered: false,
     upgrade: null,
+    atLimit: null,
     upgrading: false,
     improved: false,
   });

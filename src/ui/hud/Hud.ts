@@ -495,6 +495,17 @@ export class Hud {
     }
     this.elements.buildingState.textContent = state.join(' · ');
 
+    // A workshop the player told to stop is not a workshop in trouble, and on
+    // the map the two look the same. Said before the staffing line, because a
+    // building at its ceiling with nobody in it is at its ceiling — sending the
+    // player off to find workers for it would be the panel wasting their time.
+    if (building.atLimit) {
+      this.elements.buildingDetail.textContent = `${this.i18n.t('building.atLimit')} ${this.i18n
+        .t(`hud.${building.atLimit}` as MessageKey)
+        .toLocaleLowerCase()}`;
+      return;
+    }
+
     // A workshop with nobody in it looks identical to a working one, and the
     // difference is the whole reason a settlement starves with a hut standing.
     if (building.workerSlots > 0 && building.workers === 0) {

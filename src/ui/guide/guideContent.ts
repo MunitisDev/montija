@@ -276,6 +276,10 @@ export function buildGuide(t: Translate): readonly GuideSection[] {
       })),
     }),
     section('resources', t, {
+      // The limits live here rather than in a section of their own: they are a
+      // thing you do *to* a resource, and the player who is wondering whether to
+      // cap their stone is already reading this list.
+      body: t('guide.resources.body'),
       entries: RESOURCE_IDS.map((resource) => ({
         term: t(`hud.${resource}` as MessageKey),
         detail: t(`resource.${resource}.purpose` as MessageKey),
