@@ -65,6 +65,18 @@ body.is-menu-open #hud {
   gap: 10px;
   max-width: 34rem;
   text-align: center;
+  /*
+   * Scrolls rather than overflowing, because the panel grew.
+   *
+   * The name box, the rule under it and a list of settlements are all things the
+   * menu did not used to hold, and on a 360px-tall landscape phone the title was
+   * pushed off the top with the Found button off the bottom. Now the whole panel
+   * is a scroll region with room to breathe at each end.
+   */
+  max-height: 100%;
+  padding: 12px 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .menu__title {
@@ -126,6 +138,97 @@ body.is-menu-open #hud {
 .menu__button:disabled {
   opacity: 0.38;
   cursor: default;
+}
+
+/*
+ * The settlements a player already has, under the one they were last in.
+ *
+ * Second-rank buttons on purpose: continuing the newest is the path almost
+ * everybody wants, and the rest are a shelf to reach along rather than a menu to
+ * read. Scrolls rather than growing, because permadeath keeps the list short but
+ * nothing stops a determined player founding nine.
+ */
+.menu__saves {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: min(20rem, 78vw);
+  max-height: 30vh;
+  overflow-y: auto;
+}
+
+/* Both of these, because `display: flex` above beats the `hidden` attribute. */
+.menu__saves:empty,
+.menu__saves[hidden] {
+  display: none;
+}
+
+.menu__save {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 40px;
+  padding: 6px 14px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  color: var(--colour-ink);
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--colour-panel-edge);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.menu__save:hover {
+  border-color: rgba(201, 162, 39, 0.45);
+}
+
+.menu__save small {
+  font-size: 0.74rem;
+  color: var(--colour-ink-dim);
+  white-space: nowrap;
+}
+
+/* Naming a settlement: label, box, button, and the rule it plays under. */
+.menu__name {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(20rem, 78vw);
+}
+
+.menu__name[hidden] {
+  display: none;
+}
+
+.menu__label {
+  font-size: 0.86rem;
+  color: var(--colour-ink);
+}
+
+.menu__input {
+  min-height: var(--touch-target);
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--colour-ink);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--colour-panel-edge);
+  border-radius: 6px;
+}
+
+.menu__input:focus {
+  outline: none;
+  border-color: rgba(201, 162, 39, 0.55);
+}
+
+/* The bargain, said once and plainly, where the player accepts it. */
+.menu__rule {
+  margin: 0;
+  font-size: 0.76rem;
+  font-style: italic;
+  color: var(--colour-ink-dim);
 }
 
 .menu__note {

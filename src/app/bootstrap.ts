@@ -87,8 +87,11 @@ export function start(): void {
     guide,
     fullscreenTarget: gameRoot,
     onFullscreenChange: (active) => hud.setFullscreen(active),
+    // Straight to the name box: a new valley has no file until it is named.
+    onSettlementReplaced: () => mainMenu.open({ naming: true }),
   });
   const mainMenu = new MainMenu(gameRoot, game, i18n, guide);
+  hud.onSettlementReplaced = () => mainMenu.open({ naming: true });
 
   /**
    * Opens a sheet with the clock stopped, and puts it back as it was after.

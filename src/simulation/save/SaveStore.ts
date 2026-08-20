@@ -10,20 +10,43 @@
  * happen to be saves. Validation lives in `SaveGame.ts`.
  */
 
-import { validateSave, type LoadResult, type SaveGame } from './SaveGame';
+import {
+  summarise,
+  validateSave,
+  type LoadResult,
+  type SaveGame,
+  type SaveSummary,
+} from './SaveGame';
 
 const DATABASE_NAME = 'montija';
 const DATABASE_VERSION = 1;
 const STORE_NAME = 'saves';
 
-/** The slot autosave writes to. */
+/**
+ * The slot the game wrote to before settlements had names.
+ *
+ * Kept so a settlement saved by an older build is still offered on the menu
+ * rather than silently orphaned. Nothing writes here any more.
+ */
 export const AUTOSAVE_SLOT = 'autosave';
+
+/**
+ * Where a save's one-line summary lives.
+ *
+ * Beside the save rather than inside it, under a key the listing can scan for.
+ * A save is a megabyte of terrain and the menu needs a name and a year — reading
+ * four saves to draw four buttons is four megabytes of parsing for a screen the
+ * player looks at for a second.
+ */
+const SUMMARY_PREFIX = 'summary:';
 
 export interface SaveStore {
   write(slot: string, save: SaveGame): Promise<void>;
   read(slot: string): Promise<LoadResult>;
   has(slot: string): Promise<boolean>;
   remove(slot: string): Promise<void>;
+  /** Every settlement in the store, newest first. */
+  list(): Promise<readonly SaveSummary[]>;
 }
 
 /** `true` when this browser can persist saves at all. */
@@ -37,6 +60,12 @@ export class IndexedDbSaveStore implements SaveStore {
   public async write(slot: string, save: SaveGame): Promise<void> {
     const database = await this.open();
     await runTransaction(database, 'readwrite', (store) => store.put(save, slot));
+    // The summary second, and in its own transaction: a save that landed and a
+    // summary that did not is a settlement missing from the menu, which is
+    // recoverable. The other way round is a menu entry that opens nothing.
+    await runTransaction(database, 'readwrite', (store) =>
+      store.put(summarise(slot, save), SUMMARY_PREFIX + slot),
+    );
   }
 
   public async read(slot: string): Promise<LoadResult> {
@@ -57,6 +86,36 @@ export class IndexedDbSaveStore implements SaveStore {
   public async remove(slot: string): Promise<void> {
     const database = await this.open();
     await runTransaction(database, 'readwrite', (store) => store.delete(slot));
+    await runTransaction(database, 'readwrite', (store) => store.delete(SUMMARY_PREFIX + slot));
+  }
+
+  public async list(): Promise<readonly SaveSummary[]> {
+    const database = await this.open();
+    const keys = await runTransaction<IDBValidKey[]>(database, 'readonly', (store) =>
+      store.getAllKeys(),
+    );
+
+    const summaries: SaveSummary[] = [];
+    for (const key of keys) {
+      if (typeof key !== 'string' || !key.startsWith(SUMMARY_PREFIX)) {
+        continue;
+      }
+      const value = await runTransaction<unknown>(database, 'readonly', (store) => store.get(key));
+      const summary = readSummary(value);
+      if (summary) {
+        summaries.push(summary);
+      }
+    }
+
+    // A settlement saved before names existed still deserves to be offered.
+    if (keys.includes(AUTOSAVE_SLOT) && !summaries.some((s) => s.slot === AUTOSAVE_SLOT)) {
+      const legacy = await this.read(AUTOSAVE_SLOT);
+      if (legacy.ok) {
+        summaries.push(summarise(AUTOSAVE_SLOT, legacy.save));
+      }
+    }
+
+    return sortNewestFirst(summaries);
   }
 
   private open(): Promise<IDBDatabase> {
@@ -103,9 +162,11 @@ function runTransaction<T>(
  */
 export class MemorySaveStore implements SaveStore {
   private readonly slots = new Map<string, string>();
+  private readonly summaries = new Map<string, SaveSummary>();
 
   public async write(slot: string, save: SaveGame): Promise<void> {
     this.slots.set(slot, JSON.stringify(save));
+    this.summaries.set(slot, summarise(slot, save));
   }
 
   public async read(slot: string): Promise<LoadResult> {
@@ -129,5 +190,40 @@ export class MemorySaveStore implements SaveStore {
 
   public async remove(slot: string): Promise<void> {
     this.slots.delete(slot);
+    this.summaries.delete(slot);
   }
+
+  public async list(): Promise<readonly SaveSummary[]> {
+    return sortNewestFirst([...this.summaries.values()]);
+  }
+}
+
+/**
+ * Newest first, because that is the settlement the player almost always wants.
+ *
+ * Ties break on name so the list is stable rather than shuffling between two
+ * saves written in the same second.
+ */
+function sortNewestFirst(summaries: readonly SaveSummary[]): readonly SaveSummary[] {
+  return [...summaries].sort(
+    (a, b) => b.savedAt.localeCompare(a.savedAt) || a.name.localeCompare(b.name),
+  );
+}
+
+/** A stored summary, if it really is one. Anything else is ignored. */
+function readSummary(value: unknown): SaveSummary | null {
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
+  const candidate = value as Partial<SaveSummary>;
+  if (typeof candidate.slot !== 'string' || typeof candidate.name !== 'string') {
+    return null;
+  }
+  return {
+    slot: candidate.slot,
+    name: candidate.name,
+    year: typeof candidate.year === 'number' ? candidate.year : 1,
+    savedAt: typeof candidate.savedAt === 'string' ? candidate.savedAt : '',
+    population: typeof candidate.population === 'number' ? candidate.population : 0,
+  };
 }

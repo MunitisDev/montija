@@ -60,6 +60,13 @@ export class SettingsMenu {
     readonly fullscreenTarget: HTMLElement;
     /** Told when full screen changes, so the HUD layout can respond. */
     readonly onFullscreenChange?: (active: boolean) => void;
+    /**
+     * Called after the player throws this settlement away for a new one.
+     *
+     * The shell uses it to ask for a name: the old file goes with the old
+     * settlement, and a valley nobody names is a valley nobody can come back to.
+     */
+    readonly onSettlementReplaced?: () => void;
   }) {
     this.context = options.context;
     this.i18n = options.i18n;
@@ -113,6 +120,7 @@ export class SettingsMenu {
       // A new seed, so it is a new valley rather than this one again.
       this.context.startNewSettlement();
       this.close();
+      options.onSettlementReplaced?.();
     });
 
     this.languageButton.addEventListener('click', () => {

@@ -38,6 +38,8 @@ import type { PlacementCheck } from '@/simulation/buildings/BuildingRegistry';
 import type { Inventory } from '@/simulation/resources/Inventory';
 import type { WorkPreference } from '@/simulation/villagers/Villager';
 import { restore, serialise } from '@/simulation/save/serialise';
+import type { SaveSummary } from '@/simulation/save/SaveGame';
+import { slotFor, tidyName, uniqueName } from '@/simulation/save/settlementName';
 import {
   AUTOSAVE_SLOT,
   IndexedDbSaveStore,
@@ -280,6 +282,26 @@ export interface GameContext {
   save(): Promise<boolean>;
   load(): Promise<boolean>;
   hasSave(): Promise<boolean>;
+  /**
+   * What this settlement is called, or `null` until the player names it.
+   *
+   * Nothing is written to disk before it has a name: a save is a settlement's
+   * own file, and a file needs to be called something. See
+   * `simulation/save/settlementName.ts`.
+   */
+  readonly settlementName: string | null;
+  /**
+   * Names the settlement, resolves a clash, and writes its first save.
+   *
+   * @returns the name it was actually founded under, which is the one asked for
+   *   unless a settlement of that name already exists — then it is the next
+   *   numeral along.
+   */
+  nameSettlement(name: string): Promise<string>;
+  /** Every settlement in the store, newest first. */
+  listSettlements(): Promise<readonly SaveSummary[]>;
+  /** Opens one of them over the running world. */
+  loadSettlement(slot: string): Promise<boolean>;
   /** Human-readable result of the last save or load, for the HUD. */
   readonly saveStatus: string;
   readonly saveVersion: number;
@@ -325,9 +347,6 @@ export interface PlacementState {
   readonly origin: GridPoint;
   readonly check: PlacementCheck;
 }
-
-/** Ticks between autosaves. 3,000 is five in-game days. */
-const AUTOSAVE_INTERVAL_TICKS = 3000;
 
 function describeError(error: unknown): string {
   return error instanceof Error ? error.message : 'unknown error';
@@ -376,8 +395,25 @@ export class Game implements GameContext, InputIntentSink {
   private readonly saveStore: SaveStore;
   private lastSaveStatus = '';
   private saveStatusChanges = 0;
-  /** Ticks until the next autosave. */
-  private ticksUntilAutosave = AUTOSAVE_INTERVAL_TICKS;
+  /**
+   * What this settlement is called, and the slot that follows from it.
+   *
+   * Both `null` until the player names it, and nothing is written before then:
+   * a settlement's save *is* its name, so an unnamed run is deliberately
+   * unsaveable rather than saved somewhere anonymous.
+   */
+  private name: string | null = null;
+  private slot: string | null = null;
+  /**
+   * The year the settlement was last written at.
+   *
+   * **Permadeath is the reason this is a year and not a countdown.** One file
+   * per settlement, overwritten as the years pass and deleted when everybody is
+   * gone: there is no going back to a better winter, so the only honest moment
+   * to write is the turn of a year, where the player can see it happen and knows
+   * what they are keeping.
+   */
+  private lastSavedYear = 0;
   /** Randomness for the renderer, deliberately outside the simulation. */
   private readonly presentationRng: SeededRandom;
   /** The seed the current settlement was founded from. */
@@ -412,7 +448,12 @@ export class Game implements GameContext, InputIntentSink {
     this.currentPlacement = null;
     this.placementChanges += 1;
     this.cancelRoadLine();
-    this.ticksUntilAutosave = AUTOSAVE_INTERVAL_TICKS;
+    // **A new valley is a new settlement, and it has no name yet.** Carrying the
+    // last one's over would have the first year of a fresh village quietly
+    // overwriting the file of the village the player just left.
+    this.name = null;
+    this.slot = null;
+    this.lastSavedYear = 0;
     // On the camp rather than the middle of the map. The first thing the player
     // should see is their own people, not an empty acre of the interior with
     // nobody in it.
@@ -692,13 +733,45 @@ export class Game implements GameContext, InputIntentSink {
     this.updatePlacementGhost();
     this.refreshStaleSelection();
 
-    if (this.ticksLastFrame > 0) {
-      this.ticksUntilAutosave -= this.ticksLastFrame;
-      if (this.ticksUntilAutosave <= 0) {
-        this.ticksUntilAutosave = AUTOSAVE_INTERVAL_TICKS;
-        // Fire and forget: a slow disk must never stall a frame.
-        void this.save();
+    // Every frame, not only the ones that advanced the clock: a settlement can
+    // die on the tick the player pauses, and the file has to go whether or not
+    // time is running afterwards. Two comparisons.
+    this.keepTheRecord();
+  }
+
+  /**
+   * Writes the year that has just turned, and burns the file when nobody is left.
+   *
+   * The whole save policy, in one place and in this order:
+   *
+   * - **A year is written once, as it turns.** A named settlement keeps exactly
+   *   one file and it is always the last new year — which is what makes the
+   *   thing a *record* rather than a safety net. Fire and forget, because a slow
+   *   disk must never stall a frame.
+   * - **A settlement that dies takes its file with it.** That is what permadeath
+   *   means here: the run is over, and leaving the last autosave behind would
+   *   quietly hand the player a way to un-lose it. The name goes with it, so the
+   *   next settlement has to be founded and named like any other.
+   */
+  private keepTheRecord(): void {
+    if (this.simulation.hasFailed) {
+      const lost = this.slot;
+      if (lost) {
+        this.slot = null;
+        this.name = null;
+        this.lastSavedYear = 0;
+        void this.saveStore.remove(lost).catch(() => {
+          // A store that will not delete is not a reason to stop the game.
+        });
+        this.setSaveStatus('Lost');
       }
+      return;
+    }
+
+    const year = this.simulation.year.year;
+    if (this.slot !== null && year !== this.lastSavedYear) {
+      this.lastSavedYear = year;
+      void this.save();
     }
   }
 
@@ -714,12 +787,54 @@ export class Game implements GameContext, InputIntentSink {
     return this.saveStatusChanges;
   }
 
-  /** Writes the settlement to the autosave slot. */
+  public get settlementName(): string | null {
+    return this.name;
+  }
+
+  /**
+   * Names the settlement and writes its first save.
+   *
+   * The name is tidied rather than refused, and a clash becomes the next numeral
+   * along — see `save/settlementName.ts`. Both rules are about words, so they
+   * live there; what happens here is the file.
+   */
+  public async nameSettlement(wanted: string): Promise<string> {
+    const tidy = tidyName(wanted);
+    if (tidy === '') {
+      return '';
+    }
+
+    let taken: readonly string[] = [];
+    try {
+      taken = (await this.saveStore.list()).map((summary) => summary.name);
+    } catch {
+      // A store that cannot be listed cannot be clashed with either. Founding a
+      // settlement matters more than the numeral being right.
+    }
+
+    const name = uniqueName(tidy, taken);
+    this.name = name;
+    this.slot = slotFor(name);
+    this.lastSavedYear = this.simulation.year.year;
+    await this.save();
+    return name;
+  }
+
+  public listSettlements(): Promise<readonly SaveSummary[]> {
+    return this.saveStore.list().catch(() => []);
+  }
+
+  /** Writes the settlement to its own file. */
   public async save(): Promise<boolean> {
+    if (this.slot === null) {
+      this.setSaveStatus('Name the settlement first');
+      return false;
+    }
+
     try {
       await this.saveStore.write(
-        AUTOSAVE_SLOT,
-        serialise(this.simulation, new Date().toISOString()),
+        this.slot,
+        serialise(this.simulation, new Date().toISOString(), this.name ?? undefined),
       );
       this.setSaveStatus('Saved');
       return true;
@@ -736,15 +851,25 @@ export class Game implements GameContext, InputIntentSink {
    * version counter, and restoring bumps all of them, so the world redraws
    * itself on the next frame.
    */
-  public async load(): Promise<boolean> {
+  public load(): Promise<boolean> {
+    return this.loadSettlement(this.slot ?? AUTOSAVE_SLOT);
+  }
+
+  /** Opens one settlement's file over the running world. */
+  public async loadSettlement(slot: string): Promise<boolean> {
     try {
-      const result = await this.saveStore.read(AUTOSAVE_SLOT);
+      const result = await this.saveStore.read(slot);
       if (!result.ok) {
         this.setSaveStatus(describeFailure(result.failure.kind));
         return false;
       }
 
       restore(this.simulation, result.save);
+      // The file the player just opened is the file they keep playing: the year
+      // that turns next overwrites this one, under this name.
+      this.name = result.save.settlementName ?? null;
+      this.slot = this.name === null ? slot : slotFor(this.name);
+      this.lastSavedYear = this.simulation.year.year;
       this.clock.restore(result.save.simulationTime, this.clock.speed);
       this.currentSelection = null;
       this.selectionChanges += 1;
@@ -762,7 +887,10 @@ export class Game implements GameContext, InputIntentSink {
   }
 
   public hasSave(): Promise<boolean> {
-    return this.saveStore.has(AUTOSAVE_SLOT).catch(() => false);
+    return this.saveStore
+      .list()
+      .then((saves) => saves.length > 0)
+      .catch(() => false);
   }
 
   private setSaveStatus(status: string): void {

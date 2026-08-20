@@ -108,6 +108,14 @@ export class Hud {
   private readonly context: GameContext;
   private readonly i18n: I18n;
   private readonly root: HTMLElement;
+  /**
+   * Called after the player begins again, so the shell can ask for a name.
+   *
+   * A hook rather than a dependency: the HUD is built before the main menu is,
+   * and a HUD that reached into the menu would be the wrong way round.
+   */
+  public onSettlementReplaced: (() => void) | null = null;
+
   private renderedLanguageVersion = -1;
   private readonly elements: HudElements;
   private lastRenderedSpeed: SimulationSpeed | null = null;
@@ -154,6 +162,11 @@ export class Hud {
     });
     this.elements.failureRestart.addEventListener('click', () => {
       this.context.startNewSettlement();
+      // **And back to the title, to be named.** The dead settlement's file was
+      // deleted with it, so a new valley the player never names is a valley they
+      // cannot come back to — the menu is where naming happens, so that is where
+      // beginning again goes.
+      this.onSettlementReplaced?.();
       // `undefined` means "not yet drawn". `null` is a real value here — it is
       // what "the settlement is fine" looks like — so using it as the reset
       // sentinel left the panel on screen over the new settlement.

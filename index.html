@@ -581,7 +581,7 @@
         <div class="menu__panel">
           <h1 class="menu__title">Montija</h1>
           <p class="menu__tagline" data-ui="menu-tagline"></p>
-          <div class="menu__actions">
+          <div class="menu__actions" data-ui="menu-actions">
             <button
               type="button"
               class="menu__button menu__button--primary"
@@ -590,6 +590,38 @@
             <button type="button" class="menu__button" data-ui="menu-new"></button>
             <button type="button" class="menu__button" data-ui="menu-guide"></button>
           </div>
+
+          <!--
+            Every settlement in the store but the newest, which is the button
+            above. Built by the menu rather than written here: how many there
+            are is a question about the player's history.
+          -->
+          <div class="menu__saves" data-ui="menu-saves"></div>
+
+          <!--
+            Naming a new settlement. A form so the on-screen keyboard offers a
+            Go key and Enter founds the village — the one place in this game
+            where a keyboard is the right instrument.
+          -->
+          <form class="menu__name" data-ui="menu-name" hidden>
+            <label class="menu__label" for="settlement-name" data-ui="menu-name-label"></label>
+            <input
+              class="menu__input"
+              id="settlement-name"
+              data-ui="menu-name-input"
+              type="text"
+              maxlength="24"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button
+              type="submit"
+              class="menu__button menu__button--primary"
+              data-ui="menu-found"
+            ></button>
+            <p class="menu__rule" data-ui="menu-permadeath"></p>
+          </form>
+
           <p class="menu__note" data-ui="menu-note"></p>
           <button
             type="button"

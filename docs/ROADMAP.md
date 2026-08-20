@@ -1961,3 +1961,15 @@ tapping anybody. See `ART_BIBLE.md` for the drawing.
 The pack is deliberately not the good being carried. Which resource it is is already on the ground at
 both ends of the trip, a sack of grain and a sack of iron look alike on a back, and thirteen goods times
 four figures times six colours is a texture nobody needs.
+
+## PHASE 65 — A settlement's name is its file — Implemented
+
+Named saves, one per settlement, written as each year turns and deleted on death. See
+`SAVE_FORMAT.md` for the rules and `simulation/save/settlementName.ts` for the two that are about
+words rather than disks.
+
+The shape of it is worth recording: the naming and uniqueness rules are pure functions, the store
+gained a `list()` backed by small summary records rather than by reading every save, and the game owns
+the name because the name is which _file_ this is rather than a fact about the settlement's machinery.
+Both ways of starting over — the failure screen and the settings sheet — now come back to the menu's
+name box, because a valley nobody names is a valley nobody can return to.

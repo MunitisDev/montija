@@ -17,6 +17,8 @@
 import type { BuildingId } from '@/data/buildings';
 import type { ResourceId } from '@/data/resources';
 import type { Job } from '@/simulation/jobs/Job';
+import { TICKS_PER_YEAR } from '@/simulation/seasons/SeasonClock';
+import { FALLBACK_SETTLEMENT_NAME } from './settlementName';
 
 /** Bump whenever the shape below changes incompatibly. */
 export const SAVE_VERSION = 1;
@@ -163,6 +165,16 @@ export interface SavedTree {
 export interface SaveGame {
   readonly version: number;
   readonly savedAt: string;
+  /**
+   * What the player called this settlement.
+   *
+   * The save's identity as well as its label: the slot it lives in is derived
+   * from this, so two settlements can never quietly overwrite one another. See
+   * `settlementName.ts`. Absent in saves written before settlements had names,
+   * which the menu lists under a placeholder — those settlements were founded
+   * before anybody asked.
+   */
+  readonly settlementName?: string;
   readonly worldSeed: number;
   readonly simulationTime: number;
 
@@ -291,6 +303,35 @@ export interface SaveGame {
     readonly forest?: { readonly seed: number; readonly cursor: number };
     /** Absent in saves written before anyone could fall ill. */
     readonly illness?: { readonly seed: number; readonly cursor: number };
+  };
+}
+
+/**
+ * One line about a saved settlement, for the menu to list.
+ *
+ * Kept apart from the save itself and stored beside it, because listing what a
+ * player has is a *menu* and a save is a megabyte of terrain: reading four of
+ * them to draw four buttons is four megabytes of parsing for a screen the player
+ * looks at for a second.
+ */
+export interface SaveSummary {
+  readonly slot: string;
+  readonly name: string;
+  /** The year the settlement had reached when it was written. */
+  readonly year: number;
+  readonly savedAt: string;
+  readonly population: number;
+}
+
+/** The one line the menu needs about a save, taken off the save itself. */
+export function summarise(slot: string, save: SaveGame): SaveSummary {
+  return {
+    slot,
+    name: save.settlementName ?? FALLBACK_SETTLEMENT_NAME,
+    // The clock counts ticks; a player counts years, and the first one is Year 1.
+    year: Math.floor(save.simulationTime / TICKS_PER_YEAR) + 1,
+    savedAt: save.savedAt,
+    population: save.villagers.length,
   };
 }
 

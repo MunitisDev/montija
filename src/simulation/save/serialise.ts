@@ -21,12 +21,24 @@ import { Villager } from '@/simulation/villagers/Villager';
 import type { SavedInventory, SaveGame } from './SaveGame';
 import { SAVE_VERSION } from './SaveGame';
 
-export function serialise(simulation: Simulation, savedAt: string): SaveGame {
+export function serialise(
+  simulation: Simulation,
+  savedAt: string,
+  /**
+   * What the player called this settlement.
+   *
+   * Passed in rather than read off the simulation because it is not a fact about
+   * the settlement's machinery — it is which *file* this is, and the file is the
+   * game's business. See `save/settlementName.ts`.
+   */
+  settlementName?: string,
+): SaveGame {
   const world = simulation.world;
 
   return {
     version: SAVE_VERSION,
     savedAt,
+    ...(settlementName === undefined ? {} : { settlementName }),
     worldSeed: simulation.worldSeed,
     simulationTime: simulation.tick,
 

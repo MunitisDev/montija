@@ -110,16 +110,55 @@ that is only known once the whole save is in place.
 
 ---
 
-## Where saves live
+## Where saves live — Implemented
 
-IndexedDB, one record per slot, under an autosave key written every few minutes and whenever the
-player asks. When the browser has no IndexedDB the game falls back to an in-memory store, so it still
-runs — saves simply do not survive a refresh, and the game does not pretend otherwise.
+IndexedDB, and **one record per settlement**: the slot key is derived from the settlement's own name,
+so `Peñalba` lives under `settlement:peñalba` with a small `summary:` record beside it. When the
+browser has no IndexedDB the game falls back to an in-memory store, so it still runs — saves simply do
+not survive a refresh, and the game does not pretend otherwise.
+
+The summaries are what the menu lists. They exist because a save is a megabyte of terrain and a menu
+row is a name and a year: reading four saves to draw four buttons would be four megabytes of parsing
+for a screen the player looks at for a second.
+
+### A name is the file
+
+One autosave in one slot is right for a game with one settlement and wrong for a game about founding
+them. A player who begins again after a hard winter wants _their_ valley back — the one with the bridge
+in the wrong place — not whichever run was saved last. So:
+
+- **A settlement is named when it is founded**, in the main menu, from a box that opens with a
+  suggestion already in it (taken from the world seed, so the valley reads as already having a name).
+- **Nothing is written before it has one.** An unnamed run is deliberately unsaveable: there is nowhere
+  to put it.
+- **Two settlements never share a name.** The second Peñalba is _Peñalba II_ — roman numerals, because
+  this is a game about medieval settlements and that is where roman numerals belong. Clashes are
+  judged by slot, so `Peñalba` and `peñalba` are one village rather than two.
+- **The name is tidied, not rejected.** Double spaces, trailing spaces and a paragraph pasted into the
+  box are things a player did by accident, and an error message is a worse answer than quietly fixing
+  it.
+
+### Permadeath
+
+**A settlement's file is written as each year turns, and deleted when the settlement dies.**
+
+That is one file, always holding the last new year. There is no going back to a better winter, so the
+only honest moment to write is the turn of a year — where the player can see it happen and knows what
+they are keeping. And when the last villager is gone the record goes with them: leaving the final
+autosave behind would quietly hand the player a way to un-lose the run, which is the whole thing
+permadeath is for. The name is dropped at the same moment, so the next valley has to be founded and
+named like any other rather than inheriting a dead village's file.
+
+The check runs every frame rather than only on the frames that advanced the clock: a settlement can
+die on the tick the player pauses, and the file has to go either way.
+
+Saves written before settlements had names are still listed, under a placeholder — those settlements
+were founded before anybody asked, and refusing to show them would be the update eating a player's
+village.
 
 ---
 
 ## Planned
 
-- More than one save slot, and naming them.
 - Migration rather than refusal for old versions, once the format is worth migrating.
 - Export and import to a file, so a settlement can outlive a browser profile.
