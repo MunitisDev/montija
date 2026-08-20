@@ -48,7 +48,12 @@ export const RECIPES: Readonly<Record<string, Recipe>> = {
     id: 'cut-stone',
     name: 'Cut stone',
     inputs: [],
-    outputs: [{ resource: 'stone', amount: 4 }],
+    // **Halved, on the evidence.** At four a cut, eight measured settlements
+    // finished their third year with five hundred and twenty stone apiece on
+    // the shelves — a quarry and two masons out-supplying everything the
+    // settlement could think of to build, so stone stopped being a thing anyone
+    // had to plan for. Two a cut keeps it a decision.
+    outputs: [{ resource: 'stone', amount: 2 }],
     // Slow. A quarry is not meant to beat picking up a surface deposit — it is
     // meant to still be there in ten years, when every deposit is gone.
     workTicks: 70,
