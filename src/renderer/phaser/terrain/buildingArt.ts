@@ -518,8 +518,11 @@ export const BUILDING_COLOURS: Readonly<Record<BuildingId, BuildingPalette>> = {
   tailor: { wall: 0xa08c84, roof: 0x584740, trim: 0x342c29 },
   // Worked ground rather than buildings — the trim colour is the soil and the
   // wall colour is what is growing in it.
-  'crop-field': { wall: 0x7a7038, roof: 0x6a5f38, trim: 0x574a2c },
-  orchard: { wall: 0x4f5c37, roof: 0x44502f, trim: 0x3a4428 },
+  // The field's green is the *leaf* green of a vegetable bed, kept well clear of
+  // the orchard's darker crowns — the two plots are the pair most likely to be
+  // mistaken for one another, so their greens are chosen against each other.
+  'crop-field': { wall: 0x87924a, roof: 0x6a5f38, trim: 0x574a2c },
+  orchard: { wall: 0x4a5a33, roof: 0x44502f, trim: 0x475339 },
   // Dressed stone, paler and greyer than anything around it, under slate. The
   // settlement's one monument should be legible from across the map.
   // Turned earth and grey markers, kept deliberately quiet — but not black. At
@@ -552,6 +555,36 @@ const STONE_FOOTING = 0x6a675e;
  * reads on the chimney, which is the part of a house the eye finds first.
  */
 const IMPROVED_STONE = 0x9d9789;
+
+/**
+ * What an improvement changes about how a building is put together.
+ *
+ * **A pale chimney was not enough.** The first attempt at a stone hearth carried
+ * the whole difference in the colour of one stack, and at the zoom a settlement
+ * is actually played at that is a few pixels: a player with eight cottages had
+ * no way of telling which four they had already paid for. A house that has been
+ * given a hearth has had its walls taken down to the footing and rebuilt in
+ * stone under slate, so that is what it is drawn as — a different *material*,
+ * which the eye reads at any distance, rather than a different shade.
+ *
+ * Nothing in here may make a building taller. The texture box is measured from
+ * the plain mass in {@link buildingTextureSpec}, so a higher wall or a steeper
+ * roof would be quietly cropped; material and colour are free.
+ */
+interface ImprovedLook {
+  readonly build?: WallBuild;
+  readonly cover?: RoofCover;
+  readonly wall?: number;
+  readonly roof?: number;
+  readonly timber?: number;
+}
+
+const IMPROVED: Partial<Readonly<Record<BuildingId, ImprovedLook>>> = {
+  // Rubble stone, laid pale and cold against the timber cottages beside it,
+  // under grey slate where the plain house has ochre thatch. The two read
+  // differently in silhouette even in snow, which is when it matters most.
+  house: { build: 'stone', cover: 'slate', wall: 0x9c968a, roof: 0x5d6064, timber: 0x4b4640 },
+};
 
 /**
  * The storage yard, in pixels. See {@link drawStorageYard}.
@@ -825,18 +858,21 @@ function plotPoint(
 /** The look one building is built to, assembled from its mass and its palette. */
 function lookFor(id: BuildingId, palette: BuildingPalette, variant = 0): StructureLook {
   const mass = MASS[id];
+  // Only ever for a building that *has* an improvement, and only for its second
+  // variant. See {@link IMPROVED} and {@link artVariants}.
+  const better = variant > 0 ? IMPROVED[id] : undefined;
   return {
     wallHeight: mass.wallHeight,
     roofHeight: mass.roofHeight,
     eaves: mass.eaves,
     plinth: mass.plinth ?? 0,
-    wall: palette.wall,
-    roof: palette.roof,
-    timber: palette.trim,
+    wall: better?.wall ?? palette.wall,
+    roof: better?.roof ?? palette.roof,
+    timber: better?.timber ?? palette.trim,
     stone: variant > 0 ? IMPROVED_STONE : STONE_FOOTING,
     form: mass.form ?? 'gable',
-    build: mass.build ?? 'framed',
-    cover: mass.cover ?? 'shingle',
+    build: better?.build ?? mass.build ?? 'framed',
+    cover: better?.cover ?? mass.cover ?? 'shingle',
     windows: mass.windows ?? 1,
     door: mass.noDoor !== true,
     chimney: mass.chimney === true,
@@ -1285,24 +1321,63 @@ function drawField(
       ]);
     }
   } else if (kind === 'crop') {
-    // Furrows running along one axis, in the crop's own colour. Seven of them:
-    // enough to read as ploughed, few enough not to shimmer when the camera
-    // moves.
-    for (let index = 1; index <= 7; index += 1) {
-      const t = -1 + (index * 2) / 8;
-      const spanX = halfW * t;
-      const spanY = halfH * (1 - Math.abs(t));
-      graphics.fillStyle(shade(palette.wall, index % 2 === 0 ? 1.1 : 0.94), 1);
+    // **Beds of vegetables, not just ploughing.** Furrows alone read as "some
+    // kind of worked ground", and the player had a field and an orchard that
+    // looked like two versions of each other. Two things fix it: the ground is
+    // *banded* rather than striped, so it reads as dug from any distance, and
+    // there is a crop standing in it — rows of leaf clumps, with one bed turned
+    // over and bare, which is what a garden looks like halfway through a season.
+    //
+    // Eight bands, with a boundary at the middle: the rhombus narrows towards
+    // each end, and a band straddling the widest point would cut the corner off
+    // its own plot.
+    const BANDS = 8;
+    const edge = (t: number) => ({
+      x: cx + halfW * t,
+      half: halfH * (1 - Math.abs(t)),
+    });
+    for (let band = 0; band < BANDS; band += 1) {
+      const from = edge(-1 + (band * 2) / BANDS);
+      const to = edge(-1 + ((band + 1) * 2) / BANDS);
+      // Turned earth, in two tones. Wide enough apart to read as ridge and
+      // furrow rather than as a texture.
+      graphics.fillStyle(shade(palette.trim, band % 2 === 0 ? 1.24 : 0.96), 1);
       polygon(graphics, [
-        { x: cx + spanX, y: groundY - spanY },
-        { x: cx + spanX, y: groundY + spanY },
-        { x: cx + spanX + 3, y: groundY + spanY - 1.5 },
-        { x: cx + spanX + 3, y: groundY - spanY - 1.5 },
+        { x: from.x, y: groundY - from.half },
+        { x: to.x, y: groundY - to.half },
+        { x: to.x, y: groundY + to.half },
+        { x: from.x, y: groundY + from.half },
       ]);
+
+      // One bed left bare: dug over and waiting, so the field reads as tended
+      // rather than as a printed pattern.
+      if (band === 2) {
+        continue;
+      }
+
+      // Cabbage-shaped clumps down the middle of the ridge, two tones with the
+      // light one on the upper left like everything else in the settlement — a
+      // flat green blob at this size reads as a coin.
+      const x = (from.x + to.x) / 2;
+      const half = (from.half + to.half) / 2;
+      for (const along of [-0.66, -0.22, 0.22, 0.66] as const) {
+        const y = groundY + half * along;
+        graphics.fillStyle(shade(palette.trim, 0.72), 1);
+        graphics.fillEllipse(x + 0.6, y + 2, 8.6, 3.6);
+        graphics.fillStyle(shade(palette.wall, band % 2 === 0 ? 1.04 : 0.88), 1);
+        graphics.fillEllipse(x, y, 8.4, 6);
+        graphics.fillStyle(shade(palette.wall, 1.26), 1);
+        graphics.fillEllipse(x - 1.8, y - 1.5, 4, 3);
+      }
     }
   } else {
-    // Fruit trees in rows: small rounded crowns on short trunks, so an orchard
-    // reads as trees the settlement planted rather than as wild wood.
+    // **Fruit trees, with fruit on them.** An orchard has to be tellable from
+    // the field beside it *and* from the wild wood behind it: the rows are what
+    // say planted, and the fruit is what says orchard rather than coppice. The
+    // grass between the rows is left alone — an orchard is not ploughed, and
+    // that is half of what separates the two plots at a glance.
+    const FRUIT = 0xb8452b;
+    let index = 0;
     for (const [ox, oy] of [
       [-0.5, -0.25],
       [0, -0.5],
@@ -1314,14 +1389,36 @@ function drawField(
     ] as const) {
       const x = cx + halfW * ox * 0.72;
       const y = groundY + halfH * oy * 0.72;
+      index += 1;
+
       graphics.fillStyle(0x000000, 0.18);
-      graphics.fillEllipse(x, y + 1, 11, 4);
+      graphics.fillEllipse(x, y + 1, 12, 4.4);
+      // A short trunk that forks, which is how a tree kept low for picking
+      // grows and the quickest way to say *pruned*.
       graphics.fillStyle(0x4a3d2c, 1);
-      graphics.fillRect(x - 1.2, y - 9, 2.4, 9);
-      graphics.fillStyle(shade(palette.wall, 1.18), 1);
-      graphics.fillEllipse(x - 1.5, y - 14, 13, 11);
-      graphics.fillStyle(shade(palette.wall, 0.82), 1);
-      graphics.fillEllipse(x + 3, y - 12, 8, 8);
+      graphics.fillRect(x - 1.3, y - 9, 2.6, 9);
+      graphics.fillRect(x - 3.4, y - 11, 2, 4);
+      graphics.fillRect(x + 1.6, y - 11, 2, 4);
+
+      graphics.fillStyle(shade(palette.wall, 1.22), 1);
+      graphics.fillEllipse(x - 1.5, y - 15, 14, 12);
+      graphics.fillStyle(shade(palette.wall, 0.78), 1);
+      graphics.fillEllipse(x + 3.2, y - 12.5, 8.5, 8.5);
+
+      // Fruit, in the crown and under it. Positioned off the row's index rather
+      // than rolled: this is drawn once into a texture, and the renderer must
+      // never touch a simulation stream.
+      graphics.fillStyle(FRUIT, 1);
+      for (const [fx, fy] of [
+        [-4.6, -17],
+        [0.4, -19.4],
+        [3.6, -15.6],
+        [-2.4, -12.4],
+      ] as const) {
+        graphics.fillCircle(x + fx + (index % 2) * 0.8, y + fy + (index % 3) * 0.6, 1.5);
+      }
+      graphics.fillStyle(shade(FRUIT, 1.35), 1);
+      graphics.fillCircle(x + 0.8, y - 19.6, 0.7);
     }
   }
 
@@ -1655,4 +1752,29 @@ function drawStackedGoods(
   graphics.fillRect(cx + crate * 0.3, y - crate * 0.6, crate * 1.2, crate * 0.8);
   graphics.fillStyle(0x6d5c40, 1);
   graphics.fillRect(cx - crate * 0.5, y - crate * 1.5, crate, crate * 0.9);
+}
+
+/**
+ * Where a building's roof is, relative to its anchor, and how wide.
+ *
+ * Exported for the flames. A building alight burns *on its roof*, and the roof
+ * is not a thing the renderer can see: it is buried in the same mass table the
+ * texture was drawn from. Asking here is what stops a fire drawn beside the
+ * house it is supposedly consuming — the same reason {@link chimneyOffset}
+ * exists, and the same failure it was written to prevent.
+ *
+ * `dy` is the height of the ridge above the footprint's centre, negative because
+ * up is negative on screen; `halfWidth` is the built part's half-extent, so
+ * flames spread across the roof rather than across the garden.
+ */
+export function roofSpan(id: BuildingId): { dy: number; halfWidth: number } {
+  const mass = MASS[id];
+  const base = baseSize(BUILDINGS[id].footprint);
+  const inset = mass.inset ?? 1;
+  return {
+    // Two thirds up the pitch rather than at the ridge: fire comes through a
+    // roof where the roof is, and a tongue starting at the apex reads as a flag.
+    dy: -((mass.plinth ?? 0) + mass.wallHeight + mass.roofHeight * 0.62),
+    halfWidth: (base.width / 2 - FOOTPRINT_INSET) * inset,
+  };
 }

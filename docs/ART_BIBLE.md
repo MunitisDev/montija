@@ -781,17 +781,53 @@ as a stone table. The water in it is the one cold colour on the map.
 
 ## A building alight — Implemented
 
-Two signals, because one is never enough at gameplay zoom: the building takes a **warm tint** — the only
-one outside a forge — and it smokes **dark and fast**, four times a hearth's rate in a colour no cooking
-fire ever has. A fire and a chimney must not be mistakable for one another from across a valley.
+Two signals, because one is never enough at gameplay zoom: **flames** standing off the roof and smoke
+that is **dark and fast**, four times a hearth's rate in a colour no cooking fire ever has. A fire and a
+chimney must not be mistakable for one another from across a valley.
+
+The first version tinted the sprite orange instead of drawing flames, and it was wrong: the building
+kept its shape, its roof and its stillness and simply changed colour, which reads as a rendering fault
+rather than as a fire. What a fire looks like is _movement_. Five tongues stand along the roof, tallest
+in the middle, each guttering at its own rate, over a slow pulse of light on the thatch beneath them.
+
+Sorted **with the roof, not with the smoke**. Smoke drifts off its own building and so lives in the sky
+band; a flame stays on the building it is eating, so it takes that building's own depth in the
+`Effect` layer and is covered by anything standing between it and the camera. The flicker is a function
+of elapsed real seconds and the building's id — no random source at all, so a fire looks the same after
+a reload and nothing in the renderer can touch a simulation stream.
 
 ## An improved building — Implemented
 
-A building that has been given its one improvement is drawn as **the same silhouette with better
-masonry**: dressed, pale stone where the plain one has field stone. It cannot be anything else — the
-texture box is fixed per building, so the silhouette cannot grow — and it does not need to be, because
-the part of a house the eye finds first is its chimney and that is exactly what the stone colours.
+A building that has been given its one improvement is drawn as **the same silhouette in a different
+material**. The house's walls come down to the footing and go back up in rubble stone, pale and cold
+against the timber cottages beside it, under grey slate where the plain house has ochre thatch.
+
+The first attempt carried the whole difference in the colour of one chimney, and at the zoom a
+settlement is actually played at that is a few pixels: a player with eight cottages had no way of
+telling which four they had already paid for. Material reads at any distance where a shade does not.
+
+What an improvement may change is fixed by one rule: **nothing that makes the building taller.** The
+texture box is measured from the plain mass, so a higher wall or a steeper roof would be quietly
+cropped. Material and colour are free, the silhouette is not.
 
 The variant machinery is the storage yard's, unchanged: `artVariants` reports two looks for anything
 with an upgrade in its data, the second is reserved for the improved state rather than handed out by id,
 and both are drawn into textures once at load.
+
+## A field and an orchard — Implemented
+
+The two plots most likely to be mistaken for one another, so they are drawn against each other rather
+than each on its own merits.
+
+The **field** is dug ground with a crop standing in it: eight bands of turned earth in two tones, with
+rows of pale leaf clumps down the ridges and one bed left bare, because a garden halfway through a
+season has a bed waiting. Bands rather than thin stripes — a stripe reads as a texture, a band reads as
+ploughing from any distance. The green is the leaf green of a vegetable bed.
+
+The **orchard** is trees the settlement planted: low forked trunks in rows, rounded crowns in a darker
+green than the field's, **fruit** in and under each crown, and the grass between the rows left unploughed.
+The rows say planted, the fruit says orchard rather than coppice, and the unbroken grass is half of what
+separates the two plots at a glance.
+
+Both keep the low fence on the two back edges only. Across the front it would hide the crop, which is
+the one thing the player needs to see.

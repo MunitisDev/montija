@@ -22,6 +22,7 @@ import { RenderLayer, depthFor } from '@/renderer/phaser/sorting';
 import { gridToScene } from '@/shared/math/isometric';
 import { FrameTimer } from '@/renderer/FrameTimer';
 import { WeatherRenderer } from '@/renderer/phaser/effects/WeatherRenderer';
+import { FireRenderer } from '@/renderer/phaser/effects/FireRenderer';
 import { HearthRenderer } from '@/renderer/phaser/effects/HearthRenderer';
 import { structureTint } from '@/renderer/phaser/terrain/seasonalPalette';
 
@@ -41,6 +42,7 @@ export class WorldScene extends Phaser.Scene {
   private buildingRenderer!: BuildingRenderer;
   private weatherRenderer!: WeatherRenderer;
   private hearthRenderer!: HearthRenderer;
+  private fireRenderer!: FireRenderer;
   /**
    * One marker per selected cell, grown on demand and never shrunk.
    *
@@ -86,6 +88,7 @@ export class WorldScene extends Phaser.Scene {
     this.buildingRenderer = new BuildingRenderer(this);
     this.weatherRenderer = new WeatherRenderer(this);
     this.hearthRenderer = new HearthRenderer(this);
+    this.fireRenderer = new FireRenderer(this);
 
     this.selectionMarkers = [];
 
@@ -99,6 +102,8 @@ export class WorldScene extends Phaser.Scene {
       this.connectorRenderer.destroy();
       this.resourceRenderer.destroy();
       this.buildingRenderer.destroy();
+      this.hearthRenderer.destroy();
+      this.fireRenderer.destroy();
     });
 
     this.cameraBinding.sync();
@@ -143,6 +148,7 @@ export class WorldScene extends Phaser.Scene {
       this.context.simulation.storages,
     );
     this.hearthRenderer.sync(this.context.simulation.world.buildings);
+    this.fireRenderer.sync(this.context.simulation.world.buildings);
     this.buildingRenderer.syncGhost(this.context.placement, this.context.placementVersion);
     this.syncSelectionMarker();
   }
@@ -183,6 +189,10 @@ export class WorldScene extends Phaser.Scene {
       camera: this.cameras.main,
       random: () => this.context.presentationRandom(),
     });
+
+    // Flames belong to one roof and stay on it, so they are sorted with the
+    // building rather than with the smoke. See `effects/FireRenderer.ts`.
+    this.fireRenderer.update(deltaMilliseconds / 1000);
   }
 
   /** Exposed so the debug overlay can report render object counts. */
