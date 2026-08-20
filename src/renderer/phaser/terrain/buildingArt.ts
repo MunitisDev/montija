@@ -391,6 +391,23 @@ const MASS: Readonly<Record<BuildingId, BuildingMass>> = {
     ground: 'garden',
   },
 
+  // A shed on a bank: boarded, low, one window, with the drying frame and the
+  // creel outside doing all the work of saying *river*. Deliberately the least
+  // built-looking hut in the settlement after the gatherer's — it is a jetty
+  // with a roof behind it.
+  'fishing-hut': {
+    wallHeight: 16,
+    roofHeight: 17,
+    eaves: 7,
+    form: 'gable',
+    build: 'boarded',
+    cover: 'thatch',
+    windows: 1,
+    feature: { kind: 'nets', u: 0.84, v: 0.14 },
+    inset: PLOT_FILL,
+    ground: 'worn',
+  },
+
   // A cabin out at the treeline, with a hide stretched in its frame and antlers
   // on a post — the two things in the settlement that could be nothing else.
   hunter: {
@@ -513,6 +530,9 @@ export const BUILDING_COLOURS: Readonly<Record<BuildingId, BuildingPalette>> = {
   herbalist: { wall: 0x7f8a63, roof: 0x7a6942, trim: 0x39422d },
   // Plastered and kept clean, which is the point of the building.
   healer: { wall: 0xa9a493, roof: 0x5a564a, trim: 0x36332d },
+  // Timber that has spent its life wet: grey-green, the coolest walls on dry
+  // land, so a fishing hut reads as belonging to the river rather than the wood.
+  'fishing-hut': { wall: 0x7f877a, roof: 0x6a6b4c, trim: 0x3b4034 },
   hunter: { wall: 0x8a7454, roof: 0x7a6942, trim: 0x3c3327 },
   // A workshop with good light, and the palest walls of the working buildings.
   tailor: { wall: 0xa08c84, roof: 0x584740, trim: 0x342c29 },

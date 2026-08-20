@@ -28,6 +28,7 @@
  * biggest surplus is not the one it is willing to part with.
  */
 
+import { FOOD_IDS, isFood } from '@/data/resources';
 import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
 import type { StorageRegistry } from '@/simulation/logistics/Storage';
 import type { Season } from '@/simulation/seasons/SeasonClock';
@@ -65,7 +66,7 @@ export const SURPLUS_FLOOR = 80;
  * firewood is what stands between it and January. Neither is ever a surplus in
  * a way worth acting on, whatever the number says.
  */
-const NEVER_SOLD: ReadonlySet<ResourceId> = new Set<ResourceId>(['food', 'firewood']);
+const NEVER_SOLD: ReadonlySet<ResourceId> = new Set<ResourceId>([...FOOD_IDS, 'firewood']);
 
 /**
  * What the player has asked the post to do.
@@ -209,8 +210,15 @@ function scarcest(held: ReadonlyMap<ResourceId, number>): ResourceId | null {
   let worst: ResourceId | null = null;
   let worstAmount = Number.POSITIVE_INFINITY;
 
+  // **Food is one larder for this purpose**, not five goods. A settlement with
+  // three hundred vegetables and no fish is not short of food, and a merchant
+  // who read it good by good would spend every visit buying whichever kind the
+  // settlement happens not to farm — which is how the automatic order stopped
+  // ever buying iron.
+  const larder = FOOD_IDS.reduce((sum, id) => sum + (held.get(id) ?? 0), 0);
+
   for (const resource of RESOURCE_IDS) {
-    const amount = held.get(resource) ?? 0;
+    const amount = isFood(resource) ? larder : (held.get(resource) ?? 0);
     if (amount < worstAmount) {
       worst = resource;
       worstAmount = amount;

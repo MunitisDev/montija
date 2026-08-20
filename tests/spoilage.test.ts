@@ -29,12 +29,12 @@ describe('what spoils', () => {
   it('turns food left in an open yard', () => {
     const { storages, piles } = registries();
     const yard = storages.add({ cell: { gx: 0, gy: 0 }, capacity: 500 });
-    yard.inventory.add('food', 100);
+    yard.inventory.add('vegetables', 100);
 
     const report = runSpoilage(storages, piles);
 
-    expect(yard.inventory.count('food')).toBeLessThan(100);
-    expect(report.lost.food).toBeGreaterThan(0);
+    expect(yard.inventory.count('vegetables')).toBeLessThan(100);
+    expect(report.lost.vegetables).toBeGreaterThan(0);
   });
 
   it('leaves timber, stone and firewood alone', () => {
@@ -54,21 +54,21 @@ describe('what spoils', () => {
 
   it('spoils food lying on the ground too', () => {
     const { storages, piles } = registries();
-    piles.drop({ gx: 3, gy: 3 }, 'food', 50);
+    piles.drop({ gx: 3, gy: 3 }, 'vegetables', 50);
 
     runSpoilage(storages, piles);
 
-    expect(piles.totalOf('food')).toBeLessThan(50);
+    expect(piles.totalOf('vegetables')).toBeLessThan(50);
   });
 
   it('is the same every time, with no randomness', () => {
     const first = registries();
     const second = registries();
-    first.storages.add({ cell: { gx: 0, gy: 0 }, capacity: 500 }).inventory.add('food', 137);
-    second.storages.add({ cell: { gx: 0, gy: 0 }, capacity: 500 }).inventory.add('food', 137);
+    first.storages.add({ cell: { gx: 0, gy: 0 }, capacity: 500 }).inventory.add('vegetables', 137);
+    second.storages.add({ cell: { gx: 0, gy: 0 }, capacity: 500 }).inventory.add('vegetables', 137);
 
-    expect(runSpoilage(first.storages, first.piles).lost.food).toBe(
-      runSpoilage(second.storages, second.piles).lost.food,
+    expect(runSpoilage(first.storages, first.piles).lost.vegetables).toBe(
+      runSpoilage(second.storages, second.piles).lost.vegetables,
     );
   });
 });
@@ -80,18 +80,20 @@ describe('the larder', () => {
     const larder = storages.add({
       cell: { gx: 5, gy: 0 },
       capacity: 500,
-      accepts: ['food'],
+      accepts: ['vegetables'],
       preservation: 0.1,
     });
-    yard.inventory.add('food', 300);
-    larder.inventory.add('food', 300);
+    yard.inventory.add('vegetables', 300);
+    larder.inventory.add('vegetables', 300);
 
     // A season of standing still.
     for (let day = 0; day < 12; day++) {
       runSpoilage(storages, piles);
     }
 
-    expect(larder.inventory.count('food')).toBeGreaterThan(yard.inventory.count('food') * 2);
+    expect(larder.inventory.count('vegetables')).toBeGreaterThan(
+      yard.inventory.count('vegetables') * 2,
+    );
   });
 
   it('carries a winter of food where a yard cannot', () => {
@@ -100,19 +102,19 @@ describe('the larder', () => {
     const larder = storages.add({
       cell: { gx: 5, gy: 0 },
       capacity: 500,
-      accepts: ['food'],
+      accepts: ['vegetables'],
       preservation: 0.1,
     });
     // What ten villagers eat across a twelve-day winter, banked in autumn.
-    yard.inventory.add('food', 120);
-    larder.inventory.add('food', 120);
+    yard.inventory.add('vegetables', 120);
+    larder.inventory.add('vegetables', 120);
 
     for (let day = 0; day < 12; day++) {
       runSpoilage(storages, piles);
     }
 
-    expect(larder.inventory.count('food')).toBeGreaterThan(100);
-    expect(yard.inventory.count('food')).toBeLessThan(40);
+    expect(larder.inventory.count('vegetables')).toBeGreaterThan(100);
+    expect(yard.inventory.count('vegetables')).toBeLessThan(40);
   });
 
   it('receives food in preference to a nearer open yard', () => {
@@ -123,11 +125,11 @@ describe('the larder', () => {
     const larder = storages.add({
       cell: { gx: 9, gy: 0 },
       capacity: 500,
-      accepts: ['food'],
+      accepts: ['vegetables'],
       preservation: 0.1,
     });
 
-    expect(storages.findNearestAccepting({ gx: 0, gy: 0 }, 'food')).toBe(larder);
+    expect(storages.findNearestAccepting({ gx: 0, gy: 0 }, 'vegetables')).toBe(larder);
   });
 
   it('does not divert goods that keep perfectly well anywhere', () => {
@@ -143,22 +145,22 @@ describe('spoilage arithmetic', () => {
   it('never takes more than there is', () => {
     const { storages, piles } = registries();
     const yard = storages.add({ cell: { gx: 0, gy: 0 }, capacity: 500 });
-    yard.inventory.add('food', 4);
+    yard.inventory.add('vegetables', 4);
 
     for (let day = 0; day < 40; day++) {
       runSpoilage(storages, piles);
     }
 
-    expect(yard.inventory.count('food')).toBeGreaterThanOrEqual(0);
+    expect(yard.inventory.count('vegetables')).toBeGreaterThanOrEqual(0);
   });
 
   it('agrees with the rate in the resource definition', () => {
     const { storages, piles } = registries();
     const yard = storages.add({ cell: { gx: 0, gy: 0 }, capacity: 500 });
-    yard.inventory.add('food', 200);
+    yard.inventory.add('vegetables', 200);
 
     const report = runSpoilage(storages, piles);
 
-    expect(report.lost.food).toBe(Math.round(200 * RESOURCES.food.spoilsPerDay));
+    expect(report.lost.vegetables).toBe(Math.round(200 * RESOURCES.vegetables.spoilsPerDay));
   });
 });

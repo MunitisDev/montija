@@ -182,7 +182,7 @@ describe('making camp', () => {
 describe('what they brought', () => {
   it('is mostly timber, and enough food to start on', () => {
     expect(STARTING_RESOURCES.logs).toBeGreaterThan(0);
-    expect(STARTING_RESOURCES.food).toBeGreaterThan(0);
+    expect(STARTING_RESOURCES.vegetables).toBeGreaterThan(0);
   });
 
   it('contains a little stone, and not enough of it', () => {
@@ -222,7 +222,7 @@ describe('what they brought', () => {
     // off the ground still works when there is anything lying there.
     const simulation = new Simulation(OPTIONS);
 
-    expect(simulation.storages.totalOf('food')).toBe(STARTING_RESOURCES.food);
+    expect(simulation.storages.totalOf('vegetables')).toBe(STARTING_RESOURCES.vegetables);
     expect(simulation.storages.totalOf('logs')).toBe(STARTING_RESOURCES.logs);
     expect(onTheGround(simulation, 'logs')).toBe(0);
     expect([...simulation.world.piles.all]).toEqual([]);

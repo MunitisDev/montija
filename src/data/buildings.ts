@@ -6,7 +6,7 @@
  * mean adding a row, never writing a new menu button or a new placement branch.
  */
 
-import type { ResourceId } from './resources';
+import { FOOD_IDS, type ResourceId } from './resources';
 import { WET_TERRAIN, type TerrainType } from './terrain';
 
 export type BuildingId =
@@ -21,6 +21,7 @@ export type BuildingId =
   | 'blacksmith'
   | 'crop-field'
   | 'orchard'
+  | 'fishing-hut'
   | 'hunter'
   | 'tailor'
   | 'trading-post'
@@ -328,7 +329,7 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     // A tenth of the spoilage of an open yard. This is the whole reason the
     // building exists: food will sit anywhere, but only keeps through a winter
     // in here.
-    storage: { capacity: 800, accepts: ['food'], preservation: 0.1 },
+    storage: { capacity: 800, accepts: FOOD_IDS, preservation: 0.1 },
   },
   'gatherer-hut': {
     id: 'gatherer-hut',
@@ -415,6 +416,24 @@ export const BUILDINGS: Readonly<Record<BuildingId, BuildingDefinition>> = {
     buildTicks: 400,
     workerSlots: 2,
     recipeId: 'tend-orchard',
+  },
+  'fishing-hut': {
+    id: 'fishing-hut',
+    category: 'food',
+    name: 'Fishing Hut',
+    description:
+      'A jetty and a drying rack on the river. Brings something in every month of the year, and keeps worse than anything else.',
+    footprint: { width: 2, height: 2 },
+    // Cheap, like the Gatherer Hut, and for the same reason: it is a hut on a
+    // bank rather than a building, and the settlement that needs it most is the
+    // one that has just found out its first spring is longer than its stores.
+    constructionCost: [{ resource: 'logs', amount: 10 }],
+    buildTicks: 100,
+    workerSlots: 2,
+    recipeId: 'catch-fish',
+    // On the water, or on a channel dug to it. The second building whose place
+    // on the map is a real decision.
+    adjacentTo: WET_TERRAIN,
   },
   herbalist: {
     id: 'herbalist',
@@ -704,6 +723,7 @@ export const BUILDING_IDS: readonly BuildingId[] = [
   'blacksmith',
   'crop-field',
   'orchard',
+  'fishing-hut',
   'hunter',
   'tailor',
   'trading-post',

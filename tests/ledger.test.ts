@@ -175,7 +175,7 @@ describe('what a day costs', () => {
     const simulation = new Simulation(OPTIONS);
     const flows = estimateFlows(simulation);
 
-    expect(flows.survivalDemand.get('food')).toBeCloseTo(
+    expect(flows.survivalDemand.get('vegetables')).toBeCloseTo(
       simulation.villagers.all.length * FOOD_PER_VILLAGER_PER_DAY,
     );
   });
@@ -241,7 +241,7 @@ describe('what a day makes', () => {
     expect(hut).not.toBeNull();
     hut!.desiredWorkers = 0;
 
-    expect(estimateFlows(simulation).production.get('food') ?? 0).toBe(0);
+    expect(estimateFlows(simulation).production.get('spices') ?? 0).toBe(0);
   });
 
   it('claims food once somebody is foraging', () => {
@@ -253,7 +253,7 @@ describe('what a day makes', () => {
       (building) => building.definition.id === 'gatherer-hut' && building.workers.length > 0,
     );
     expect(staffed).toBe(true);
-    expect(estimateFlows(simulation).production.get('food') ?? 0).toBeGreaterThan(0);
+    expect(estimateFlows(simulation).production.get('spices') ?? 0).toBeGreaterThan(0);
   });
 
   it('scales output with the staff', () => {
@@ -270,8 +270,8 @@ describe('what a day makes', () => {
     const oneStaff = staffAt(one, 'gatherer-hut');
     const twoStaff = staffAt(two, 'gatherer-hut');
     expect(twoStaff).toBeGreaterThan(oneStaff);
-    expect(estimateFlows(two).production.get('food') ?? 0).toBeGreaterThan(
-      estimateFlows(one).production.get('food') ?? 0,
+    expect(estimateFlows(two).production.get('spices') ?? 0).toBeGreaterThan(
+      estimateFlows(one).production.get('spices') ?? 0,
     );
   });
 
@@ -295,10 +295,10 @@ describe('what a day makes', () => {
     );
     if (!winterField || winterField.workers.length === 0) {
       // Winter releases the field's staff, which is itself the right answer.
-      expect(estimateFlows(simulation).production.get('food') ?? 0).toBe(0);
+      expect(estimateFlows(simulation).production.get('spices') ?? 0).toBe(0);
       return;
     }
-    expect(estimateFlows(simulation).production.get('food') ?? 0).toBe(0);
+    expect(estimateFlows(simulation).production.get('spices') ?? 0).toBe(0);
   });
 
   it('counts a workshop input as demand', () => {
@@ -324,9 +324,10 @@ describe('what a day makes', () => {
 
 describe('how the sheet reads a shortfall', () => {
   it('marks a resource being spent faster than it is made', () => {
-    // Ten mouths and no gatherer: food is going one way only.
+    // Ten mouths and no gatherer: the food they landed with is going one way
+    // only, and it is all vegetables — see `app/config.ts`.
     const simulation = new Simulation(OPTIONS);
-    const row = find(buildLedger(simulation, t), 'consumption', t('hud.food'));
+    const row = find(buildLedger(simulation, t), 'consumption', t('hud.vegetables'));
     expect(row?.tone).toBe('bad');
     expect(row?.detail).toContain(t('ledger.flow.lasts'));
   });
@@ -408,9 +409,9 @@ function feed(simulation: Simulation): void {
   if (!yard) {
     return;
   }
-  const short = 60 - yard.inventory.count('food');
+  const short = 60 - yard.inventory.count('vegetables');
   if (short > 0) {
-    yard.inventory.add('food', short);
+    yard.inventory.add('vegetables', short);
     simulation.storages.markChanged();
   }
 }

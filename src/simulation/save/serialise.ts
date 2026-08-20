@@ -153,11 +153,12 @@ export function restore(simulation: Simulation, save: SaveGame): void {
   world.piles.clear();
   for (const pile of save.piles) {
     const cell = { gx: pile.gx, gy: pile.gy };
-    world.piles.drop(cell, pile.resource, pile.amount);
+    const resource = legacyResource(pile.resource);
+    world.piles.drop(cell, resource, pile.amount);
     // The age comes back with it. A heap twelve days old is the settlement's
     // most urgent errand, and a reload that forgot it would quietly hand the
     // player back the deadlock they had just been rescued from.
-    const restored = world.piles.getAt(cell, pile.resource);
+    const restored = world.piles.getAt(cell, resource);
     if (restored) {
       restored.days = pile.days ?? 0;
     }
@@ -297,7 +298,7 @@ export function restore(simulation: Simulation, save: SaveGame): void {
   // that did leaves the loaded settlement's own instructions standing.
   simulation.stockLimits.clear();
   for (const [resource, limit] of save.stockLimits ?? []) {
-    simulation.stockLimits.set(resource as ResourceId, limit);
+    simulation.stockLimits.set(legacyResource(resource), limit);
   }
   simulation.restoreClock(save.simulationTime, save.deaths);
 }
@@ -314,6 +315,20 @@ function toRecord(inventory: Inventory): SavedInventory {
 export function fillInventory(inventory: Inventory, saved: SavedInventory): void {
   inventory.clear();
   for (const [resource, amount] of Object.entries(saved)) {
-    inventory.add(resource as ResourceId, amount);
+    inventory.add(legacyResource(resource), amount);
   }
+}
+
+/**
+ * What a good in an older save is called now.
+ *
+ * There was one good called `food` until the larder was split into five, and a
+ * settlement saved before that has its whole winter's supply under that name.
+ * Dropping it would empty their stores; refusing the save would lose their
+ * settlement. It comes back as **vegetables**, the staple of the five, which is
+ * the closest true thing that can be said about an undifferentiated heap of
+ * food.
+ */
+function legacyResource(saved: string): ResourceId {
+  return saved === 'food' ? 'vegetables' : (saved as ResourceId);
 }

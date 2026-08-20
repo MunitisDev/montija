@@ -93,7 +93,7 @@ describe('what is set down there', () => {
     const origin = clearing(simulation);
     const cell = { gx: origin.gx + 4, gy: origin.gy + 4 };
 
-    simulation.world.dropNear(cell, 'food', 200);
+    simulation.world.dropNear(cell, 'vegetables', 200);
 
     const heart = simulation.world.heartCell;
     for (const pile of simulation.world.piles.all) {

@@ -113,16 +113,20 @@ describe('the ledger, in whole things', () => {
     raise(simulation, 'gatherer-hut');
     run(simulation, TICKS_PER_DAY * 2);
 
-    const perDay = estimateFlows(simulation).production.get('food') ?? 0;
+    const perDay = estimateFlows(simulation).production.get('spices') ?? 0;
     expect(perDay).toBeGreaterThan(0);
-    expect(row(simulation, 'production', t('hud.food'))?.value).toBe(`+${perSeason(perDay)}`);
+    expect(row(simulation, 'production', t('hud.spices'))?.value).toBe(`+${perSeason(perDay)}`);
   });
 
   it('states demand as the season it labels', () => {
     const simulation = new Simulation(OPTIONS);
-    const perDay = estimateFlows(simulation).survivalDemand.get('food') ?? 0;
+    // The settlers land with one kind of food, so the whole day's rations are
+    // charged against it — see `resources/diet.ts`.
+    const perDay = estimateFlows(simulation).survivalDemand.get('vegetables') ?? 0;
     expect(perDay).toBeGreaterThan(0);
-    expect(row(simulation, 'consumption', t('hud.food'))?.value).toBe(`-${perSeason(perDay)}`);
+    expect(row(simulation, 'consumption', t('hud.vegetables'))?.value).toBe(
+      `-${perSeason(perDay)}`,
+    );
   });
 
   it('still counts the runway down in days', () => {
@@ -130,13 +134,14 @@ describe('the ledger, in whole things', () => {
     // larder left is the one number a player has to act on tonight, and
     // "about 0 seasons" would bury it.
     const simulation = new Simulation(OPTIONS);
-    const food = row(simulation, 'consumption', t('hud.food'));
+    const food = row(simulation, 'consumption', t('hud.vegetables'));
     expect(food?.detail).toContain(t('ledger.flow.days'));
 
     const flows = estimateFlows(simulation);
-    const net = (flows.production.get('food') ?? 0) - (flows.survivalDemand.get('food') ?? 0);
+    const net =
+      (flows.production.get('vegetables') ?? 0) - (flows.survivalDemand.get('vegetables') ?? 0);
     expect(net).toBeLessThan(0);
-    const days = Math.floor(simulation.snapshot().stored.food / -net);
+    const days = Math.floor(simulation.snapshot().stored.vegetables / -net);
     expect(food?.detail).toContain(String(days));
   });
 });

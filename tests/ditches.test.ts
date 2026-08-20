@@ -233,17 +233,19 @@ function harvestAutumn(distance: number): { stored: number; lying: number } {
   // a settlement starving before its trees come in.
   const yard = simulation.storages.all[0]!;
   while (simulation.snapshot().season !== 'autumn') {
-    yard.inventory.add('food', 20);
+    yard.inventory.add('vegetables', 20);
     simulation.storages.markChanged();
     run(simulation, TICKS_PER_DAY);
   }
-  yard.inventory.remove('food', yard.inventory.count('food'));
+  yard.inventory.remove('vegetables', yard.inventory.count('vegetables'));
   simulation.storages.markChanged();
 
-  const before = simulation.snapshot().stored.food;
+  // Fruit, because that is what an orchard brings in — and the hand-feeding
+  // above was vegetables, so the two cannot be confused with one another.
+  const before = simulation.snapshot().stored.fruit;
   run(simulation, TICKS_PER_DAY * 10);
   const snapshot = simulation.snapshot();
-  return { stored: snapshot.stored.food - before, lying: snapshot.loose.food };
+  return { stored: snapshot.stored.fruit - before, lying: snapshot.loose.fruit };
 }
 
 function run(simulation: Simulation, ticks: number): void {

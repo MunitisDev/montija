@@ -1939,3 +1939,62 @@ they are a reason to carry them in.
 A capped workshop says so in its panel — _Stopped — the settlement has enough stone_ — because on the
 map a building the player told to stop and a building nobody is working look identical, and they want
 opposite responses.
+
+## Five foods, and a varied table — Implemented
+
+One good called _food_ was the last place in the economy with no decision in it. Every building that
+fed the settlement made the same interchangeable number, so a village with four gatherer huts ate
+exactly as well as one with a field, an orchard, a fishing hut and a hunter — and the second had gone
+to far more trouble for it.
+
+| Building     | Brings in      | When                                                    |
+| ------------ | -------------- | ------------------------------------------------------- |
+| Gatherer Hut | **Spices**     | the growing seasons; nothing under snow                 |
+| Field        | **Vegetables** | sown in spring, worth having in autumn                  |
+| Orchard      | **Fruit**      | nothing until summer, then the best harvest in the game |
+| Fishing Hut  | **Fish**       | every month of the year, best when the meltwater runs   |
+| Hunter       | **Meat**       | lean in spring, fat before the cold — and hides with it |
+
+**The calories are identical.** A fish feeds somebody exactly as well as a cabbage, and a settlement
+living on one thing does not starve for it. All five carry and stack alike, too — that was measured:
+a smaller basket for the smallest harvest cost twenty lives across twenty-four worlds, because
+foraged food is what the whole opening runs on and carrying it at twenty a trip rather than thirty is
+a hauling tax on the entire first year. **Foods differ by the season that brings them in**, which is
+the axis worth having, and by how fast they turn.
+
+### What variety is worth
+
+A kind counts once the larder holds **half a day's ration of it per villager** — a token fish on the
+shelf is not a diet. Every kind after the first is worth the same again, so the fifth is as welcome as
+the second.
+
+- **Spirit.** A full spread is a fifth of the way to contentment on its own, alongside water, the
+  cemetery and the temple. Smaller than water, because it is a comfort collected for doing what the
+  settlement was going to do anyway: nobody raises an orchard _for_ the variety.
+- **Health, and so life expectancy.** A varied table takes a third off the chance of falling ill. A
+  day spent unwell is already a day off the end of a life, so this is how food becomes life
+  expectancy — and the population system never learns that food had anything to do with it. Well
+  below the five-fold risk of sleeping rough: a settlement must never be able to eat its way out of
+  homelessness.
+
+Both are **collected rather than owed**. A settlement eating nothing but foraged roots plays exactly
+the game it always played; it is simply not collecting.
+
+### Two rules about which food comes off which shelf
+
+**The exposed stock is eaten first** — the open yard before the larder. Food in a yard is food that is
+about to rot, and a settlement that ate its way through the larder while the harvest spoiled outside
+would be wasting the very building the player raised to stop that. Within one store the meal is drawn
+**in proportion to what is held**, so a settlement eats mostly what it has most of and a varied larder
+stays varied rather than having its smallest kind drained first.
+
+### The Fishing Hut — Implemented
+
+A jetty and a drying frame, on the river or on a channel dug to it — the second building whose place
+on the map is a real decision. Cheap, like the Gatherer Hut, because the settlement that needs it most
+is the one that has just found out its first spring is longer than its stores. It is the flattest yield
+curve in the game: no harvest, worth about the same every month, best in the meltwater and still worth
+something through the ice. The price is that fish keeps worse than anything else the settlement stores.
+
+The HUD's strip still carries **one Food figure**, because "have we enough to eat" is still the
+question; the stores drawer breaks it into the five.

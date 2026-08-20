@@ -227,7 +227,23 @@ function drawStone(graphics: Phaser.GameObjects.Graphics, box: PileBox): void {
  * distinct silhouette in the set: a woven tub with produce piled out of the top.
  * Warm russet against the greens of the map, and nothing else here is round.
  */
-function drawFood(graphics: Phaser.GameObjects.Graphics, box: PileBox): void {
+/**
+ * A basket of produce, in whatever the produce is.
+ *
+ * **One drawing, five larders.** The four bulk foods are all "a basket somebody
+ * carried in from a field", and inventing four separate baskets would be four
+ * times the code for a difference nobody could name. What tells them apart is
+ * *colour* — the one thing the eye reads instantly at this size — and, for the
+ * fish, a shape: a fish is the one food in the settlement that does not look
+ * like a vegetable, and drawing it as a green roundel would be a lie the player
+ * would notice.
+ */
+function drawFood(
+  graphics: Phaser.GameObjects.Graphics,
+  box: PileBox,
+  produce: readonly [number, number, number, number] = [0x7d5535, 0x6d4234, 0x8a6540, 0x55632f],
+  shape: 'heap' | 'fish' | 'windfall' | 'joint' | 'bunches' = 'heap',
+): void {
   const cx = box.width / 2;
   const base = box.height;
   groundShadow(graphics, cx, base, 34);
@@ -267,17 +283,93 @@ function drawFood(graphics: Phaser.GameObjects.Graphics, box: PileBox): void {
   graphics.fillStyle(shade(wicker, 0.5), 1);
   graphics.fillEllipse(cx - 3, base - 19, 18, 5);
 
-  // The produce: roots and berries heaped over the rim.
+  // The produce, heaped over the rim.
   // Muted on purpose: bright fruit in a settlement of earth tones pulls the eye
-  // off the buildings, and food is the one good there is most of on the ground.
-  graphics.fillStyle(0x7d5535, 1);
+  // off the buildings, and food is the good there is most of on the ground.
+  if (shape === 'fish') {
+    // Laid across the rim rather than heaped in it, nose to tail, because that
+    // is what a morning's catch looks like and it is unmistakable at any zoom.
+    for (const [dx, dy, len, tone] of [
+      [-7, -22, 20, 0],
+      [2, -25, 18, 1],
+      [-2, -28, 16, 2],
+    ] as const) {
+      const x = cx + dx;
+      const y = base + dy;
+      graphics.fillStyle(produce[tone] ?? produce[0], 1);
+      graphics.fillEllipse(x, y, len, 7);
+      polygonAt(graphics, [
+        [x + len / 2 - 1, y],
+        [x + len / 2 + 5, y - 4],
+        [x + len / 2 + 5, y + 4],
+      ]);
+      // The one glint this style allows: a wet back, lit from the upper left.
+      graphics.fillStyle(shade(produce[tone] ?? produce[0], 1.35), 1);
+      graphics.fillEllipse(x - 2, y - 1.6, len * 0.5, 2.4);
+    }
+    return;
+  }
+
+  graphics.fillStyle(produce[0], 1);
   graphics.fillEllipse(cx - 8, base - 23, 11, 9);
-  graphics.fillStyle(0x6d4234, 1);
+  graphics.fillStyle(produce[1], 1);
   graphics.fillEllipse(cx + 1, base - 25, 12, 10);
-  graphics.fillStyle(0x8a6540, 1);
+  graphics.fillStyle(produce[2], 1);
   graphics.fillEllipse(cx - 3, base - 27, 9, 8);
-  graphics.fillStyle(0x55632f, 1);
+  graphics.fillStyle(produce[3], 1);
   graphics.fillEllipse(cx + 5, base - 22, 7, 6);
+
+  // **And one thing beside the basket per food**, because colour alone is not a
+  // silhouette: at gameplay zoom in winter light two baskets of different greens
+  // are one object drawn twice, and `tests/pile-art.test.ts` fails the build for
+  // exactly that. Each of these changes the outline as well as the palette.
+  if (shape === 'windfall') {
+    // Windfalls rolled out of the basket. Only fruit does this.
+    graphics.fillStyle(produce[1], 1);
+    graphics.fillEllipse(cx - 19, base - 6, 8, 7);
+    graphics.fillStyle(produce[0], 1);
+    graphics.fillEllipse(cx - 14, base - 4, 7, 6);
+    graphics.fillStyle(shade(produce[2], 1.2), 1);
+    graphics.fillEllipse(cx - 20, base - 8, 3, 2.6);
+  } else if (shape === 'joint') {
+    // A block with the joint on it: the only heap in the settlement with a
+    // straight edge on top of it.
+    const wood = 0x6b573a;
+    polygonAt(graphics, [
+      [cx - 24, base - 9],
+      [cx - 10, base - 9],
+      [cx - 10, base - 4],
+      [cx - 24, base - 4],
+    ]);
+    graphics.fillStyle(shade(wood, 1.2), 1);
+    polygonAt(graphics, [
+      [cx - 24, base - 9],
+      [cx - 10, base - 9],
+      [cx - 12, base - 11],
+      [cx - 22, base - 11],
+    ]);
+    graphics.fillStyle(produce[3], 1);
+    graphics.fillEllipse(cx - 17, base - 13, 13, 6);
+    graphics.fillStyle(shade(produce[2], 1.15), 1);
+    graphics.fillEllipse(cx - 19, base - 14, 6, 3);
+  } else if (shape === 'bunches') {
+    // Tied bunches leaning against the basket, hung to dry — and deliberately
+    // not the herb pile's bundles: two of them, short, and against the wicker.
+    for (const [dx, height] of [
+      [-20, 15],
+      [-15, 12],
+    ] as const) {
+      graphics.fillStyle(produce[0], 1);
+      polygonAt(graphics, [
+        [cx + dx - 3, base - 3],
+        [cx + dx + 3, base - 3],
+        [cx + dx + 1.5, base - height],
+        [cx + dx - 1.5, base - height],
+      ]);
+      graphics.fillStyle(shade(produce[2], 1.2), 1);
+      graphics.fillRect(cx + dx - 3, base - height * 0.55, 6, 1.8);
+    }
+  }
 }
 
 /**
@@ -484,7 +576,18 @@ function drawHerbs(graphics: Phaser.GameObjects.Graphics, box: PileBox): void {
 const PILES: Readonly<
   Record<ResourceId, (graphics: Phaser.GameObjects.Graphics, box: PileBox) => void>
 > = {
-  food: drawFood,
+  // The five foods: the same basket, told apart by what is in it. Kept within
+  // the settlement's earth tones — a scarlet heap of apples would pull the eye
+  // off the buildings, and food is the good there is most of on the ground.
+  vegetables: (graphics, box) => drawFood(graphics, box, [0x5f7038, 0x4c5c2e, 0x76883f, 0x8a7a3f]),
+  fruit: (graphics, box) =>
+    drawFood(graphics, box, [0x9c4b2e, 0xa8632c, 0x8a3f2c, 0x7d6a34], 'windfall'),
+  fish: (graphics, box) =>
+    drawFood(graphics, box, [0x7f8790, 0x6d757e, 0x8d949a, 0x5f666d], 'fish'),
+  meat: (graphics, box) =>
+    drawFood(graphics, box, [0x84402f, 0x6f3226, 0x91553c, 0x5c2b22], 'joint'),
+  spices: (graphics, box) =>
+    drawFood(graphics, box, [0x9a7434, 0x7d5a2c, 0xa8874a, 0x6b4f2a], 'bunches'),
   logs: drawLogs,
   firewood: drawFirewood,
   stone: drawStone,

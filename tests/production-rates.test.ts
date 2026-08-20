@@ -60,7 +60,7 @@ describe('a building that produces something', () => {
 
   it('reports both halves of a recipe with two outputs', () => {
     const hunter = productionSummary('hunter');
-    expect(hunter.outputs.map((rate) => rate.resource)).toEqual(['food', 'hides']);
+    expect(hunter.outputs.map((rate) => rate.resource)).toEqual(['meat', 'hides']);
   });
 });
 

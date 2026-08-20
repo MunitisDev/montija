@@ -61,10 +61,10 @@ describe('production', () => {
 
     for (let tick = 1; tick <= 20000; tick += 1) {
       simulation.update(tick, TICK);
-      if (simulation.snapshot().stored.food > 0) break;
+      if (simulation.snapshot().stored.spices > 0) break;
     }
 
-    expect(simulation.snapshot().stored.food).toBeGreaterThan(0);
+    expect(simulation.snapshot().stored.spices).toBeGreaterThan(0);
     expect(hut.definition.recipeId).toBe('forage-food');
   });
 
@@ -76,7 +76,7 @@ describe('production', () => {
     let sawLoose = 0;
     for (let tick = 1; tick <= 8000; tick += 1) {
       simulation.update(tick, TICK);
-      sawLoose = Math.max(sawLoose, simulation.snapshot().loose.food);
+      sawLoose = Math.max(sawLoose, simulation.snapshot().loose.spices);
       if (sawLoose > 0) break;
     }
 
@@ -185,14 +185,14 @@ describe('production', () => {
 
   it('produces nothing at all without a workshop', () => {
     const simulation = new Simulation(OPTIONS);
-    const before = simulation.snapshot().stored.food;
+    const before = simulation.snapshot().stored.vegetables;
 
     for (let tick = 1; tick <= 4000; tick += 1) {
       simulation.update(tick, TICK);
     }
 
     // Food only ever falls: it is eaten, and nothing replaces it.
-    expect(simulation.snapshot().stored.food).toBeLessThanOrEqual(before);
+    expect(simulation.snapshot().stored.vegetables).toBeLessThanOrEqual(before);
     expect(simulation.snapshot().stored.firewood).toBe(0);
   });
 
@@ -202,7 +202,7 @@ describe('production', () => {
       standingBuilding(simulation, 'gatherer-hut');
       for (let tick = 1; tick <= 5000; tick += 1) simulation.update(tick, TICK);
       const s = simulation.snapshot();
-      return `${s.stored.food}|${s.loose.food}|${s.jobsCompleted}`;
+      return `${s.stored.spices}|${s.loose.spices}|${s.jobsCompleted}`;
     };
 
     expect(play()).toBe(play());

@@ -53,7 +53,7 @@ function raiseAFamily(days: number, seed = OPTIONS.seed): Simulation {
     // settlement then froze to death with a full granary — which is the game
     // working correctly, and was purely an artefact of how the test stocked it.
     for (const yard of simulation.storages.all) {
-      yard.inventory.add('food', Math.max(0, 400 - yard.inventory.count('food')));
+      yard.inventory.add('vegetables', Math.max(0, 400 - yard.inventory.count('vegetables')));
       yard.inventory.add('firewood', Math.max(0, 300 - yard.inventory.count('firewood')));
     }
     for (let tick = 1; tick <= TICKS_PER_DAY; tick += 1) {
@@ -85,7 +85,7 @@ function step(simulation: Simulation, ticks: number): void {
   for (let tick = 0; tick < ticks; tick += 1) {
     if (simulation.tick % TICKS_PER_DAY === 0) {
       for (const yard of simulation.storages.all) {
-        yard.inventory.add('food', Math.max(0, 200 - yard.inventory.count('food')));
+        yard.inventory.add('vegetables', Math.max(0, 200 - yard.inventory.count('vegetables')));
       }
     }
     simulation.update(simulation.tick + 1, TICK);

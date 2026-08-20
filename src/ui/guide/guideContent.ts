@@ -24,7 +24,13 @@ import {
   type BuildingDefinition,
   type BuildingId,
 } from '@/data/buildings';
-import { LOGS_PER_TREE, RESOURCE_IDS, STONE_PER_DEPOSIT, type ResourceId } from '@/data/resources';
+import {
+  isFood,
+  LOGS_PER_TREE,
+  RESOURCE_IDS,
+  STONE_PER_DEPOSIT,
+  type ResourceId,
+} from '@/data/resources';
 import { SKILL_THRESHOLD_YEARS, SKILL_WORK_BONUS } from '@/data/skills';
 import { MATURE_YEARS } from '@/simulation/world/TreeGrowth';
 import { WATER_SOLACE_SHARE } from '@/simulation/Simulation';
@@ -377,9 +383,13 @@ function freezingDaysPerYear(): number {
 function describeYearlyDraw(resource: ResourceId, t: Translate): string | null {
   const yearDays = SEASONS.length * DAYS_PER_SEASON;
 
-  if (resource === 'food') {
+  // The whole day's rations against every food, because that is the truthful
+  // answer to "how much of this does a person get through": the settlement eats
+  // one a day and draws it from whatever it has, so any single kind could be all
+  // of it — see `resources/diet.ts`.
+  if (isFood(resource)) {
     const perYear = Math.round(FOOD_PER_VILLAGER_PER_DAY * yearDays);
-    return `${perYear} ${t('guide.perVillagerYear')}`;
+    return `${t('guide.upTo')} ${perYear} ${t('guide.perVillagerYear')}`;
   }
   if (resource === 'firewood') {
     const perYear = Math.round(FIREWOOD_PER_VILLAGER_PER_COLD_DAY * freezingDaysPerYear());
@@ -690,8 +700,8 @@ function landYields(t: Translate): GuideTable {
  */
 function householdDraw(t: Translate): GuideTable {
   const freezing = freezingDaysPerYear();
-  const draw = (resource: ResourceId, perYear: number, who: MessageKey): GuideTableRow => ({
-    label: t(`hud.${resource}` as MessageKey),
+  const draw = (label: MessageKey, perYear: number, who: MessageKey): GuideTableRow => ({
+    label: t(label),
     values: [figure(perYear, t), t(who)],
   });
 
@@ -700,14 +710,17 @@ function householdDraw(t: Translate): GuideTable {
     caption: t('guide.figures.people'),
     columns: [t('guide.figures.draw'), t('guide.figures.aYearColumn'), t('guide.figures.who')],
     rows: [
-      draw('food', FOOD_PER_VILLAGER_PER_DAY * DAYS_PER_YEAR, 'guide.figures.everyone'),
+      // One line for the larder rather than five: a person eats one a day
+      // whatever it is, and five identical rows would say the same thing over
+      // and over while implying five appetites.
+      draw('hud.food', FOOD_PER_VILLAGER_PER_DAY * DAYS_PER_YEAR, 'guide.figures.everyone'),
       draw(
-        'firewood',
+        'hud.firewood',
         FIREWOOD_PER_VILLAGER_PER_COLD_DAY * freezing,
         'guide.figures.everyoneHoused',
       ),
-      draw('clothing', CLOTHING_PER_VILLAGER_PER_COLD_DAY * freezing, 'guide.figures.everyone'),
-      draw('tools', TOOLS_PER_WORKER_PER_DAY * DAYS_PER_YEAR, 'guide.figures.everyWorker'),
+      draw('hud.clothing', CLOTHING_PER_VILLAGER_PER_COLD_DAY * freezing, 'guide.figures.everyone'),
+      draw('hud.tools', TOOLS_PER_WORKER_PER_DAY * DAYS_PER_YEAR, 'guide.figures.everyWorker'),
     ],
     note: `${DAYS_PER_YEAR} ${t('guide.figures.yearNote')} ${freezing} ${t('guide.figures.freezingNote')}`,
   };

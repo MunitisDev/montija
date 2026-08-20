@@ -40,7 +40,7 @@ function stores(contents: Partial<Record<ResourceId, number>> = {}): Stores {
 }
 
 const EMPTY = stores();
-const STOCKED = stores({ logs: 100, stone: 100, iron: 100, hides: 100, food: 100 });
+const STOCKED = stores({ logs: 100, stone: 100, iron: 100, hides: 100, vegetables: 100 });
 
 describe('grouping', () => {
   it('offers every building exactly once', () => {
@@ -84,10 +84,12 @@ describe('grouping', () => {
   });
 
   it('keeps every group small enough to read without scrolling', () => {
-    // The whole reason for grouping. Four cards is two rows on a phone held
-    // upright; more than that and the panel is a scroller again.
+    // The whole reason for grouping. The panel is a wrapping grid of 8.5rem
+    // cards, so five fit on one line of a landscape phone — which is the target
+    // orientation — and wrap to two lines on anything narrower. It never
+    // scrolls; past five it stops being a glance.
     for (const group of buildMenuGroups(EMPTY, t)) {
-      expect(group.options.length).toBeLessThanOrEqual(4);
+      expect(group.options.length).toBeLessThanOrEqual(5);
     }
   });
 

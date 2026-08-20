@@ -55,7 +55,7 @@ function people(count: number, housed: boolean): Villager[] {
 function stocked(options: { firewood: number; clothing: number }): StorageRegistry {
   const storages = new StorageRegistry();
   const yard = storages.add({ cell: { gx: 0, gy: 0 }, capacity: 5000 });
-  yard.inventory.add('food', 500);
+  yard.inventory.add('vegetables', 500);
   yard.inventory.add('firewood', options.firewood);
   yard.inventory.add('clothing', options.clothing);
   return storages;
@@ -67,7 +67,7 @@ describe('the chain that makes a coat', () => {
     expect(hunt?.outputs.some((output) => output.resource === 'hides')).toBe(true);
     // Meat as well as hides: getting both from one building is what stops
     // clothing being a chore bolted onto an economy with no room for it.
-    expect(hunt?.outputs.some((output) => output.resource === 'food')).toBe(true);
+    expect(hunt?.outputs.some((output) => output.resource === 'meat')).toBe(true);
 
     const sew = recipe('sew-clothing');
     expect(sew?.inputs.some((input) => input.resource === 'hides')).toBe(true);

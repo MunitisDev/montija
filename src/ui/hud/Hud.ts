@@ -27,7 +27,16 @@ import type { ResourceId } from '@/data/resources';
  * are always there and a zero against any of them is information rather than
  * clutter.
  */
-const STRIP_RESOURCES: readonly ResourceId[] = ['food', 'logs', 'firewood', 'stone'];
+const STRIP_RESOURCES: readonly StripKey[] = ['food', 'logs', 'firewood', 'stone'];
+
+/**
+ * What a slot on the strip counts.
+ *
+ * `'food'` is not a resource any more — there are five of them — but it is still
+ * the question the player asks, so the strip carries the larder as one figure and
+ * the drawer underneath breaks it down. See `resources/diet.ts`.
+ */
+type StripKey = 'food' | ResourceId;
 import type { GameContext } from '@/game/Game';
 import type { TreeStage } from '@/simulation/world/TreeGrowth';
 import { hidesGroundPanel } from '@/game/selection';
@@ -45,7 +54,7 @@ import type { MessageKey } from '@/ui/i18n/messages';
 interface HudElements {
   readonly population: HTMLElement;
   /** Only the strip's few — the rest of the stores belong to the drawer. */
-  readonly resources: ReadonlyMap<ResourceId, HTMLElement>;
+  readonly resources: ReadonlyMap<StripKey, HTMLElement>;
   readonly selection: HTMLElement;
   readonly selectionTerrain: HTMLElement;
   readonly selectionCell: HTMLElement;
@@ -106,9 +115,9 @@ export class Hud {
   private lastRenderedSelection = -1;
   private lastRenderedRoadLine = -1;
   /** Stored totals last written to the DOM, so unchanged values are skipped. */
-  private readonly lastRenderedTotals = new Map<ResourceId, number>();
+  private readonly lastRenderedTotals = new Map<StripKey, number>();
   /** Loose totals last written, tracked apart from stored ones. */
-  private readonly lastRenderedLoose = new Map<ResourceId, number>();
+  private readonly lastRenderedLoose = new Map<StripKey, number>();
   private lastRenderedAdvice: string | null | undefined;
   private lastRenderedFailure: string | null | undefined;
   /** The last day whose events were announced, so each is announced once. */
@@ -189,8 +198,8 @@ export class Hud {
     // the ground are excluded on purpose: felling a tree must not move the
     // counter until somebody has actually carried the logs in.
     for (const [resource, element] of this.elements.resources) {
-      const stored = snapshot.stored[resource];
-      const loose = snapshot.loose[resource];
+      const stored = resource === 'food' ? snapshot.food.stored : snapshot.stored[resource];
+      const loose = resource === 'food' ? snapshot.food.loose : snapshot.loose[resource];
 
       if (this.lastRenderedTotals.get(resource) !== stored) {
         element.textContent = String(stored);

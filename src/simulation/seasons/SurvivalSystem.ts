@@ -22,6 +22,7 @@
 
 import type { ResourceId } from '@/data/resources';
 import type { StorageRegistry } from '@/simulation/logistics/Storage';
+import { drawMeal, takeFromStorages } from '@/simulation/resources/diet';
 import { WearLedger } from '@/simulation/resources/wear';
 import type { Villager } from '@/simulation/villagers/Villager';
 import type { YearState } from './SeasonClock';
@@ -236,7 +237,10 @@ export function runDay(
     wear.spend(resource, demand, (which, whole) => takeFromStorages(storages, which, whole));
 
   const foodWanted = villagers.length * FOOD_PER_VILLAGER_PER_DAY;
-  const foodTaken = takeFromStorages(storages, 'food', foodWanted);
+  // Drawn across every kind the settlement keeps rather than out of one store.
+  // See `resources/diet.ts` — a meal is mostly whatever there is most of, which
+  // is what keeps a varied larder varied.
+  const foodTaken = drawMeal(storages, foodWanted);
 
   const needsFire = year.isFreezing;
   // Only houses are heated. Wood is not burned for people who have nowhere to
@@ -386,23 +390,4 @@ function coverage(storages: StorageRegistry, resource: ResourceId, wanted: numbe
     return 0;
   }
   return Math.min(1, storages.totalOf(resource) / wanted);
-}
-
-/** Draws from every yard until the amount is met. */
-function takeFromStorages(storages: StorageRegistry, resource: ResourceId, amount: number): number {
-  if (amount <= 0) {
-    return 0;
-  }
-
-  let taken = 0;
-  for (const storage of storages.all) {
-    if (taken >= amount) {
-      break;
-    }
-    taken += storage.inventory.remove(resource, amount - taken);
-  }
-  if (taken > 0) {
-    storages.markChanged();
-  }
-  return taken;
 }

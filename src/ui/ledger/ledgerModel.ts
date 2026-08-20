@@ -34,7 +34,7 @@
 
 import { recipe as findRecipe } from '@/data/recipes';
 import { WORKING_AGE } from '@/data/population';
-import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
+import { FOOD_IDS, RESOURCE_IDS, type ResourceId } from '@/data/resources';
 import { STORAGE_WARNING_FRACTION, type Simulation } from '@/simulation/Simulation';
 import { hasColdReading } from '@/simulation/history/Chronicle';
 import { DAYS_PER_YEAR, SEASONAL_YIELD, TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
@@ -176,7 +176,18 @@ export function estimateFlows(simulation: Simulation): Flows {
   const housed = people.filter((villager) => villager.homeId !== null).length;
   const freezing = simulation.year.isFreezing;
 
-  add(survivalDemand, 'food', people.length * FOOD_PER_VILLAGER_PER_DAY);
+  // **The day's rations, charged across the kinds the settlement actually has**,
+  // in the same proportion the meal is drawn in — see `resources/diet.ts`. One
+  // "food" row would be simpler and would lie: a settlement whose fish are
+  // running out while its vegetables pile up wants to see which line is red.
+  const larder = FOOD_IDS.map((id) => ({ id, held: simulation.storages.totalOf(id) }));
+  const stored = larder.reduce((sum, kind) => sum + kind.held, 0);
+  const eaten = people.length * FOOD_PER_VILLAGER_PER_DAY;
+  for (const kind of larder) {
+    if (stored > 0) {
+      add(survivalDemand, kind.id, (eaten * kind.held) / stored);
+    }
+  }
   add(survivalDemand, 'tools', workers * TOOLS_PER_WORKER_PER_DAY);
   if (freezing) {
     // Only houses are heated, so an unhoused settlement burns nothing — and
@@ -417,7 +428,7 @@ function buildingsTab(simulation: Simulation, t: Translate): LedgerTab {
   // The food line only once a larder stands: until then the founding yard is
   // both stores, and the same figure under two names says nothing twice.
   if (simulation.storages.hasLarder) {
-    stores.push(fillRow(simulation, 'food', t('ledger.stores.larders'), t));
+    stores.push(larderRow(simulation, t('ledger.stores.larders'), t));
   }
 
   return {
@@ -459,7 +470,15 @@ function fillRow(
   label: string,
   t: Translate,
 ): LedgerRow {
-  const { used, capacity } = simulation.storages.fill(resource);
+  return describeFill(simulation.storages.fill(resource), label, t);
+}
+
+function describeFill(
+  fill: { readonly used: number; readonly capacity: number },
+  label: string,
+  t: Translate,
+): LedgerRow {
+  const { used, capacity } = fill;
   if (capacity <= 0) {
     return { label, value: t('ledger.stores.none'), tone: 'bad' as const };
   }
@@ -470,6 +489,11 @@ function fillRow(
     detail: `${used} / ${capacity}`,
     ...(fraction >= STORAGE_WARNING_FRACTION ? { tone: 'bad' as const } : {}),
   };
+}
+
+/** The same line for the larder, which takes five goods rather than one. */
+function larderRow(simulation: Simulation, label: string, t: Translate): LedgerRow {
+  return describeFill(simulation.storages.foodFill(), label, t);
 }
 
 function productionTab(flows: Flows, t: Translate): LedgerTab {

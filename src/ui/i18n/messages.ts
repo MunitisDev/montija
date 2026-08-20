@@ -14,6 +14,11 @@
 export const EN = {
   'hud.population': 'Pop',
   'hud.food': 'Food',
+  'hud.vegetables': 'Vegetables',
+  'hud.fruit': 'Fruit',
+  'hud.fish': 'Fish',
+  'hud.meat': 'Meat',
+  'hud.spices': 'Spices',
   'hud.logs': 'Logs',
   'hud.firewood': 'Firewood',
   'hud.stone': 'Stone',
@@ -142,6 +147,9 @@ export const EN = {
   'building.trading-post': 'Trading Post',
   'building.trading-post.description':
     'A merchant calls in fair weather and swaps your surplus for what you lack.',
+  'building.fishing-hut': 'Fishing Hut',
+  'building.fishing-hut.description':
+    'A jetty and a drying frame on the river. Brings something in every month of the year, and the catch keeps worse than anything else.',
   'building.hunter': "Hunter's Cabin",
   'building.hunter.description': 'Brings in meat and hides, and still pays in winter.',
   'building.tailor': 'Tailor',
@@ -479,6 +487,7 @@ export const EN = {
   'guide.houses': 'houses',
   'guide.free': 'costs nothing',
   'guide.aYear': 'a year',
+  'guide.upTo': 'up to',
   'guide.using': 'using',
   'guide.cells': 'cells',
   'guide.fellsOwn': 'fells the wood around it while the stores are low',
@@ -555,7 +564,15 @@ export const EN = {
     'Felled trees. Almost everything is built from them, and firewood is split from them.',
   'resource.firewood.purpose': 'Burned on freezing days to keep houses warm.',
   'resource.stone.purpose': 'Cut from rock faces. Most buildings need some.',
-  'resource.food.purpose': 'One eaten per person per day. It rots fastest lying in the open.',
+  'resource.vegetables.purpose':
+    'From a field. The settlement eats one thing a day, whatever it is, and keeping several kinds lifts spirits and keeps people well.',
+  'resource.fruit.purpose':
+    'From an orchard, and only in the second half of the year. The biggest harvest there is.',
+  'resource.fish.purpose':
+    'From a hut on the river. Comes in every month of the year, and keeps worse than anything else.',
+  'resource.meat.purpose': 'From a hunter, with the hides. Lean in spring, best before the cold.',
+  'resource.spices.purpose':
+    'Berries, roots and seasoning out of the woods. The one food that keeps almost indefinitely.',
   'resource.iron.purpose': 'Dug out of a hillside by a mine, and forged into tools.',
   'resource.tools.purpose':
     'Worn down by work. While the settlement has them, every job goes up to half as fast again.',
@@ -605,6 +622,11 @@ export type Messages = Record<MessageKey, string>;
 export const ES: Messages = {
   'hud.population': 'Pobl',
   'hud.food': 'Comida',
+  'hud.vegetables': 'Hortalizas',
+  'hud.fruit': 'Fruta',
+  'hud.fish': 'Pescado',
+  'hud.meat': 'Carne',
+  'hud.spices': 'Especias',
   'hud.logs': 'Troncos',
   'hud.firewood': 'Leña',
   'hud.stone': 'Piedra',
@@ -728,6 +750,9 @@ export const ES: Messages = {
   'building.trading-post': 'Puesto comercial',
   'building.trading-post.description':
     'Un mercader viene con buen tiempo y cambia tu excedente por lo que te falta.',
+  'building.fishing-hut': 'Cabaña de pesca',
+  'building.fishing-hut.description':
+    'Un embarcadero y un secadero en el río. Trae algo todos los meses del año, y la pesca se conserva peor que nada.',
   'building.hunter': 'Cabaña de caza',
   'building.hunter.description': 'Trae carne y pieles, y sigue dando en invierno.',
   'building.tailor': 'Sastre',
@@ -1048,6 +1073,7 @@ export const ES: Messages = {
   'guide.houses': 'aloja a',
   'guide.free': 'no cuesta nada',
   'guide.aYear': 'al año',
+  'guide.upTo': 'hasta',
   'guide.using': 'consumiendo',
   'guide.cells': 'casillas',
   'guide.fellsOwn': 'tala el bosque a su alrededor mientras falten en los almacenes',
@@ -1124,8 +1150,16 @@ export const ES: Messages = {
     'Árboles talados. Casi todo se construye con ellos, y de ellos se parte la leña.',
   'resource.firewood.purpose': 'Se quema los días de helada para calentar las casas.',
   'resource.stone.purpose': 'Se saca de paredes de roca. Casi todos los edificios necesitan algo.',
-  'resource.food.purpose':
-    'Se come una por persona y día. Se pudre antes que nada tirada a la intemperie.',
+  'resource.vegetables.purpose':
+    'Del campo. El asentamiento come una cosa al día, sea la que sea, y tener varias clases sube el ánimo y mantiene sana a la gente.',
+  'resource.fruit.purpose':
+    'Del huerto, y sólo en la segunda mitad del año. La cosecha más grande que hay.',
+  'resource.fish.purpose':
+    'De una cabaña en el río. Entra todos los meses del año, y se conserva peor que nada.',
+  'resource.meat.purpose':
+    'Del cazador, junto con las pieles. Flaca en primavera, mejor antes del frío.',
+  'resource.spices.purpose':
+    'Bayas, raíces y condimentos del bosque. El único alimento que se conserva casi indefinidamente.',
   'resource.iron.purpose': 'Lo extrae una mina de la ladera, y se forja en herramientas.',
   'resource.tools.purpose':
     'El trabajo las desgasta. Mientras el asentamiento tenga, cada tarea va hasta la mitad más rápido.',

@@ -255,9 +255,9 @@ function feed(simulation: Simulation): void {
   if (!yard) {
     return;
   }
-  const short = 200 - yard.inventory.count('food');
+  const short = 200 - yard.inventory.count('vegetables');
   if (short > 0) {
-    yard.inventory.add('food', short);
+    yard.inventory.add('vegetables', short);
     simulation.storages.markChanged();
   }
 }

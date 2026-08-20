@@ -258,7 +258,7 @@ function toAutumn(simulation: Simulation): void {
     if (simulation.tick % TICKS_PER_DAY === 0) {
       const yard = simulation.storages.all[0];
       if (yard) {
-        yard.inventory.add('food', Math.max(0, 200 - yard.inventory.count('food')));
+        yard.inventory.add('vegetables', Math.max(0, 200 - yard.inventory.count('vegetables')));
         simulation.storages.markChanged();
       }
     }

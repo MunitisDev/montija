@@ -1906,3 +1906,27 @@ the hauling it generated was competing with the harvest.
 
 **Fire is drawn as fire**, an improved house is stone rather than a paler chimney, and a field no longer
 looks like an orchard. See `ART_BIBLE.md`.
+
+## PHASE 62 — Five foods — Implemented
+
+The larder split five ways, one per food building, with a new Fishing Hut on the river. See
+`GAME_DESIGN.md` for what it is and `simulation/resources/diet.ts` for how a meal is drawn.
+
+Two things were measured and one of them was wrong twice:
+
+- **Spices that kept.** Dried roots and hung berries keeping almost indefinitely is the truthful thing
+  to say about them, and it broke the opening: what a settlement forages is what it lives on in its
+  first year, so a forage that did not spoil made the larder optional, let a one-hut village grow, and
+  took winter's teeth out. Four balance claims failed at once. They rot like everything else.
+- **A smaller basket for the smallest harvest.** Twenty a trip instead of thirty cost twenty lives
+  across twenty-four worlds, for the same reason: the opening runs on foraged food. Measured with the
+  two scripted players — `disciplined` went 47 deaths → 67 with the small basket and → 37 once every
+  food carried alike, against `prepared`'s 73. The five foods carry identically now.
+
+The first attempt at the meal drew it by _kind_ rather than by _store_, which meant a settlement ate
+its protected larder while the yard spoiled outside; suspected, measured, and only worth two lives —
+the real cost was the basket. The rule is kept anyway because it is the right one.
+
+**Known tightness.** The stores drawer is thirteen rows with a stepper each. On a 360px-tall landscape
+phone that is three rows and a scroll; on the tablet it is the primary target for, it is comfortable.
+Worth a denser row on short screens if a player complains.

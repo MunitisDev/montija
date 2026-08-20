@@ -333,7 +333,7 @@ function keptWell(seed: number, houses: number): Simulation {
 /** Tops the yards up to a level, so nothing starves or freezes mid-test. */
 function feed(simulation: Simulation): void {
   for (const yard of simulation.storages.all) {
-    yard.inventory.add('food', Math.max(0, 900 - yard.inventory.count('food')));
+    yard.inventory.add('vegetables', Math.max(0, 900 - yard.inventory.count('vegetables')));
     yard.inventory.add('firewood', Math.max(0, 400 - yard.inventory.count('firewood')));
   }
   simulation.storages.markChanged();

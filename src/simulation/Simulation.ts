@@ -16,13 +16,20 @@ import { STARTING_RESOURCES } from '@/app/config';
 import type { BuildingId } from '@/data/buildings';
 import { recipe as findRecipe } from '@/data/recipes';
 import type { Recipe } from '@/data/recipes';
-import { RESOURCE_IDS, resourceDefinition, type ResourceId } from '@/data/resources';
+import {
+  FOOD_IDS,
+  RESOURCE_IDS,
+  isFood,
+  resourceDefinition,
+  type ResourceId,
+} from '@/data/resources';
 import { SKILL_WORK_BONUS } from '@/data/skills';
 import type { Building } from './buildings/Building';
 import type { PlacementCheck } from './buildings/BuildingRegistry';
 import { isFinished, JobPriority } from './jobs/Job';
 import { JobManager } from './jobs/JobManager';
 import { StockLimits } from './logistics/StockLimits';
+import { foodKinds, foodStored, foodWantedPerVillager, varietyShare } from './resources/diet';
 import { StorageRegistry } from './logistics/Storage';
 import {
   AUTOMATIC_TRADE,
@@ -171,6 +178,19 @@ export const STORAGE_WARNING_FRACTION = 0.9;
 export const WATER_SOLACE_SHARE = 0.25;
 
 /**
+ * How much of it a varied table accounts for.
+ *
+ * A fifth, at a full spread of all five foods — smaller than water, because it
+ * is a comfort a settlement collects for doing what it was going to do anyway.
+ * A village that raises a field, an orchard, a fishing hut and a hunter's cabin
+ * has not built any of them *for* the comfort; it built them to be fed in four
+ * different seasons, and this is the settlement being pleasant to live in as a
+ * consequence. Paying much for it would turn a nice consequence into a
+ * checklist.
+ */
+export const DIET_SOLACE_SHARE = 0.2;
+
+/**
  * Days a heap may lie on the ground before carrying it beats making more.
  *
  * Twelve, which is a season — the player's own figure, and the right one: it is
@@ -290,6 +310,20 @@ export interface SimulationSnapshot {
   readonly stored: Readonly<Record<ResourceId, number>>;
   /** Units lying on the ground, waiting to be hauled. */
   readonly loose: Readonly<Record<ResourceId, number>>;
+  /**
+   * The larder as one figure, because that is how a player thinks about it.
+   *
+   * There are five foods and the question is still "have we enough to eat", so
+   * the HUD's strip carries the total and the drawer breaks it down. `kinds`
+   * counts how many of them the settlement is keeping a real amount of — see
+   * `resources/diet.ts` — which is what a varied table is worth spirit and
+   * health for.
+   */
+  readonly food: {
+    readonly stored: number;
+    readonly loose: number;
+    readonly kinds: number;
+  };
 }
 
 export interface SimulationOptions {
@@ -681,6 +715,11 @@ export class Simulation {
       ),
       stored: this.totalsFrom((resource) => this.storages.totalOf(resource)),
       loose: this.totalsFrom((resource) => this.world.piles.totalOf(resource)),
+      food: {
+        stored: foodStored(this.storages),
+        loose: FOOD_IDS.reduce((sum, id) => sum + this.world.piles.totalOf(id), 0),
+        kinds: foodKinds(this.storages, this.villagers.count),
+      },
       chronicle: this.chronicle,
       necrology: this.necrology.all,
     };
@@ -980,7 +1019,7 @@ export class Simulation {
     // Only once a larder exists. Before that the founding yard is the food store
     // *and* the timber store, and telling the player their larders are full when
     // they have none reads as a bug — the yard warning below covers it.
-    if (this.storages.hasLarder && nearlyFull(this.storages.fill('food'))) {
+    if (this.storages.hasLarder && nearlyFull(this.storages.foodFill())) {
       return 'larderFilling';
     }
     if (nearlyFull(this.storages.fill('logs'))) {
@@ -1003,9 +1042,10 @@ export class Simulation {
     // and a player watching two huts work hard has no way to tell why. Only
     // worth saying once there is enough food for the loss to matter.
     const hasLarder = this.storages.all.some(
-      (storage) => storage.preservation < 1 && storage.accepts('food'),
+      (storage) => storage.preservation < 1 && FOOD_IDS.some((id) => storage.accepts(id)),
     );
-    if (!hasLarder && (this.lastSpoilage.lost.food ?? 0) >= 3) {
+    const foodLost = FOOD_IDS.reduce((sum, id) => sum + (this.lastSpoilage.lost[id] ?? 0), 0);
+    if (!hasLarder && foodLost >= 3) {
       return 'foodSpoiling';
     }
 
@@ -1165,6 +1205,13 @@ export class Simulation {
     // settlement built up on the dry side of the valley is not being punished, it
     // simply has not taken a comfort that was there for eight stone.
     share += WATER_SOLACE_SHARE * this.wateredShare();
+
+    // **And a varied table is the fourth comfort.** A settlement eating nothing
+    // but foraged roots is fed; one that also has fish, fruit, vegetables and
+    // meat on the shelf is *living somewhere*. Collected rather than owed like
+    // the rest: one kind of food is worth nothing here, because eating is not an
+    // achievement — every kind after the first is.
+    share += DIET_SOLACE_SHARE * varietyShare(foodKinds(this.storages, this.villagers.count));
     return Math.min(1, share);
   }
 
@@ -1322,7 +1369,7 @@ export class Simulation {
       villagers: this.villagers.all,
       buildings: this.world.buildings,
       random: this.villagers.random,
-      foodDaysPerPerson: people === 0 ? 0 : this.storages.totalOf('food') / people,
+      foodDaysPerPerson: people === 0 ? 0 : foodStored(this.storages) / people,
     });
 
     const when = this.year;
@@ -2109,7 +2156,14 @@ export class Simulation {
       this.takeStored(resource, whole),
     );
 
-    const report = runIllness(this.villagers.all, this.illnessRandom, staffed * supplied);
+    const report = runIllness(
+      this.villagers.all,
+      this.illnessRandom,
+      staffed * supplied,
+      // A varied larder keeps people out of their sickbeds, and days not spent
+      // ill are days at the end of a life. See `population/IllnessSystem.ts`.
+      varietyShare(foodKinds(this.storages, this.villagers.count)),
+    );
     return { ...report, herbsUsed: herbsTaken };
   }
 
@@ -2282,13 +2336,33 @@ export class Simulation {
   private plentiful(): ReadonlySet<ResourceId> {
     const people = Math.max(1, this.villagers.all.length);
     const enough = new Set<ResourceId>();
+    // **Food is judged as a larder, not as five separate goods.** Each kind
+    // wants only its own share of the twenty-five a person eats through, so
+    // asking per kind would drop the harvest to the bottom of the board while
+    // the settlement was still four fifths short of a winter's food. What the
+    // rule means is "is there enough to eat", and that is one question.
+    const fedUp = foodStored(this.storages) >= foodWantedPerVillager() * people;
     for (const resource of RESOURCE_IDS) {
       // The player's ceiling wins where they have set one: it is a statement
       // about this settlement, and the per-villager figure is only a default for
       // settlements that have not said anything.
-      const wanted =
-        this.stockLimits.get(resource) ?? resourceDefinition(resource).wantedPerVillager * people;
-      if (this.storages.totalOf(resource) >= wanted) {
+      const limit = this.stockLimits.get(resource);
+      if (limit !== null) {
+        if (this.storages.totalOf(resource) >= limit) {
+          enough.add(resource);
+        }
+        continue;
+      }
+      if (isFood(resource)) {
+        if (fedUp) {
+          enough.add(resource);
+        }
+        continue;
+      }
+      if (
+        this.storages.totalOf(resource) >=
+        resourceDefinition(resource).wantedPerVillager * people
+      ) {
         enough.add(resource);
       }
     }

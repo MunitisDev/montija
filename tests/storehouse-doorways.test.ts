@@ -68,15 +68,17 @@ describe('a store whose doorway is built over', () => {
     const yard = simulation.storages.all[0]!;
     wallIn(simulation, { ...yard.cell });
 
-    simulation.world.dropNear(yard.cell, 'food', 40);
-    const before = simulation.storages.totalOf('food');
+    simulation.world.dropNear(yard.cell, 'vegetables', 40);
+    const before = simulation.storages.totalOf('vegetables');
     run(simulation, TICKS_PER_DAY * 3);
 
     // Somebody carried it in, and it went onto a shelf rather than into a
     // neighbour's cupboard. Measured against the day's eating, which is why this
     // is "more than it had" rather than an exact figure.
-    expect(simulation.world.piles.totalOf('food')).toBeLessThan(40);
-    expect(simulation.storages.totalOf('food') + eaten(simulation, before)).toBeGreaterThan(0);
+    expect(simulation.world.piles.totalOf('vegetables')).toBeLessThan(40);
+    expect(simulation.storages.totalOf('vegetables') + eaten(simulation, before)).toBeGreaterThan(
+      0,
+    );
   });
 });
 
@@ -131,7 +133,7 @@ describe('fetching materials out of a store', () => {
 function eaten(simulation: Simulation, before: number): number {
   // A settlement of ten eats ten a day, so "the store went up" is not a claim that
   // survives three days. What is asserted is that the food left the field.
-  return Math.max(0, before - simulation.storages.totalOf('food'));
+  return Math.max(0, before - simulation.storages.totalOf('vegetables'));
 }
 
 /** Raises finished buildings until the given cell is walled in. */

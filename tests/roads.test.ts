@@ -297,7 +297,7 @@ describe('laying roads', () => {
       return;
     }
 
-    simulation.world.piles.drop(simulation.world.landfallCell, 'food', 20);
+    simulation.world.piles.drop(simulation.world.landfallCell, 'vegetables', 20);
     expect(simulation.designateRoad(cell)).toBe(true);
     // Hauling jobs are posted during the tick, not the moment the pile lands.
     simulation.update(1, TICK);

@@ -15,6 +15,7 @@
  */
 
 import { Simulation } from '@/simulation/Simulation';
+import { FOOD_IDS } from '@/data/resources';
 import { STARTING_VILLAGERS, WORLD_HEIGHT, WORLD_WIDTH } from '@/app/config';
 import type { BuildingId } from '@/data/buildings';
 import { buildingDefinition } from '@/data/buildings';
@@ -110,14 +111,17 @@ export function playtest(options: {
     }
 
     const snapshot = simulation.snapshot();
-    lowestFood = Math.min(lowestFood, snapshot.stored.food);
+    // **The larder, not one kind of it.** There are five foods now and a
+    // settlement lives on the sum; measuring one of them would report a famine
+    // every time the settlement changed what it grew.
+    lowestFood = Math.min(lowestFood, snapshot.food.stored);
     lowestFirewood = Math.min(lowestFirewood, snapshot.stored.firewood);
 
     if (snapshot.deaths > 0 && firstDeathDay === null) {
       firstDeathDay = day;
     }
     if (snapshot.season === 'winter' && atWinter === null) {
-      atWinter = { food: snapshot.stored.food, firewood: snapshot.stored.firewood };
+      atWinter = { food: snapshot.food.stored, firewood: snapshot.stored.firewood };
     }
 
     log.push({
@@ -125,14 +129,14 @@ export function playtest(options: {
       season: snapshot.season,
       villagers: snapshot.villagerCount,
       deaths: snapshot.deaths,
-      food: snapshot.stored.food,
+      food: snapshot.food.stored,
       firewood: snapshot.stored.firewood,
       logs: snapshot.stored.logs,
-      looseFood: snapshot.loose.food,
+      looseFood: snapshot.food.loose,
       foodEaten: snapshot.lastDay.foodEaten,
       foodShortfall: snapshot.lastDay.foodShortfall,
       firewoodShortfall: snapshot.lastDay.firewoodShortfall,
-      spoiledFood: snapshot.spoiled.lost.food ?? 0,
+      spoiledFood: FOOD_IDS.reduce((sum, id) => sum + (snapshot.spoiled.lost[id] ?? 0), 0),
       lowestHunger: lowestNeed(simulation, 'hunger'),
       lowestWarmth: lowestNeed(simulation, 'warmth'),
       lowestHealth: snapshot.lowestHealth,

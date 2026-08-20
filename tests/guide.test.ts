@@ -204,7 +204,10 @@ describe('what the guide says about a building', () => {
     // The figure the whole game turns on, and the one nothing said. A player can
     // read that a hut makes so much food a year and still not know whether that
     // feeds ten people.
-    const food = entryFor('resources', EN['hud.food']);
+    // Asked of one of the five foods: a person eats one thing a day whatever it
+    // is, so every food carries the same figure — the whole year's rations, as
+    // the most any single kind could have to cover.
+    const food = entryFor('resources', EN['hud.vegetables']);
     expect(food.meta).toContain(EN['guide.perVillagerYear']);
     expect(food.meta).toMatch(/\d+/);
 

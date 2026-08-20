@@ -192,7 +192,7 @@ describe('only the staff work the workshop', () => {
     }
 
     simulation.setDesiredWorkers(hut.id, 0);
-    const idle = simulation.storages.totalOf('food');
+    const idle = simulation.storages.totalOf('spices');
     for (let tick = 1; tick <= TICKS_PER_DAY * 3; tick += 1) {
       simulation.update(tick, TICK);
     }
@@ -206,7 +206,7 @@ describe('only the staff work the workshop', () => {
     // Food eaten daily makes the stored total a poor witness; what matters is
     // that the hut resumed producing at all.
     expect(
-      simulation.storages.totalOf('food') + simulation.world.piles.totalOf('food'),
+      simulation.storages.totalOf('spices') + simulation.world.piles.totalOf('spices'),
     ).toBeGreaterThan(0);
     expect(idle).toBeGreaterThanOrEqual(0);
   });
@@ -320,7 +320,7 @@ function provision(simulation: Simulation): void {
     // the test quietly provisioned an empty settlement and failed for a reason
     // that had nothing to do with employment.
     for (const [resource, level] of [
-      ['food', 700],
+      ['vegetables', 700],
       ['firewood', 700],
     ] as const) {
       yard.inventory.add(resource, Math.max(0, level - yard.inventory.count(resource)));

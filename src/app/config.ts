@@ -69,7 +69,13 @@ export const STARTING_VILLAGERS = 10;
  * gets a food supply going still dies, three days later than before.
  */
 export const STARTING_RESOURCES = {
-  food: 156,
+  // **The same fifteen days, and all of it one thing.** The settlers land with a
+  // hold of roots and nothing else, which is the right starting position for a
+  // game where a varied larder is a comfort you *build*: a settlement begins with
+  // no water, no temple, no cemetery and one kind of food, and every one of those
+  // is something the player goes and gets. Landing them with a mixed cargo was
+  // tried and handed them a comfort on the first morning for nothing.
+  vegetables: 156,
   logs: 45,
   stone: 10,
   iron: 8,

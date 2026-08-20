@@ -79,7 +79,7 @@ describe('what the post does', () => {
     const storages = yardWith({
       logs: 900,
       stone: 200,
-      food: 300,
+      vegetables: 300,
       firewood: 200,
       tools: 40,
       hides: 40,
@@ -101,7 +101,7 @@ describe('what the post does', () => {
     const storages = yardWith({ logs: 900, firewood: 0, iron: 0, clothing: 0 });
     const report = runTrade({ storages, day: SUMMER_TRADING_DAY, season: 'summer', posts: 1 });
 
-    expect(report.bought).toBe('food');
+    expect(report.bought).toBe('vegetables');
   });
 
   it('charges a bad rate, on purpose', () => {
@@ -117,20 +117,20 @@ describe('what the post does', () => {
   it('will not sell food or firewood, however much of it there is', () => {
     // A post that sells the last of the firewood in November because it
     // outnumbers the iron would be the game working against the player.
-    const storages = yardWith({ food: 5000, firewood: 4000, iron: 0 });
+    const storages = yardWith({ vegetables: 5000, firewood: 4000, iron: 0 });
     const report = runTrade({ storages, day: SUMMER_TRADING_DAY, season: 'summer', posts: 1 });
 
     expect(report.sold).toBeNull();
-    expect(storages.totalOf('food')).toBe(5000);
+    expect(storages.totalOf('vegetables')).toBe(5000);
     expect(storages.totalOf('firewood')).toBe(4000);
   });
 
   it('will happily buy food, which is what a merchant is for in a bad autumn', () => {
-    const storages = yardWith({ logs: 900, food: 0, iron: 200, stone: 200 });
+    const storages = yardWith({ logs: 900, vegetables: 0, iron: 200, stone: 200 });
     const report = runTrade({ storages, day: SUMMER_TRADING_DAY, season: 'summer', posts: 1 });
 
-    expect(report.bought).toBe('food');
-    expect(storages.totalOf('food')).toBeGreaterThan(0);
+    expect(report.bought).toBe('vegetables');
+    expect(storages.totalOf('vegetables')).toBeGreaterThan(0);
   });
 
   it('leaves a working stock behind rather than selling down to nothing', () => {
@@ -270,17 +270,17 @@ describe('when the player names the trade', () => {
   it('still refuses to sell food, however it is asked', () => {
     // Offering the player a choice the game then quietly ignores would be
     // worse than not offering it; refusing outright is at least honest.
-    const storages = yardWith({ food: 5000, iron: 0 });
+    const storages = yardWith({ vegetables: 5000, iron: 0 });
     const report = runTrade({
       storages,
       day: SUMMER_TRADING_DAY,
       season: 'summer',
       posts: 1,
-      order: { sell: 'food', buy: 'iron' },
+      order: { sell: 'vegetables', buy: 'iron' },
     });
 
     expect(report.sold).toBeNull();
-    expect(storages.totalOf('food')).toBe(5000);
+    expect(storages.totalOf('vegetables')).toBe(5000);
   });
 
   it('still leaves a working stock behind', () => {

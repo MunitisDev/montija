@@ -11,7 +11,7 @@
  * live.
  */
 
-import { RESOURCES, type ResourceId } from '@/data/resources';
+import { FOOD_IDS, RESOURCES, type ResourceId } from '@/data/resources';
 import type { GridPoint } from '@/shared/types/geometry';
 import { Inventory } from '@/simulation/resources/Inventory';
 
@@ -121,7 +121,31 @@ export class StorageRegistry {
 
   /** `true` once a purpose-built food store stands, as against the open yard. */
   public get hasLarder(): boolean {
-    return this.storages.some((storage) => storage.preservation < 1 && storage.isFor('food'));
+    return this.storages.some(
+      (storage) => storage.preservation < 1 && FOOD_IDS.some((id) => storage.isFor(id)),
+    );
+  }
+
+  /**
+   * How full the buildings that take food are, across every kind of it.
+   *
+   * Asked as one question because that is how the player asks it — "have I room
+   * for this harvest" is about the shed, not about the cabbages — and because a
+   * larder takes all five foods, so five separate answers would be the same
+   * answer five times over. Counted per *store* rather than per food, so a shed
+   * that takes four kinds is not counted four times.
+   */
+  public foodFill(): { readonly used: number; readonly capacity: number } {
+    let used = 0;
+    let capacity = 0;
+    for (const storage of this.storages) {
+      if (!FOOD_IDS.some((id) => storage.isFor(id))) {
+        continue;
+      }
+      used += storage.inventory.total;
+      capacity += storage.inventory.capacity;
+    }
+    return { used, capacity };
   }
 
   /**

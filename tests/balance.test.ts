@@ -283,7 +283,7 @@ describe('the first winter', () => {
     expect(spoiled).toBeGreaterThan(eaten * 0.5);
     // Ten days in, a stock that was meant to last fifteen is already spent.
     expect(firstTenDays.at(-1)!.food).toBe(0);
-    expect(STARTING_RESOURCES.food / (10 * FOOD_PER_VILLAGER_PER_DAY)).toBeGreaterThan(15);
+    expect(STARTING_RESOURCES.vegetables / (10 * FOOD_PER_VILLAGER_PER_DAY)).toBeGreaterThan(15);
   });
 
   it('kills a settlement that leaves its food supply too long', () => {

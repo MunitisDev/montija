@@ -58,9 +58,9 @@ describe('a ceiling on a good', () => {
 
   it('is reached at the figure, not past it', () => {
     const limits = new StockLimits();
-    limits.set('food', 200);
-    expect(limits.reached('food', 199)).toBe(false);
-    expect(limits.reached('food', 200)).toBe(true);
+    limits.set('vegetables', 200);
+    expect(limits.reached('vegetables', 199)).toBe(false);
+    expect(limits.reached('vegetables', 200)).toBe(true);
   });
 });
 
@@ -73,29 +73,45 @@ describe('a workshop under a ceiling', () => {
     expect(producing(simulation, hut.id)).toBeGreaterThan(0);
 
     // Whatever is on the shelves is already too much.
-    simulation.setStockLimit('food', 0);
+    simulation.setStockLimit('spices', 0);
     runDays(simulation, 1);
 
     expect(producing(simulation, hut.id)).toBe(0);
-    expect(simulation.productionHaltedBy(hut.id)).toBe('food');
+    expect(simulation.productionHaltedBy(hut.id)).toBe('spices');
   });
 
   it('starts again by itself once the stores fall', () => {
     const simulation = new Simulation(OPTIONS);
     const hut = raise(simulation, 'gatherer-hut');
     simulation.setDesiredWorkers(hut.id, hut.definition.workerSlots);
-    simulation.setStockLimit('food', 0);
+    // Long enough to have *carried something in*, not merely to have foraged
+    // it: a heap beside the hut is not stock, and "stopped" and "has not started
+    // yet" would otherwise be the same state and this would prove nothing.
+    runDays(simulation, 6);
+    const stocked = simulation.snapshot().stored.spices;
+    expect(stocked).toBeGreaterThan(0);
+
+    simulation.setStockLimit('spices', stocked);
     runDays(simulation, 1);
     expect(producing(simulation, hut.id)).toBe(0);
 
-    // A ceiling set exactly at what is in store: nobody touches the lever
-    // again, the settlement eats its way under it, and the hut goes back to work
-    // on its own. That self-starting is the whole reason a limit beats taking
-    // the workers off by hand.
-    simulation.setStockLimit('food', simulation.snapshot().stored.food);
-    runDays(simulation, 2);
+    // The settlement eats. Emptied by hand rather than waited out, so what is
+    // being tested is the rule and not how long ten people take to get through a
+    // barrel of dried roots.
+    for (const storage of simulation.storages.all) {
+      storage.inventory.remove('spices', storage.inventory.count('spices'));
+    }
+    simulation.storages.markChanged();
+
+    // One tick, not a day: the work goes back on the board the moment the stores
+    // are under the ceiling, and a whole day would let the heaps still lying
+    // beside the hut be carried in and put it back over.
+    simulation.update(simulation.tick + 1, 0.1);
+    // Nobody touched the lever: the ceiling is still set, and the hut went back
+    // to work on its own. That self-starting is the whole reason a limit beats
+    // taking the workers off by hand.
+    expect(simulation.stockLimits.get('spices')).toBe(stocked);
     expect(producing(simulation, hut.id)).toBeGreaterThan(0);
-    expect(simulation.stockLimits.get('food')).not.toBeNull();
   });
 
   it('is not stopped for one of two goods it makes', () => {
@@ -104,7 +120,7 @@ describe('a workshop under a ceiling', () => {
     const simulation = new Simulation(OPTIONS);
     const cabin = raise(simulation, 'hunter');
     simulation.setDesiredWorkers(cabin.id, cabin.definition.workerSlots);
-    simulation.setStockLimit('food', 0);
+    simulation.setStockLimit('meat', 0);
     runDays(simulation, 3);
 
     expect(simulation.productionHaltedBy(cabin.id)).toBeNull();
@@ -136,7 +152,7 @@ describe('a ceiling being moved', () => {
     runDays(simulation, 3);
     expect(producing(simulation, hut.id)).toBeGreaterThan(0);
 
-    simulation.setStockLimit('food', 0);
+    simulation.setStockLimit('spices', 0);
     expect(producing(simulation, hut.id)).toBe(0);
   });
 
@@ -151,14 +167,14 @@ describe('a ceiling being moved', () => {
   it('comes back after a reload', () => {
     const simulation = new Simulation(OPTIONS);
     simulation.setStockLimit('stone', 200);
-    simulation.setStockLimit('food', 0);
+    simulation.setStockLimit('spices', 0);
 
     const loaded = new Simulation(OPTIONS);
     loaded.setStockLimit('iron', 50);
     restore(loaded, serialise(simulation, 'now'));
 
     expect(loaded.stockLimits.get('stone')).toBe(200);
-    expect(loaded.stockLimits.get('food')).toBe(0);
+    expect(loaded.stockLimits.get('spices')).toBe(0);
     // And the session's own limits are gone rather than left standing over a
     // settlement that never set them.
     expect(loaded.stockLimits.get('iron')).toBeNull();

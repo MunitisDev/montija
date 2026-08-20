@@ -37,6 +37,7 @@ export type FeatureKind =
   | 'hides'
   | 'cloth'
   | 'physic'
+  | 'nets'
   | 'bell';
 
 /** Where a feature stands, and how big it is drawn there. */
@@ -52,6 +53,8 @@ const STONE = 0x7f7c6e;
 const CLOTH = 0xa8a08a;
 const GREEN = 0x556b39;
 const EMBER = 0xc4622a;
+/** Wet scales: the coldest, palest thing in the settlement after the well. */
+const FISH = 0x8b9299;
 
 /** A plain iso box standing on the ground: benches, blocks, vats, troughs. */
 function block(
@@ -183,6 +186,9 @@ export function drawFeature(
       return;
     case 'physic':
       drawPhysic(graphics, at, s);
+      return;
+    case 'nets':
+      drawNets(graphics, at, s);
       return;
     case 'bell':
       drawBell(graphics, at, s);
@@ -526,6 +532,47 @@ function drawRacks(graphics: Phaser.GameObjects.Graphics, at: Point, s: number):
       ]);
     }
   }
+}
+
+/**
+ * A drying frame with the catch hanging on it, and a creel under it.
+ *
+ * The one prop in the settlement that is unmistakably about *water*, and it has
+ * to be — the hut itself is a small boarded shed, which could be anybody's. The
+ * fish hang nose-down from a rail, the way they are split and dried, and their
+ * pale bellies are the only near-silver in the game outside the well.
+ */
+function drawNets(graphics: Phaser.GameObjects.Graphics, at: Point, s: number): void {
+  const left = { x: at.x - 10 * s, y: at.y + 2 * s };
+  const right = { x: at.x + 4 * s, y: at.y + 9 * s };
+  const height = 18 * s;
+  post(graphics, left, height, 2.4 * s, TIMBER);
+  post(graphics, right, height, 2.4 * s, TIMBER);
+  graphics.fillStyle(shade(TIMBER, 1.12), 1);
+  polygon(
+    graphics,
+    strip({ x: left.x, y: left.y - height }, { x: right.x, y: right.y - height }, 1.8 * s),
+  );
+
+  // The catch, hanging tail-up along the rail.
+  for (const t of [0.2, 0.46, 0.72]) {
+    const x = left.x + (right.x - left.x) * t;
+    const y = left.y + (right.y - left.y) * t - height;
+    graphics.fillStyle(FISH, 1);
+    graphics.fillEllipse(x, y + 6 * s, 4.4 * s, 10 * s);
+    graphics.fillStyle(shade(FISH, 1.3), 1);
+    graphics.fillEllipse(x - 0.8 * s, y + 5 * s, 2 * s, 6 * s);
+    graphics.fillStyle(shade(FISH, 0.7), 1);
+    polygon(graphics, [
+      { x: x - 2.6 * s, y: y + 11.5 * s },
+      { x: x + 2.6 * s, y: y + 11.5 * s },
+      { x, y: y + 14.5 * s },
+    ]);
+  }
+
+  // A creel set down beside the frame, because a rack alone reads as laundry.
+  const creel = { x: at.x + 9 * s, y: at.y + 3 * s };
+  block(graphics, creel, 8 * s, 5 * s, 6 * s, 0x8a6b45);
 }
 
 /** A hide stretched in a frame, and antlers set on a post beside it. */

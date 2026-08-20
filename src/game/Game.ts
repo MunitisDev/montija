@@ -31,7 +31,7 @@ import { cellLine, cellRoute } from '@/shared/math/gridLine';
 import type { TreeStage } from '@/simulation/world/TreeGrowth';
 import type { GridPoint, ScreenPoint } from '@/shared/types/geometry';
 import type { TerrainType } from '@/data/terrain';
-import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
+import { RESOURCE_IDS, isFood, type ResourceId } from '@/data/resources';
 import { SeededRandom, deriveSeed } from '@/shared/math/random';
 import type { BuildingId, ResourceAmount } from '@/data/buildings';
 import type { PlacementCheck } from '@/simulation/buildings/BuildingRegistry';
@@ -1305,7 +1305,7 @@ export class Game implements GameContext, InputIntentSink {
  * then refuses is worse than not offering it.
  */
 const TRADEABLE: Readonly<Record<'sell' | 'buy', readonly ResourceId[]>> = {
-  sell: RESOURCE_IDS.filter((resource) => resource !== 'food' && resource !== 'firewood'),
+  sell: RESOURCE_IDS.filter((resource) => !isFood(resource) && resource !== 'firewood'),
   buy: RESOURCE_IDS,
 };
 

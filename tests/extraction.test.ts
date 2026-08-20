@@ -340,7 +340,8 @@ describe('farming through the year', () => {
     for (let tick = 1; tick <= TICKS_PER_DAY * 55; tick += 1) {
       simulation.update(tick, TICK);
       if (simulation.snapshot().season === 'autumn') {
-        harvested = simulation.storages.totalOf('food') + simulation.world.piles.totalOf('food');
+        harvested =
+          simulation.storages.totalOf('vegetables') + simulation.world.piles.totalOf('vegetables');
       }
     }
     expect(harvested).toBeGreaterThan(0);

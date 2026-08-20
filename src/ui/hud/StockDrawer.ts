@@ -18,7 +18,7 @@
  * rather than a day because a day's net is a fraction; see `@/ui/format/rates`.
  */
 
-import { RESOURCE_IDS, type ResourceId } from '@/data/resources';
+import { FOOD_IDS, RESOURCE_IDS, type ResourceId } from '@/data/resources';
 import type { GameContext } from '@/game/Game';
 import { signedSeason } from '@/ui/format/rates';
 import type { I18n } from '@/ui/i18n/I18n';
@@ -34,7 +34,7 @@ import { atCeiling, atFloor, nextLimit } from './stockLimit';
  * not in the game — which is the opposite of what a zero is for.
  */
 const ALWAYS_LISTED: ReadonlySet<ResourceId> = new Set<ResourceId>([
-  'food',
+  ...FOOD_IDS,
   'logs',
   'firewood',
   'stone',
@@ -143,9 +143,9 @@ export class StockDrawer {
     // in and says nothing about why.
     // The larder line only once one is built: before that the founding yard is
     // both, and the same figure twice under two names is noise.
-    const fills = [this.describeFill('logs', 'stock.yards')];
+    const fills = [this.describeFill(this.context.simulation.storages.fill('logs'), 'stock.yards')];
     if (this.context.simulation.storages.hasLarder) {
-      fills.push(this.describeFill('food', 'stock.larders'));
+      fills.push(this.describeFill(this.context.simulation.storages.foodFill(), 'stock.larders'));
     }
     this.foot.textContent = `${fills.join(' · ')} — ${this.i18n.t('stock.foot')} ${this.i18n.t('stock.limitFoot')}`;
 
@@ -254,8 +254,11 @@ export class StockDrawer {
    * of nought is not empty, and a settlement with no larder is in a different
    * kind of trouble from one with an empty larder.
    */
-  private describeFill(resource: ResourceId, label: MessageKey): string {
-    const { used, capacity } = this.context.simulation.storages.fill(resource);
+  private describeFill(
+    fill: { readonly used: number; readonly capacity: number },
+    label: MessageKey,
+  ): string {
+    const { used, capacity } = fill;
     const name = this.i18n.t(label);
     if (capacity <= 0) {
       return `${name} ${this.i18n.t('stock.none')}`;

@@ -70,6 +70,22 @@ export const BASE_ILLNESS_CHANCE = 0.002;
  */
 export const EXPOSURE_MULTIPLIER = 5;
 
+/**
+ * How much of the settlement's sickness a fully varied diet keeps away.
+ *
+ * **This is where food variety turns into life expectancy**, and it does it
+ * without the population system knowing anything about food. A day spent unwell
+ * is already a day off the end of a life — that is what makes a Healer worth
+ * building — so a settlement that eats a spread of things falls ill less, spends
+ * fewer days ill, and lives longer for it. The chain is three rules long and
+ * every link was already there.
+ *
+ * A third, deliberately below the roof's five-fold exposure: eating well helps,
+ * and having somewhere to sleep helps far more. A settlement should never be
+ * able to eat its way out of homelessness.
+ */
+export const DIET_HEALTH_SHARE = 1 / 3;
+
 /** Days a case lasts on its own. */
 export const ILLNESS_DAYS = 8;
 
@@ -110,6 +126,14 @@ export function runIllness(
   villagers: readonly Villager[],
   random: SeededRandom,
   care: number,
+  /**
+   * How varied the settlement's larder is, in `0..1`.
+   *
+   * Passed in rather than worked out here, for the same reason `care` is: what
+   * is on the shelves is not this system's business. Defaults to nothing, which
+   * is the rate the game always ran at.
+   */
+  nourishment = 0,
 ): IllnessReport {
   let fellIll = 0;
   let recovered = 0;
@@ -136,7 +160,7 @@ export function runIllness(
       continue;
     }
 
-    if (random.next() < chanceFor(villager)) {
+    if (random.next() < chanceFor(villager, nourishment)) {
       villager.illDaysRemaining = ILLNESS_DAYS;
       fellIll += 1;
       ill += 1;
@@ -159,7 +183,8 @@ export function runIllness(
  * housing is per person: the villagers sleeping rough are the ones who get
  * sick, and they are the ones the player can do something about.
  */
-export function chanceFor(villager: Villager): number {
+export function chanceFor(villager: Villager, nourishment = 0): number {
   const exposed = villager.homeId === null;
-  return Math.min(1, BASE_ILLNESS_CHANCE * (exposed ? EXPOSURE_MULTIPLIER : 1));
+  const wellFed = 1 - DIET_HEALTH_SHARE * Math.max(0, Math.min(1, nourishment));
+  return Math.min(1, BASE_ILLNESS_CHANCE * (exposed ? EXPOSURE_MULTIPLIER : 1) * wellFed);
 }

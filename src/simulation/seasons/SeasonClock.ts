@@ -58,7 +58,7 @@ export const SEASON_FORAGE_SCALE: Readonly<Record<Season, number>> = {
  * has to store what it brings in and make it last, which is the same lesson
  * winter teaches, arriving a season earlier.
  */
-export type SeasonalProfile = 'none' | 'forage' | 'crop' | 'orchard' | 'game';
+export type SeasonalProfile = 'none' | 'forage' | 'crop' | 'orchard' | 'game' | 'fish';
 
 export const SEASONAL_YIELD: Readonly<Record<SeasonalProfile, Readonly<Record<Season, number>>>> = {
   // Workshops do not care what month it is.
@@ -75,6 +75,14 @@ export const SEASONAL_YIELD: Readonly<Record<SeasonalProfile, Readonly<Record<Se
   // something in through January — which is exactly why a settlement built on
   // foraging alone finds winter so much harder than one that hunts.
   game: { spring: 0.6, summer: 1, autumn: 1.5, winter: 0.5 },
+  // **The flattest curve in the game, on purpose.** A river does not have a
+  // harvest: it is worth about the same every month, best when the meltwater
+  // runs, and still worth something through the ice. That makes a fishing hut
+  // the answer to a *hungry spring* — the gap a settlement living on foraging
+  // and fields cannot cover — and the price is that fish keeps worse than
+  // anything else in the store, so a winter of it has to be eaten as it is
+  // caught.
+  fish: { spring: 1.2, summer: 1, autumn: 1.1, winter: 0.6 },
 };
 
 export interface YearState {

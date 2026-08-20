@@ -93,7 +93,7 @@ describe('daily survival', () => {
   function stockedStorage(food: number, firewood: number): StorageRegistry {
     const storages = new StorageRegistry();
     const yard = storages.add({ cell: { gx: 0, gy: 0 }, capacity: food + firewood + 100 });
-    expect(yard.inventory.add('food', food)).toBe(food);
+    expect(yard.inventory.add('vegetables', food)).toBe(food);
     expect(yard.inventory.add('firewood', firewood)).toBe(firewood);
     return storages;
   }
@@ -108,7 +108,7 @@ describe('daily survival', () => {
     const { report } = runDay(villagers, storages, summer);
 
     expect(report.foodEaten).toBe(5);
-    expect(storages.totalOf('food')).toBe(45);
+    expect(storages.totalOf('vegetables')).toBe(45);
   });
 
   it('burns no firewood when it is not freezing', () => {
@@ -205,7 +205,7 @@ describe('shelter', () => {
   function stocked() {
     const storages = new StorageRegistry();
     const yard = storages.add({ cell: { gx: 0, gy: 0 }, capacity: 500 });
-    yard.inventory.add('food', 200);
+    yard.inventory.add('vegetables', 200);
     yard.inventory.add('firewood', 200);
     return storages;
   }
@@ -286,10 +286,10 @@ describe('winter in the running simulation', () => {
     const larder = simulation.storages.add({
       cell: { gx: yard.cell.gx + 2, gy: yard.cell.gy },
       capacity: 800,
-      accepts: ['food'],
+      accepts: ['vegetables'],
       preservation: 0.1,
     });
-    expect(larder.inventory.add('food', 600)).toBe(600);
+    expect(larder.inventory.add('vegetables', 600)).toBe(600);
     simulation.storages.markChanged();
 
     for (let tick = 1; tick <= TICKS_PER_YEAR; tick += 1) {
@@ -311,10 +311,10 @@ describe('winter in the running simulation', () => {
     const larder = simulation.storages.add({
       cell: { gx: yard.cell.gx + 2, gy: yard.cell.gy },
       capacity: 800,
-      accepts: ['food'],
+      accepts: ['vegetables'],
       preservation: 0.1,
     });
-    larder.inventory.add('food', 600);
+    larder.inventory.add('vegetables', 600);
     simulation.storages.markChanged();
 
     for (let tick = 1; tick <= TICKS_PER_YEAR && !simulation.hasFailed; tick += 1) {
@@ -329,7 +329,7 @@ describe('winter in the running simulation', () => {
     // a year, however much of it there is.
     const simulation = new Simulation(OPTIONS);
     const yard = simulation.storages.all[0]!;
-    yard.inventory.add('food', 600);
+    yard.inventory.add('vegetables', 600);
     yard.inventory.add('firewood', 600);
     simulation.storages.markChanged();
 

@@ -176,7 +176,7 @@ describe('StorageRegistry', () => {
 
   it('skips a yard that does not accept the resource', () => {
     const storages = new StorageRegistry();
-    storages.add({ cell: { gx: 1, gy: 1 }, capacity: 100, accepts: ['food'] });
+    storages.add({ cell: { gx: 1, gy: 1 }, capacity: 100, accepts: ['vegetables'] });
     const general = storages.add({ cell: { gx: 30, gy: 30 }, capacity: 100 });
 
     expect(storages.findNearestAccepting({ gx: 0, gy: 0 }, 'logs')?.id).toBe(general.id);
@@ -239,7 +239,7 @@ describe('the full logistics loop', () => {
     const snapshot = simulation.snapshot();
 
     expect(simulation.storages.count).toBe(1);
-    expect(snapshot.stored.food).toBe(STARTING_RESOURCES.food);
+    expect(snapshot.stored.vegetables).toBe(STARTING_RESOURCES.vegetables);
     expect(snapshot.stored.logs).toBe(STARTING_RESOURCES.logs);
     expect(snapshot.stored.stone).toBe(STARTING_RESOURCES.stone);
     expect(snapshot.loose.logs).toBe(0);
@@ -327,20 +327,20 @@ describe('the full logistics loop', () => {
     // everything past the first fifty until a hauler came.
     const simulation = new Simulation(OPTIONS);
     const cell = simulation.world.heartCell;
-    const stack = resourceDefinition('food').maxStack;
+    const stack = resourceDefinition('vegetables').maxStack;
 
-    const placed = simulation.world.dropNear(cell, 'food', stack * 3);
+    const placed = simulation.world.dropNear(cell, 'vegetables', stack * 3);
 
     expect(placed).toBe(stack * 3);
-    expect(simulation.world.piles.totalOf('food')).toBe(stack * 3);
+    expect(simulation.world.piles.totalOf('vegetables')).toBe(stack * 3);
     // And spread over more than one cell, because one cell cannot hold it.
-    expect(simulation.world.piles.getAt(cell, 'food')?.amount).toBe(stack);
+    expect(simulation.world.piles.getAt(cell, 'vegetables')?.amount).toBe(stack);
   });
 
   it('keeps a spilled load somewhere a hauler can stand', () => {
     const simulation = new Simulation(OPTIONS);
-    const stack = resourceDefinition('food').maxStack;
-    simulation.world.dropNear(simulation.world.heartCell, 'food', stack * 3);
+    const stack = resourceDefinition('vegetables').maxStack;
+    simulation.world.dropNear(simulation.world.heartCell, 'vegetables', stack * 3);
 
     for (const pile of simulation.world.piles.all) {
       expect(simulation.world.isWalkable(pile.cell), `${pile.cell.gx},${pile.cell.gy}`).toBe(true);
@@ -481,7 +481,7 @@ describe('a heap nobody has carried', () => {
     // what is being tested is the price on the board.
     const simulation = new Simulation({ ...OPTIONS, startingVillagers: 0 });
     const hut = workshop(simulation, 'gatherer-hut');
-    const pile = heapAt(simulation, hut.accessCell, 'food');
+    const pile = heapAt(simulation, hut.accessCell, 'spices');
 
     advance(simulation, 2);
     const job = haulFor(simulation, pile.id);
@@ -551,7 +551,7 @@ describe('a heap nobody has carried', () => {
     advance(simulation, TICKS_PER_DAY * 2);
     expect(hut.workers).toHaveLength(2);
 
-    const pile = heapAt(simulation, hut.accessCell, 'food');
+    const pile = heapAt(simulation, hut.accessCell, 'spices');
     pile.days = STALE_PILE_DAYS;
     advance(simulation, 2);
     expect(haulFor(simulation, pile.id).priority).toBe(JobPriority.overdue);

@@ -40,7 +40,10 @@ export const RECIPES: Readonly<Record<string, Recipe>> = {
     id: 'forage-food',
     name: 'Forage',
     inputs: [],
-    outputs: [{ resource: 'food', amount: 6 }],
+    // Berries, roots, nuts and what can be dried and hung for seasoning. The
+    // settlement's first and least reliable larder: it needs no cleared ground,
+    // no water and no tools, and it is the one harvest nobody has to plan.
+    outputs: [{ resource: 'spices', amount: 6 }],
     workTicks: 40,
     seasonal: 'forage',
   },
@@ -82,7 +85,7 @@ export const RECIPES: Readonly<Record<string, Recipe>> = {
     id: 'grow-crops',
     name: 'Work the field',
     inputs: [],
-    outputs: [{ resource: 'food', amount: 7 }],
+    outputs: [{ resource: 'vegetables', amount: 7 }],
     workTicks: 45,
     seasonal: 'crop',
   },
@@ -90,7 +93,7 @@ export const RECIPES: Readonly<Record<string, Recipe>> = {
     id: 'tend-orchard',
     name: 'Tend the orchard',
     inputs: [],
-    outputs: [{ resource: 'food', amount: 9 }],
+    outputs: [{ resource: 'fruit', amount: 9 }],
     workTicks: 50,
     seasonal: 'orchard',
   },
@@ -103,7 +106,7 @@ export const RECIPES: Readonly<Record<string, Recipe>> = {
     // both from one building is what stops clothing being a chore bolted on to
     // an economy that had no room for it.
     outputs: [
-      { resource: 'food', amount: 5 },
+      { resource: 'meat', amount: 5 },
       { resource: 'hides', amount: 2 },
     ],
     workTicks: 55,
@@ -111,6 +114,18 @@ export const RECIPES: Readonly<Record<string, Recipe>> = {
     // shape to a field and gives a settlement a second, differently-timed way
     // to eat.
     seasonal: 'game',
+  },
+  'catch-fish': {
+    id: 'catch-fish',
+    name: 'Fish the river',
+    inputs: [],
+    outputs: [{ resource: 'fish', amount: 6 }],
+    workTicks: 45,
+    // **The second thing that still works under snow**, and unlike hunting it
+    // works in spring too — a river is at its best when the meltwater runs and
+    // the woods have nothing in them. What it costs is that fish keeps worse
+    // than anything else the settlement stores.
+    seasonal: 'fish',
   },
   'sew-clothing': {
     id: 'sew-clothing',

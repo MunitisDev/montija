@@ -49,7 +49,7 @@ describe('how full the stores are', () => {
     raise(simulation, 'food-storage');
 
     expect(simulation.storages.fill('logs').capacity).toBe(before);
-    expect(simulation.storages.fill('food').capacity).toBeGreaterThan(before);
+    expect(simulation.storages.fill('vegetables').capacity).toBeGreaterThan(before);
   });
 
   it('reports no room at all rather than an empty percentage', () => {
@@ -88,7 +88,7 @@ describe('the warning before it is too late', () => {
     // The founding yard is both stores. "Your larders are full" to a settlement
     // that has no larder reads as a bug rather than as advice.
     const simulation = new Simulation(OPTIONS);
-    fillTo(simulation, 'food', 0.95);
+    fillTo(simulation, 'vegetables', 0.95);
     expect(simulation.snapshot().advice).toBe('storageFilling');
   });
 
@@ -98,7 +98,7 @@ describe('the warning before it is too late', () => {
     // food genuinely includes it.
     const simulation = new Simulation(OPTIONS);
     raise(simulation, 'food-storage');
-    fillTo(simulation, 'food', 0.95);
+    fillTo(simulation, 'vegetables', 0.95);
 
     expect(simulation.snapshot().advice).toBe('larderFilling');
   });
@@ -187,7 +187,7 @@ function section(tabs: readonly LedgerTab[], tabId: string, sectionId: string): 
 }
 
 /** Fills every store that would take a resource to roughly a given share. */
-function fillTo(simulation: Simulation, resource: 'food' | 'logs', share: number): void {
+function fillTo(simulation: Simulation, resource: 'vegetables' | 'logs', share: number): void {
   for (const storage of simulation.storages.all) {
     if (!storage.isFor(resource)) {
       continue;
