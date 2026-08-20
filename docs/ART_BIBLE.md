@@ -839,3 +839,27 @@ separates the two plots at a glance.
 
 Both keep the low fence on the two back edges only. Across the front it would hide the crop, which is
 the one thing the player needs to see.
+
+### Four looks each, one per season — Implemented
+
+A tint is not a season for anything that grows. Every other building in the settlement is the same
+building in January with winter's light on it; a field in January is empty and an orchard is bare wood.
+So the two worked plots carry **a texture per season**, and the renderer swaps them on the frames where
+the year turns — four times a simulated year, for a handful of sprites.
+
+| Season | Field                                               | Orchard                                |
+| ------ | --------------------------------------------------- | -------------------------------------- |
+| Spring | turned earth, a thin line of seedlings, mostly bare | bare pruned wood, first blossom        |
+| Summer | full rows in leaf                                   | full crowns, fruit set and still green |
+| Autumn | heavy and yellowing, two beds already lifted        | red fruit, and windfalls in the grass  |
+| Winter | frost along every ridge, stubble, nothing standing  | bare forks and twigs                   |
+
+The winter field is the one that took two attempts. Lightening the soil to read as frost lightened
+_both_ ridge tones into each other, and the banding that makes it a field at all disappeared — a flat
+lozenge inside a fence, which reads as ground somebody enclosed for no reason. The frost is now drawn
+as its own pale line along each ridge crest, over unchanged soil.
+
+Only the growing plots get this. The graveyard is worked ground too and does not change: nothing grows
+in it. Buildings do not get it either — four textures each for twenty-two buildings would be four times
+the startup cost for a difference nobody would notice. The guide's thumbnails ask for **summer**, since
+they are answering "what is this building" rather than "what month is it".

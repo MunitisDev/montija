@@ -27,7 +27,9 @@ import {
   BUILDING_COLOURS,
   buildingTextureSpec,
   drawBuilding,
+  seasonalArt,
 } from '@/renderer/phaser/terrain/buildingArt';
+import { SEASONS } from '@/simulation/seasons/SeasonClock';
 
 /** Data URLs already drawn, keyed by `id@width×height`. */
 const cache = new Map<string, string>();
@@ -76,7 +78,17 @@ export function buildingThumbnail(id: BuildingId, box: ThumbnailBox): string {
   context.translate((canvas.width / scale - spec.width) / 2, canvas.height / scale - spec.height);
   context.imageSmoothingEnabled = false;
 
-  drawBuilding(new CanvasGraphics(context) as never, id, BUILDING_COLOURS[id]);
+  // **Summer for anything that grows.** A field and an orchard carry a look per
+  // season now, and the first of the four is spring — turned earth and bare wood,
+  // which is a picture of a plot that has nothing in it. The guide is answering
+  // "what is this building", so it shows the one month of the year that answers
+  // it.
+  drawBuilding(
+    new CanvasGraphics(context) as never,
+    id,
+    BUILDING_COLOURS[id],
+    seasonalArt(id) ? SEASONS.indexOf('summer') : 0,
+  );
 
   const url = canvas.toDataURL('image/png');
   cache.set(key, url);

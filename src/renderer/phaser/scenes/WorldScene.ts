@@ -169,6 +169,9 @@ export class WorldScene extends Phaser.Scene {
       this.terrainRenderer.applySeason(this.context.simulation.world, season);
       const tint = structureTint(season);
       this.buildingRenderer.applyTint(tint);
+      // And the plots that grow something turn over their whole picture rather
+      // than taking the season's light: see `BuildingRenderer.applySeason`.
+      this.buildingRenderer.applySeason(season);
       this.villagerRenderer.applyTint(tint);
       this.resourceRenderer.applyTint(tint);
     }

@@ -1930,3 +1930,16 @@ the real cost was the basket. The rule is kept anyway because it is the right on
 **Known tightness.** The stores drawer is thirteen rows with a stepper each. On a 360px-tall landscape
 phone that is three rows and a scroll; on the tablet it is the primary target for, it is comfortable.
 Worth a denser row on short screens if a player complains.
+
+## PHASE 63 — The year on the ground — Implemented
+
+The field and the orchard carry a look per season and the renderer turns them over when the year does.
+See `ART_BIBLE.md` for the four states and for the winter field, which took two attempts.
+
+Worth saying why it is only these two: the calendar was legible everywhere in this game except on the
+ground that actually grows, which is the one place a player looks to judge whether the year is going
+well. A house in January is a house; a field in January is the difference between a settlement that
+harvested and one that did not.
+
+`tests/building-art.test.ts` already checked every variant of every building against its own footprint,
+so the four new textures each were held to that from the first run.

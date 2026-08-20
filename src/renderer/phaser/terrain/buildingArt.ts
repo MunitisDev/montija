@@ -35,6 +35,7 @@
 import type Phaser from 'phaser';
 
 import { BUILDINGS, type BuildingId } from '@/data/buildings';
+import { SEASONS, type Season } from '@/simulation/seasons/SeasonClock';
 import { TILE_HEIGHT, TILE_WIDTH } from '@/shared/math/isometric';
 import { drawFeature, type FeatureKind } from './buildingFeatures';
 import { CRATE, isoBarrel, isoCrate, isoLogStack, isoSack } from './isoProps';
@@ -831,6 +832,24 @@ export function yardFillVariant(total: number): number {
 }
 
 /**
+ * `true` for the plots whose art follows the year.
+ *
+ * **Only the growing ones.** A field and an orchard are the two things in the
+ * settlement that are visibly *doing* something across a year — ploughed, in
+ * leaf, in fruit, bare — and watching that happen is most of what makes the
+ * calendar mean anything on the map. The graveyard is worked ground too and does
+ * not change: nothing grows in it.
+ *
+ * Buildings do not get this. A house in January is a house with snow tinted over
+ * it, and four textures each for twenty-two buildings would be four times the
+ * startup cost for a difference nobody would notice.
+ */
+export function seasonalArt(id: BuildingId): boolean {
+  const field = MASS[id].field;
+  return field === 'crop' || field === 'orchard';
+}
+
+/**
  * How many textures a building needs.
  *
  * One for almost everything: a house looks like a house whatever is happening
@@ -840,6 +859,11 @@ export function yardFillVariant(total: number): number {
 export function artVariants(id: BuildingId): number {
   if (MASS[id].yard === true) {
     return YARD_FILL_LEVELS;
+  }
+  // A worked plot gets one look per season, and the renderer swaps them when the
+  // year turns. See {@link seasonalArt}.
+  if (seasonalArt(id)) {
+    return SEASONS.length;
   }
   // A building that can be improved is drawn twice: as built, and with the
   // masonry that improvement buys. See {@link IMPROVED_STONE}.
@@ -974,7 +998,17 @@ export function drawBuilding(
   }
 
   if (mass.field) {
-    drawField(graphics, { palette, cx, groundY, halfW, halfH, kind: mass.field });
+    drawField(graphics, {
+      palette,
+      cx,
+      groundY,
+      halfW,
+      halfH,
+      kind: mass.field,
+      // A worked plot's variant *is* its season: see {@link artVariants}. The
+      // graveyard has one look and lands on spring, which it ignores.
+      season: SEASONS[variant] ?? 'spring',
+    });
     return;
   }
 
@@ -1263,9 +1297,11 @@ function drawField(
     halfW: number;
     halfH: number;
     kind: 'crop' | 'orchard' | 'graves';
+    /** Which of the four the plot is standing in. Ignored by the graveyard. */
+    season: Season;
   },
 ): void {
-  const { palette, cx, groundY, halfW, halfH, kind } = options;
+  const { palette, cx, groundY, halfW, halfH, kind, season } = options;
 
   // Broken earth, in two facets like the ground it replaced. The two are pulled
   // well apart: at a few per cent difference a field reads as one flat sticker.
@@ -1341,12 +1377,11 @@ function drawField(
       ]);
     }
   } else if (kind === 'crop') {
-    // **Beds of vegetables, not just ploughing.** Furrows alone read as "some
-    // kind of worked ground", and the player had a field and an orchard that
-    // looked like two versions of each other. Two things fix it: the ground is
-    // *banded* rather than striped, so it reads as dug from any distance, and
-    // there is a crop standing in it — rows of leaf clumps, with one bed turned
-    // over and bare, which is what a garden looks like halfway through a season.
+    // **Beds of vegetables, and a different bed in every season.** Furrows alone
+    // read as "some kind of worked ground", and watching a plot go from turned
+    // earth to a full row to stubble is most of what makes the calendar mean
+    // anything on the map — the year is the thing this whole game is about, and
+    // it was legible everywhere except on the ground that actually grows.
     //
     // Eight bands, with a boundary at the middle: the rhombus narrows towards
     // each end, and a band straddling the widest point would cut the corner off
@@ -1356,12 +1391,27 @@ function drawField(
       x: cx + halfW * t,
       half: halfH * (1 - Math.abs(t)),
     });
+
+    /** How the year reads on a vegetable bed. */
+    const crop = {
+      // Sown: the beds are turned and there is a thin line of seedlings up each
+      // ridge. Bare earth is most of what you see, which is the point.
+      spring: { size: 0.42, tone: 1.16, rows: 3, fallow: 2, soil: 1.0 },
+      // In full leaf, and the reason a field is worth having.
+      summer: { size: 1, tone: 1, rows: 4, fallow: 2, soil: 1.0 },
+      // Ripe and going over: bigger, heavier, yellowing, and two beds already
+      // lifted — an autumn field is half harvest and half harvested.
+      autumn: { size: 1.12, tone: 0.82, rows: 4, fallow: 4, soil: 0.94 },
+      // Lifted and left. Frost on the ridges and nothing standing in them.
+      winter: { size: 0, tone: 1, rows: 0, fallow: 0, soil: 1.02 },
+    }[season];
+
     for (let band = 0; band < BANDS; band += 1) {
       const from = edge(-1 + (band * 2) / BANDS);
       const to = edge(-1 + ((band + 1) * 2) / BANDS);
       // Turned earth, in two tones. Wide enough apart to read as ridge and
-      // furrow rather than as a texture.
-      graphics.fillStyle(shade(palette.trim, band % 2 === 0 ? 1.24 : 0.96), 1);
+      // furrow rather than as a texture, and paler under frost.
+      graphics.fillStyle(shade(palette.trim, (band % 2 === 0 ? 1.24 : 0.96) * crop.soil), 1);
       polygon(graphics, [
         { x: from.x, y: groundY - from.half },
         { x: to.x, y: groundY - to.half },
@@ -1369,9 +1419,9 @@ function drawField(
         { x: from.x, y: groundY + from.half },
       ]);
 
-      // One bed left bare: dug over and waiting, so the field reads as tended
-      // rather than as a printed pattern.
-      if (band === 2) {
+      // A bed left bare: dug over and waiting in spring and summer, lifted in
+      // autumn, and the whole field in winter.
+      if (crop.size === 0 || band % crop.fallow === 2 % crop.fallow) {
         continue;
       }
 
@@ -1380,23 +1430,77 @@ function drawField(
       // flat green blob at this size reads as a coin.
       const x = (from.x + to.x) / 2;
       const half = (from.half + to.half) / 2;
-      for (const along of [-0.66, -0.22, 0.22, 0.66] as const) {
-        const y = groundY + half * along;
+      const along =
+        crop.rows === 3 ? ([-0.55, 0, 0.55] as const) : ([-0.66, -0.22, 0.22, 0.66] as const);
+      for (const t of along) {
+        const y = groundY + half * t;
+        const w = 8.4 * crop.size;
+        const h = 6 * crop.size;
         graphics.fillStyle(shade(palette.trim, 0.72), 1);
-        graphics.fillEllipse(x + 0.6, y + 2, 8.6, 3.6);
-        graphics.fillStyle(shade(palette.wall, band % 2 === 0 ? 1.04 : 0.88), 1);
-        graphics.fillEllipse(x, y, 8.4, 6);
-        graphics.fillStyle(shade(palette.wall, 1.26), 1);
-        graphics.fillEllipse(x - 1.8, y - 1.5, 4, 3);
+        graphics.fillEllipse(x + 0.6, y + h * 0.34, w * 1.02, h * 0.55);
+        graphics.fillStyle(shade(palette.wall, (band % 2 === 0 ? 1.04 : 0.88) * crop.tone), 1);
+        graphics.fillEllipse(x, y, w, h);
+        graphics.fillStyle(shade(palette.wall, 1.26 * crop.tone), 1);
+        graphics.fillEllipse(x - w * 0.21, y - h * 0.25, w * 0.48, h * 0.5);
+      }
+    }
+
+    // **Winter is not simply an empty plot.** Frost along the crest of every
+    // ridge and the stubble of what was lifted: without them a frozen field is a
+    // flat lozenge inside a fence, which reads as ground somebody enclosed for no
+    // reason rather than as ground that fed the settlement four months ago.
+    //
+    // The frost is drawn rather than got by lightening the soil, because the two
+    // ridge tones lighten into each other — pale enough and the banding that
+    // makes it a *field* disappears, which is what the first attempt did.
+    if (season === 'winter') {
+      for (let band = 0; band <= BANDS; band += 1) {
+        const at = edge(-1 + (band * 2) / BANDS);
+        graphics.fillStyle(0xd8dde2, 0.5);
+        polygon(graphics, [
+          { x: at.x - 1.2, y: groundY - at.half },
+          { x: at.x + 1.2, y: groundY - at.half },
+          { x: at.x + 1.2, y: groundY + at.half },
+          { x: at.x - 1.2, y: groundY + at.half },
+        ]);
+      }
+
+      graphics.fillStyle(shade(palette.wall, 0.66), 1);
+      for (let band = 1; band < BANDS; band += 2) {
+        const at = edge(-1 + (band * 2) / BANDS);
+        for (const t of [-0.55, -0.18, 0.18, 0.55] as const) {
+          graphics.fillRect(at.x - 1.2, groundY + at.half * t - 3, 2.4, 3);
+        }
       }
     }
   } else {
-    // **Fruit trees, with fruit on them.** An orchard has to be tellable from
-    // the field beside it *and* from the wild wood behind it: the rows are what
-    // say planted, and the fruit is what says orchard rather than coppice. The
-    // grass between the rows is left alone — an orchard is not ploughed, and
+    // **Fruit trees, and a different tree in every season.** An orchard has to be
+    // tellable from the field beside it *and* from the wild wood behind it: the
+    // rows are what say planted, and what is *on* the trees is what says which
+    // month it is. Bare and pruned, in blossom, in green fruit, in ripe fruit —
+    // the plot the player waited three seasons for should look like it was worth
+    // waiting for when it finally comes in.
+    //
+    // The grass between the rows is left alone. An orchard is not ploughed, and
     // that is half of what separates the two plots at a glance.
-    const FRUIT = 0xb8452b;
+    const RIPE = 0xb8452b;
+    const GREEN_FRUIT = 0x7c8a44;
+    const BLOSSOM = 0xd8c3c6;
+
+    /** How the year reads on a fruit tree. */
+    const tree = {
+      // Bare wood and the first blossom. No crown to speak of: what the player
+      // should read is *pruned and waiting*.
+      spring: { crown: 0.5, fruit: BLOSSOM, fruits: 3, size: 1.1, windfall: false },
+      // In full leaf, with the fruit set and still green.
+      summer: { crown: 1, fruit: GREEN_FRUIT, fruits: 3, size: 1.2, windfall: false },
+      // The harvest. Heavy crowns, red fruit, and windfalls in the grass.
+      autumn: { crown: 1.06, fruit: RIPE, fruits: 4, size: 1.6, windfall: true },
+      // Bare. Two forks and nothing on them, which is the shape the whole year
+      // is measured against.
+      winter: { crown: 0, fruit: RIPE, fruits: 0, size: 0, windfall: false },
+    }[season];
+
     let index = 0;
     for (const [ox, oy] of [
       [-0.5, -0.25],
@@ -1411,34 +1515,60 @@ function drawField(
       const y = groundY + halfH * oy * 0.72;
       index += 1;
 
-      graphics.fillStyle(0x000000, 0.18);
+      graphics.fillStyle(0x000000, tree.crown > 0 ? 0.18 : 0.1);
       graphics.fillEllipse(x, y + 1, 12, 4.4);
       // A short trunk that forks, which is how a tree kept low for picking
-      // grows and the quickest way to say *pruned*.
+      // grows and the quickest way to say *pruned*. In winter it is the whole
+      // tree, so the forks reach a little further.
+      const reach = tree.crown > 0 ? 1 : 1.6;
       graphics.fillStyle(0x4a3d2c, 1);
       graphics.fillRect(x - 1.3, y - 9, 2.6, 9);
-      graphics.fillRect(x - 3.4, y - 11, 2, 4);
-      graphics.fillRect(x + 1.6, y - 11, 2, 4);
-
-      graphics.fillStyle(shade(palette.wall, 1.22), 1);
-      graphics.fillEllipse(x - 1.5, y - 15, 14, 12);
-      graphics.fillStyle(shade(palette.wall, 0.78), 1);
-      graphics.fillEllipse(x + 3.2, y - 12.5, 8.5, 8.5);
-
-      // Fruit, in the crown and under it. Positioned off the row's index rather
-      // than rolled: this is drawn once into a texture, and the renderer must
-      // never touch a simulation stream.
-      graphics.fillStyle(FRUIT, 1);
-      for (const [fx, fy] of [
-        [-4.6, -17],
-        [0.4, -19.4],
-        [3.6, -15.6],
-        [-2.4, -12.4],
-      ] as const) {
-        graphics.fillCircle(x + fx + (index % 2) * 0.8, y + fy + (index % 3) * 0.6, 1.5);
+      graphics.fillRect(x - 3.4 * reach, y - 11 - 2 * reach, 2, 4 * reach);
+      graphics.fillRect(x + 1.6 * reach, y - 11 - 2 * reach, 2, 4 * reach);
+      if (tree.crown === 0) {
+        // Two more branches off the forks: a bare tree is drawn by its wood,
+        // and four twigs is the fewest that reads as a tree rather than a post.
+        graphics.fillRect(x - 5 * reach, y - 17, 2, 5);
+        graphics.fillRect(x + 3.6 * reach, y - 17, 2, 5);
       }
-      graphics.fillStyle(shade(FRUIT, 1.35), 1);
-      graphics.fillCircle(x + 0.8, y - 19.6, 0.7);
+
+      if (tree.crown > 0) {
+        graphics.fillStyle(shade(palette.wall, 1.22), 1);
+        graphics.fillEllipse(x - 1.5, y - 15, 14 * tree.crown, 12 * tree.crown);
+        graphics.fillStyle(shade(palette.wall, 0.78), 1);
+        graphics.fillEllipse(x + 3.2, y - 12.5, 8.5 * tree.crown, 8.5 * tree.crown);
+      }
+
+      // Fruit, or blossom, in the crown and under it. Positioned off the row's
+      // index rather than rolled: this is drawn once into a texture, and the
+      // renderer must never touch a simulation stream.
+      graphics.fillStyle(tree.fruit, 1);
+      for (const [fx, fy] of (
+        [
+          [-4.6, -17],
+          [0.4, -19.4],
+          [3.6, -15.6],
+          [-2.4, -12.4],
+        ] as const
+      ).slice(0, tree.fruits)) {
+        graphics.fillCircle(
+          x + fx * (tree.crown > 0 ? 1 : 0.7) + (index % 2) * 0.8,
+          y + fy * (tree.crown > 0 ? 1 : 0.72) + (index % 3) * 0.6,
+          tree.size / 2,
+        );
+      }
+      if (tree.fruits > 0 && tree.crown > 0) {
+        graphics.fillStyle(shade(tree.fruit, 1.35), 1);
+        graphics.fillCircle(x + 0.8, y - 19.6, tree.size / 4);
+      }
+
+      // Windfalls in the grass under the tree: the detail that makes an autumn
+      // orchard read as *picking* rather than as a greener summer.
+      if (tree.windfall) {
+        graphics.fillStyle(shade(RIPE, 0.86), 1);
+        graphics.fillCircle(x - 6 + (index % 3), y + 2.6, 1.6);
+        graphics.fillCircle(x + 5 - (index % 2) * 2, y + 3.4, 1.4);
+      }
     }
   }
 

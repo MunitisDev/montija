@@ -19,10 +19,12 @@ import {
 import { gridToScene, worldToScene } from '@/shared/math/isometric';
 import { buildingDefinition } from '@/data/buildings';
 import type { PlacementState } from '@/game/Game';
+import type { BuildingId } from '@/data/buildings';
+import { SEASONS, type Season } from '@/simulation/seasons/SeasonClock';
 import type { Building } from '@/simulation/buildings/Building';
 import type { BuildingRegistry } from '@/simulation/buildings/BuildingRegistry';
 import type { StorageRegistry } from '@/simulation/logistics/Storage';
-import { artVariants, yardFillVariant } from '@/renderer/phaser/terrain/buildingArt';
+import { artVariants, seasonalArt, yardFillVariant } from '@/renderer/phaser/terrain/buildingArt';
 
 const VALID_TINT = 0x7fb069;
 
@@ -42,8 +44,18 @@ export class BuildingRenderer {
   private renderedFillVersion = -1;
   /** Which fill each yard is drawn at, so a texture is only swapped when it moves. */
   private readonly fills = new Map<number, number>();
+  /**
+   * The plots whose look follows the year, by building id.
+   *
+   * Kept so turning the season is a walk over the handful of fields and orchards
+   * rather than a lookup per sprite per season for every building in the
+   * settlement.
+   */
+  private readonly seasonal = new Map<number, BuildingId>();
   /** Seasonal light, applied to buildings raised later as well. */
   private seasonTint = 0xffffff;
+  /** The season the plots are currently drawn in. See {@link applySeason}. */
+  private season: Season = 'spring';
   private renderedPlacementVersion = -1;
 
   constructor(scene: Phaser.Scene) {
@@ -133,6 +145,7 @@ export class BuildingRenderer {
         sprites.body.destroy();
         sprites.progress?.destroy();
         this.fills.delete(id);
+        this.seasonal.delete(id);
         this.sprites.delete(id);
       }
     }
@@ -182,12 +195,40 @@ export class BuildingRenderer {
     }
   }
 
+  /**
+   * Turns the year over on the plots that follow it.
+   *
+   * **A tint is not a season for anything that grows.** Every other building in
+   * the settlement is the same building in January with winter's light on it, but
+   * a field in January is empty and an orchard is bare wood — so the worked plots
+   * carry four textures each and swap between them here. Nothing else is touched:
+   * see `seasonalArt` for why houses are not in this.
+   *
+   * Called from the scene beside `applyTint`, on the frames where the season
+   * actually turned, which is four times a simulated year.
+   */
+  public applySeason(season: Season): void {
+    if (season === this.season) {
+      return;
+    }
+    this.season = season;
+
+    for (const [id, sprites] of this.sprites) {
+      const building = this.seasonal.get(id);
+      if (!building || !sprites.complete) {
+        continue;
+      }
+      sprites.body.setTexture(TextureKeys.building(building, SEASONS.indexOf(season)));
+    }
+  }
+
   public destroy(): void {
     for (const sprites of this.sprites.values()) {
       sprites.body.destroy();
       sprites.progress?.destroy();
     }
     this.sprites.clear();
+    this.seasonal.clear();
     for (const cell of this.ghostCells) {
       cell.destroy();
     }
@@ -208,7 +249,7 @@ export class BuildingRenderer {
     );
 
     const texture = building.isComplete
-      ? TextureKeys.building(building.definition.id, styleFor(building))
+      ? TextureKeys.building(building.definition.id, styleFor(building, this.season))
       : TextureKeys.site;
 
     const body = this.scene.add
@@ -224,6 +265,14 @@ export class BuildingRenderer {
         building.isComplete ? buildingGroundLine(building.definition.id) : SITE_GROUND_LINE,
       )
       .setDepth(depth);
+
+    // Remembered only once it is finished: a site is drawn as a site, and a
+    // half-built field has no crop in it to turn.
+    if (building.isComplete && seasonalArt(building.definition.id)) {
+      this.seasonal.set(building.id, building.definition.id);
+    } else {
+      this.seasonal.delete(building.id);
+    }
 
     const sprites: BuildingSprites = {
       body,
@@ -288,10 +337,14 @@ export function footprintCentre(building: Building) {
  * Yards are the exception: their variant is how full they are, and that is
  * chosen by `syncYardFills` from the store rather than here.
  */
-function styleFor(building: Building): number {
+function styleFor(building: Building, season: Season): number {
   const looks = artVariants(building.definition.id);
   if (looks <= 1 || building.definition.storage) {
     return 0;
+  }
+  // A worked plot's look is the season it is standing in, and nothing else.
+  if (seasonalArt(building.definition.id)) {
+    return SEASONS.indexOf(season);
   }
   // A building that can be improved has its second look reserved for exactly
   // that, rather than handed out by id: the player has to be able to tell which
