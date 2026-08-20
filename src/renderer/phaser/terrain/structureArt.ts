@@ -677,8 +677,8 @@ function drawCrossRoof(
   graphics.fillStyle(shade(look.wall, 0.74), 1);
   polygon(graphics, [walls.topFront, apexRight, walls.topRight]);
   if (look.build === 'stone') {
-    gableOculus(graphics, look, walls.topLeft, walls.topFront, apexLeft);
-    gableOculus(graphics, look, walls.topFront, walls.topRight, apexRight);
+    gableLight(graphics, look, walls.topLeft, walls.topFront, apexLeft);
+    gableLight(graphics, look, walls.topFront, walls.topRight, apexRight);
   } else {
     drawGableFraming(graphics, look, [
       [walls.topLeft, apexLeft, walls.topFront, true],
@@ -745,7 +745,7 @@ function drawGableRoof(
   graphics.fillStyle(shade(look.wall, facing === -1 ? 0.94 : 0.74), 1);
   polygon(graphics, [gB, gA, ridgeFront]);
   if (look.build === 'stone') {
-    gableOculus(graphics, look, gB, gA, ridgeFront);
+    gableLight(graphics, look, gB, gA, ridgeFront);
   } else {
     drawGableFraming(graphics, look, [[gB, ridgeFront, gA, facing === -1]]);
   }
@@ -826,42 +826,86 @@ function drawGableFraming(
 }
 
 /**
- * A small opening high in a stone gable, and the sill under it.
+ * The loft window high in a stone gable, with a sill under it.
  *
  * Masonry has no rafters showing, so a stone gable gets nothing where a timber
  * one gets its frame — and a blank triangle two storeys tall is the flattest
- * shape in the settlement. One dark opening up in it is what gives it a scale
- * and says the wall has a building behind it.
+ * shape in the settlement. One opening up in it gives the wall a scale and says
+ * there is a building behind it.
+ *
+ * **It has to be an upright window, and the first version was a diamond.** A
+ * rotated square is cheap to draw and reads, unmistakably, as a window somebody
+ * has fitted crooked — the eye knows which way a window goes long before it
+ * knows what building it is looking at. So this is built exactly the way the
+ * wall windows below it are: the head and sill run along the wall's own
+ * direction, `a` to `b`, and the jambs are vertical on screen. That is what
+ * makes it sit *in* the masonry instead of on top of it.
  */
-function gableOculus(
+function gableLight(
   graphics: Phaser.GameObjects.Graphics,
   look: StructureLook,
   a: Point,
   b: Point,
   apex: Point,
 ): void {
-  const centre = {
-    x: (a.x + b.x) / 2 + (apex.x - (a.x + b.x) / 2) * 0.46,
-    y: (a.y + b.y) / 2 + (apex.y - (a.y + b.y) / 2) * 0.46,
-  };
-  const half = Math.min(4.4, Math.abs(apex.y - (a.y + b.y) / 2) * 0.12);
-  if (half < 1.6) {
+  const base = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  /** How far the apex stands above the wall top, in pixels. */
+  const rise = base.y - apex.y;
+  const head = rise * 0.62;
+  const foot = rise * 0.26;
+  if (head - foot < 4) {
     return;
   }
 
-  graphics.fillStyle(shade(look.wall, 1.2), 1);
+  /** A point in the gable wall's own plane. */
+  const at = (t: number, lift: number): Point => ({
+    x: a.x + (b.x - a.x) * t,
+    y: a.y + (b.y - a.y) * t - lift,
+  });
+
+  // Half the width, as a share of the wall. Kept well inside the rakes: at
+  // 0.135 the triangle above is still a third taller than the window's head, so
+  // the frame never crosses the roof line however steep the pitch.
+  const t0 = 0.5 - 0.11;
+  const t1 = 0.5 + 0.11;
+
+  // The surround, cut a little proud of the opening — dressed stone round a
+  // hole in rubble, which is how the opening was actually made.
+  graphics.fillStyle(shade(look.wall, 1.22), 1);
   polygon(graphics, [
-    { x: centre.x - half - 1.4, y: centre.y },
-    { x: centre.x, y: centre.y - half - 1.4 },
-    { x: centre.x + half + 1.4, y: centre.y },
-    { x: centre.x, y: centre.y + half + 1.4 },
+    at(t0 - 0.025, head + 2),
+    at(t1 + 0.025, head + 2),
+    at(t1 + 0.025, foot - 2),
+    at(t0 - 0.025, foot - 2),
   ]);
+
   graphics.fillStyle(WINDOW_DARK, 1);
+  polygon(graphics, [at(t0, head), at(t1, head), at(t1, foot), at(t0, foot)]);
+
+  // One upright mullion, as downstairs. Two tall lights rather than four panes:
+  // a loft window was smaller than a hall window and this keeps it reading as
+  // one at half the size.
+  graphics.fillStyle(shade(look.timber, 1.1), 1);
+  polygon(graphics, strip(at(0.5, head), at(0.5, foot), 1.2));
+
+  // The reveal along the head, in shadow: the thickness of the wall.
+  graphics.fillStyle(0x000000, 0.34);
+  polygon(graphics, [at(t0, head), at(t1, head), at(t1, head - 2), at(t0, head - 2)]);
+
+  // And the sill, oversailing both jambs and lit along its top.
+  graphics.fillStyle(shade(look.stone, 1.12), 1);
   polygon(graphics, [
-    { x: centre.x - half, y: centre.y },
-    { x: centre.x, y: centre.y - half },
-    { x: centre.x + half, y: centre.y },
-    { x: centre.x, y: centre.y + half },
+    at(t0 - 0.045, foot - 1),
+    at(t1 + 0.045, foot - 1),
+    at(t1 + 0.045, foot - 3.4),
+    at(t0 - 0.045, foot - 3.4),
+  ]);
+  graphics.fillStyle(shade(look.stone, 0.8), 1);
+  polygon(graphics, [
+    at(t0 - 0.045, foot - 3.4),
+    at(t1 + 0.045, foot - 3.4),
+    at(t1 + 0.045, foot - 4.4),
+    at(t0 - 0.045, foot - 4.4),
   ]);
 }
 

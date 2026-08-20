@@ -810,6 +810,14 @@ What an improvement may change is fixed by one rule: **nothing that makes the bu
 texture box is measured from the plain mass, so a higher wall or a steeper roof would be quietly
 cropped. Material and colour are free, the silhouette is not.
 
+Stone brings one thing with it that timber does not: a **loft window** in each gable. A timber gable
+shows its framing, and masonry has none to show — a blank triangle two storeys tall is the flattest
+shape in the settlement, and one opening up in it gives the wall a scale. It is built exactly like the
+windows below it, head and sill running along the wall's own direction and the jambs vertical on
+screen. The first version was a diamond, which is cheap to draw and reads unmistakably as a window
+somebody fitted crooked: the eye knows which way a window goes long before it knows what building it
+is looking at.
+
 The variant machinery is the storage yard's, unchanged: `artVariants` reports two looks for anything
 with an upgrade in its data, the second is reserved for the improved state rather than handed out by id,
 and both are drawn into textures once at load.
