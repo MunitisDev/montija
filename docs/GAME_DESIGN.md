@@ -1998,3 +1998,35 @@ something through the ice. The price is that fish keeps worse than anything else
 
 The HUD's strip still carries **one Food figure**, because "have we enough to eat" is still the
 question; the stores drawer breaks it into the five.
+
+## The one line of advice — Implemented
+
+The HUD shows **one** warning at a time, the most urgent thing wrong. A stack of advice is noise, and
+what the player needs to know is what to do _next_, not everything that could ever go wrong.
+
+**Advice that cries wolf is advice a player stops reading**, and the food warnings had been doing
+exactly that. They counted buildings — "is there a Gatherer Hut, and is there one for every six
+people" — so a settlement eating comfortably off a field, an orchard and a fishing hut was told nobody
+was gathering food, and a settlement with three hundred in the larder was told to build another hut.
+Both were reported from a real game and both were fair: the player could see the food on the screen
+while the banner said otherwise.
+
+The rule now is that **the stores decide, not the buildings**:
+
+- _Nothing is bringing food in_ — no standing building makes any of the five foods. Asked of the
+  recipes rather than of a list of ids, so a sixth kind of food building later is a row in a data file.
+  Still said on the first morning with a hold full of roots, because having food today is not having a
+  food supply.
+- _The food is running out_ — under a fortnight of food per villager **and the stores are not
+  growing**. Days rather than an amount, so it holds as the settlement grows; the trend, because a low
+  store that is filling is a harvest coming in rather than a famine. One remembered number — what the
+  larder held at the end of yesterday — is the whole mechanism.
+
+The firewood advice had the same defect and got the same treatment: it warned about having no
+Woodcutter whatever was in the store, so a settlement that had salvaged or bought a winter's firewood
+was nagged all autumn about a building it did not need. Nothing is said now until the woodpile is
+actually short, and only then does it name what is missing — a Woodcutter, a Feller for it, or simply
+more of it.
+
+Measured over two years of a properly played settlement: **no food warning while there was food**, and
+the two that do appear appear on the days they are true.

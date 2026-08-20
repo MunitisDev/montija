@@ -198,8 +198,8 @@ export const EN = {
   'placement.unreachable': 'nobody can walk there — bridge the river first',
   'placement.wouldSeal': 'it would wall the ground behind it in',
 
-  'warning.foodLow': 'Nobody is gathering food — build a Gatherer Hut',
-  'warning.needMoreHuts': 'One hut cannot feed everyone — build another Gatherer Hut',
+  'warning.foodLow': 'Nothing is bringing food in — build a Gatherer Hut or a Field',
+  'warning.foodFalling': 'The food is running out — more has to come in than is eaten',
   'warning.freezing': 'People are freezing',
   'warning.noShelter': 'People have no house for the winter — build Houses',
   'warning.siteStalled': 'Building work has stopped — nothing is being built without',
@@ -801,8 +801,8 @@ export const ES: Messages = {
   'placement.unreachable': 'nadie puede llegar — cruza el río con un puente',
   'placement.wouldSeal': 'dejaría encerrado el terreno de detrás',
 
-  'warning.foodLow': 'Nadie recolecta comida: construye una Cabaña de recolección',
-  'warning.needMoreHuts': 'Una cabaña no alimenta a todos: construye otra Cabaña de recolección',
+  'warning.foodLow': 'Nada trae comida: construye una cabaña de recolección o un campo',
+  'warning.foodFalling': 'La comida se está acabando: tiene que entrar más de la que se come',
   'warning.freezing': 'La gente se está congelando',
   'warning.noShelter': 'Hay gente sin casa para el invierno: construye Casas',
   'warning.siteStalled': 'Las obras están paradas: no se construye nada sin',

@@ -150,8 +150,10 @@ export type Advice =
   /** The larders are nearly full, and the next harvest has nowhere to go. */
   | 'larderFilling'
   | 'noShelter'
+  /** Nothing in the settlement brings food in, whatever is in the larder. */
   | 'foodLow'
-  | 'needMoreHuts'
+  /** The larder is thin and going down: measured, not guessed at. */
+  | 'foodFalling'
   | 'foodSpoiling'
   | 'firewoodLow'
   | 'firewoodShort'
@@ -221,14 +223,20 @@ function nearlyFull(fill: { readonly used: number; readonly capacity: number }):
 }
 
 /**
- * Roughly how many villagers one Gatherer Hut keeps fed.
+ * Days of food in store below which the settlement is warned, if it is falling.
  *
- * Measured rather than assumed: a two-slot hut yields around six food a day
- * across the growing seasons, against one eaten per villager per day. It is
- * used only for advice, so being approximate is fine — but it must track the
- * recipe, or the game will tell the player something untrue.
+ * **The advice about food used to count buildings, and it was wrong twice.** It
+ * asked "is there a Gatherer Hut, and is there one per six people" — so a
+ * settlement living comfortably off a field, an orchard and a fishing hut was
+ * told nobody was gathering food, and a settlement with three hundred in the
+ * larder was told to build another hut. Reported from a real game, and both
+ * complaints were fair: the player could see the food.
+ *
+ * A fortnight, and only while the stores are *not growing*. Days rather than an
+ * amount so it holds as the settlement grows, and the trend because a low store
+ * that is filling is a harvest coming in rather than a famine.
  */
-export const VILLAGERS_FED_PER_GATHERER_HUT = 6;
+export const FOOD_DAYS_LOW = 12;
 
 /** A read-only view of the simulation, safe to hand to the renderer and HUD. */
 export interface SimulationSnapshot {
@@ -377,6 +385,8 @@ export class Simulation {
   private readonly seed: number;
   private readonly tickRandom: RandomSource;
   private currentTick = 0;
+  /** The larder's total at the end of yesterday. See {@link FOOD_DAYS_LOW}. */
+  private foodYesterday = 0;
   private lastDayReport: DailyReport = EMPTY_REPORT;
   private lastSpoilage: SpoilageReport = NO_SPOILAGE;
   private lastPopulation: PopulationReport = NO_POPULATION_CHANGE;
@@ -1026,16 +1036,22 @@ export class Simulation {
       return 'storageFilling';
     }
 
-    const huts = this.world.buildings.countOf('gatherer-hut');
-    if (huts === 0) {
+    // **Nothing brings food in at all**, which is the settlement's first
+    // problem and is true on the morning it lands with a hold full of roots.
+    // Asked of every building that makes any food — five of them do now, and
+    // asking after Gatherer Huts alone told settlements living off a field and a
+    // fishing hut that nobody was gathering.
+    if (!this.hasFoodSupply()) {
       return 'foodLow';
     }
 
-    // One hut cannot feed everyone, and the settlement that has one usually
-    // believes it has solved food. Saying so is the difference between losing
-    // to the game and losing to an invisible rule.
-    if (huts * VILLAGERS_FED_PER_GATHERER_HUT < people) {
-      return 'needMoreHuts';
+    // And beyond that, the *stores* decide, not the buildings. A fortnight of
+    // food left and no longer filling is a settlement in trouble whatever it has
+    // built; three hundred in the larder is a settlement that is fine however it
+    // got there. See {@link FOOD_DAYS_LOW}.
+    const stored = foodStored(this.storages);
+    if (stored / people < FOOD_DAYS_LOW && stored <= this.foodYesterday) {
+      return 'foodFalling';
     }
 
     // Losing food to rot is invisible otherwise: the total simply fails to grow,
@@ -1051,17 +1067,21 @@ export class Simulation {
 
     // Firewood only matters once the cold is in sight; warning in spring would
     // be noise the player learns to ignore.
+    // **And only when the woodpile is actually short.** This had the same defect
+    // the food advice did: it warned about having no Woodcutter whatever was in
+    // the store, so a settlement that had bought or salvaged a winter's firewood
+    // was nagged all autumn about a building it did not need.
     if (winterIsNear) {
       const firewoodDays = this.storages.totalOf('firewood') / people;
-      if (this.world.buildings.countOf('woodcutter') === 0) {
-        return 'firewoodLow';
-      }
-      // A Woodcutter with nothing to split is a building the player will watch
-      // idling all winter without ever being told why.
-      if (this.storages.totalOf('logs') <= 0 && !this.hasFelling()) {
-        return 'noFeller';
-      }
       if (firewoodDays < DAYS_PER_SEASON) {
+        if (this.world.buildings.countOf('woodcutter') === 0) {
+          return 'firewoodLow';
+        }
+        // A Woodcutter with nothing to split is a building the player will watch
+        // idling all winter without ever being told why.
+        if (this.storages.totalOf('logs') <= 0 && !this.hasFelling()) {
+          return 'noFeller';
+        }
         return 'firewoodShort';
       }
     }
@@ -1250,6 +1270,32 @@ export class Simulation {
    * Deaths remove the villager outright. There is no illness model — the brief
    * asks for consequences, not a medical simulation.
    */
+  /**
+   * `true` when anything standing in the settlement makes food.
+   *
+   * Any of the five, and asked of the *recipe* rather than of a list of building
+   * ids: a sixth kind of food building later is a row in a data file, and a
+   * hard-coded list is how the advice came to be about Gatherer Huts alone.
+   *
+   * Staffing is deliberately not part of it. A field with nobody in it makes
+   * nothing, but the panel already says so, and telling a player who has just
+   * built one that nothing brings food in would be the game arguing with what is
+   * on the screen.
+   */
+  private hasFoodSupply(): boolean {
+    for (const building of this.world.buildings.all) {
+      if (!building.isComplete) {
+        continue;
+      }
+      const id = building.definition.recipeId;
+      const recipe = id ? findRecipe(id) : null;
+      if (recipe?.outputs.some((output) => isFood(output.resource))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private runDailyUpkeep(): void {
     const { report, dead } = runDay(
       this.villagers.all,
@@ -1339,6 +1385,11 @@ export class Simulation {
     // what their parents' mastery is worth on the same day.
     inheritTrades(this.villagers.all);
     this.lastSkills = runSkillDay(this.villagers.all, this.world.buildings);
+
+    // What the larder held at the end of the day, so tomorrow can tell a famine
+    // from a harvest coming in. One number, and the whole difference between
+    // advice that means something and advice a player learns to ignore.
+    this.foodYesterday = foodStored(this.storages);
 
     this.recordTheDay();
   }
