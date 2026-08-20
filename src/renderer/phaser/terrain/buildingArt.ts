@@ -832,6 +832,26 @@ export function yardFillVariant(total: number): number {
 }
 
 /**
+ * `true` for the buildings a person can be *inside*.
+ *
+ * Walls and a roof, which is to say: not a field, not an open yard, not a
+ * wellhead, not a half-built bridge. Exported for the villager renderer, which
+ * uses it to decide whether somebody working at a building should be standing at
+ * its door or out of sight within it — a woodcutter at his bench is indoors, a
+ * farmhand in her field is not, and the difference is exactly this.
+ */
+export function hasInterior(id: BuildingId): boolean {
+  const mass = MASS[id];
+  return (
+    mass.field === undefined &&
+    mass.open !== true &&
+    mass.yard !== true &&
+    mass.wellhead !== true &&
+    mass.roofHeight > 0
+  );
+}
+
+/**
  * `true` for the plots whose art follows the year.
  *
  * **Only the growing ones.** A field and an orchard are the two things in the

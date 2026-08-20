@@ -99,14 +99,21 @@ Rule: everything that stands on the ground anchors at the point where it touches
 | Asset class            | Footprint | Sprite size | Notes                          |
 | ---------------------- | --------- | ----------- | ------------------------------ |
 | Terrain tile           | 1×1       | 64 × 32     | May extend downward for cliffs |
-| Villager               | —         | 32 × 48     | ~2/3 tile width                |
+| Villager               | —         | 32 × 48     | drawn at 2/3, so 21 × 32       |
 | Tree                   | 1×1       | 64 × 96     | Canopy overhangs the tile      |
 | Small building (house) | 2×2       | 128 × 128   |                                |
 | Medium building        | 3×3       | 192 × 176   |                                |
 | Storage yard           | 3×3       | 192 × 96    | Low, open                      |
 | Resource pile          | 1×1       | 64 × 40     | Grows with stored amount       |
 
-A villager at 48px against a 128px house gives the intended "people are small" reading.
+A villager at 32px against a 128px house gives the intended "people are small" reading.
+
+**Drawn at two thirds of the size it is painted at.** The figures are painted into a 32 × 48 frame and
+put on screen at 21 × 32. At full size a grown villager stood about as tall as a cottage door is wide,
+which put people and houses on the same footing — the opposite of what this document is most insistent
+about. At two thirds an adult is about the size the children used to be, and a child is smaller again.
+Scaling the sprite rather than redrawing the figures keeps the 48px detail — a hood, a stoop, a staff, a
+sack — and gives it up gradually as the player zooms out, which is what every other sprite already does.
 
 ---
 
@@ -863,3 +870,29 @@ Only the growing plots get this. The graveyard is worked ground too and does not
 in it. Buildings do not get it either — four textures each for twenty-two buildings would be four times
 the startup cost for a difference nobody would notice. The guide's thumbnails ask for **summer**, since
 they are answering "what is this building" rather than "what month is it".
+
+## People, at a glance — Implemented
+
+Three things about a villager are readable without tapping them, and each is an **outline** change
+rather than a colour one, because at this size a colour is a smudge:
+
+**A load on the back.** Half of what happens in this settlement is hauling and none of it was visible:
+somebody walking to a tree and somebody walking back with the logs were the same picture. Anybody
+physically carrying something now has a corded sack over one shoulder — hessian, tied at the neck, set
+high and to the shaded side so it breaks the silhouette. It is a **frame in the atlas**, not a second
+sprite: two rows per figure instead of one, drawn once at load, so a settlement of three hundred
+haulers costs no more per frame than one of three hundred idlers.
+
+Deliberately not the good being carried. Which resource it is is already on the ground at both ends of
+the trip, a sack of grain and a sack of iron look alike on a back, and thirteen goods times four figures
+times six colours is a texture nobody needs.
+
+**Through the door, not stood in the corner of it.** Somebody working inside a workshop was drawn at its
+doorway, which reads as a person waiting outside a building rather than as one working in it — and with
+four of them at one hut it read as a queue. A worker now fades out over 0.22s as they arrive and back in
+as they leave. Three conditions, each load-bearing: they are _working_ (not delivering a load, which
+should be seen), they are _at their own workshop's door_ (a feller employed by a hut spends his day out
+in the wood, and vanishing under a tree would be worse than the problem this fixes), and that building
+_has an interior_ — a farmhand works her field standing in it.
+
+Real seconds rather than simulation ones. A door does not open four times faster at 4x.

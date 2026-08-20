@@ -1943,3 +1943,21 @@ harvested and one that did not.
 
 `tests/building-art.test.ts` already checked every variant of every building against its own footprint,
 so the four new textures each were held to that from the first run.
+
+## PHASE 64 — Three things about a villager — Implemented
+
+Presentation only, and all three are about the same thing: what a player can read off the map without
+tapping anybody. See `ART_BIBLE.md` for the drawing.
+
+- **A load on the back**, so a hauler carrying something is not the same picture as somebody walking to
+  a job. A frame in the atlas rather than a second sprite: two rows per figure, drawn once at load.
+- **Workers go inside.** Somebody working in a workshop fades out at its door over 0.22 real seconds and
+  back in on the way out, instead of standing in the corner of it. Three conditions, and the middle one
+  is the one that matters: they have to be at _their own workshop's_ door, or a feller would vanish
+  under the tree he is cutting.
+- **Villagers are drawn at two thirds size.** An adult is now about what a child used to be. The
+  figures are still painted at 48px and scaled down, so the detail is there to be zoomed into.
+
+The pack is deliberately not the good being carried. Which resource it is is already on the ground at
+both ends of the trip, a sack of grain and a sack of iron look alike on a back, and thirteen goods times
+four figures times six colours is a texture nobody needs.

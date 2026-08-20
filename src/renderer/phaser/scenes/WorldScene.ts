@@ -127,11 +127,16 @@ export class WorldScene extends Phaser.Scene {
 
     // Villagers move every frame, so this runs unconditionally — unlike the
     // tile marker, which only moves when the selection changes.
-    this.villagerRenderer.sync(
-      this.context.simulation.villagers.all,
-      this.context.tickAlpha,
-      this.context.selection?.villager?.id ?? null,
-    );
+    this.villagerRenderer.sync({
+      villagers: this.context.simulation.villagers.all,
+      alpha: this.context.tickAlpha,
+      selectedId: this.context.selection?.villager?.id ?? null,
+      // Where somebody works decides whether they are drawn at all: see
+      // `VillagerRenderer.sync`. Real seconds, because walking through a door is
+      // not a thing the simulation clock should speed up.
+      buildings: this.context.simulation.world.buildings,
+      deltaSeconds: delta / 1000,
+    });
 
     this.syncSeason(delta);
     this.designationRenderer.sync(this.context.simulation.jobs);

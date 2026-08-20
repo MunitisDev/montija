@@ -88,9 +88,18 @@ export const TextureKeys = {
     `${type}-${season}-${variant % TERRAIN_VARIANTS}`,
   /** Frame name within the tree atlas. */
   treeFrame: (variant: number, season: Season): string => `tree-${variant % TREE_SHAPES}-${season}`,
-  /** Frame name within the villager atlas: one figure in one person's colour. */
-  villagerFrame: (look: VillagerLook, colourIndex: number): string =>
-    `villager-${look}-${colourIndex % PERSON_COLOURS.length}`,
+  /**
+   * Frame name within the villager atlas: one figure, in one person's colour,
+   * with or without a load on their back.
+   *
+   * The load is a *frame* rather than a second sprite, and deliberately: the
+   * settlement can have three hundred people in it, a pack is two dozen more
+   * polygons drawn once at load, and a separate object per hauler would be
+   * another sprite to place, depth-sort and tint every frame — for something the
+   * artist can simply draw over the shoulder where it belongs.
+   */
+  villagerFrame: (look: VillagerLook, colourIndex: number, laden = false): string =>
+    `villager-${look}-${colourIndex % PERSON_COLOURS.length}${laden ? '-laden' : ''}`,
 } as const;
 
 /**
@@ -383,6 +392,7 @@ function drawVillager(
   graphics: Phaser.GameObjects.Graphics,
   look: VillagerLook,
   cloth: number,
+  laden = false,
 ): void {
   const cx = VILLAGER_WIDTH / 2;
   const feet = VILLAGER_HEIGHT;
@@ -396,13 +406,109 @@ function drawVillager(
 
   if (look === 'child') {
     drawChild(graphics, cx, feet, cloth, cloak);
-    return;
-  }
-  if (look === 'woman') {
+  } else if (look === 'woman') {
     drawWoman(graphics, cx, feet, cloth, cloak);
-    return;
+  } else {
+    drawGrownFigure(graphics, cx, feet, cloth, cloak, look === 'elder');
   }
-  drawGrownFigure(graphics, cx, feet, cloth, cloak, look === 'elder');
+
+  if (laden) {
+    drawLoad(graphics, cx, feet, look);
+  }
+}
+
+/**
+ * The bundle on the back of somebody carrying something.
+ *
+ * **Half of what happens in this settlement is hauling, and none of it was
+ * visible.** A villager walking to a tree and a villager walking back with the
+ * logs were the same picture, so the thing the player most often wants to know at
+ * a glance — is anything actually *moving*, or is everybody still on their way
+ * somewhere — could not be read off the map at all.
+ *
+ * A corded sack over the shoulder rather than a strapped pack: it is the
+ * medieval answer, and at this size a shoulder line reads where a harness would
+ * be one grey pixel. Drawn last so it sits over the cloak, and set high and to
+ * the shaded side so it breaks the figure's silhouette — an outline change is
+ * what carries at gameplay zoom, where a colour is a smudge.
+ *
+ * Deliberately not the good being carried. Which resource it is is already on
+ * the ground at both ends of the trip, a sack of grain and a sack of iron look
+ * the same on a back, and thirteen goods times four figures times six colours is
+ * a texture nobody needs.
+ */
+function drawLoad(
+  graphics: Phaser.GameObjects.Graphics,
+  cx: number,
+  feet: number,
+  look: VillagerLook,
+): void {
+  // **High on the back, not out to the side.** The frame is only thirty-two
+  // pixels wide and the figure's arms already use twenty-two of them, so a pack
+  // slung out beyond the shoulder would be sliced off by the texture edge. Up is
+  // where the room is — and a bundle that rises past the shoulder is the
+  // stronger silhouette anyway: a humped outline reads as *carrying* from across
+  // the map, where a patch of colour beside a hip reads as nothing at all.
+  const small = look === 'child';
+  // An elder is drawn four pixels shorter and leaning; the load rides with them.
+  const drop = look === 'elder' ? 4 : 0;
+  const top = feet - (small ? 30 : 42) + drop;
+  const w = small ? 8.5 : 11.5;
+  const h = small ? 11 : 15;
+  const x = cx - (small ? 6 : 8);
+
+  // Hessian: the one sacking colour in the settlement, kept near the crates on
+  // the storage yard so a load reads as *goods* rather than as part of the
+  // person wearing it.
+  const sack = 0xa89066;
+
+  // The bundle: a rounded sack, lit on the left like everything else, with a
+  // dark rim along the bottom so it sits *on* the back rather than floating.
+  graphics.fillStyle(shade(sack, 1.04), 1);
+  polygonAt(graphics, [
+    [x - w / 2, top + 3],
+    [x - w / 4, top],
+    [x + w / 4, top + 0.6],
+    [x + w / 2, top + 4],
+    [x + w / 2 - 0.5, top + h],
+    [x - w / 2 + 0.5, top + h - 1],
+  ]);
+  graphics.fillStyle(shade(sack, 0.76), 1);
+  polygonAt(graphics, [
+    [x + w / 4, top + 0.6],
+    [x + w / 2, top + 4],
+    [x + w / 2 - 0.5, top + h],
+    [x + w / 6, top + h - 0.4],
+  ]);
+  graphics.fillStyle(shade(sack, 0.5), 1);
+  polygonAt(graphics, [
+    [x - w / 2 + 0.5, top + h - 1],
+    [x + w / 2 - 0.5, top + h],
+    [x + w / 2 - 1.4, top + h + 1.6],
+    [x - w / 2 + 1.4, top + h + 0.6],
+  ]);
+
+  // The gathered neck, tied off — the detail that says sack rather than crate.
+  graphics.fillStyle(shade(sack, 1.16), 1);
+  polygonAt(graphics, [
+    [x - 2.2, top + 0.8],
+    [x + 2.2, top + 1.2],
+    [x + 1.6, top - 2.6],
+    [x - 1.6, top - 2.2],
+  ]);
+  graphics.fillStyle(0x463a2a, 1);
+  graphics.fillRect(x - 2.4, top - 0.8, 4.8, 1.4);
+
+  // And the cord over the shoulder, down across the chest. Two pixels wide, and
+  // at this size two pixels of dark diagonal is the whole reason the bundle
+  // reads as *strapped on* rather than as standing behind somebody.
+  graphics.fillStyle(0x463a2a, 1);
+  polygonAt(graphics, [
+    [x + w / 2 - 1, top + 3],
+    [cx + (small ? 4 : 6), top + (small ? 9 : 12)],
+    [cx + (small ? 4 : 6), top + (small ? 11 : 14)],
+    [x + w / 2 - 1, top + 5],
+  ]);
 }
 
 /**
@@ -641,32 +747,44 @@ function buildVillagerAtlas(scene: Phaser.Scene, graphics: Phaser.GameObjects.Gr
     return;
   }
 
-  VILLAGER_LOOKS.forEach((look, row) => {
-    PERSON_COLOURS.forEach((colour, column) => {
-      graphics.translateCanvas(column * VILLAGER_WIDTH, row * VILLAGER_HEIGHT);
-      drawVillager(graphics, look, colour);
-      graphics.translateCanvas(-column * VILLAGER_WIDTH, -row * VILLAGER_HEIGHT);
-    });
+  // Two rows per figure: empty-handed, and with a load on the back. Every frame
+  // is drawn once at load, so a settlement of three hundred haulers costs no more
+  // per frame than one of three hundred idlers.
+  const rowFor = (look: number, laden: boolean): number => look * 2 + (laden ? 1 : 0);
+  const ROWS = VILLAGER_LOOKS.length * 2;
+
+  VILLAGER_LOOKS.forEach((look, index) => {
+    for (const laden of [false, true]) {
+      const row = rowFor(index, laden);
+      PERSON_COLOURS.forEach((colour, column) => {
+        graphics.translateCanvas(column * VILLAGER_WIDTH, row * VILLAGER_HEIGHT);
+        drawVillager(graphics, look, colour, laden);
+        graphics.translateCanvas(-column * VILLAGER_WIDTH, -row * VILLAGER_HEIGHT);
+      });
+    }
   });
   graphics.generateTexture(
     TextureKeys.villagerAtlas,
     PERSON_COLOURS.length * VILLAGER_WIDTH,
-    VILLAGER_LOOKS.length * VILLAGER_HEIGHT,
+    ROWS * VILLAGER_HEIGHT,
   );
   graphics.clear();
 
   const texture = scene.textures.get(TextureKeys.villagerAtlas);
-  VILLAGER_LOOKS.forEach((look, row) => {
-    PERSON_COLOURS.forEach((_colour, column) => {
-      texture.add(
-        TextureKeys.villagerFrame(look, column),
-        0,
-        column * VILLAGER_WIDTH,
-        row * VILLAGER_HEIGHT,
-        VILLAGER_WIDTH,
-        VILLAGER_HEIGHT,
-      );
-    });
+  VILLAGER_LOOKS.forEach((look, index) => {
+    for (const laden of [false, true]) {
+      const row = rowFor(index, laden);
+      PERSON_COLOURS.forEach((_colour, column) => {
+        texture.add(
+          TextureKeys.villagerFrame(look, column, laden),
+          0,
+          column * VILLAGER_WIDTH,
+          row * VILLAGER_HEIGHT,
+          VILLAGER_WIDTH,
+          VILLAGER_HEIGHT,
+        );
+      });
+    }
   });
 }
 
