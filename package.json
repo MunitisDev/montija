@@ -1,7 +1,7 @@
 {
   "name": "montija",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.5.0",
   "type": "module",
   "description": "A mobile-first 2D medieval survival settlement builder that runs in the browser.",
   "scripts": {

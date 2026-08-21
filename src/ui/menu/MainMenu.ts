@@ -27,6 +27,7 @@
  * accept it. See `simulation/save/settlementName.ts`.
  */
 
+import { GAME_VERSION } from '@/app/config';
 import { suggestedPlaceName } from '@/data/places';
 import type { GameContext } from '@/game/Game';
 import type { SaveSummary } from '@/simulation/save/SaveGame';
@@ -51,6 +52,7 @@ export class MainMenu {
   private readonly nameInput: HTMLInputElement;
   private readonly foundButton: HTMLButtonElement;
   private readonly permadeathNote: HTMLElement;
+  private readonly version: HTMLElement;
 
   private renderedLanguageVersion = -1;
 
@@ -72,6 +74,10 @@ export class MainMenu {
     this.nameInput = requireElement(root, '[data-ui="menu-name-input"]') as HTMLInputElement;
     this.foundButton = requireElement(root, '[data-ui="menu-found"]') as HTMLButtonElement;
     this.permadeathNote = requireElement(root, '[data-ui="menu-permadeath"]');
+    this.version = requireElement(root, '[data-ui="menu-version"]');
+    // Written once. It is the one thing on this card that never changes, and it
+    // is the same in every language.
+    this.version.textContent = `v${GAME_VERSION}`;
 
     // **A new settlement is named before it is played.** Nothing is written to
     // disk until it has a name, so asking here is the difference between a run

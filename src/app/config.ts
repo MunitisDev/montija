@@ -117,3 +117,29 @@ export function randomWorldSeed(): number {
  * question with a stable answer. Play uses {@link randomWorldSeed}.
  */
 export const REFERENCE_WORLD_SEED = 20260815;
+
+/**
+ * What build this is, shown on the start screen.
+ *
+ * **Three numbers, and each one means something different is happening.** The
+ * player asked for a whole number when a change is large and a smaller one when
+ * it is not, which is what `major.minor.patch` already is:
+ *
+ * - **major** — the game is a different game. Reserved: `1.0.0` is a release,
+ *   and nothing but the person making this gets to decide when that is.
+ * - **minor** — a feature. Five foods, named saves, seasons on the fields: a
+ *   thing a player would notice was not there last week.
+ * - **patch** — a fix or a pass of polish. Flames instead of a red house, a
+ *   warning that stops crying wolf, windows that are not crooked.
+ *
+ * `0.5.0` is the first honest figure this project has had. The version in
+ * `package.json` said `0.1.0` through sixty-five phases of work, which was true
+ * on the first afternoon and a lie ever since. Half way, then: the MVP's
+ * twenty-one requirements are all met and everything since has been depth.
+ *
+ * **Kept in step with `package.json` by a test**, rather than by a build-time
+ * define. `tests/version.test.ts` fails if the two ever disagree, which is
+ * cheaper than plumbing the same string through two config files and bundling
+ * the manifest into the game to read one field off it.
+ */
+export const GAME_VERSION = '0.5.0';

@@ -238,6 +238,21 @@ body.is-menu-open #hud {
   color: var(--colour-ink-dim);
 }
 
+/*
+ * The build, at the foot of the card.
+ *
+ * Quiet on purpose: a version number is for the person reporting something that
+ * went wrong, not part of the game's own voice. Monospaced so a digit is a digit.
+ */
+.menu__version {
+  margin: 2px 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: var(--colour-ink-dim);
+  opacity: 0.6;
+}
+
 .menu__language {
   margin-top: 4px;
   min-height: 34px;

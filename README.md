@@ -122,6 +122,19 @@ Full detail in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 | [`docs/MOBILE_UX.md`](docs/MOBILE_UX.md)           | Touch targets, gestures, safe areas, responsiveness                |
 | [`docs/SAVE_FORMAT.md`](docs/SAVE_FORMAT.md)       | What a save contains, and how versioning works                     |
 
+## Version
+
+The build is shown at the foot of the start screen, and it is `major.minor.patch`:
+
+- **major** — the game is a different game. Reserved: `1.0.0` is a release.
+- **minor** — a feature. Something a player would notice was not there last week.
+- **patch** — a fix, or a pass of polish.
+
+`GAME_VERSION` in `src/app/config.ts` is the one the player sees, and
+`tests/version.test.ts` fails if it and `package.json` ever disagree. That is cheaper than plumbing the
+same string through two Vite configs, and it catches the same mistake — `package.json` sat at `0.1.0`
+through sixty-five phases of work because nothing read it and nothing checked it.
+
 ## Licence
 
 Not yet chosen. All code and art in this repository is original work for this project.
