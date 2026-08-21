@@ -225,6 +225,7 @@ export const EN = {
   'event.fire': 'Fire!',
   'event.fireSaved': 'the fire was put out',
   'event.fireLost': 'a building burned down',
+  'event.fireDeath': 'Someone did not get out of the fire',
   'event.merchant': 'A merchant has arrived',
   'event.fellIll': 'Someone has fallen ill',
   'event.recovered': 'Someone has recovered',
@@ -279,6 +280,7 @@ export const EN = {
   'death.cold': 'Cold',
   'death.hungerAndCold': 'Hunger and cold',
   'death.oldAge': 'Old age',
+  'death.fire': 'Fire',
   'death.ill.f': 'ill',
   'death.ill.m': 'ill',
   'building.underConstruction': 'Under construction',
@@ -490,7 +492,7 @@ export const EN = {
     'Villagers grow old and die. Houses let families raise children, which is the only way the settlement lasts.',
   'guide.hardship.fire': 'Fire',
   'guide.hardship.fire.detail':
-    'A lit hearth can set its own roof alight on a freezing night, and a working forge any day of the year. The tighter the settlement is packed, the likelier it is. Water within ten cells — the river, a channel or a Well — puts it out and the building stands; without it the building and everything in it are gone, and the fire may take the next one along unless a road, a ditch or the water itself lies between them. Nobody is ever hurt.',
+    'A lit hearth can set its own roof alight on a freezing night, and a working forge any day of the year. The tighter the settlement is packed, the likelier it is. Water within ten cells — the river, a channel or a Well — puts it out and the building stands; without it the building and everything in it are gone, and the fire may take the next one along unless a road, a ditch or the water itself lies between them. Worse: a building lost this way endangers whoever was inside \u2014 the household asleep in a house, the workers at a forge. Most get out; somebody already ill is likelier not to. Water within reach is what makes a fire cost nothing at all.',
   'guide.resources': 'Resources',
   'guide.resources.body':
     'Open the stores from the bar at the top and you can set how much of anything to keep. Once a good reaches its limit the workshops that make it stop, and their people go and do whatever the settlement needs more — until the stores fall again, when they go back to it on their own. Nothing you marked by hand is affected: a tree you ordered felled is still felled.',
@@ -843,6 +845,7 @@ export const ES: Messages = {
   'event.fire': '¡Fuego!',
   'event.fireSaved': 'se ha apagado el fuego',
   'event.fireLost': 'un edificio ha ardido',
+  'event.fireDeath': 'Alguien no ha salido del incendio',
   'event.merchant': 'Ha llegado un mercader',
   'event.fellIll': 'Alguien ha enfermado',
   'event.recovered': 'Alguien se ha recuperado',
@@ -882,6 +885,7 @@ export const ES: Messages = {
   'death.cold': 'Frío',
   'death.hungerAndCold': 'Hambre y frío',
   'death.oldAge': 'Vejez',
+  'death.fire': 'Fuego',
   'death.ill.f': 'enferma',
   'death.ill.m': 'enfermo',
   'building.underConstruction': 'En construcción',
@@ -1091,7 +1095,7 @@ export const ES: Messages = {
     'Los aldeanos envejecen y mueren. Las casas permiten criar hijos, que es lo único que hace durar al asentamiento.',
   'guide.hardship.fire': 'Fuego',
   'guide.hardship.fire.detail':
-    'Un hogar encendido puede prender su propio tejado en noche de helada, y una fragua en marcha cualquier día del año. Cuanto más apretado esté el asentamiento, más probable es. Con agua a menos de diez casillas —el río, una acequia o un Pozo— se apaga y el edificio queda en pie; sin ella se pierde el edificio y todo lo que hubiera dentro, y el fuego puede saltar al siguiente si no hay un camino, una acequia o el agua de por medio. Nunca hay heridos.',
+    'Un hogar encendido puede prender su propio tejado en noche de helada, y una fragua en marcha cualquier día del año. Cuanto más apretado esté el asentamiento, más probable es. Con agua a menos de diez casillas —el río, una acequia o un Pozo— se apaga y el edificio queda en pie; sin ella se pierde el edificio y todo lo que hubiera dentro, y el fuego puede saltar al siguiente si no hay un camino, una acequia o el agua de por medio. Y hay algo peor: un edificio perdido as\u00ed pone en peligro a quien estuviera dentro \u2014 la familia dormida en una casa, los obreros en una fragua. La mayor\u00eda sale; quien ya estaba enfermo tiene menos suerte. El agua al alcance es lo que hace que un incendio no cueste nada.',
   'guide.resources': 'Recursos',
   'guide.resources.body':
     'Abre las reservas desde la barra de arriba y podrás fijar cuánto quieres guardar de cada cosa. Cuando algo llega a su límite, los talleres que lo producen se paran y su gente se va a lo que el asentamiento necesite más — hasta que las reservas bajen, y entonces vuelven solos. Lo que hayas marcado a mano no se toca: un árbol que mandaste talar se tala igual.',

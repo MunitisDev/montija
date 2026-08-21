@@ -1003,6 +1003,7 @@ Every part of a fire is a decision the player made:
 | How likely                | How tightly it is built: every neighbour within 2 cells adds half again |
 | Whether it costs anything | Water within 10 cells — the river, a channel, or a Well                 |
 | How far it goes           | What lies between: a road, a ditch or the water breaks the line         |
+| Whether anybody dies      | Who was inside the building that was lost, and whether they were ill    |
 
 A fire burns for a whole **day**, so the player watches it happen rather than reading about it
 afterwards — and there is nothing to do in that moment, because what settles it was decided seasons ago.
@@ -1011,8 +1012,29 @@ inside it; no water and the building and its contents are gone, and the fire may
 which burns the following day. One ignition a night, and never while something is already alight: a
 settlement that could lose three buildings in a night is one nobody can plan against.
 
-**Nobody is ever hurt.** This game has enough ways to kill people and none of them is a dice roll. A fire
-takes buildings, which can be rebuilt.
+**A building that is lost endangers the people inside it.** Until version 0.6 a fire took buildings and
+never a life, on the reasoning that this game has enough ways to kill people and none of them should be a
+dice roll. That reasoning holds — and this is not a dice roll either. Every step above has already been
+decided by the plan: a fire only reaches people in a building the settlement could not put out, which is
+to say one the player left out of reach of water, and the number of people in it is the number the player
+put there.
+
+| Who is inside             | The household of a house, or the workers at a forge |
+| ------------------------- | --------------------------------------------------- |
+| Chance of not getting out | 25% each                                            |
+| If they were already ill  | twice that                                          |
+
+A hearth fire is a night fire and a forge fire a working-hours one, so in both cases the people who
+belong to the building are the people in it. Most get out. Being ill is the one place in this game where
+sickness kills directly, and it is legible: the player can see who is unwell and can see which houses
+have no water. **A settlement that keeps its houses within reach of water never loses anybody to a fire
+at all**, which is the same answer the roof and the goods already had.
+
+Measured again after fire could take a life, across six settlements played out over twenty years each:
+**no building lost and nobody killed at all**, because those settlements stood within reach of water.
+That is the whole shape of the mechanic — the cost is zero for a settlement that answered the question,
+and the tests that hold the rule to account rig a dry valley to do it, because a rule that fires once in
+several years cannot be measured by playing.
 
 Measured over twenty simulated years with six houses: **five fires, all of them put out**, because that
 settlement stood by the river. That is the intended shape — the river is safety, and building away from

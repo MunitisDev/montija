@@ -14,12 +14,13 @@
  *
  * **The causes are the ones the simulation actually has.** Hunger and cold each
  * drain health, and health at zero is death; old age arrives on its own
- * schedule. Illness is deliberately *not* a cause, because in this game it does
- * not kill anybody: a case costs somebody their working days, and the settlement
- * dies of the starvation that follows in winter. Listing it would be inventing a
- * mechanic on a screen whose whole job is to explain what really happened — so
- * instead each record notes whether they were ill at the end, which is a true
- * thing that was true of them.
+ * schedule; and a fire takes whoever could not get out of the building it took.
+ * Illness is deliberately *not* a cause, because it does not kill anybody by
+ * itself: a case costs somebody their working days, and the settlement dies of
+ * the starvation that follows in winter. Listing it would be inventing a mechanic
+ * on a screen whose whole job is to explain what really happened — so instead
+ * each record notes whether they were ill at the end, which is a true thing that
+ * was true of them, and which on a `fire` line is the reason they are on it.
  */
 
 import type { BuildingId } from '@/data/buildings';
@@ -34,9 +35,15 @@ import type { Sex, Villager } from '@/simulation/villagers/Villager';
  * two: a villager who was starving *and* freezing is the settlement failing at
  * both, and picking one of them for the roll would misreport a winter.
  */
-export type DeathCause = 'hunger' | 'cold' | 'hungerAndCold' | 'oldAge';
+export type DeathCause = 'hunger' | 'cold' | 'hungerAndCold' | 'oldAge' | 'fire';
 
-export const DEATH_CAUSES: readonly DeathCause[] = ['hunger', 'cold', 'hungerAndCold', 'oldAge'];
+export const DEATH_CAUSES: readonly DeathCause[] = [
+  'hunger',
+  'cold',
+  'hungerAndCold',
+  'oldAge',
+  'fire',
+];
 
 /** One line of the roll. Plain data, so it writes to a save as-is. */
 export interface DeathRecord {
@@ -64,6 +71,9 @@ export interface DeathRecord {
 
 /**
  * Which of hunger and cold had run out when health did.
+ *
+ * Only asked of the people health killed. A fire names its own cause, because
+ * the fire is the thing that happened and their needs were full when it did.
  *
  * Read off the needs at the moment of death, which is the only place the answer
  * exists: health is a single number and does not remember what drained it.
@@ -121,6 +131,7 @@ export class Necrology {
       cold: 0,
       hungerAndCold: 0,
       oldAge: 0,
+      fire: 0,
     };
     for (const record of this.records) {
       counts[record.cause] += 1;

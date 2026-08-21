@@ -150,6 +150,10 @@ export function serialise(
 export function restore(simulation: Simulation, save: SaveGame): void {
   const world = simulation.world;
 
+  // The settlement's own seed, before anything asks the world what kind of year
+  // it is having. See `Simulation.restoreSeed`.
+  simulation.restoreSeed(save.worldSeed);
+
   // Terrain is restored rather than regenerated: villagers reshape it, and
   // re-running the generator would undo every clearing they ever made.
   world.terrain.loadBuffer(Uint8Array.from(save.world.terrain));

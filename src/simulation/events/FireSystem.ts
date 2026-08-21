@@ -20,8 +20,22 @@
  *   a channel or the river breaks the line and the fire stops; bare ground does
  *   not. Roads and ditches were laid for other reasons and now do this as well.
  *
- * Nobody is hurt. The game has enough ways to kill people and none of them are a
- * dice roll; a fire takes buildings, which are rebuildable, and never a life.
+ * - **Whether anybody dies** is who was inside and whether they could get out.
+ *   This was the one part of a fire that used to cost nothing: for a long while
+ *   the rule here was that a fire took buildings and never a life, because the
+ *   game has enough ways to kill people and none of them should be a dice roll.
+ *   That reasoning holds; what it got wrong is that this is not a dice roll
+ *   either. Every roll above has already been decided by the plan — a fire only
+ *   reaches people in a building the settlement could not put out, which is to
+ *   say a building the player left out of reach of water, and the number of
+ *   people in it is the number the player put there. A settlement that keeps its
+ *   houses by the water never loses anybody to a fire at all.
+ *
+ * So a building that is **lost** endangers the people who belong to it: a
+ * household in its beds on the freezing night its own hearth catches, or the
+ * workers at the forge that caught while they were working it. Most get out.
+ * Whoever was already ill is likelier not to, which is the one place in the game
+ * where sickness kills directly, and it kills for a legible reason.
  *
  * Deterministic from the settlement's own stream, like every other slow process:
  * the same seed and the same plan burn on the same night.
@@ -30,6 +44,7 @@
 import { cellLine } from '@/shared/math/gridLine';
 import type { GridPoint } from '@/shared/types/geometry';
 import type { Building } from '@/simulation/buildings/Building';
+import type { Villager } from '@/simulation/villagers/Villager';
 import type { World } from '@/simulation/world/World';
 
 /**
@@ -65,6 +80,33 @@ export const CROWDING_STEP = 0.5;
 /** How far a fire can jump to the next building, in cells. */
 export const SPREAD_REACH = 3;
 
+/**
+ * Chance somebody inside a building the settlement lost does not get out.
+ *
+ * A quarter, and the arithmetic behind it matters more than the figure: a house
+ * only burns down when there was no water within reach of it, which in a
+ * well-planned settlement is never. Ten houses lit through fourteen freezing
+ * nights catch about once every four years before crowding is counted, and a
+ * household is three or four people — so this is one life every several years in
+ * a settlement that built away from water, and none at all in one that did not.
+ *
+ * Rolled per person rather than once for the building, so a cottage with eight
+ * people in it risks twice what a cottage with four risks. That is the crowding
+ * decision again, and it is the same decision that made the fire likelier in the
+ * first place.
+ */
+export const TRAPPED_CHANCE = 0.25;
+
+/**
+ * How much likelier somebody already ill is not to get out.
+ *
+ * Twice, and this is the only place in the game where illness kills anybody
+ * directly. It is worth the exception because it is not a hidden roll: a player
+ * who can see who is unwell and can see which houses have no water can see this
+ * coming, which is the whole difference between a consequence and a punishment.
+ */
+export const ILL_TRAPPED_MULTIPLIER = 2;
+
 /** What happened to the settlement's buildings today. */
 export interface FireReport {
   /** The building that caught tonight, or `null` on the ordinary night. */
@@ -75,9 +117,23 @@ export interface FireReport {
   readonly lost: readonly number[];
   /** Buildings the fire jumped to, which burn tomorrow. */
   readonly spread: readonly number[];
+  /**
+   * Villagers who were inside a building that was lost and did not get out.
+   *
+   * Ids rather than the villagers themselves, because this system decides and
+   * `Simulation` owns what a death means for the settlement's roll, its jobs and
+   * its households.
+   */
+  readonly trapped: readonly number[];
 }
 
-export const NO_FIRE: FireReport = { started: null, saved: [], lost: [], spread: [] };
+export const NO_FIRE: FireReport = {
+  started: null,
+  saved: [],
+  lost: [],
+  spread: [],
+  trapped: [],
+};
 
 export interface FireOptions {
   readonly world: World;
@@ -93,6 +149,13 @@ export interface FireOptions {
   readonly isFreezing: boolean;
   /** Whether water can be fetched to a cell. See `world/Water.ts`. */
   readonly waterAt: (cell: GridPoint) => boolean;
+  /**
+   * Everybody in the settlement, so the system can work out who was indoors.
+   *
+   * Handed the whole list rather than a per-building lookup because who counts
+   * as inside a burning building is a fire rule, and fire rules live here.
+   */
+  readonly villagers: readonly Villager[];
 }
 
 /**
@@ -108,11 +171,12 @@ export interface FireOptions {
  * what pulling a building down means for its people, its jobs and its yard.
  */
 export function runFire(options: FireOptions): FireReport {
-  const { world, random, isFreezing, waterAt } = options;
+  const { world, random, isFreezing, waterAt, villagers } = options;
 
   const saved: number[] = [];
   const lost: number[] = [];
   const spread: number[] = [];
+  const trapped: number[] = [];
 
   // **Snapshotted before anything is resolved**, and it has to be: a fire that
   // jumps sets its neighbour alight, and walking the registry live meant the loop
@@ -134,6 +198,16 @@ export function runFire(options: FireOptions): FireReport {
     }
 
     lost.push(building.id);
+    // The roof is gone, and the people under it have to get themselves out.
+    // Before the fire jumps, so the order the report reads in is the order the
+    // night happened in.
+    for (const villager of occupants(villagers, building)) {
+      const risk = TRAPPED_CHANCE * (villager.isIll ? ILL_TRAPPED_MULTIPLIER : 1);
+      if (random.next() < risk) {
+        trapped.push(villager.id);
+      }
+    }
+
     const next = nearestCatch(world, building);
     if (next) {
       next.burning = true;
@@ -144,11 +218,29 @@ export function runFire(options: FireOptions): FireReport {
   // Nothing new while something is still alight: one fire at a time is what
   // keeps a bad night from being an unrecoverable one.
   if (spread.length > 0) {
-    return { started: null, saved, lost, spread };
+    return { started: null, saved, lost, spread, trapped };
   }
 
   const started = ignite(world, random, isFreezing);
-  return { started, saved, lost, spread };
+  return { started, saved, lost, spread, trapped };
+}
+
+/**
+ * The people who were inside a building when it went.
+ *
+ * Two kinds, and between them they cover every building that has anybody in it:
+ * the **household**, who are in their beds on the freezing night their own
+ * hearth catches, and the **workers**, who are at the bench of a forge that only
+ * catches while somebody is working it. A hearth fire is a night fire and a forge
+ * fire a working-hours one, so in both cases the people who belong to the
+ * building are the people who are in it.
+ *
+ * Anyone whose home *and* workplace this was is counted once.
+ */
+function occupants(villagers: readonly Villager[], building: Building): readonly Villager[] {
+  return villagers.filter(
+    (villager) => villager.homeId === building.id || villager.employerId === building.id,
+  );
 }
 
 /**

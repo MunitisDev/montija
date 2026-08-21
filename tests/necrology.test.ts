@@ -103,7 +103,13 @@ describe('the roll', () => {
     necrology.record(aged(31), 'cold', when);
     necrology.record(aged(70), 'oldAge', when);
 
-    expect(necrology.byCause()).toEqual({ hunger: 0, cold: 2, hungerAndCold: 0, oldAge: 1 });
+    expect(necrology.byCause()).toEqual({
+      hunger: 0,
+      cold: 2,
+      hungerAndCold: 0,
+      oldAge: 1,
+      fire: 0,
+    });
   });
 
   it('has no average age until somebody has died', () => {

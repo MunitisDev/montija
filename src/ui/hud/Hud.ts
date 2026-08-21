@@ -374,6 +374,10 @@ export class Hud {
     for (let index = 0; index < snapshot.fire.lost.length; index += 1) {
       this.announceOnce(this.i18n.t('event.fireLost'), 'is-loss');
     }
+    // And the part of a fire that is not about buildings. Announced separately
+    // from the ordinary deaths below, which are counted from the day's hunger
+    // and cold and know nothing about the night's fire.
+    this.announce('event.fireDeath', snapshot.fire.trapped.length);
 
     this.announce('event.born', population.births);
     this.announce('event.arrived', population.arrivals);

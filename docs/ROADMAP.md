@@ -1841,9 +1841,12 @@ deliberately the cheapest of the three so that an early settlement has a comfort
 **Fire, on the bad day.** A lit hearth can set its own roof alight on a freezing night, a staffed forge
 on any day of the year, and nothing else starts a fire at all. Crowding raises the odds, water within
 reach puts it out, and a road, a ditch or the river between two buildings stops it spreading. A fire
-burns for a whole day where the player can see it and resolves at the next boundary; one at a time,
-never while something is already alight, and **never a life** — this game has enough ways to kill people
-and none of them is a die roll.
+burns for a whole day where the player can see it and resolves at the next boundary; one at a time and
+never while something is already alight. A building that is **lost** endangers whoever belongs to it —
+the household asleep in a house, the workers at a forge — with a quarter of them not getting out and
+twice that for anybody already ill. That is not a die roll either: a fire only reaches people in a
+building the settlement could not put out, so a settlement whose houses are within reach of water never
+loses anybody to one.
 
 Measured over twenty years with six houses: five fires, every one of them put out, because that
 settlement stood by the river. That is the shape intended — the river is safety and the Well is what

@@ -2,8 +2,9 @@
  * Water, and the night a settlement finds out whether it has any.
  *
  * **A fire in this game is never bad luck**, and every test here is about one of
- * the four decisions that make it so: what the buildings do, how tightly they are
- * packed, whether there is water within reach, and what was laid between them.
+ * the five decisions that make it so: what the buildings do, how tightly they are
+ * packed, whether there is water within reach, what was laid between them, and
+ * how many people were inside the one that could not be saved.
  *
  * The rate is deliberately low — about one fire every four years for a village
  * of six houses, measured — which is exactly why it is tested with a stubbed
@@ -18,13 +19,16 @@ import type { Building } from '@/simulation/buildings/Building';
 import {
   CROWDING_STEP,
   HEARTH_FIRE_CHANCE,
+  ILL_TRAPPED_MULTIPLIER,
   NO_FIRE,
   runFire,
   SPREAD_REACH,
+  TRAPPED_CHANCE,
 } from '@/simulation/events/FireSystem';
 import { restore, serialise } from '@/simulation/save/serialise';
 import { TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
 import { WATER_REACH, waterWithinReach } from '@/simulation/world/Water';
+import { Villager } from '@/simulation/villagers/Villager';
 import { World } from '@/simulation/world/World';
 import type { BuildingId } from '@/data/buildings';
 import type { GridPoint } from '@/shared/types/geometry';
@@ -203,6 +207,125 @@ describe('what a fire costs', () => {
   });
 });
 
+describe('who does not get out', () => {
+  /** Somebody who lives in a building, and nothing else. */
+  function resident(id: number, homeId: number | null): Villager {
+    const villager = new Villager({
+      id,
+      name: 'Test',
+      sex: 'f',
+      age: 30,
+      position: { wx: 0, wy: 0 },
+      lifespan: 70,
+    });
+    villager.homeId = homeId;
+    return villager;
+  }
+
+  it('is nobody at all, when the water reached the building', () => {
+    // The whole rule in one claim: a fire only takes people from a building the
+    // settlement could not put out, so a settlement with water by its houses
+    // never loses anybody to one. The night is rigged to catch and to trap.
+    const simulation = new Simulation(OPTIONS);
+    const house = raise(simulation, 'house', openGround(simulation));
+    house.burning = true;
+
+    const report = burn(simulation, {
+      isFreezing: true,
+      random: ALWAYS,
+      wet: true,
+      villagers: [resident(1, house.id), resident(2, house.id)],
+    });
+
+    expect(report.saved).toEqual([house.id]);
+    expect(report.trapped).toEqual([]);
+  });
+
+  it('is drawn from the people who belong to the building that was lost', () => {
+    // A household is in its beds on the freezing night its own hearth catches.
+    // The neighbours are not.
+    const simulation = new Simulation(OPTIONS);
+    const spot = openGround(simulation);
+    const house = raise(simulation, 'house', spot);
+    const elsewhere = raise(simulation, 'house', { gx: spot.gx + SPREAD_REACH * 3, gy: spot.gy });
+    house.burning = true;
+
+    const report = burn(simulation, {
+      isFreezing: true,
+      random: ALWAYS,
+      dry: true,
+      villagers: [resident(1, house.id), resident(2, elsewhere.id), resident(3, null)],
+    });
+
+    expect(report.lost).toEqual([house.id]);
+    expect(report.trapped).toEqual([1]);
+  });
+
+  it('is most of them getting out, on the ordinary bad night', () => {
+    // A quarter, not all of them: losing a house is a disaster and losing a
+    // household is a different and much rarer one.
+    const simulation = new Simulation(OPTIONS);
+    const house = raise(simulation, 'house', openGround(simulation));
+    house.burning = true;
+    const household = [1, 2, 3, 4].map((id) => resident(id, house.id));
+
+    const report = burn(simulation, {
+      isFreezing: true,
+      random: { next: () => TRAPPED_CHANCE * 1.5 },
+      dry: true,
+      villagers: household,
+    });
+
+    expect(report.lost).toEqual([house.id]);
+    expect(report.trapped).toEqual([]);
+  });
+
+  it('is likelier for somebody who was already ill', () => {
+    // The one place in this game where sickness kills directly, and it is not a
+    // hidden roll: the player can see who is unwell and can see which houses
+    // have no water.
+    const simulation = new Simulation(OPTIONS);
+    const house = raise(simulation, 'house', openGround(simulation));
+    house.burning = true;
+    const well = resident(1, house.id);
+    const sick = resident(2, house.id);
+    sick.illDaysRemaining = 6;
+
+    const report = burn(simulation, {
+      isFreezing: true,
+      random: { next: () => TRAPPED_CHANCE * 1.5 },
+      dry: true,
+      villagers: [well, sick],
+    });
+
+    expect(report.trapped).toEqual([sick.id]);
+    expect(ILL_TRAPPED_MULTIPLIER).toBeGreaterThan(1);
+  });
+
+  it('costs the settlement the people, and says so on the roll', () => {
+    // End to end through the simulation, because the roll of the dead is what
+    // the player reads afterwards and it has to name the fire.
+    const simulation = new Simulation(OPTIONS);
+    const dry = dryGround(simulation);
+    const house = raise(simulation, 'house', dry);
+    for (const villager of simulation.villagers.all) {
+      villager.homeId = house.id;
+    }
+    house.burning = true;
+    const before = simulation.villagers.count;
+
+    // A whole day, so the fire is resolved where the game resolves it.
+    for (let tick = 0; tick < TICKS_PER_DAY; tick += 1) {
+      simulation.update(simulation.tick + 1, 0.1);
+    }
+
+    expect(simulation.villagers.count).toBeLessThan(before);
+    const roll = simulation.necrology.all;
+    expect(roll.length).toBeGreaterThan(0);
+    expect(roll.every((record) => record.cause === 'fire')).toBe(true);
+  });
+});
+
 describe('a settlement that remembers its fire', () => {
   it('is still alight after a reload', () => {
     const simulation = new Simulation(OPTIONS);
@@ -262,6 +385,13 @@ function burn(
     /** Force the water answer, for the tests that are about the fire itself. */
     wet?: boolean;
     dry?: boolean;
+    /**
+     * Who is in the settlement, for the tests about who gets out.
+     *
+     * Defaults to nobody, so every test written before a fire could take a life
+     * still measures what it was written to measure.
+     */
+    villagers?: readonly Villager[];
   },
 ) {
   const report = runFire({
@@ -270,6 +400,7 @@ function burn(
     isFreezing: options.isFreezing,
     waterAt: (cell) =>
       options.wet === true ? true : options.dry === true ? false : simulation.waterAt(cell),
+    villagers: options.villagers ?? [],
   });
   return report;
 }

@@ -76,6 +76,16 @@ loaded over another world anchored itself on the previous valley's camp. It is w
 and restored before anything reads it. Older saves have no `landfall` field and fall back to
 recomputing, which is what they were doing anyway.
 
+### Why the seed is restored as well as stored
+
+`worldSeed` was written into every save from the first version and read by nobody: loading replaces the
+contents of an existing simulation, and that simulation kept the seed it was _founded_ with. Every
+random stream is restored with its own position, so almost nothing noticed — except the one thing that
+asks the seed directly, which is what kind of year a given year is. A loaded settlement inherited the
+hard and bitter years of whatever world the player happened to have open, so the same file had a
+different future in every session, and saving it again wrote that wrong seed into the file. The seed is
+now adopted before anything asks the world a question about itself.
+
 ### Why loading counts as a new world for the renderer
 
 The presentation layer refreshes off version counters, and a load bumped only the load counter — so

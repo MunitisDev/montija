@@ -414,7 +414,7 @@ export class Simulation {
    */
   public readonly stockLimits = new StockLimits();
 
-  private readonly seed: number;
+  private seed: number;
   private readonly tickRandom: RandomSource;
   private currentTick = 0;
   /** The larder's total at the end of yesterday. See {@link FOOD_DAYS_LOW}. */
@@ -559,6 +559,26 @@ export class Simulation {
 
   public get worldSeed(): number {
     return this.seed;
+  }
+
+  /**
+   * Adopts the seed of a settlement being loaded into this simulation.
+   *
+   * A load replaces the contents of an existing world, so the number this
+   * simulation was *founded* with is not the number the settlement it is now
+   * playing was founded with — and one thing still reads the seed directly
+   * rather than through a saved stream: {@link yearCharacter}, which asks what
+   * kind of year a given year of a given world is. Left unrestored, a loaded
+   * settlement got the hard and bitter years of the world the player happened to
+   * have open, and the same file loaded in two sessions had two different
+   * futures. Saving it again then wrote the wrong `worldSeed` into the file.
+   *
+   * The derived streams — tick, forest, fire, illness, villagers — are not
+   * rebuilt from this, because they are restored with their own positions; see
+   * `docs/SAVE_FORMAT.md`.
+   */
+  public restoreSeed(seed: number): void {
+    this.seed = seed >>> 0;
   }
 
   public get tick(): number {
@@ -1423,6 +1443,7 @@ export class Simulation {
       random: this.fireRandom,
       isFreezing: this.year.isFreezing,
       waterAt: (cell) => this.waterAt(cell),
+      villagers: this.villagers.all,
     });
     // The renderers watch the registry's version, and a building catching fire
     // is a change they have to see: it takes the fire's colour and starts
@@ -1432,6 +1453,22 @@ export class Simulation {
     }
     this.chronicle.firesFought += this.lastFire.saved.length;
     this.chronicle.firesLost += this.lastFire.lost.length;
+
+    // **Whoever did not get out, before the building comes down.** The order is
+    // load-bearing: pulling the building down clears the household that says who
+    // was inside it, so the roll of the dead has to be written while there is
+    // still a house to have been in.
+    for (const id of this.lastFire.trapped) {
+      const villager = this.villagers.findById(id);
+      if (!villager) {
+        continue;
+      }
+      this.necrology.record(villager, 'fire', this.year);
+      this.villagers.remove(villager.id);
+      this.totalDeaths += 1;
+      this.chronicle.died += 1;
+    }
+
     for (const id of this.lastFire.lost) {
       const building = this.world.buildings.getById(id);
       if (building) {

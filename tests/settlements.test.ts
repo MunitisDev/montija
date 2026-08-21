@@ -210,6 +210,25 @@ describe('opening a save over another settlement', () => {
     expect(await game.loadSettlement(saves[0]!.slot)).toBe(true);
     expect(game.simulation.world.landfallCell).toEqual(landed);
   });
+
+  it('brings its own seed, so its hard years are still its own', async () => {
+    // One thing still reads the seed itself rather than a saved stream: what
+    // kind of year a year is. Unrestored, a settlement loaded into an open world
+    // inherited *that* world's hard and bitter years, so the same file had a
+    // different future in every session — and saving it again wrote the wrong
+    // seed into the file.
+    const game = new Game({ seed: SEED });
+    await game.nameSettlement('Valdivia');
+    const saves = await game.listSettlements();
+
+    game.startNewSettlement(SEED + 21);
+    expect(game.simulation.worldSeed).not.toBe(SEED);
+
+    expect(await game.loadSettlement(saves[0]!.slot)).toBe(true);
+    expect(game.simulation.worldSeed).toBe(SEED);
+    const founded = new Game({ seed: SEED });
+    expect(game.simulation.yearCharacter).toEqual(founded.simulation.yearCharacter);
+  });
 });
 
 describe('permadeath', () => {

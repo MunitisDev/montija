@@ -58,10 +58,12 @@ export interface EndGameReport {
   /**
    * Said under the roll when anybody died ill.
    *
-   * Illness is not one of the causes, because in this game it does not kill: it
+   * Illness is not one of the causes, because it does not kill by itself: it
    * costs a settlement working days and the starvation comes later. Naming it as
    * a cause on the one screen whose job is to explain what happened would be
-   * inventing a mechanic. Saying how many were ill at the end is simply true.
+   * inventing a mechanic. Saying how many were ill at the end is simply true —
+   * and on a `fire` line it is very nearly the cause, since being ill is what
+   * doubles the chance of not getting out of a burning building.
    */
   readonly illNote: string;
 }
