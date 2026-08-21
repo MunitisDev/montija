@@ -113,6 +113,26 @@ export class World {
   }
 
   /**
+   * Puts the camp back where the save says it was, or forgets it.
+   *
+   * **A loaded settlement was landing in the wrong valley.** The camp is worked
+   * out once from the terrain and then remembered, which is right while a world
+   * lasts a session — and wrong the moment a save is opened over it, because the
+   * cell it remembered belongs to the map that was just replaced. Everything
+   * anchored on it went with it: what counts as reachable, where the founding
+   * yard is, where the camera looks.
+   *
+   * Restored from the save rather than recomputed, because the camp cell is built
+   * over within a tick of a settlement starting — the founding yard stands on it —
+   * so asking the terrain again can pick a different cell than the one the
+   * settlement was actually founded on. `null` forgets it, which is what an older
+   * save that never recorded one deserves.
+   */
+  public restoreLandfall(cell: GridPoint | null): void {
+    this.camp = cell;
+  }
+
+  /**
    * The nearest cell to this one the settlement can actually walk to.
    *
    * `nearestWalkable` is not enough on its own: a cell can be perfectly walkable

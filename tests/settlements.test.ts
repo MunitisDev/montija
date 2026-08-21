@@ -171,6 +171,47 @@ describe('keeping the record', () => {
   });
 });
 
+describe('opening a save over another settlement', () => {
+  it('brings its own map with it', () => {
+    // **Reported from a real game: houses standing in a river.** The ground is
+    // painted once when the scene opens; buildings, trees and villagers all
+    // notice a load and redraw. So a settlement loaded over another one stood its
+    // saved houses on the valley that had just been replaced. The world's version
+    // counter is what tells the renderer to build the picture again, and a load
+    // has to move it.
+    const game = new Game({ seed: SEED });
+    const before = game.worldVersion;
+
+    return game.nameSettlement('Nogaleda').then(async (name) => {
+      expect(name).toBe('Nogaleda');
+      const saves = await game.listSettlements();
+      game.startNewSettlement(SEED + 5);
+      const afterFounding = game.worldVersion;
+      expect(afterFounding).toBeGreaterThan(before);
+
+      expect(await game.loadSettlement(saves[0]!.slot)).toBe(true);
+      expect(game.worldVersion).toBeGreaterThan(afterFounding);
+    });
+  });
+
+  it('lands the settlers back where they actually landed', async () => {
+    // The camp is worked out from the terrain once and then remembered, and
+    // everything hangs off it: what counts as reachable, where the founding yard
+    // is, where the camera looks. Remembering the *old* map's camp put the
+    // settlement in the wrong valley.
+    const game = new Game({ seed: SEED });
+    await game.nameSettlement('Ombría');
+    const landed = { ...game.simulation.world.landfallCell };
+    const saves = await game.listSettlements();
+
+    game.startNewSettlement(SEED + 9);
+    expect(game.simulation.world.landfallCell).not.toEqual(landed);
+
+    expect(await game.loadSettlement(saves[0]!.slot)).toBe(true);
+    expect(game.simulation.world.landfallCell).toEqual(landed);
+  });
+});
+
 describe('permadeath', () => {
   it('deletes the file when the last villager is gone', async () => {
     const game = new Game({ seed: SEED });

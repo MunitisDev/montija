@@ -66,6 +66,26 @@ A bridge is a building standing on a cell of water, and the boards it carries ar
 already saved. The one thing the loader has to know is that a finished crossing **opens** its cell
 rather than blocking it, or a settlement would load with bridges nobody could walk over.
 
+### Why the settlers' landing place is stored
+
+`landfall` is the cell the ten settlers arrived on, and everything about where the settlement _is_
+hangs off it: the founding yard's radius, the reachability check that decides whether a site can be
+built, and where the camera looks when a save opens. The world memoises it from the terrain the
+first time anything asks, which is right for a new valley and wrong for a loaded one — a settlement
+loaded over another world anchored itself on the previous valley's camp. It is written into the save
+and restored before anything reads it. Older saves have no `landfall` field and fall back to
+recomputing, which is what they were doing anyway.
+
+### Why loading counts as a new world for the renderer
+
+The presentation layer refreshes off version counters, and a load bumped only the load counter — so
+the buildings, trees, villagers and roads all reloaded while the ground stayed painted as the valley
+the player had just left. Saved houses stood in rivers that were no longer there. A load replaces
+the world's contents wholesale, which is exactly what `worldVersion` means, so loading bumps it and
+the scene is rebuilt rather than re-synced. The terrain is the reason: its ~9,200 tiles are painted
+once when the scene opens and repainted only for a season or a felled tree, never for a whole new
+map.
+
 ### Why the RNG position is stored
 
 A seeded stream is only reproducible from its **position**, not merely its seed. Saving the seed but

@@ -55,6 +55,7 @@ export function serialise(
         planted: tree.planted,
       })),
       roads: world.roads.all(),
+      landfall: { ...world.landfallCell },
     },
 
     villagers: simulation.villagers.all.map((villager) => ({
@@ -152,6 +153,10 @@ export function restore(simulation: Simulation, save: SaveGame): void {
   // Terrain is restored rather than regenerated: villagers reshape it, and
   // re-running the generator would undo every clearing they ever made.
   world.terrain.loadBuffer(Uint8Array.from(save.world.terrain));
+  // **Before anything asks where the settlement is.** The camp is remembered
+  // rather than recomputed, and the one it is remembering belongs to the map this
+  // load just replaced — see `World.restoreLandfall`.
+  world.restoreLandfall(save.world.landfall ? { ...save.world.landfall } : null);
   // Roads before the rebuild, not after: the navigation grid reads them while
   // it re-costs every cell, so restoring them second would leave a settlement
   // whose roads were drawn but not routed over until the next one was laid.

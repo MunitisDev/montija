@@ -878,6 +878,16 @@ export class Game implements GameContext, InputIntentSink {
       // a different map.
       this.cancelRoadLine();
       this.loadsCompleted += 1;
+      // **And the scene has to be built again, not merely re-synced.** Every
+      // renderer that watches a registry — buildings, trees, villagers, roads —
+      // notices a load and redraws itself. The ground does not: the ~9,200 tiles
+      // are painted once when the scene opens, so a settlement loaded over
+      // another one stood its saved houses on the *old* valley's terrain, with
+      // cottages in the middle of a river that was not there any more.
+      //
+      // Bumping the world's version is the honest signal: the contents of the
+      // world were replaced wholesale, which is exactly what that counter means.
+      this.worldGeneration += 1;
       this.setSaveStatus('Loaded');
       return true;
     } catch (error) {

@@ -200,6 +200,16 @@ export interface SaveGame {
      * cells.
      */
     readonly roads?: readonly { readonly gx: number; readonly gy: number }[];
+    /**
+     * The cell the settlers landed on.
+     *
+     * Saved rather than recomputed, and it has to be: the camp cell is built over
+     * within a tick of a settlement starting, so asking the terrain where a camp
+     * *would* go can answer with a different cell than the one this settlement
+     * was actually founded on — and everything anchored on it moves with it.
+     * Absent in older saves, which fall back to asking the terrain.
+     */
+    readonly landfall?: { readonly gx: number; readonly gy: number };
   };
 
   readonly villagers: readonly SavedVillager[];
