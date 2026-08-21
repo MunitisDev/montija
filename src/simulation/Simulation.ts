@@ -43,10 +43,12 @@ import { causeOfDeath, Necrology, type DeathRecord } from './history/Necrology';
 import type { ResourcePile } from './resources/ResourcePile';
 import { WearLedger } from './resources/wear';
 
+import { characterOf, type YearCharacter, type YearKind } from './seasons/YearCharacter';
 import {
   DAYS_PER_SEASON,
   SEASONAL_YIELD,
   TICKS_PER_DAY,
+  TICKS_PER_YEAR,
   isDayBoundary,
   yearStateAt,
   type Season,
@@ -150,6 +152,13 @@ export type Advice =
   /** The larders are nearly full, and the next harvest has nowhere to go. */
   | 'larderFilling'
   | 'noShelter'
+  /**
+   * The harvest is lying in the fields and every adult is in a workshop.
+   *
+   * The settlement is not short of food. It is short of *hands*, and the two
+   * look identical from the HUD.
+   */
+  | 'nobodyHauling'
   /** Nothing in the settlement brings food in, whatever is in the larder. */
   | 'foodLow'
   /** The larder is thin and going down: measured, not guessed at. */
@@ -259,6 +268,16 @@ export interface SimulationSnapshot {
   readonly year: number;
   readonly dayOfSeason: number;
   readonly temperature: number;
+  /**
+   * What kind of year this is: kind, ordinary, hard or bitter.
+   *
+   * Fixed the moment the year begins and shown all year, because a hard year the
+   * player was told about in spring is a plan and the same year sprung on them in
+   * December is a dice roll. See `seasons/YearCharacter.ts`.
+   */
+  readonly yearKind: YearKind;
+  /** What the ground gives this year, against an ordinary year's 1. */
+  readonly harvest: number;
   /** What the settlement ate and burned on the last day that passed. */
   readonly lastDay: DailyReport;
   /** What went bad overnight, so the HUD can explain a falling total. */
@@ -490,7 +509,13 @@ export class Simulation {
     // Everything that comes out of the ground follows the calendar, and the
     // curves differ: foraging trickles through the growing seasons, a field is
     // worth having in autumn, an orchard only then.
-    this.villagers.productionScaleProvider = (profile) => SEASONAL_YIELD[profile][this.year.season];
+    // The season's curve, times the year's own character: a hard year is a
+    // fifth off everything that comes out of the ground, every season of it.
+    // See `seasons/YearCharacter.ts`.
+    this.villagers.productionScaleProvider = (profile) =>
+      profile === 'none'
+        ? SEASONAL_YIELD[profile][this.year.season]
+        : SEASONAL_YIELD[profile][this.year.season] * this.yearCharacter.harvest;
     // Tools make every job quicker. With none, this is exactly 1.
     // Tools and spirit compose: a well-equipped, settled village is
     // meaningfully quicker than a miserable ill-equipped one, and neither of
@@ -706,6 +731,8 @@ export class Simulation {
       year: year.year,
       dayOfSeason: year.dayOfSeason,
       temperature: year.temperature,
+      yearKind: this.yearCharacter.kind,
+      harvest: this.yearCharacter.harvest,
       lastDay: this.lastDayReport,
       spoiled: this.lastSpoilage,
       population: this.lastPopulation,
@@ -967,6 +994,25 @@ export class Simulation {
       return null;
     }
 
+    // **Said before the starving, because it is *why* they are starving.**
+    // Measured on a settlement that built the obvious things: by its fourth
+    // autumn it had forty-three food on the shelves, two hundred and ninety-two
+    // lying in the fields, and every adult inside a workshop. Nobody was
+    // carrying anything, so it starved to death with four years of harvest on the
+    // ground — and the banner said "the food is running out", which is true and
+    // sends the player to build another hut, which takes two more pairs of hands
+    // off the road.
+    //
+    // The settlement does not fix this itself, deliberately: who works where is
+    // the player's decision and the game handing it back to them would be the
+    // game playing itself. What it owes them is the sentence.
+    if (
+      this.lastEmployment.labourers === 0 &&
+      FOOD_IDS.reduce((sum, id) => sum + this.world.piles.totalOf(id), 0) >= people
+    ) {
+      return 'nobodyHauling';
+    }
+
     // Real hunger, not a missed delivery. A settlement living hand to mouth has
     // shortfall days routinely while nobody is any thinner, and an alarm that
     // cries wolf every other day is one the player stops reading.
@@ -1089,9 +1135,20 @@ export class Simulation {
     return null;
   }
 
+  /**
+   * What kind of year this is: how cold, and how much the ground gives.
+   *
+   * Derived from the world's seed and the year's number rather than stored, so it
+   * costs nothing to ask, survives a save for free, and cannot drift out of step
+   * with the calendar. See `seasons/YearCharacter.ts`.
+   */
+  public get yearCharacter(): YearCharacter {
+    return characterOf(this.seed, Math.floor(this.currentTick / TICKS_PER_YEAR) + 1);
+  }
+
   /** The calendar at the current tick. */
   public get year(): YearState {
-    return yearStateAt(this.currentTick);
+    return yearStateAt(this.currentTick, this.yearCharacter.coldBite);
   }
 
   /**

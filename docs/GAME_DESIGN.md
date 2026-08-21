@@ -2030,3 +2030,65 @@ more of it.
 
 Measured over two years of a properly played settlement: **no food warning while there was food**, and
 the two that do appear appear on the days they are true.
+
+## What kind of year it is — Implemented
+
+**The granary was never the decision it should have been.** Every year was the same year — the same
+fourteen freezing nights, the same harvest — so a settlement that got through one winter got through
+all of them, and a full larder in autumn was tidiness rather than insurance. Nothing in the game ever
+asked the player why they were keeping two hundred food they did not need.
+
+A year now has a character, and everything about how it is built is aimed at it being the opposite of
+bad luck:
+
+| Year         | Cold        | Harvest | How often |
+| ------------ | ----------- | ------- | --------- |
+| **kind**     | 1.5° milder | +15%    | ~1 in 5   |
+| **ordinary** | —           | —       | ~2 in 5   |
+| **hard**     | 2.5° colder | −20%    | ~1 in 4   |
+| **bitter**   | 5° colder   | −38%    | ~1 in 7   |
+
+- **Derived, not rolled.** From the world's seed and the year's number, so the same valley has the same
+  history twice and a settlement replayed from its save meets the winter it met before.
+- **Announced.** It is settled the moment the year begins and shown in the calendar all year — _Autumn ·
+  Y4 · bitter year_ — which gives the player three seasons to answer it. A hard year the player was told
+  about in spring is a plan; the same year sprung on them in December is a dice roll.
+- **The first year is never hard.** A settlement's opening is already the hardest thing in the game, and
+  a bitter first winter would be the game killing beginners for something they had no way to see coming.
+- **Kind years exist**, and that is deliberate. A game whose weather can only be neutral or worse
+  teaches the player to read every announcement as a punishment.
+
+The cold is expressed as **degrees off the whole year** rather than as a count of freezing nights,
+because the thermometer is already on the HUD: a bitter year _reads_ as bitter every day of it, and the
+extra nights of fire fall out of the same number rather than being a second rule.
+
+## Where the difficulty actually is — Measured
+
+Worth writing down, because it was not what anybody assumed. Eight worlds, eight years, a player who
+keeps a third of the adults free to carry:
+
+- **Every single death is cold.** 149 of them, and not one from hunger or old age.
+- **Food is solved.** 150–300 in store at every year's end, and one or two hungry days a year.
+- **The settlement does not grow.** Ten people in year one, ten in year eight, with three dying and
+  three being born each year. A churn, not an arc.
+
+So the game has exactly one difficulty and it is firewood. Hard years sharpen it — the cold half lands
+squarely on the thing already killing everybody — while the harvest half is currently decorative,
+because a settlement with three hundred food does not notice losing a fifth of a harvest. Two things
+follow, and neither is done yet: food has to be capable of being tight again for the harvest to mean
+anything, and the population needs a reason to grow.
+
+## The harvest nobody is carrying — Implemented
+
+Measured on a settlement that built the obvious things: by its fourth autumn it had **forty-three food
+on the shelves, two hundred and ninety-two lying in the fields**, and every adult inside a workshop. It
+starved to death with four years of harvest on the ground.
+
+Nobody was carrying anything, and the banner said _the food is running out_ — which is true, and sends
+the player off to build another hut, which takes two more pairs of hands off the road. The intuitive
+answer made it worse.
+
+The settlement does **not** fix this itself. Who works where is the player's decision and the game
+handing it back to them would be the game playing itself. What it owes them is the sentence: _the
+harvest is lying in the fields — take somebody off a workshop_, said before the starvation warning
+because it is the reason for it.

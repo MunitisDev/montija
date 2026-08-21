@@ -84,6 +84,51 @@ describe('what the settlement says about food', () => {
   });
 });
 
+describe('the harvest nobody is carrying', () => {
+  it('is named, because it is why they are starving', () => {
+    // **Measured on a settlement that built the obvious things**: by its fourth
+    // autumn it had forty-three food on the shelves, two hundred and ninety-two
+    // lying in the fields, and every adult inside a workshop. It starved to death
+    // with four years of harvest on the ground while the banner said "the food is
+    // running out" — which is true, and sends the player to build another hut,
+    // which takes two more pairs of hands off the road.
+    const simulation = new Simulation(OPTIONS);
+    // Enough posts to swallow every adult in the settlement, which is exactly
+    // what a player does when they answer "we are short of food" by building
+    // more places to get it.
+    for (let index = 0; index < 5; index += 1) {
+      raise(simulation, 'gatherer-hut');
+    }
+    stockFood(simulation, 0);
+    for (const building of simulation.world.buildings.all) {
+      simulation.setDesiredWorkers(building.id, building.definition.workerSlots);
+    }
+    runADay(simulation);
+    expect(simulation.snapshot().employment.labourers).toBe(0);
+    const at = simulation.world.landfallCell;
+    simulation.world.dropNear({ gx: at.gx + 3, gy: at.gy + 3 }, 'vegetables', 120);
+    runADay(simulation);
+
+    expect(simulation.snapshot().advice).toBe('nobodyHauling');
+  });
+
+  it('says nothing while there are hands free', () => {
+    // The settlement does not fix this itself, deliberately — who works where is
+    // the player's decision — but it must not nag them about a problem they do
+    // not have.
+    const simulation = new Simulation(OPTIONS);
+    raise(simulation, 'crop-field');
+    stockFood(simulation, 600);
+    runADay(simulation);
+    const at = simulation.world.landfallCell;
+    simulation.world.dropNear({ gx: at.gx + 3, gy: at.gy + 3 }, 'vegetables', 120);
+    runADay(simulation);
+
+    expect(simulation.snapshot().employment.labourers).toBeGreaterThan(0);
+    expect(simulation.snapshot().advice).not.toBe('nobodyHauling');
+  });
+});
+
 describe('what it says about firewood', () => {
   it('says nothing in autumn when the woodpile is deep', () => {
     // The same defect as the food advice: it warned about having no Woodcutter

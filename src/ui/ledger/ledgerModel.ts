@@ -154,7 +154,11 @@ export function estimateFlows(simulation: Simulation): Flows {
       // resource into another, so neither belongs in a table of goods.
       continue;
     }
-    const scale = SEASONAL_YIELD[recipe.seasonal][snapshot.season];
+    // The year's character rides on the season's curve: the sheet has to forecast
+    // the year the settlement is actually in, not an average one.
+    const scale =
+      SEASONAL_YIELD[recipe.seasonal][snapshot.season] *
+      (recipe.seasonal === 'none' ? 1 : simulation.yearCharacter.harvest);
     const batches = (building.workers.length * TICKS_PER_DAY * workRate) / recipe.workTicks;
 
     for (const output of recipe.outputs) {

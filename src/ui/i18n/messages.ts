@@ -36,6 +36,11 @@ export const EN = {
   'season.autumn': 'Autumn',
   'season.winter': 'Winter',
   'time.yearShort': 'Y',
+  'year.kind': 'kind year',
+  'year.hard': 'hard year',
+  'year.bitter': 'bitter year',
+  'year.hint':
+    'How cold this year runs and what the ground will give. Settled when the year begins and told in spring, so it can be planned for.',
   'time.dayShort': 'd',
 
   'terrain.grass': 'Grass',
@@ -198,6 +203,7 @@ export const EN = {
   'placement.unreachable': 'nobody can walk there — bridge the river first',
   'placement.wouldSeal': 'it would wall the ground behind it in',
 
+  'warning.nobodyHauling': 'The harvest is lying in the fields — take somebody off a workshop',
   'warning.foodLow': 'Nothing is bringing food in — build a Gatherer Hut or a Field',
   'warning.foodFalling': 'The food is running out — more has to come in than is eaten',
   'warning.freezing': 'People are freezing',
@@ -651,6 +657,11 @@ export const ES: Messages = {
   'season.autumn': 'Otoño',
   'season.winter': 'Invierno',
   'time.yearShort': 'A',
+  'year.kind': 'año generoso',
+  'year.hard': 'año duro',
+  'year.bitter': 'año crudo',
+  'year.hint':
+    'Lo frío que viene el año y lo que va a dar la tierra. Se decide al empezar el año y se dice en primavera, para que se pueda planificar.',
   'time.dayShort': 'd',
 
   'terrain.grass': 'Hierba',
@@ -808,6 +819,7 @@ export const ES: Messages = {
   'placement.unreachable': 'nadie puede llegar — cruza el río con un puente',
   'placement.wouldSeal': 'dejaría encerrado el terreno de detrás',
 
+  'warning.nobodyHauling': 'La cosecha se queda en el campo: saca a alguien de un taller',
   'warning.foodLow': 'Nada trae comida: construye una cabaña de recolección o un campo',
   'warning.foodFalling': 'La comida se está acabando: tiene que entrar más de la que se come',
   'warning.freezing': 'La gente se está congelando',

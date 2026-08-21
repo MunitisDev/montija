@@ -1973,3 +1973,25 @@ gained a `list()` backed by small summary records rather than by reading every s
 the name because the name is which _file_ this is rather than a fact about the settlement's machinery.
 Both ways of starting over — the failure screen and the settings sheet — now come back to the menu's
 name box, because a valley nobody names is a valley nobody can return to.
+
+## PHASE 66 — Years that differ, and a warning that names the real problem — Implemented
+
+Two things, and the second came out of measuring the first.
+
+**A year has a character** — kind, ordinary, hard or bitter — derived from the seed, announced in the
+calendar, never hard in the first year. See `GAME_DESIGN.md`, and `seasons/YearCharacter.ts` for why it
+is degrees off the year rather than a count of freezing nights.
+
+**The harvest nobody is carrying** is now named. A settlement whose every adult is in a workshop starves
+with the harvest in the field, and the old advice sent the player to build another workshop.
+
+### What the measurement said
+
+Eight worlds, eight years, a competent player: **149 deaths, every one of them cold.** No hunger, no old
+age. Food sits at 150–300 in store all the way through, and the population is the same ten people in
+year eight as in year one.
+
+The game has one difficulty and it is firewood. That is worth knowing before adding more: hard years
+land on the cold, which is already the killer, and their harvest cut is currently decorative. Before
+food can be a threat again it needs something that makes it tight — soil that wears out, or a
+population that grows — and before the settlement grows, somebody has to want to live in it.

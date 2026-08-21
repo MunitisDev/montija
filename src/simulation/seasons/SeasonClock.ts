@@ -96,14 +96,22 @@ export interface YearState {
   readonly isFreezing: boolean;
 }
 
-/** Reads the calendar at a given simulation tick. */
-export function yearStateAt(tick: number): YearState {
+/**
+ * Reads the calendar at a given simulation tick.
+ *
+ * `coldBite` is degrees off the whole year, which is how a hard year is felt: the
+ * HUD's thermometer reads lower every day of it and the extra freezing nights
+ * fall out of the same number rather than being counted separately. Passed in
+ * rather than looked up, because which year is hard depends on the world's seed
+ * and this file is pure arithmetic over a tick. See `YearCharacter.ts`.
+ */
+export function yearStateAt(tick: number, coldBite = 0): YearState {
   const tickInYear = ((tick % TICKS_PER_YEAR) + TICKS_PER_YEAR) % TICKS_PER_YEAR;
   const seasonIndex = Math.floor(tickInYear / TICKS_PER_SEASON);
   const season = SEASONS[seasonIndex] ?? 'spring';
   const tickInSeason = tickInYear - seasonIndex * TICKS_PER_SEASON;
 
-  const temperature = temperatureAt(season, tickInSeason);
+  const temperature = Math.round((temperatureAt(season, tickInSeason) - coldBite) * 10) / 10;
 
   return {
     season,

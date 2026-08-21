@@ -241,12 +241,24 @@ export class Hud {
     // The season and year together, and the day beside them. Split because the
     // narrowest phone drops the day to keep the calendar on one row with the
     // four tool buttons, and CSS can only hide what has its own element.
+    // **And what kind of year it is**, when it is not an ordinary one. It rides
+    // in the calendar rather than arriving as a banner because it is a fact the
+    // player needs all year, not an event: a settlement three seasons into a
+    // bitter year should be able to look up and see why the thermometer is low.
     const seasonLabel = [
       this.i18n.t(`season.${snapshot.season}` as MessageKey),
       `${this.i18n.t('time.yearShort')}${snapshot.year}`,
-    ].join(' · ');
+      // An ordinary year is not news, and the chip is tight on a phone: it gets
+      // no word at all rather than one that says nothing.
+      snapshot.yearKind === 'ordinary'
+        ? ''
+        : this.i18n.t(`year.${snapshot.yearKind}` as MessageKey),
+    ]
+      .filter((part) => part !== '')
+      .join(' · ');
     if (seasonLabel !== this.lastRenderedSeason) {
       this.elements.season.textContent = seasonLabel;
+      this.elements.season.title = this.i18n.t('year.hint');
       this.lastRenderedSeason = seasonLabel;
     }
 
