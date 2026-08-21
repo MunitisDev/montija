@@ -1053,14 +1053,17 @@ settlement with full stores can never be in any trouble at all, however large or
 Illness is the thing in itself. It arrives on its own schedule and does not care how full the
 granary is.
 
-| Rule                  | Value                            |
-| --------------------- | -------------------------------- |
-| Chance of falling ill | 0.2% per villager per day        |
-| With no roof          | five times that                  |
-| Length of a case      | 8 days                           |
-| Cost of a case        | the villager does no work at all |
-| Full care removes     | 75% of the remaining days        |
-| Herbs used            | 0.5 per patient per day of care  |
+| Rule                       | Value                                           |
+| -------------------------- | ----------------------------------------------- |
+| Chance of falling ill      | 0.2% per villager per day                       |
+| With no roof               | five times that                                 |
+| Length of a case           | 8 days                                          |
+| Cost of a case             | the villager does no work at all                |
+| Full care removes          | 75% of the remaining days                       |
+| Herbs used                 | 0.5 per patient per day of care                 |
+| Caught from a housemate    | 3% per ill person under the same roof, per day  |
+| Caught from the settlement | up to 2% a day, scaled by the share who are ill |
+| Water by the houses        | halves both of those                            |
 
 **Illness costs work, not health**, and that took three measurements to arrive at. Every version
 that drained health did the same damage to the shape of the game: a settlement that would have
@@ -1080,9 +1083,39 @@ workshop — so the labour bill is far steeper than the case count suggests. At 
 settlement playing well lost most of the food it had banked for winter, which made sickness the
 game's dominant mechanic rather than its third one.
 
-**Nothing is contagious.** Each villager is rolled independently. Modelling spread would make an
-outbreak a curve to be studied rather than a problem to be answered, and the answer would still be
-"build a healer".
+**And it spreads**, which it did not until version 0.6. The old rule was that each villager was
+rolled independently, on the reasoning that an epidemic curve is a thing to be studied rather than a
+problem to be answered. That reasoning was wrong about which curve it would be: rolled
+independently, sickness scales with population and with nothing else, so it was the one hardship in
+the game a player could neither cause nor prevent.
+
+Both channels are places the player put people. **A household** is the strong one: sharing a roof
+with somebody ill is far and away the likeliest way to catch anything, so a settlement that put
+fourteen people in three houses passes it round those houses. Crowding is a real saving — fewer
+houses, less firewood, less hauling — and this is what it costs. **The settlement** is the weak one,
+from working alongside people, and it scales with the _share_ of the settlement that is ill rather
+than the count, so a large village is not doomed for being large.
+
+**Water within reach of the homes halves the spreading** — the same Well, river or channel that puts
+out fires. Washing is the answer a medieval settlement actually had, it is a decision made seasons
+before the outbreak, and it gives the Well a second reason to exist. It does nothing about people
+falling ill on their own, which is the difference between hygiene and medicine; the second is the
+Healer's job.
+
+The rate is measured. Across six settlements played out over eight years, 3% a housemate makes
+rather more than a third of all illness contagious — 43 cases caught out of 89 — and that is the
+point of having it: much below that and it is a rounding error on the base rate. Much above it was
+tried and rejected: at 5% the share of caught cases passes half and the difficulty curve bends, with
+a one-hut settlement — which is _meant_ to stand still rather than fail — losing two worlds in eight
+instead of one.
+
+**People sleeping rough are not a household**, and that rule was tried the other way round and
+measured away. "The homeless share a roof" is evocative and, in this game, a death sentence: every
+settlement _begins_ with ten settlers in the open, so one case in the first fortnight went round all
+ten of them and took the hands the opening needs to find stone. The first death moved out of winter
+and into autumn, and a well-played settlement's deaths across twenty-four worlds doubled while a
+careless one's did not move — the difficulty curve pointing the wrong way. Sleeping rough is
+dangerous for the reason it always was: five times the chance of falling ill at all.
 
 ---
 

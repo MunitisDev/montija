@@ -152,6 +152,8 @@ export type Advice =
   /** The larders are nearly full, and the next harvest has nowhere to go. */
   | 'larderFilling'
   | 'noShelter'
+  /** More than a quarter of the settlement is ill and nothing is treating them. */
+  | 'sicknessSpreading'
   /**
    * The harvest is lying in the fields and every adult is in a workshop.
    *
@@ -176,6 +178,17 @@ export type Advice =
  * by then the answer is "you needed another one yesterday".
  */
 export const STORAGE_WARNING_FRACTION = 0.9;
+
+/**
+ * How much of the settlement has to be ill before the player is told.
+ *
+ * A quarter, which is the point at which it stops being somebody being unwell
+ * and starts being the reason the woodpile is not growing. Below that the notice
+ * on the day each case starts is enough; above it the settlement has a problem
+ * with two answers — water by the houses and a Healer — and neither of them is
+ * guessable from watching villagers stand still.
+ */
+export const OUTBREAK_SHARE = 0.25;
 
 /**
  * How much of the settlement's comfort water accounts for.
@@ -1039,6 +1052,20 @@ export class Simulation {
     const winterIsNear = year.season === 'autumn' || year.season === 'winter';
     if (this.lastPopulation.homeless > 0 && winterIsNear && !this.hasHousingUnderway()) {
       return 'noShelter';
+    }
+
+    // **An outbreak, which is the one hardship with no picture.** A villager
+    // who is ill looks exactly like a villager with nothing to do: they stop,
+    // and the settlement quietly loses a quarter of its hands for a week and a
+    // half. Said only when it is spreading rather than on every case, and only
+    // while nothing is treating it — a settlement with a staffed Healer has
+    // already answered this and does not need telling twice.
+    if (
+      this.lastIllness.ill >= 2 &&
+      this.lastIllness.ill / people >= OUTBREAK_SHARE &&
+      this.lastIllness.careFraction < 1
+    ) {
+      return 'sicknessSpreading';
     }
 
     // A site waiting for a material the settlement has none of will wait for
@@ -2271,6 +2298,9 @@ export class Simulation {
       // A varied larder keeps people out of their sickbeds, and days not spent
       // ill are days at the end of a life. See `population/IllnessSystem.ts`.
       varietyShare(foodKinds(this.storages, this.villagers.count)),
+      // And whether there is water by the houses to wash in, which is what
+      // decides how far a case gets — the same Well that puts out fires.
+      this.wateredShare(),
     );
     return { ...report, herbsUsed: herbsTaken };
   }

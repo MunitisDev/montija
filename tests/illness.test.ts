@@ -20,7 +20,9 @@ import {
   BASE_ILLNESS_CHANCE,
   CARE_RECOVERY_SHARE,
   EXPOSURE_MULTIPLIER,
+  HOUSEHOLD_CONTAGION,
   ILLNESS_DAYS,
+  WASHING_SHARE,
   chanceFor,
   runIllness,
 } from '@/simulation/population/IllnessSystem';
@@ -71,7 +73,14 @@ describe('who falls ill', () => {
   it('is rare enough not to be a treadmill', () => {
     // A settlement of twenty under a roof should see a handful of cases a year,
     // not a rolling infirmary. Sixty days is a year in this game.
-    const villagers = Array.from({ length: 20 }, (_, i) => person({ id: i + 1 }));
+    //
+    // Housed four to a cottage, which is what twenty people under a roof
+    // actually is — and it matters now that illness spreads: putting the same
+    // twenty in one house is a different claim, and the outbreak below is where
+    // it is tested.
+    const villagers = Array.from({ length: 20 }, (_, i) =>
+      person({ id: i + 1, homeId: Math.floor(i / 4) + 1 }),
+    );
     const random = new SeededRandom(99);
     let cases = 0;
     for (let day = 0; day < 60; day += 1) {
@@ -79,7 +88,7 @@ describe('who falls ill', () => {
     }
 
     expect(cases).toBeGreaterThan(0);
-    expect(cases).toBeLessThan(8);
+    expect(cases).toBeLessThan(10);
   });
 });
 
@@ -129,20 +138,90 @@ describe('a case, once caught', () => {
     expect(villagers[0]!.needs.health).toBe(before);
   });
 
-  it('does not spread', () => {
-    // Nothing is contagious, on purpose: an outbreak that compounds is a curve
-    // to be studied, and the answer would still be "build a healer".
-    const villagers = Array.from({ length: 12 }, (_, i) => person({ id: i + 1 }));
-    villagers[0]!.illDaysRemaining = ILLNESS_DAYS;
-    const random = new SeededRandom(4);
+  it('goes round the house it started in', () => {
+    // The whole point of contagion: five people sharing a roof with somebody ill
+    // are in a different settlement from five people in five cottages, and the
+    // player decides which one they built.
+    const together = Array.from({ length: 5 }, (_, i) => person({ id: i + 1, homeId: 1 }));
+    const apart = Array.from({ length: 5 }, (_, i) => person({ id: i + 1, homeId: i + 1 }));
+    together[0]!.illDaysRemaining = ILLNESS_DAYS;
+    apart[0]!.illDaysRemaining = ILLNESS_DAYS;
 
+    let crowded = 0;
+    let spread = 0;
     for (let day = 0; day < ILLNESS_DAYS; day += 1) {
-      runIllness(villagers, random, 0);
+      crowded += runIllness(together, new SeededRandom(4 + day), 0).fellIll;
+      spread += runIllness(apart, new SeededRandom(4 + day), 0).fellIll;
     }
 
-    // Somebody else may still catch something on their own account; what must
-    // not happen is the whole household going down together.
-    expect(villagers.filter((villager) => villager.isIll).length).toBeLessThan(4);
+    expect(crowded).toBeGreaterThan(spread);
+  });
+
+  it('spreads half as far where there is water to wash in', () => {
+    // The Well's second job, and a decision made seasons before anybody is ill.
+    // Rolled against a fixed number rather than a stream, because the claim is
+    // about the odds and not about one valley's luck.
+    const household = () => {
+      const people = Array.from({ length: 4 }, (_, i) => person({ id: i + 1, homeId: 1 }));
+      people[0]!.illDaysRemaining = ILLNESS_DAYS;
+      return people;
+    };
+    const certain = { next: () => HOUSEHOLD_CONTAGION * 0.75 };
+
+    const dry = runIllness(household(), certain, 0, 0, 0);
+    const washed = runIllness(household(), certain, 0, 0, 1);
+
+    // A roll three quarters of the way to the dry chance catches it without
+    // water and does not with it, which is what halving the spread means.
+    expect(dry.caught).toBe(3);
+    expect(washed.caught).toBe(0);
+    expect(WASHING_SHARE).toBeGreaterThan(0);
+  });
+
+  it('separates what was caught from what simply happened', () => {
+    // Two ways to fall ill, told apart by one roll read twice. It is the only
+    // honest way to answer "did the settlement do this to itself?".
+    const alone = [person()];
+    const report = runIllness(alone, { next: () => 0 }, 0);
+
+    expect(report.fellIll).toBe(1);
+    expect(report.caught).toBe(0);
+  });
+
+  it('does not run through a household in a single day', () => {
+    // Today's exposure is yesterday's sick list. Walk the villagers live and the
+    // first case of the morning infects the family by the afternoon, which makes
+    // the outcome depend on the order people happen to be stored in.
+    const family = Array.from({ length: 4 }, (_, i) => person({ id: i + 1, homeId: 1 }));
+    let call = 0;
+    const random = {
+      next: () => {
+        call += 1;
+        // The first villager falls ill on their own account; the rest roll a
+        // number that would catch it from a sick housemate and would not catch
+        // anything from a healthy one.
+        return call === 1 ? 0 : HOUSEHOLD_CONTAGION * 0.5;
+      },
+    };
+
+    const report = runIllness(family, random, 0);
+
+    expect(report.fellIll).toBe(1);
+    expect(report.caught).toBe(0);
+  });
+
+  it('is not passed round the people sleeping rough, who have no roof to share', () => {
+    // Written the other way round first, and measured away: every settlement
+    // starts with ten people sleeping in the open, so treating them as one
+    // household meant one case in the first fortnight took most of the hands the
+    // opening needs. Sleeping rough is dangerous because of the exposure, not
+    // because of the company.
+    const rough = Array.from({ length: 4 }, (_, i) => person({ id: i + 1, homeId: null }));
+    rough[0]!.illDaysRemaining = ILLNESS_DAYS;
+
+    const report = runIllness(rough, { next: () => HOUSEHOLD_CONTAGION * 0.9 }, 0);
+
+    expect(report.caught).toBe(0);
   });
 });
 
@@ -334,8 +413,13 @@ describe('the settlement as a whole', () => {
   });
 
   it('is rarer under a roof than in the open, over a whole year', () => {
-    // The measurement that makes housing worth more than warmth alone.
-    const sheltered = Array.from({ length: 30 }, (_, i) => person({ id: i + 1, homeId: 1 }));
+    // The measurement that makes housing worth more than warmth alone. Thirty
+    // people housed is thirty people in cottages of four; thirty people exposed
+    // is thirty people sleeping in one heap, which is why the gap is now far
+    // wider than the fivefold the base rate alone would give.
+    const sheltered = Array.from({ length: 30 }, (_, i) =>
+      person({ id: i + 1, homeId: Math.floor(i / 4) + 1 }),
+    );
     const exposed = Array.from({ length: 30 }, (_, i) => person({ id: i + 1, homeId: null }));
     const random = new SeededRandom(2026);
 

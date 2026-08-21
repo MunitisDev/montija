@@ -208,6 +208,8 @@ export const EN = {
   'warning.foodFalling': 'The food is running out — more has to come in than is eaten',
   'warning.freezing': 'People are freezing',
   'warning.noShelter': 'People have no house for the winter — build Houses',
+  'warning.sicknessSpreading':
+    'Illness is going round the houses — a Well nearby to wash and a Healer\u2019s House to treat it',
   'warning.siteStalled': 'Building work has stopped — nothing is being built without',
   'warning.storageFull': 'Goods are lying in the field with nowhere to go — build a Storage Yard',
   'warning.storageFilling': 'The storage yards are nearly full — build another Storage Yard',
@@ -482,7 +484,7 @@ export const EN = {
     'Firewood only warms people who have a house. A full woodshed and no roofs will still kill everyone.',
   'guide.hardship.illness': 'Illness',
   'guide.hardship.illness.detail':
-    'People fall ill now and then, far more often without a roof. They stop working for about a week; a Healer shortens it.',
+    'People fall ill now and then, far more often without a roof, and it spreads: sharing a house with somebody who is ill is by far the likeliest way to catch it, so a crowded settlement passes it round its houses. Water within reach of the homes halves the spreading, and a Healer shortens each case. Anyone ill stops working for about a week.',
   'guide.hardship.age': 'Old age',
   'guide.hardship.age.detail':
     'Villagers grow old and die. Houses let families raise children, which is the only way the settlement lasts.',
@@ -824,6 +826,8 @@ export const ES: Messages = {
   'warning.foodFalling': 'La comida se está acabando: tiene que entrar más de la que se come',
   'warning.freezing': 'La gente se está congelando',
   'warning.noShelter': 'Hay gente sin casa para el invierno: construye Casas',
+  'warning.sicknessSpreading':
+    'La enfermedad corre por las casas: un Pozo cerca para lavarse y una Casa del Sanador para curarla',
   'warning.siteStalled': 'Las obras están paradas: no se construye nada sin',
   'warning.storageFull': 'Hay mercancía en el suelo sin dónde meterla: construye un almacén',
   'warning.storageFilling': 'Los almacenes están casi llenos: construye otro Almacén',
@@ -1081,7 +1085,7 @@ export const ES: Messages = {
     'La leña solo calienta a quien tiene casa. Una leñera llena y ningún tejado mata igual a todo el mundo.',
   'guide.hardship.illness': 'Enfermedad',
   'guide.hardship.illness.detail':
-    'La gente enferma de vez en cuando, mucho más sin un techo. Dejan de trabajar cerca de una semana; un Sanador lo acorta.',
+    'La gente enferma de vez en cuando, mucho más sin un techo, y se contagia: compartir casa con alguien enfermo es de largo la forma más probable de cogerla, así que un asentamiento apiñado la va pasando de casa en casa. El agua al alcance de las viviendas reduce el contagio a la mitad y un Sanador acorta cada caso. Quien está enfermo deja de trabajar cerca de una semana.',
   'guide.hardship.age': 'Vejez',
   'guide.hardship.age.detail':
     'Los aldeanos envejecen y mueren. Las casas permiten criar hijos, que es lo único que hace durar al asentamiento.',
