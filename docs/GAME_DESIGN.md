@@ -1075,19 +1075,57 @@ settlement with full stores can never be in any trouble at all, however large or
 Illness is the thing in itself. It arrives on its own schedule and does not care how full the
 granary is.
 
-| Rule                       | Value                                           |
-| -------------------------- | ----------------------------------------------- |
-| Chance of falling ill      | 0.2% per villager per day                       |
-| With no roof               | five times that                                 |
-| Length of a case           | 8 days                                          |
-| Cost of a case             | the villager does no work at all                |
-| Full care removes          | 75% of the remaining days                       |
-| Herbs used                 | 0.5 per patient per day of care                 |
-| Caught from a housemate    | 3% per ill person under the same roof, per day  |
-| Caught from the settlement | up to 2% a day, scaled by the share who are ill |
-| Water by the houses        | halves both of those                            |
+| Rule                       | Value                                              |
+| -------------------------- | -------------------------------------------------- |
+| Chance of falling ill      | 0.2% per villager per day                          |
+| With no roof               | five times that                                    |
+| Length of a case           | 8 days                                             |
+| Cost of a case             | the villager does no work at all                   |
+| Full care removes          | 75% of the remaining days                          |
+| Herbs used                 | 0.5 per patient per day of care                    |
+| Caught from a housemate    | 3% per ill person under the same roof, per day     |
+| Caught from the settlement | up to 2% a day, scaled by the share who are ill    |
+| Water by the houses        | halves both of those                               |
+| Chance of dying of it      | 0.2% per day unwell at 20, doubling every 12 years |
 
-**Illness costs work, not health**, and that took three measurements to arrive at. Every version
+**Illness can now kill, and the rule it reverses is worth stating precisely**, because the new one is
+narrower than the old. What was measured away three times was illness _draining health_; what happens
+now is a small discrete roll each day somebody is unwell. A drain compounds with hunger and cold and
+front-loads the year — settlements that should have died in winter died in autumn instead. A roll does
+not: it takes the frail, mostly the old, and it cannot quietly hollow out a settlement that is
+otherwise fine.
+
+| Term                       | Effect                                                        |
+| -------------------------- | ------------------------------------------------------------- |
+| Base, per day unwell       | 0.2% at age 20                                                |
+| Age                        | doubles every 12 years — the dominant term                    |
+| A staffed, supplied Healer | removes 70% of the risk, **and** shortens the case            |
+| Cold, and hunger           | up to +75% each, so both at once is a little over three times |
+
+What that comes to for one untreated case of eight days:
+
+| Age | Untreated | With full care | Untreated, freezing and starving |
+| --- | --------- | -------------- | -------------------------------- |
+| 8   | 0.8%      | 0.03%          | 2.4%                             |
+| 20  | 1.6%      | 0.07%          | 4.8%                             |
+| 40  | 5.0%      | 0.2%           | 14.5%                            |
+| 60  | 15.0%     | 0.7%           | 39.9%                            |
+| 68  | 22.9%     | 1.1%           | 56.2%                            |
+
+Children sit _below_ young adults rather than above them, which departs from real medieval mortality
+on purpose: the curve asked for is "the older, the worse", and a game that killed infants at the
+historical rate would be about something else. They are not immune, because a monotonic curve with a
+hole in it is a rule nobody could reason about.
+
+The rate is measured. The first figure tried was four times smaller and the rule was invisible: six
+settlements played out over twenty years buried **two** people of illness between them, because a
+settlement that collapses in its eighth year never has anybody old enough for the age term to matter.
+At 0.2% the same twelve decades of settlement bury **23** — against **one** for the same settlements
+with a Healer's House standing — and every claim in `tests/balance.test.ts` is unchanged. That contrast
+is the whole reason the rule exists: the Healer has no output, costs two pairs of hands and a shelf of
+herbs, and what it sells is that people the settlement would otherwise have buried are still alive.
+
+**Illness still costs work as well**, and that part took three measurements to arrive at. Every version
 that drained health did the same damage to the shape of the game: a settlement that would have
 reached winter lost somebody in _autumn_ instead, because a villager who had been ill during the
 good days met the bad ones with less to spare. Softening the numbers did not help, and neither did

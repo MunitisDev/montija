@@ -17,8 +17,13 @@ import { describe, expect, it } from 'vitest';
 import { SeededRandom } from '@/shared/math/random';
 import { Simulation } from '@/simulation/Simulation';
 import {
+  AGE_DOUBLING,
   BASE_ILLNESS_CHANCE,
   CARE_RECOVERY_SHARE,
+  CARE_SURVIVAL_SHARE,
+  MORTAL_BASE,
+  PRIME_AGE,
+  mortalRiskFor,
   EXPOSURE_MULTIPLIER,
   HOUSEHOLD_CONTAGION,
   ILLNESS_DAYS,
@@ -96,7 +101,10 @@ describe('a case, once caught', () => {
   it('runs its course and ends', () => {
     const villagers = [person()];
     villagers[0]!.illDaysRemaining = ILLNESS_DAYS;
-    const random = new SeededRandom(1);
+    // A stream that never rolls anything: nobody catches anything and nobody
+    // dies of it, so the only thing moving is the case itself. This is a claim
+    // about how long an illness lasts and it should not be a claim about luck.
+    const random = { next: () => 1 };
 
     let days = 0;
     while (villagers[0]!.isIll && days < 50) {
@@ -113,7 +121,7 @@ describe('a case, once caught', () => {
     // still loses the work.
     const treated = [person()];
     treated[0]!.illDaysRemaining = ILLNESS_DAYS;
-    const random = new SeededRandom(1);
+    const random = { next: () => 1 };
 
     let days = 0;
     while (treated[0]!.isIll && days < 50) {
@@ -126,6 +134,81 @@ describe('a case, once caught', () => {
     expect(CARE_RECOVERY_SHARE).toBeGreaterThan(0);
   });
 
+  it('can be the end of somebody, and the older they are the likelier', () => {
+    // What the player asked for, and the reversal of the oldest rule in this
+    // system. Doubling every dozen years, so a settlement's elders are the ones
+    // at risk and its young adults are very nearly not.
+    const young = person();
+    young.age = PRIME_AGE;
+    const old = person();
+    old.age = PRIME_AGE + AGE_DOUBLING * 3;
+
+    expect(mortalRiskFor(young)).toBeCloseTo(MORTAL_BASE);
+    expect(mortalRiskFor(old)).toBeCloseTo(MORTAL_BASE * 8);
+  });
+
+  it('is far less likely for somebody being treated', () => {
+    const patient = person();
+    patient.age = 60;
+
+    expect(mortalRiskFor(patient, 1)).toBeCloseTo(
+      mortalRiskFor(patient, 0) * (1 - CARE_SURVIVAL_SHARE),
+    );
+    expect(mortalRiskFor(patient, 1)).toBeLessThan(mortalRiskFor(patient, 0));
+  });
+
+  it('is worse for somebody cold and worse again for somebody hungry', () => {
+    // The two things the player is already managing, meeting the sickbed. Not a
+    // second way to lose health — a multiplier on a small number.
+    const comfortable = person();
+    const cold = person();
+    cold.needs.warmth = 0;
+    const starving = person();
+    starving.needs.hunger = 0;
+    const both = person();
+    both.needs.warmth = 0;
+    both.needs.hunger = 0;
+
+    expect(mortalRiskFor(cold)).toBeGreaterThan(mortalRiskFor(comfortable));
+    expect(mortalRiskFor(starving)).toBeGreaterThan(mortalRiskFor(comfortable));
+    expect(mortalRiskFor(both)).toBeGreaterThan(mortalRiskFor(cold));
+    // And bounded: three times over, not ten.
+    expect(mortalRiskFor(both)).toBeLessThan(mortalRiskFor(comfortable) * 4);
+  });
+
+  it('reports who died rather than removing them itself', () => {
+    // The illness system decides who does not recover; what a death means for
+    // the roll of the dead, the household and the job they were holding belongs
+    // to the simulation.
+    const villagers = [person()];
+    villagers[0]!.age = 70;
+    villagers[0]!.illDaysRemaining = ILLNESS_DAYS;
+
+    const report = runIllness(villagers, { next: () => 0 }, 0);
+
+    expect(report.died).toEqual([villagers[0]!.id]);
+    expect(villagers[0]!.isIll).toBe(false);
+  });
+
+  it('buries them in the settlement, and names the illness', () => {
+    // End to end: a settlement of elders with something going round loses
+    // people, and the roll says what took them.
+    const simulation = new Simulation(OPTIONS);
+    for (const villager of simulation.villagers.all) {
+      villager.age = 74;
+      villager.illDaysRemaining = ILLNESS_DAYS;
+    }
+    const before = simulation.villagers.count;
+
+    for (let day = 0; day < ILLNESS_DAYS; day += 1) {
+      runDays(simulation, 1);
+    }
+
+    expect(simulation.villagers.count).toBeLessThan(before);
+    const roll = simulation.necrology.all;
+    expect(roll.some((record) => record.cause === 'illness')).toBe(true);
+  });
+
   it('takes no health at all', () => {
     // The central design decision. Illness costs the settlement hands; hunger
     // and cold are what kill.
@@ -133,7 +216,7 @@ describe('a case, once caught', () => {
     villagers[0]!.illDaysRemaining = ILLNESS_DAYS;
     const before = villagers[0]!.needs.health;
 
-    runIllness(villagers, new SeededRandom(1), 0);
+    runIllness(villagers, { next: () => 1 }, 0);
 
     expect(villagers[0]!.needs.health).toBe(before);
   });
@@ -142,16 +225,22 @@ describe('a case, once caught', () => {
     // The whole point of contagion: five people sharing a roof with somebody ill
     // are in a different settlement from five people in five cottages, and the
     // player decides which one they built.
-    const together = Array.from({ length: 5 }, (_, i) => person({ id: i + 1, homeId: 1 }));
-    const apart = Array.from({ length: 5 }, (_, i) => person({ id: i + 1, homeId: i + 1 }));
-    together[0]!.illDaysRemaining = ILLNESS_DAYS;
-    apart[0]!.illDaysRemaining = ILLNESS_DAYS;
-
+    //
+    // Counted over forty streams rather than one, because a single household's
+    // fortnight is luck: the rate is three in a hundred a day.
     let crowded = 0;
     let spread = 0;
-    for (let day = 0; day < ILLNESS_DAYS; day += 1) {
-      crowded += runIllness(together, new SeededRandom(4 + day), 0).fellIll;
-      spread += runIllness(apart, new SeededRandom(4 + day), 0).fellIll;
+    for (let trial = 0; trial < 40; trial += 1) {
+      const together = Array.from({ length: 5 }, (_, i) => person({ id: i + 1, homeId: 1 }));
+      const apart = Array.from({ length: 5 }, (_, i) => person({ id: i + 1, homeId: i + 1 }));
+      together[0]!.illDaysRemaining = ILLNESS_DAYS;
+      apart[0]!.illDaysRemaining = ILLNESS_DAYS;
+      const near = new SeededRandom(4 + trial);
+      const far = new SeededRandom(4 + trial);
+      for (let day = 0; day < ILLNESS_DAYS; day += 1) {
+        crowded += runIllness(together, near, 0).fellIll;
+        spread += runIllness(apart, far, 0).fellIll;
+      }
     }
 
     expect(crowded).toBeGreaterThan(spread);

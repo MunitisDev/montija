@@ -109,6 +109,7 @@ describe('the roll', () => {
       hungerAndCold: 0,
       oldAge: 1,
       fire: 0,
+      illness: 0,
     });
   });
 

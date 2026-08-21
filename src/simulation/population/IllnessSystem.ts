@@ -184,6 +184,94 @@ export const CARE_RECOVERY_SHARE = 0.75;
 /** Herbs used per patient per day of care. */
 export const HERBS_PER_PATIENT_PER_DAY = 0.5;
 
+/**
+ * Chance an ill villager in their prime dies of it, per day unwell.
+ *
+ * **This reverses the oldest rule in this file, and the reversal is narrower
+ * than it looks.** What was measured away three times was illness *draining
+ * health*: a villager who had been unwell during the good days met the bad ones
+ * with less to spare, so settlements that should have died in winter died in
+ * autumn instead. A drain compounds with everything else and front-loads the
+ * year. A discrete roll does not: it is a small chance each day, it takes the
+ * frail rather than everybody, and it cannot quietly hollow out a settlement
+ * that is otherwise fine.
+ *
+ * At this rate a whole case — {@link ILLNESS_DAYS} of it, untreated — is about one
+ * chance in sixty for a twenty-year-old and nearly one in four for somebody of
+ * sixty-eight. See {@link AGE_DOUBLING} for the curve, which is the point of the
+ * mechanic.
+ *
+ * **Measured, and the first figure tried was four times smaller.** At 0.0008 the
+ * rule was invisible: six settlements played out over twenty years buried *two*
+ * people of illness between them, because a settlement that collapses in its
+ * eighth year never has anybody old enough for the age term to matter. Raising it
+ * changed nothing about the shape of the year — every claim in
+ * `tests/balance.test.ts` still holds — and made the mechanic something a player
+ * can actually see: 23 deaths over the same twelve decades of settlement, against
+ * **one** for the same settlements with a Healer's House standing. That contrast
+ * is the whole reason the rule exists.
+ */
+export const MORTAL_BASE = 0.002;
+
+/** The age {@link MORTAL_BASE} is quoted at. */
+export const PRIME_AGE = 20;
+
+/**
+ * Years of age in which the risk doubles.
+ *
+ * **Age is the strongest term by far, and doubling is the honest shape of it.**
+ * Twelve years is steep enough that a settlement's elders are genuinely at risk
+ * of not surviving a bad winter's illness and its young adults are barely
+ * touched, which is what makes a Healer's House something a mature settlement
+ * needs more than a new one:
+ *
+ * | Age | Chance of dying of one untreated case |
+ * | --- | ------------------------------------- |
+ * | 8   | 0.2%                                  |
+ * | 20  | 0.6%                                  |
+ * | 32  | 1.3%                                  |
+ * | 44  | 2.5%                                  |
+ * | 56  | 5.0%                                  |
+ * | 68  | 9.6%                                  |
+ *
+ * Children are below a young adult rather than above them, which is a
+ * deliberate departure from real medieval mortality: the curve the player asked
+ * for is "the older, the worse", and a game that killed infants at the true
+ * historical rate would be about something else. They are not immune, because a
+ * monotonic curve with a hole in it is a rule nobody could reason about.
+ */
+export const AGE_DOUBLING = 12;
+
+/**
+ * How much of the risk a fully staffed, supplied healer takes away.
+ *
+ * Seven tenths, and it stacks with the case being shorter — {@link
+ * CARE_RECOVERY_SHARE} — so a Healer's House cuts both the number of days at
+ * risk and the risk of each day. That double return is deliberate: the building
+ * has no output, costs two pairs of hands and a shelf of herbs, and the only
+ * thing it can offer in exchange is that people the settlement would have buried
+ * are still alive.
+ *
+ * Not ten tenths, ever. A healer who guaranteed survival would make the whole
+ * mechanic a checkbox: build one, stop thinking about it.
+ */
+export const CARE_SURVIVAL_SHARE = 0.7;
+
+/**
+ * What an empty need adds to the risk, each.
+ *
+ * Being cold and being hungry are the two the player is already managing, and
+ * this is where they meet the sickbed: an ill villager who is also freezing and
+ * starving carries a little over three times the risk of a warm, fed one.
+ *
+ * Deliberately a *multiplier on a small number* rather than another way to lose
+ * health. That is the whole distinction this file rests on — hunger and cold
+ * still kill by themselves, on their own schedule, and what they do here is make
+ * an illness the thing that finishes a bad winter rather than a second race
+ * running alongside it.
+ */
+export const FRAILTY = 0.75;
+
 export interface IllnessReport {
   /** People who fell ill today. */
   readonly fellIll: number;
@@ -198,6 +286,14 @@ export interface IllnessReport {
   readonly caught: number;
   /** People who recovered today. */
   readonly recovered: number;
+  /**
+   * Villagers who died of it today, by id.
+   *
+   * Ids rather than the villagers, because this system decides who does not
+   * recover and `Simulation` owns what a death means for the roll of the dead,
+   * the household and the jobs they were holding.
+   */
+  readonly died: readonly number[];
   /** People ill right now. */
   readonly ill: number;
   /** How much of the settlement's sickness was being treated, in `0..1`. */
@@ -209,6 +305,7 @@ export const NO_ILLNESS: IllnessReport = {
   fellIll: 0,
   caught: 0,
   recovered: 0,
+  died: [],
   ill: 0,
   careFraction: 0,
   herbsUsed: 0,
@@ -254,6 +351,7 @@ export function runIllness(
   let caught = 0;
   let recovered = 0;
   let ill = 0;
+  const died: number[] = [];
 
   // **Who is ill is counted before anybody is resolved**, and it has to be: walk
   // the list live and the first person to fall ill this morning is infecting
@@ -279,6 +377,16 @@ export function runIllness(
       // building rather than a convenience: shortening cases lengthens lives,
       // so the settlement's life expectancy is something the player builds.
       villager.illDaysLived += 1;
+
+      // **And a day unwell is a day that can be the last one.** Rolled before
+      // the case is advanced, so the day they would have recovered on is still a
+      // day they were ill — and rolled per day rather than per case, which is
+      // what makes a healer shortening the illness worth something twice over.
+      if (random.next() < mortalRiskFor(villager, care)) {
+        villager.illDaysRemaining = 0;
+        died.push(villager.id);
+        continue;
+      }
 
       // Care shortens a case rather than curing it outright: a healer is
       // somebody who gets you through it, not a switch that turns it off.
@@ -318,6 +426,7 @@ export function runIllness(
     fellIll,
     caught,
     recovered,
+    died,
     ill,
     careFraction: care,
     herbsUsed: 0,
@@ -350,6 +459,31 @@ export function chanceFor(
   // Eating well resists what is going round as well as what is not: a body that
   // has had a winter of nothing but roots is the one that takes it.
   return Math.min(1, (own + Math.max(0, contagion)) * wellFed);
+}
+
+/**
+ * How likely this villager is to die of what they have, today.
+ *
+ * Four terms, and each one is something the player either decided or can do
+ * something about:
+ *
+ * - **their age**, doubling every {@link AGE_DOUBLING} years, which is the term
+ *   that dominates and the reason a settlement of elders is fragile in a way a
+ *   settlement of twenty-year-olds is not;
+ * - **whether anybody is treating them** — {@link CARE_SURVIVAL_SHARE};
+ * - **whether they are warm**, which is firewood and a roof;
+ * - **whether they are fed**, which is the larder.
+ *
+ * Multiplicative, so the frail old man in an unheated house during a hard winter
+ * is in real danger and the fed, warm young woman is very nearly not. Capped at
+ * one, which nothing in this game's numbers can reach.
+ */
+export function mortalRiskFor(villager: Villager, care = 0): number {
+  const age = Math.pow(2, (villager.age - PRIME_AGE) / AGE_DOUBLING);
+  const cold = 1 + FRAILTY * (1 - clamp(villager.needs.warmth / 100));
+  const hungry = 1 + FRAILTY * (1 - clamp(villager.needs.hunger / 100));
+  const treated = 1 - CARE_SURVIVAL_SHARE * clamp(care);
+  return Math.min(1, MORTAL_BASE * age * cold * hungry * treated);
 }
 
 /**

@@ -386,6 +386,10 @@ export class Hud {
     // is the only way the player can connect the empty granary to the cause.
     this.announce('event.fellIll', snapshot.illness.fellIll);
     this.announce('event.recovered', snapshot.illness.recovered);
+    // And the ones who did not recover. Said apart from the hardship deaths
+    // below, which are counted off the day's hunger and cold and know nothing
+    // about a sickbed.
+    this.announce('event.diedOfIllness', snapshot.illness.died.length);
     this.announce('event.diedOfOldAge', population.deathsOfOldAge);
     this.announce('event.died', fromHardship);
   }

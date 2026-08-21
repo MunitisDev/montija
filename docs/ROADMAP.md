@@ -556,21 +556,35 @@ be in any trouble at all, however large or badly housed.
 
 - **Illness** arrives on its own schedule, five times as often for somebody with
   no roof over them, and does not care how full the granary is.
-- An ill villager **stops working** for eight days. That is the whole cost:
-  illness takes hands, not health.
+- An ill villager **stops working** for eight days, which is the cost a healthy
+  settlement feels: illness takes hands.
+- It **spreads**, through two channels the player built: 3% a day per ill person
+  under the same roof, and up to 2% from the settlement at large, scaled by the
+  share who are ill. Water within reach of the homes halves both.
+- It **can kill**, and age is the term that dominates: 0.2% a day unwell at
+  twenty, doubling every twelve years. Cold and hunger add up to three quarters
+  each on top.
 - A **Herbalist's Hut** gathers herbs while things grow. They keep.
-- A **Healer's House** shortens a case, using both staff and herbs. Either one
-  missing and it treats nobody.
-- Nothing is contagious. Each villager is rolled independently.
+- A **Healer's House** shortens a case _and_ removes 70% of the risk of each day,
+  using both staff and herbs. Either one missing and it treats nobody.
 
-Illness costing work rather than health took three measurements to arrive at.
-Every version that drained health did the same damage: a settlement that would
-have reached winter lost somebody in _autumn_ instead, because a villager who
-had been ill during the good days met the bad ones with less to spare. Softening
-the numbers did not help, and neither did a floor, and neither did suppressing
-the drain while somebody was already starving — the front-loading was the
-problem, not its size. Costing work still kills a marginal settlement, but it
-kills by starvation in winter, which is the failure this game is about.
+Illness not draining health took three measurements to arrive at, and the rule
+that it can now kill does not undo them. Every version that drained health did
+the same damage: a settlement that would have reached winter lost somebody in
+_autumn_ instead, because a villager who had been ill during the good days met
+the bad ones with less to spare. Softening the numbers did not help, and neither
+did a floor, and neither did suppressing the drain while somebody was already
+starving — the front-loading was the problem, not its size. A drain compounds
+with everything; a small daily roll takes the frail and leaves a healthy
+settlement healthy.
+
+The mortality rate is measured too. The first figure tried was four times smaller
+and the rule was invisible — six settlements over twenty years buried two people
+of illness between them, because a settlement that collapses in its eighth year
+never has anybody old enough for the age term to bite. At the shipped rate the
+same twelve decades bury 23, against **one** with a Healer's House standing, and
+no claim in the balance suite moved. See `docs/GAME_DESIGN.md` for the table by
+age.
 
 The base rate is measured rather than picked. A case costs eight days of
 somebody's work, and a ten-person settlement has only two or three pairs of

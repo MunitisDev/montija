@@ -14,13 +14,16 @@
  *
  * **The causes are the ones the simulation actually has.** Hunger and cold each
  * drain health, and health at zero is death; old age arrives on its own
- * schedule; and a fire takes whoever could not get out of the building it took.
- * Illness is deliberately *not* a cause, because it does not kill anybody by
- * itself: a case costs somebody their working days, and the settlement dies of
- * the starvation that follows in winter. Listing it would be inventing a mechanic
- * on a screen whose whole job is to explain what really happened — so instead
- * each record notes whether they were ill at the end, which is a true thing that
- * was true of them, and which on a `fire` line is the reason they are on it.
+ * schedule; a fire takes whoever could not get out of the building it took; and
+ * an illness takes the frail, mostly the old.
+ *
+ * `illness` was for a long time deliberately absent from this list, because for
+ * a long time an illness could not kill anybody — it cost a settlement working
+ * days and the starvation came later. It can now, so the roll says so; leaving it
+ * off would be the opposite error to the one that rule was avoiding. Each record
+ * still notes whether they were **ill at the end** whatever took them, which on a
+ * `hunger` or `cold` line is context and on a `fire` line is very nearly the
+ * reason.
  */
 
 import type { BuildingId } from '@/data/buildings';
@@ -35,7 +38,7 @@ import type { Sex, Villager } from '@/simulation/villagers/Villager';
  * two: a villager who was starving *and* freezing is the settlement failing at
  * both, and picking one of them for the roll would misreport a winter.
  */
-export type DeathCause = 'hunger' | 'cold' | 'hungerAndCold' | 'oldAge' | 'fire';
+export type DeathCause = 'hunger' | 'cold' | 'hungerAndCold' | 'oldAge' | 'fire' | 'illness';
 
 export const DEATH_CAUSES: readonly DeathCause[] = [
   'hunger',
@@ -43,6 +46,7 @@ export const DEATH_CAUSES: readonly DeathCause[] = [
   'hungerAndCold',
   'oldAge',
   'fire',
+  'illness',
 ];
 
 /** One line of the roll. Plain data, so it writes to a save as-is. */
@@ -132,6 +136,7 @@ export class Necrology {
       hungerAndCold: 0,
       oldAge: 0,
       fire: 0,
+      illness: 0,
     };
     for (const record of this.records) {
       counts[record.cause] += 1;

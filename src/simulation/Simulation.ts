@@ -2339,6 +2339,20 @@ export class Simulation {
       // decides how far a case gets — the same Well that puts out fires.
       this.wateredShare(),
     );
+    // **Whoever did not come through it.** Buried here rather than inside the
+    // illness system, for the same reason a fire's dead are: that system decides
+    // who does not recover, and what a death means for the roll, the household
+    // and the job they were holding is this one's business.
+    for (const id of report.died) {
+      const villager = this.villagers.findById(id);
+      if (!villager) {
+        continue;
+      }
+      this.necrology.record(villager, 'illness', this.year);
+      this.villagers.remove(villager.id);
+      this.totalDeaths += 1;
+      this.chronicle.died += 1;
+    }
     return { ...report, herbsUsed: herbsTaken };
   }
 

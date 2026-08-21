@@ -226,6 +226,7 @@ export const EN = {
   'event.fireSaved': 'the fire was put out',
   'event.fireLost': 'a building burned down',
   'event.fireDeath': 'Someone did not get out of the fire',
+  'event.diedOfIllness': 'Someone has died of their illness',
   'event.merchant': 'A merchant has arrived',
   'event.fellIll': 'Someone has fallen ill',
   'event.recovered': 'Someone has recovered',
@@ -281,6 +282,7 @@ export const EN = {
   'death.hungerAndCold': 'Hunger and cold',
   'death.oldAge': 'Old age',
   'death.fire': 'Fire',
+  'death.illness': 'Illness',
   'death.ill.f': 'ill',
   'death.ill.m': 'ill',
   'building.underConstruction': 'Under construction',
@@ -486,7 +488,7 @@ export const EN = {
     'Firewood only warms people who have a house. A full woodshed and no roofs will still kill everyone.',
   'guide.hardship.illness': 'Illness',
   'guide.hardship.illness.detail':
-    'People fall ill now and then, far more often without a roof, and it spreads: sharing a house with somebody who is ill is by far the likeliest way to catch it, so a crowded settlement passes it round its houses. Water within reach of the homes halves the spreading, and a Healer shortens each case. Anyone ill stops working for about a week.',
+    'People fall ill now and then, far more often without a roof, and it spreads: sharing a house with somebody who is ill is by far the likeliest way to catch it, so a crowded settlement passes it round its houses. Water within reach of the homes halves the spreading. Anyone ill stops working for about a week \u2014 and may not recover: the risk doubles every dozen years of age, so an untreated illness is barely a fright for a young villager and close to one chance in four for somebody of sixty-eight. Being cold or hungry makes it worse again. A staffed Healer\u2019s House with herbs on the shelf both shortens the illness and cuts the risk of each day, which together is nearly all of it.',
   'guide.hardship.age': 'Old age',
   'guide.hardship.age.detail':
     'Villagers grow old and die. Houses let families raise children, which is the only way the settlement lasts.',
@@ -846,6 +848,7 @@ export const ES: Messages = {
   'event.fireSaved': 'se ha apagado el fuego',
   'event.fireLost': 'un edificio ha ardido',
   'event.fireDeath': 'Alguien no ha salido del incendio',
+  'event.diedOfIllness': 'Alguien ha muerto de su enfermedad',
   'event.merchant': 'Ha llegado un mercader',
   'event.fellIll': 'Alguien ha enfermado',
   'event.recovered': 'Alguien se ha recuperado',
@@ -886,6 +889,7 @@ export const ES: Messages = {
   'death.hungerAndCold': 'Hambre y frío',
   'death.oldAge': 'Vejez',
   'death.fire': 'Fuego',
+  'death.illness': 'Enfermedad',
   'death.ill.f': 'enferma',
   'death.ill.m': 'enfermo',
   'building.underConstruction': 'En construcción',
@@ -1089,7 +1093,7 @@ export const ES: Messages = {
     'La leña solo calienta a quien tiene casa. Una leñera llena y ningún tejado mata igual a todo el mundo.',
   'guide.hardship.illness': 'Enfermedad',
   'guide.hardship.illness.detail':
-    'La gente enferma de vez en cuando, mucho más sin un techo, y se contagia: compartir casa con alguien enfermo es de largo la forma más probable de cogerla, así que un asentamiento apiñado la va pasando de casa en casa. El agua al alcance de las viviendas reduce el contagio a la mitad y un Sanador acorta cada caso. Quien está enfermo deja de trabajar cerca de una semana.',
+    'La gente enferma de vez en cuando, mucho más sin un techo, y se contagia: compartir casa con alguien enfermo es de largo la forma más probable de cogerla, así que un asentamiento apiñado la va pasando de casa en casa. El agua al alcance de las viviendas reduce el contagio a la mitad. Quien está enfermo deja de trabajar cerca de una semana \u2014 y puede no recuperarse: el riesgo se duplica cada docena de años de edad, así que una enfermedad sin tratar es un susto para un aldeano joven y casi una de cada cuatro para alguien de sesenta y ocho. El frío y el hambre lo empeoran. Una Casa del Sanador con gente y con hierbas acorta la enfermedad y además reduce el riesgo de cada día, y entre las dos cosas se lleva casi todo.',
   'guide.hardship.age': 'Vejez',
   'guide.hardship.age.detail':
     'Los aldeanos envejecen y mueren. Las casas permiten criar hijos, que es lo único que hace durar al asentamiento.',

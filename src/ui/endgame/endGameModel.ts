@@ -58,12 +58,11 @@ export interface EndGameReport {
   /**
    * Said under the roll when anybody died ill.
    *
-   * Illness is not one of the causes, because it does not kill by itself: it
-   * costs a settlement working days and the starvation comes later. Naming it as
-   * a cause on the one screen whose job is to explain what happened would be
-   * inventing a mechanic. Saying how many were ill at the end is simply true —
-   * and on a `fire` line it is very nearly the cause, since being ill is what
-   * doubles the chance of not getting out of a burning building.
+   * Illness *is* one of the causes now, and this line is still worth keeping
+   * beside it: how many of the settlement's dead were unwell when whatever took
+   * them took them. On a `hunger` or `cold` line that is context — a sickbed is
+   * where a bad winter finishes people — and on a `fire` line it is very nearly
+   * the cause, since being ill doubles the chance of not getting out.
    */
   readonly illNote: string;
 }
