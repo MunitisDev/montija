@@ -406,11 +406,20 @@ Three behaviours worth recording:
   while they read it.
 - **Starting a placement closes it, and cancelling does not reopen it.** The player has said no to
   that building; reopening the menu under their thumb is a second decision they did not make.
-- **In portrait the bar wraps to two rows** rather than truncating "Settlement" to "Settle…".
+- **In portrait the bar is a grid of four**, rather than truncating "Settlement" to "Settle…".
   Portrait has height to spare and no width to spare, which is the trade every other row there
-  makes.
+  makes — but wrapping on a flex basis let the _width_ decide how many fitted, which came out at
+  three and cost a whole third row. Reported from a phone: with the resource strip, the tools row, a
+  warning, the panel for the tapped tile and the placement bar all stacked below the world, a third
+  row of buttons is a real amount of settlement hidden. Four to a row is 102px instead of 150px, and
+  seven categories are two rows on every handset rather than three on most.
+- **The odd one out spans the gap.** Seven categories leave the second row three wide, and an empty
+  fourth column reads as a button that failed to load, so the last one takes two columns — by a rule
+  that fires only when the last item _is_ the third of a row, so an eighth category turns it off on
+  its own.
 
-Verified at 1180×820, 830×412 and 412×830, in both languages.
+Verified at 1180×820, 830×412, 412×860, 360×740 and 344×700, in both languages: two rows, nothing
+truncated, at every one.
 
 ## Drawing a road — Implemented
 

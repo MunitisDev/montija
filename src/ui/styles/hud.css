@@ -990,24 +990,46 @@
   }
 
   /*
-   * Held upright the five category names do not fit across 412px, and a
-   * truncated "Settle…" is a button the player has to guess at. Portrait has
-   * height to spare and width to spare none of, so the bar wraps to two rows
-   * rather than shortening what it says — the same trade every other row in
-   * portrait makes.
+   * **Four to a row, held upright.** Seven category names do not fit across
+   * 412px, so the bar wraps — but wrapping on a flex basis let the width decide
+   * how many fitted, which came out at three and cost a whole third row. On a
+   * portrait phone the bottom of the screen already carries the resource strip,
+   * the tools row, whatever the game is warning about, the panel for the tile
+   * that was tapped and the placement bar; a row of buttons is a real amount of
+   * the settlement hidden.
+   *
+   * A grid of exactly four says how many rather than asking, so seven
+   * categories are two rows instead of three whatever the handset is.
    */
   .build-bar {
-    flex-wrap: wrap;
-    row-gap: 6px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
   }
 
   .build-button {
-    flex: 1 1 6.5rem;
+    /* A grid cell rather than a flex share. */
+    flex: none;
+    padding: 0 6px;
+    font-size: 0.76rem;
+  }
+
+  /*
+   * The odd one out fills the row it is on.
+   *
+   * With seven categories the second row holds three and would leave a gap in
+   * the fourth column, which reads as a button that failed to load. The rule
+   * fires only when the last item *is* the third of a row — add an eighth
+   * category and it stops applying on its own, which is the point of writing it
+   * this way rather than hard-coding "the seventh one".
+   */
+  .build-button:last-child:nth-child(4n + 3) {
+    grid-column: span 2;
   }
 
   /* In portrait there is room for it, so it does not have to give way. */
   #hud.is-placing .build-bar {
-    display: flex;
+    display: grid;
   }
 
   .tile-panel {

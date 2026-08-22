@@ -132,7 +132,8 @@ export const REFERENCE_WORLD_SEED = 20260815;
  * - **patch** — a fix or a pass of polish. Flames instead of a red house, a
  *   warning that stops crying wolf, windows that are not crooked.
  *
- * `0.9.0` is wolves you can see and a fight with them: a pack that walks onto the
+ * `0.9.1` fits the build menu into two rows on a phone held upright. `0.9.0`
+ * before it was wolves you can see and a fight with them: a pack that walks onto the
  * map, an alarm that sends the children indoors and everybody else out with a
  * tool, and a wall with gates in it and stone to build it up with. `0.8.0` before
  * it was the first version of that wall, and the first thing in this game that
@@ -150,4 +151,4 @@ export const REFERENCE_WORLD_SEED = 20260815;
  * cheaper than plumbing the same string through two config files and bundling
  * the manifest into the game to read one field off it.
  */
-export const GAME_VERSION = '0.9.0';
+export const GAME_VERSION = '0.9.1';
