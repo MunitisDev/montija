@@ -200,16 +200,6 @@ export function drawBridgeConnector(graphics: Phaser.GameObjects.Graphics, mask:
   }
 }
 
-/**
- * How tall a stake line is drawn, in texture pixels.
- *
- * Twelve, against a tile 32 tall — chest height on a villager drawn at two
- * thirds scale, which is what a palisade of driven stakes should be. Any taller
- * and it hides the ground behind it at the zoom the game is played at; any
- * shorter and it reads as a hedge.
- */
-const STAKE_HEIGHT = 12;
-
 /** Fills a grid-aligned rectangle lifted off the ground by `lift` pixels. */
 function fillLiftedRect(
   graphics: Phaser.GameObjects.Graphics,
@@ -267,8 +257,119 @@ function fillStanding(
  * A lone cell still gets a post and a short length of fence, so a player who
  * orders one cell sees one cell of fence rather than nothing.
  */
-export function drawFenceConnector(graphics: Phaser.GameObjects.Graphics, mask: number): void {
-  // The shadow, on the ground, so the stakes do not look like they are floating.
+export interface WallPalette {
+  /** The side of it, in shadow. */
+  readonly face: number;
+  /** The lit top edge, which is what makes it read as standing up. */
+  readonly top: number;
+  /** How tall the run is drawn, in texture pixels. */
+  readonly height: number;
+  /** How wide, as a fraction of a cell. */
+  readonly half: number;
+}
+
+/** Driven stakes: narrow, warm, and the shorter of the two walls. */
+export const PALISADE: WallPalette = { face: 0x4a3b28, top: 0x8a7350, height: 12, half: 0.07 };
+
+/**
+ * Dressed stone: taller, thicker, and cold.
+ *
+ * The three differences are all deliberate and all visible from across the
+ * valley, because the whole point of the upgrade is that the player can see which
+ * of their walls will hold: stone is two pixels taller, half again as thick, and
+ * grey against the palisade's brown.
+ */
+export const STONE_WALL: WallPalette = { face: 0x4e5155, top: 0x9aa0a4, height: 14, half: 0.105 };
+
+/**
+ * A gateway: the wall on either side, and nothing in the middle.
+ *
+ * Drawn as the *absence* of a run — two posts and a lintel over a gap — because
+ * that is what tells the player where their people go through. The lintel is what
+ * stops it reading as a hole somebody forgot to fill.
+ */
+export function drawGateConnector(
+  graphics: Phaser.GameObjects.Graphics,
+  mask: number,
+  wall: WallPalette,
+): void {
+  drawConnectorBand(graphics, mask, { half: 0.16, colour: 0x2b2419, alpha: 0.45 });
+
+  const arms = CONNECTOR_DIRECTIONS.filter((direction) => (mask & direction.bit) !== 0);
+  for (const direction of arms) {
+    // The stub of wall on this side, stopping short of the middle: the gap is
+    // the gate.
+    const near = 0.24;
+    const far = REACH;
+    if (direction.dx !== 0) {
+      const from = direction.dx * near;
+      const to = direction.dx * far;
+      fillStanding(
+        graphics,
+        Math.min(from, to),
+        -wall.half,
+        Math.max(from, to),
+        wall.half,
+        wall.height,
+        wall.face,
+        wall.top,
+      );
+      // The post the gate hangs on.
+      fillStanding(
+        graphics,
+        from - 0.05,
+        -0.1,
+        from + 0.05,
+        0.1,
+        wall.height + 5,
+        wall.face,
+        wall.top,
+      );
+    } else {
+      const from = direction.dy * near;
+      const to = direction.dy * far;
+      fillStanding(
+        graphics,
+        -wall.half,
+        Math.min(from, to),
+        wall.half,
+        Math.max(from, to),
+        wall.height,
+        wall.face,
+        wall.top,
+      );
+      fillStanding(
+        graphics,
+        -0.1,
+        from - 0.05,
+        0.1,
+        from + 0.05,
+        wall.height + 5,
+        wall.face,
+        wall.top,
+      );
+    }
+  }
+
+  // The lintel across the opening, drawn high so the gap under it is a doorway
+  // rather than a gap.
+  graphics.fillStyle(wall.top, 0.9);
+  fillLiftedRect(graphics, -0.2, -0.05, 0.2, 0.05, wall.height + 6);
+
+  // A gate with nothing joined to it yet is still a gateway: two posts.
+  if (mask === 0) {
+    for (const at of [-0.2, 0.2]) {
+      fillStanding(graphics, at - 0.05, -0.1, at + 0.05, 0.1, wall.height + 5, wall.face, wall.top);
+    }
+  }
+}
+
+/** A length of wall, in whichever material. */
+export function drawWallConnector(
+  graphics: Phaser.GameObjects.Graphics,
+  mask: number,
+  wall: WallPalette,
+): void {
   drawConnectorBand(graphics, mask, { half: 0.16, colour: 0x2b2419, alpha: 0.45 });
 
   const arms = CONNECTOR_DIRECTIONS.filter((direction) => (mask & direction.bit) !== 0);
@@ -278,29 +379,42 @@ export function drawFenceConnector(graphics: Phaser.GameObjects.Graphics, mask: 
       fillStanding(
         graphics,
         Math.min(0, far),
-        -0.07,
+        -wall.half,
         Math.max(0, far),
-        0.07,
-        STAKE_HEIGHT,
-        0x4a3b28,
-        0x8a7350,
+        wall.half,
+        wall.height,
+        wall.face,
+        wall.top,
       );
     } else {
       const far = direction.dy * REACH;
       fillStanding(
         graphics,
-        -0.07,
+        -wall.half,
         Math.min(0, far),
-        0.07,
+        wall.half,
         Math.max(0, far),
-        STAKE_HEIGHT,
-        0x554430,
-        0x9a8158,
+        wall.height,
+        wall.face,
+        wall.top,
       );
     }
   }
 
-  // The corner post: taller than the run, which is what makes a turn read as a
+  // The corner post, taller than the run, which is what makes a turn read as a
   // turn. Always drawn, so a single ordered cell is a stake in the ground.
-  fillStanding(graphics, -0.11, -0.11, 0.11, 0.11, STAKE_HEIGHT + 4, 0x3f3223, 0x9c8459);
+  fillStanding(
+    graphics,
+    -wall.half - 0.04,
+    -wall.half - 0.04,
+    wall.half + 0.04,
+    wall.half + 0.04,
+    wall.height + 4,
+    wall.face,
+    wall.top,
+  );
+}
+
+export function drawFenceConnector(graphics: Phaser.GameObjects.Graphics, mask: number): void {
+  drawWallConnector(graphics, mask, PALISADE);
 }

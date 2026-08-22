@@ -15,6 +15,7 @@
  */
 
 import type { BuildingId } from '@/data/buildings';
+import type { FenceKind } from '@/simulation/world/FenceGrid';
 import type { ResourceId } from '@/data/resources';
 import type { Job } from '@/simulation/jobs/Job';
 import { TICKS_PER_YEAR } from '@/simulation/seasons/SeasonClock';
@@ -201,12 +202,19 @@ export interface SaveGame {
      */
     readonly roads?: readonly { readonly gx: number; readonly gy: number }[];
     /**
-     * The palisade, as a list of cells.
+     * The wall, as a list of cells with what stands on each.
      *
      * Absent in saves written before there was anything to keep out, which
-     * restore with no fence — true of those settlements, which never built one.
+     * restore with no wall — true of those settlements, which never built one.
+     * `kind` is absent in the first saves that had one, and those were all
+     * palisade; `damage` is how far a pack had got through it.
      */
-    readonly fences?: readonly { readonly gx: number; readonly gy: number }[];
+    readonly fences?: readonly {
+      readonly gx: number;
+      readonly gy: number;
+      readonly kind?: FenceKind;
+      readonly damage?: number;
+    }[];
     /**
      * The cell the settlers landed on.
      *

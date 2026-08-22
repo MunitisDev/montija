@@ -37,6 +37,16 @@ import type { World } from '@/simulation/world/World';
 const WILL_PAVE_TINT = 0x7fb069;
 const CANNOT_PAVE_TINT = 0xc0584a;
 
+/**
+ * The kinds that stand up rather than lying on the ground.
+ *
+ * **A wall sorts as a structure, not as an overlay.** Roads, bridges and ditches
+ * are painted on the ground and everything walks over them; a wall stands up, so
+ * a villager on the near side of it has to be drawn in front and one on the far
+ * side behind.
+ */
+const STANDING: readonly ConnectorKind[] = ['fence', 'stone-wall', 'timber-gate', 'stone-gate'];
+
 /** What is drawn on one cell, and which of the sixteen shapes it takes. */
 interface Piece {
   readonly kind: ConnectorKind;
@@ -95,12 +105,14 @@ export class ConnectorRenderer {
           TextureKeys.connectorFrame(piece.kind, piece.mask),
         )
         .setOrigin(0.5, 0.5)
-        // **A palisade sorts as a structure, not as an overlay.** The other three
-        // are painted on the ground and everything walks over them; a fence
-        // stands up, so a villager on the near side of it has to be drawn in
-        // front and one on the far side behind.
+        // See {@link STANDING}: a wall is drawn in the sorted layer, the three
+        // flat things are painted on the ground.
         .setDepth(
-          depthFor(gx, gy, piece.kind === 'fence' ? RenderLayer.Structure : RenderLayer.Overlay),
+          depthFor(
+            gx,
+            gy,
+            STANDING.includes(piece.kind) ? RenderLayer.Structure : RenderLayer.Overlay,
+          ),
         );
       this.tiles.set(index, { image, piece });
     }

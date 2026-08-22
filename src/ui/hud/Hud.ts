@@ -48,6 +48,7 @@ import type { SimulationSnapshot } from '@/simulation/Simulation';
 import { SIMULATION_SPEEDS, type SimulationSpeed } from '@/simulation/SimulationClock';
 import { TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
 import type { I18n } from '@/ui/i18n/I18n';
+import type { FenceKind } from '@/simulation/world/FenceGrid';
 import type { MessageKey } from '@/ui/i18n/messages';
 
 /** Elements the HUD binds to, looked up once. */
@@ -64,6 +65,8 @@ interface HudElements {
   readonly selectionDitch: HTMLButtonElement;
   readonly selectionBridge: HTMLButtonElement;
   readonly selectionFence: HTMLButtonElement;
+  readonly selectionGate: HTMLButtonElement;
+  readonly selectionWall: HTMLButtonElement;
   readonly roadLineBar: HTMLElement;
   readonly roadLineLabel: HTMLElement;
   readonly roadLineHint: HTMLElement;
@@ -863,6 +866,7 @@ export class Hud {
     this.renderRoadAction(selection);
     this.renderDitchAction(selection);
     this.renderFenceAction(selection);
+    this.renderWallActions(selection);
     this.renderBridgeAction(selection);
 
     // A tapped villager is what the player meant; the tile is the fallback.
@@ -983,6 +987,14 @@ export class Hud {
       this.context.toggleSelectedDitch();
       this.update();
     });
+    this.elements.selectionGate.addEventListener('click', () => {
+      this.context.toggleSelectedGate();
+      this.update();
+    });
+    this.elements.selectionWall.addEventListener('click', () => {
+      this.context.toggleSelectedWall();
+      this.update();
+    });
     this.elements.selectionFence.addEventListener('click', () => {
       // **A fence is a line, so tapping the button draws one.** Only undoing is
       // a single cell, exactly as with roads: a player pulling down one stake
@@ -1055,6 +1067,49 @@ export class Hud {
           : 'action.fence',
     );
     this.elements.selectionFence.classList.toggle('is-cancel', undoing);
+  }
+
+  /**
+   * The two buttons a standing wall offers: a way through it, and stone.
+   *
+   * Both only exist on a cell that already has something on it, which is what
+   * makes them read as what they are — you cut a gateway *into* a wall and you
+   * build *up* a wall you have. On open ground neither is shown and the panel is
+   * as small as it ever was.
+   */
+  private renderWallActions(selection: {
+    fenceKind: FenceKind | null;
+    gateDesignated: boolean;
+    wallDesignated: boolean;
+  }): void {
+    const kind = selection.fenceKind;
+    const isGate = kind === 'timber-gate' || kind === 'stone-gate';
+    const inStone = kind === 'stone-wall' || kind === 'stone-gate';
+
+    // A gateway: offered on a length of wall, and not on a gate — one hole per
+    // cell is all a cell has room for.
+    const gateOffered = kind !== null && (!isGate || selection.gateDesignated);
+    this.elements.selectionGate.hidden = !gateOffered;
+    if (gateOffered) {
+      this.elements.selectionGate.textContent = this.i18n.t(
+        selection.gateDesignated ? 'action.cancel' : 'action.gate',
+      );
+      this.elements.selectionGate.classList.toggle('is-cancel', selection.gateDesignated);
+    }
+
+    // Stone: offered on anything timber, gates included, and never on stone.
+    const stoneOffered = kind !== null && (!inStone || selection.wallDesignated);
+    this.elements.selectionWall.hidden = !stoneOffered;
+    if (stoneOffered) {
+      this.elements.selectionWall.textContent = this.i18n.t(
+        selection.wallDesignated
+          ? 'action.cancel'
+          : isGate
+            ? 'action.stoneGate'
+            : 'action.stoneWall',
+      );
+      this.elements.selectionWall.classList.toggle('is-cancel', selection.wallDesignated);
+    }
   }
 
   /**
@@ -1208,6 +1263,8 @@ function collectElements(root: HTMLElement): HudElements {
     selectionRoad: requireElement(root, '[data-hud="selection-road"]') as HTMLButtonElement,
     selectionDitch: requireElement(root, '[data-hud="selection-ditch"]') as HTMLButtonElement,
     selectionFence: requireElement(root, '[data-hud="selection-fence"]') as HTMLButtonElement,
+    selectionGate: requireElement(root, '[data-hud="selection-gate"]') as HTMLButtonElement,
+    selectionWall: requireElement(root, '[data-hud="selection-wall"]') as HTMLButtonElement,
     selectionBridge: requireElement(root, '[data-hud="selection-bridge"]') as HTMLButtonElement,
     roadLineBar: requireElement(root, '[data-hud="roadline"]'),
     roadLineLabel: requireElement(root, '[data-hud="roadline-label"]'),

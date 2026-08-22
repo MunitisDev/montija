@@ -23,7 +23,13 @@ import {
   WOLF_REACH,
   runWolves,
 } from '@/simulation/events/WolfSystem';
-import { LOGS_PER_FENCE } from '@/simulation/world/FenceGrid';
+import {
+  LOGS_PER_FENCE,
+  LOGS_PER_GATE,
+  STONE_PER_GATE,
+  STONE_PER_WALL,
+  TIMBER_STRENGTH,
+} from '@/simulation/world/FenceGrid';
 import { restore, serialise } from '@/simulation/save/serialise';
 import { TICKS_PER_DAY, TICKS_PER_YEAR } from '@/simulation/seasons/SeasonClock';
 import type { GridPoint } from '@/shared/types/geometry';
@@ -262,18 +268,108 @@ describe('raising a stake line', () => {
     expect(simulation.hasFence(cell)).toBe(true);
   });
 
-  it('does not stand in anybody way', () => {
-    // Deliberate: a real palisade has a gate, and a fence that blocked the
-    // pathfinder would be a whole class of unrecoverable mistake — a settlement
-    // walled in by its own defence.
+  it('stands in everybody way, which is what a wall is', () => {
+    // **The rule this reverses.** A stake line villagers walked through was a
+    // decoration; the interesting decision in any wall is where the way in is.
     const simulation = new Simulation(OPTIONS);
     const cell = openGround(simulation);
-    const before = simulation.world.navigation.costAt(cell.gx, cell.gy);
-
-    simulation.world.raiseFence(cell);
-
-    expect(simulation.world.navigation.costAt(cell.gx, cell.gy)).toBe(before);
     expect(simulation.world.navigation.isWalkable(cell.gx, cell.gy)).toBe(true);
+
+    simulation.world.raiseFence(cell, 'palisade');
+
+    expect(simulation.world.navigation.isWalkable(cell.gx, cell.gy)).toBe(false);
+  });
+
+  it('opens again the moment a gate is hung in it', () => {
+    const simulation = new Simulation(OPTIONS);
+    const cell = openGround(simulation);
+    simulation.world.raiseFence(cell, 'palisade');
+
+    simulation.world.raiseFence(cell, 'timber-gate');
+
+    expect(simulation.world.navigation.isWalkable(cell.gx, cell.gy)).toBe(true);
+    expect(simulation.world.fences.isGate(cell)).toBe(true);
+    // And it still keeps a pack out: a gate is barred when the alarm goes up.
+    expect(simulation.world.fences.hasAt(cell)).toBe(true);
+  });
+
+  it('hangs a gate for timber and work, and opens the ground', () => {
+    const simulation = new Simulation(OPTIONS);
+    const cell = openGround(simulation);
+    simulation.world.raiseFence(cell, 'palisade');
+    const before = simulation.snapshot().stored.logs;
+
+    expect(simulation.designateGate(cell)).toBe(true);
+    expect(simulation.snapshot().stored.logs).toBe(before - LOGS_PER_GATE);
+
+    for (let day = 0; day < 20 && !simulation.world.fences.isGate(cell); day += 1) {
+      runADay(simulation);
+    }
+
+    expect(simulation.world.fences.isGate(cell)).toBe(true);
+    expect(simulation.world.navigation.isWalkable(cell.gx, cell.gy)).toBe(true);
+  });
+
+  it('refuses a second gateway in the same cell', () => {
+    const simulation = new Simulation(OPTIONS);
+    const cell = openGround(simulation);
+    simulation.world.raiseFence(cell, 'timber-gate');
+
+    expect(simulation.designateGate(cell)).toBe(false);
+  });
+
+  it('builds a length up in stone, and a gate into a stone arch', () => {
+    const simulation = new Simulation(OPTIONS);
+    const wall = openGround(simulation);
+    simulation.world.raiseFence(wall, 'palisade');
+    // The quarry has not been built, so the founding stone is what there is.
+    giveStone(simulation, STONE_PER_WALL + STONE_PER_GATE);
+
+    expect(simulation.designateWall(wall)).toBe(true);
+    for (let day = 0; day < 20 && simulation.fenceKindAt(wall) !== 'stone-wall'; day += 1) {
+      runADay(simulation);
+    }
+    expect(simulation.fenceKindAt(wall)).toBe('stone-wall');
+
+    // And a gateway cut into stone is a stone one, not a wooden door.
+    simulation.designateGate(wall);
+    for (let day = 0; day < 20 && !simulation.world.fences.isGate(wall); day += 1) {
+      runADay(simulation);
+    }
+    expect(simulation.fenceKindAt(wall)).toBe('stone-gate');
+  });
+
+  it('refuses stone the settlement has not got, and keeps what it took', () => {
+    const simulation = new Simulation(OPTIONS);
+    const cell = openGround(simulation);
+    simulation.world.raiseFence(cell, 'palisade');
+    emptyTheYards(simulation);
+    giveStone(simulation, 1);
+
+    expect(simulation.designateWall(cell)).toBe(false);
+    // The one stone it did have is back on the shelf rather than swallowed.
+    expect(simulation.snapshot().stored.stone).toBe(1);
+  });
+
+  it('lets a pack chew through timber and never through stone', () => {
+    const simulation = new Simulation(OPTIONS);
+    const timber = openGround(simulation);
+    simulation.world.raiseFence(timber, 'palisade');
+
+    let bites = 0;
+    while (simulation.world.fences.hasAt(timber) && bites < TIMBER_STRENGTH * 4) {
+      simulation.world.gnawFence(timber);
+      bites += 1;
+    }
+    expect(simulation.world.fences.hasAt(timber)).toBe(false);
+    expect(bites).toBeGreaterThan(10);
+
+    const stone = openGround(simulation);
+    simulation.world.raiseFence(stone, 'stone-wall');
+    for (let bite = 0; bite < TIMBER_STRENGTH * 4; bite += 1) {
+      simulation.world.gnawFence(stone);
+    }
+    expect(simulation.fenceKindAt(stone)).toBe('stone-wall');
   });
 
   it('comes back after a save and a load', () => {
@@ -285,6 +381,26 @@ describe('raising a stake line', () => {
     restore(loaded, serialise(simulation, 'now'));
 
     expect(loaded.hasFence(cell)).toBe(true);
+  });
+
+  it('remembers which kind each cell was, and how chewed', () => {
+    const simulation = new Simulation(OPTIONS);
+    const gate = openGround(simulation);
+    simulation.world.raiseFence(gate, 'stone-gate');
+    const timber = { gx: gate.gx + 2, gy: gate.gy };
+    simulation.world.raiseFence(timber, 'palisade');
+    simulation.world.gnawFence(timber);
+    simulation.world.gnawFence(timber);
+
+    const loaded = new Simulation(OPTIONS);
+    restore(loaded, serialise(simulation, 'now'));
+
+    expect(loaded.fenceKindAt(gate)).toBe('stone-gate');
+    expect(loaded.fenceKindAt(timber)).toBe('palisade');
+    expect(loaded.world.fences.damageAt(timber)).toBeGreaterThan(0);
+    // And a gate is still a way through after a load, which is the thing a
+    // settlement would notice first if the kinds came back wrong.
+    expect(loaded.world.navigation.isWalkable(gate.gx, gate.gy)).toBe(true);
   });
 });
 
@@ -392,6 +508,17 @@ function openGround(simulation: Simulation): GridPoint {
     }
   }
   throw new Error('nowhere to fence');
+}
+
+/** Puts stone on the shelf, for the tests about building in it. */
+function giveStone(simulation: Simulation, amount: number): void {
+  for (const storage of simulation.storages.all) {
+    if (storage.accepts('stone')) {
+      storage.inventory.add('stone', amount);
+      return;
+    }
+  }
+  throw new Error('nowhere to keep stone');
 }
 
 function emptyTheYards(simulation: Simulation): void {

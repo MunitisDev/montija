@@ -727,7 +727,21 @@ export class VillagerSystem {
         this.world.digDitch(job.target);
         break;
       case 'raise-fence':
-        this.world.raiseFence(job.target);
+        this.world.raiseFence(job.target, 'palisade');
+        break;
+      case 'hang-gate':
+        // A gate takes the material of whatever it is cut into: a gateway in a
+        // stone wall is a stone arch, and one in a palisade is a timber door.
+        this.world.raiseFence(
+          job.target,
+          this.world.fences.kindAt(job.target) === 'stone-wall' ? 'stone-gate' : 'timber-gate',
+        );
+        break;
+      case 'build-wall':
+        this.world.raiseFence(
+          job.target,
+          this.world.fences.isGate(job.target) ? 'stone-gate' : 'stone-wall',
+        );
         break;
       case 'demolish':
         if (job.targetEntityId !== null) {

@@ -1090,21 +1090,39 @@ Both of the things a pack goes for are mistakes the game has been asking the pla
 the first winter — the harvest left in the field, and a lone feller sent to the far woods — and this is
 the first rule that punishes them **directly** rather than through an empty larder three weeks later.
 
-### The palisade
+### The wall
 
-A line of driven stakes, drawn like a road and screening what is behind it: **a pack will not cross a
-stake line**. Deliberately the firebreak rule again — what lies _between_ two things decides whether
-one reaches the other — so a player who has understood roads and fires already understands fences.
+A line drawn like a road, screening what is behind it: **a pack will not cross it**. Deliberately the
+firebreak rule again — what lies _between_ two things decides whether one reaches the other — so a
+player who has understood roads and fires already understands walls.
 
-- **One log a cell**, set aside out of the yard when the order is given and given back if it is called
-  off. Every other building has its materials carried out to it, and a fence has no site: forty
-  separate cells each waiting on one log is a settlement that spends a fortnight hauling single logs
-  and finishes nothing.
-- **Half a day's work a cell.** The timber is the decision, not the time.
-- **It does not block anybody.** A real palisade has a gate, and gates are where people go through;
-  modelling every gate would be a great deal of interface for a rule the player already understands
-  from every fenced field they have seen — and it means the fence can never seal the settlement in.
-- **Pulling one down gives nothing back.** Stakes are split driving them.
+**A wall is a wall.** It was a screen for one version — a line nothing crossed, that villagers walked
+through as if it were not there, on the reasoning that modelling gates would be a great deal of
+interface. That was the wrong trade: a barrier people ignore is a decoration, and the interesting
+decision in any wall is _where you leave the way in_. A wall now stops villagers too, and a **gate** is
+the one cell they may pass. Without one they walk round; with a badly placed one they walk a long way
+round.
+
+That trades one unrecoverable mistake for a recoverable one. A settlement **can** now wall itself in,
+and the way out is to pull a cell down (immediate) or put a gate in it — both one tap on the cell.
+
+| Kind        | Costs   | Work | Stops people | Stops wolves | Can be chewed through |
+| ----------- | ------- | ---- | ------------ | ------------ | --------------------- |
+| Palisade    | 1 log   | 30   | yes          | yes          | yes                   |
+| Timber gate | 3 logs  | 120  | no           | yes          | yes                   |
+| Stone wall  | 2 stone | 180  | yes          | yes          | **no**                |
+| Stone gate  | 4 stone | 180  | no           | yes          | **no**                |
+
+- **Paid when the order is given**, and given back if it is called off. Every other building has its
+  materials carried out to it, and a wall has no site: forty separate cells each waiting on one log is a
+  settlement that spends a fortnight hauling single logs and finishes nothing.
+- **A gate stops wolves** because it is barred the moment the alarm goes up, which is the honest reading
+  of a gate in a settlement that has just seen a pack.
+- **What stone buys is that it cannot be chewed.** A pack that finds no way in works at timber until it
+  gives — 240 bites, so a lone wolf takes about a minute of play at 1x and four take fifteen seconds —
+  and against stone it gives up and goes home. That is the difference between a wall that holds this
+  winter and one that holds every winter.
+- **Pulling a cell down gives nothing back.** Stakes are split driving them and dressed stone is set.
 
 Measured over twelve settlements and six years: 74 raids, 473 food taken and 3 people. The bite is
 mostly the recurring theft, which is why the first version — one heap a night rather than three — was

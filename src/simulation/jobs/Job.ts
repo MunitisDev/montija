@@ -33,6 +33,8 @@ export type JobType =
   | 'pave-road'
   | 'dig-ditch'
   | 'raise-fence'
+  | 'hang-gate'
+  | 'build-wall'
   | 'demolish';
 
 /**
@@ -172,6 +174,13 @@ export const JOB_WORK_TICKS: Readonly<Record<JobType, number>> = {
   // smaller half of the decision: what makes a player think twice about fencing
   // the whole settlement is the log a cell costs, not the afternoon.
   'raise-fence': 30,
+  // Framing a gateway and hanging a door on it. Four times a stake: a gate is
+  // carpentry, and the settlement should feel the difference between a length of
+  // fence and a way through it.
+  'hang-gate': 120,
+  // Building a length of wall up in stone, or an arch over a gateway. Dearer in
+  // work as well as in material, because this is the version that lasts.
+  'build-wall': 180,
   // Pulling a building down and stacking what is worth keeping. Slower than
   // raising a wall is fast, but far quicker than building it — tearing down is
   // always easier than putting up.

@@ -55,7 +55,7 @@ export function serialise(
         planted: tree.planted,
       })),
       roads: world.roads.all(),
-      fences: world.fences.all(),
+      fences: world.fences.survey(),
       landfall: { ...world.landfallCell },
     },
 
@@ -167,9 +167,11 @@ export function restore(simulation: Simulation, save: SaveGame): void {
   // it re-costs every cell, so restoring them second would leave a settlement
   // whose roads were drawn but not routed over until the next one was laid.
   world.roads.restore(save.world.roads ?? []);
-  // Stake lines, restored the same way and for the same reason: a list, because
-  // a settlement has tens of them rather than thousands.
-  world.fences.restore(save.world.fences ?? []);
+  // The wall, restored the same way and for the same reason: a list, because a
+  // settlement has tens of cells of it rather than thousands. Each carries what
+  // kind it is and how chewed it was — a save written before there was more than
+  // one kind restores as a palisade, which is what those settlements had.
+  world.fences.restoreWall(save.world.fences ?? []);
   world.navigation.rebuild(world.terrain);
   // Trees written before growth existed restore as full-grown; see `SavedTree`.
   world.trees.restore(

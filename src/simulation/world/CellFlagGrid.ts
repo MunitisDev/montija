@@ -1,5 +1,5 @@
 /**
- * A yes-or-no fact about every cell of the map.
+ * A small fact about every cell of the map.
  *
  * Roads and palisades are the same shape of thing and nothing else about them is
  * alike: a road is a cost multiplier the settlement walks on, a palisade is a
@@ -7,9 +7,11 @@
  * per cell, a count, and a version renderers can poll instead of diffing
  * thousands of sprites — and that is what lives here.
  *
- * A bit per cell in a `Uint8Array`. On a 96×96 map that is nine kilobytes, which
+ * A byte per cell in a `Uint8Array`. On a 96×96 map that is nine kilobytes, which
  * is cheaper than any object-per-cell alternative and makes the pathfinding
- * lookup a single array read.
+ * lookup a single array read. Roads only ever need yes or no; a wall stores
+ * *which kind* of wall in the same byte, which is why this holds a value rather
+ * than a flag.
  *
  * Deliberately a layer over the terrain rather than a terrain type. Both of these
  * are things *laid on* ground that still has its own character: felling the trees
@@ -22,7 +24,7 @@ import type { GridPoint } from '@/shared/types/geometry';
 export class CellFlagGrid {
   public readonly width: number;
   public readonly height: number;
-  private readonly cells: Uint8Array;
+  protected readonly cells: Uint8Array;
   private setCount = 0;
   private changeVersion = 0;
 
@@ -45,20 +47,41 @@ export class CellFlagGrid {
     if (!this.contains(gx, gy)) {
       return false;
     }
-    return this.cells[gy * this.width + gx] === 1;
+    return (this.cells[gy * this.width + gx] ?? 0) !== 0;
   }
 
   public hasAt(cell: GridPoint): boolean {
     return this.has(cell.gx, cell.gy);
   }
 
-  /** Sets a cell. Returns `false` when it was already set, or off the map. */
-  public lay(gx: number, gy: number): boolean {
-    if (!this.contains(gx, gy) || this.has(gx, gy)) {
+  /** What is on a cell, or `0` for nothing. */
+  public valueAt(gx: number, gy: number): number {
+    if (!this.contains(gx, gy)) {
+      return 0;
+    }
+    return this.cells[gy * this.width + gx] ?? 0;
+  }
+
+  /**
+   * Sets a cell. Returns `false` off the map, or when the value is already there.
+   *
+   * Setting a cell that holds a *different* value succeeds and replaces it: that
+   * is a palisade being built up in stone, which is one cell changing rather than
+   * one cell going and another arriving.
+   */
+  public lay(gx: number, gy: number, value = 1): boolean {
+    if (!this.contains(gx, gy) || value <= 0) {
       return false;
     }
-    this.cells[gy * this.width + gx] = 1;
-    this.setCount += 1;
+    const index = gy * this.width + gx;
+    const was = this.cells[index] ?? 0;
+    if (was === value) {
+      return false;
+    }
+    this.cells[index] = value;
+    if (was === 0) {
+      this.setCount += 1;
+    }
     this.changeVersion += 1;
     return true;
   }
@@ -82,7 +105,7 @@ export class CellFlagGrid {
   public all(): GridPoint[] {
     const cells: GridPoint[] = [];
     for (let index = 0; index < this.cells.length; index += 1) {
-      if (this.cells[index] === 1) {
+      if ((this.cells[index] ?? 0) !== 0) {
         cells.push({ gx: index % this.width, gy: Math.floor(index / this.width) });
       }
     }

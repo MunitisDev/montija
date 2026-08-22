@@ -12,6 +12,7 @@
 
 import { terrainDefinition } from '@/data/terrain';
 import type { GridPoint } from '@/shared/types/geometry';
+import type { FenceGrid } from './FenceGrid';
 import { ROAD_COST_MULTIPLIER, type RoadGrid } from './RoadGrid';
 import type { TerrainGrid } from './TerrainGrid';
 
@@ -116,9 +117,25 @@ export class NavigationGrid {
    */
   private roads: RoadGrid | null = null;
 
+  /**
+   * The wall, or `null` before any of it exists.
+   *
+   * Held the same way as the roads and for the opposite purpose: a road makes a
+   * cell cheap and a wall makes it impassable. A gate in the wall is a cell that
+   * costs what the ground under it costs, which is how a settlement gets in and
+   * out of its own defences.
+   */
+  private fences: FenceGrid | null = null;
+
   /** Points the grid at the settlement's roads, and re-costs every cell. */
   public useRoads(roads: RoadGrid, terrain: TerrainGrid): void {
     this.roads = roads;
+    this.rebuild(terrain);
+  }
+
+  /** Points the grid at the settlement's wall, and re-costs every cell. */
+  public useFences(fences: FenceGrid, terrain: TerrainGrid): void {
+    this.fences = fences;
     this.rebuild(terrain);
   }
 
@@ -164,6 +181,15 @@ export class NavigationGrid {
     const was = (this.costs[index] ?? BLOCKED) !== BLOCKED;
     const definition = terrainDefinition(terrain.get(gx, gy));
     const paved = this.roads?.has(gx, gy) === true;
+
+    // **A wall stops people, and a gate is the hole in it.** Checked before the
+    // terrain has its say, because it does not matter how good the ground is if
+    // there are stakes driven into it.
+    if (this.fences?.blocksPeople({ gx, gy }) === true) {
+      this.costs[index] = BLOCKED;
+      this.noteStructure(was, index);
+      return;
+    }
 
     if (!definition.walkable) {
       // **A bridge is a road laid over water.** Nothing else can make an

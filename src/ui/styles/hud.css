@@ -432,6 +432,23 @@
   border-color: rgba(154, 171, 122, 0.42);
 }
 
+/*
+ * A gateway is the way *through*, so it reads as the opening rather than as the
+ * wall: warmer and lighter than the palisade beside it.
+ */
+.tile-panel__action--gate:not(.is-cancel) {
+  color: #c9b98d;
+  background: rgba(201, 185, 141, 0.12);
+  border-color: rgba(201, 185, 141, 0.45);
+}
+
+/* And stone is stone: the same grey the quarry and the improved house use. */
+.tile-panel__action--wall:not(.is-cancel) {
+  color: #a8adb2;
+  background: rgba(168, 173, 178, 0.1);
+  border-color: rgba(168, 173, 178, 0.42);
+}
+
 /* A bridge is timber, and the only one of the three that costs materials. */
 .tile-panel__action--bridge {
   color: #c0a374;

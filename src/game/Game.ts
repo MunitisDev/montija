@@ -22,6 +22,7 @@ import {
   ZOOM_LIMITS,
 } from '@/app/config';
 import { isAlreadySelected } from './selection';
+import type { FenceKind } from '@/simulation/world/FenceGrid';
 import { CameraController } from '@/renderer/camera/CameraController';
 import { FOUNDING_YARD_RADIUS, Simulation, type SimulationSnapshot } from '@/simulation/Simulation';
 import { SimulationClock, type SimulationSpeed } from '@/simulation/SimulationClock';
@@ -122,6 +123,12 @@ export interface Selection {
   readonly fenceDesignated: boolean;
   /** `true` when this cell would take a stake line. */
   readonly canFence: boolean;
+  /** What stands on this cell of wall, or `null` for open ground. */
+  readonly fenceKind: FenceKind | null;
+  /** `true` when a gateway here has been ordered but not yet framed. */
+  readonly gateDesignated: boolean;
+  /** `true` when building this cell up in stone has been ordered. */
+  readonly wallDesignated: boolean;
 }
 
 /**
@@ -224,6 +231,8 @@ export interface GameContext {
   toggleSelectedRoad(): boolean;
   toggleSelectedDitch(): boolean;
   toggleSelectedFence(): boolean;
+  toggleSelectedGate(): boolean;
+  toggleSelectedWall(): boolean;
   bridgeSelectedCell(): boolean;
   /** Changes how many people the selected building should employ. */
   adjustSelectedWorkers(delta: number): boolean;
@@ -1116,6 +1125,9 @@ export class Game implements GameContext, InputIntentSink {
       hasFence: this.simulation.hasFence(cell),
       fenceDesignated: this.simulation.isFenceDesignated(cell),
       canFence: this.simulation.world.canFence(cell),
+      fenceKind: this.simulation.fenceKindAt(cell),
+      gateDesignated: this.simulation.isGateDesignated(cell),
+      wallDesignated: this.simulation.isWallDesignated(cell),
       canBridge: this.simulation.canPlaceBuilding('bridge', cell).ok,
     };
   }
@@ -1341,6 +1353,41 @@ export class Game implements GameContext, InputIntentSink {
         ? this.simulation.cancelFenceDesignation(selection.cell)
         : this.simulation.designateFence(selection.cell);
 
+    if (acted) {
+      this.refreshSelection(selection.cell);
+    }
+    return acted;
+  }
+
+  /**
+   * The gate button: cuts a way through the wall the player is looking at.
+   *
+   * Three commands in one again — order, call off, and nothing at all on a cell
+   * that is already a gate, where the button is not shown.
+   */
+  public toggleSelectedGate(): boolean {
+    const selection = this.currentSelection;
+    if (!selection) {
+      return false;
+    }
+    const acted = selection.gateDesignated
+      ? this.simulation.cancelGateDesignation(selection.cell)
+      : this.simulation.designateGate(selection.cell);
+    if (acted) {
+      this.refreshSelection(selection.cell);
+    }
+    return acted;
+  }
+
+  /** The stone button: builds this length of wall, or this gate, up in stone. */
+  public toggleSelectedWall(): boolean {
+    const selection = this.currentSelection;
+    if (!selection) {
+      return false;
+    }
+    const acted = selection.wallDesignated
+      ? this.simulation.cancelWallDesignation(selection.cell)
+      : this.simulation.designateWall(selection.cell);
     if (acted) {
       this.refreshSelection(selection.cell);
     }

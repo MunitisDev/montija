@@ -26,7 +26,7 @@ import { WET_TERRAIN, terrainDefinition, type TerrainType } from '@/data/terrain
 import { gridBoundsToScene } from '@/shared/math/isometric';
 import type { GridPoint, SceneBounds } from '@/shared/types/geometry';
 import { BuildingRegistry } from '@/simulation/buildings/BuildingRegistry';
-import { FenceGrid } from './FenceGrid';
+import { FenceGrid, type FenceKind } from './FenceGrid';
 import { RoadGrid } from './RoadGrid';
 import { ResourcePileRegistry } from '@/simulation/resources/ResourcePile';
 import { NavigationGrid } from './NavigationGrid';
@@ -81,6 +81,7 @@ export class World {
     this.roads = new RoadGrid(this.terrain.width, this.terrain.height);
     this.fences = new FenceGrid(this.terrain.width, this.terrain.height);
     this.navigation.useRoads(this.roads, this.terrain);
+    this.navigation.useFences(this.fences, this.terrain);
   }
 
   /** The middle of the map. */
@@ -636,6 +637,11 @@ export class World {
     if (!this.terrain.contains(cell.gx, cell.gy) || this.fences.hasAt(cell)) {
       return false;
     }
+    if (this.piles.anyAt(cell) !== null) {
+      // Goods on the ground would be walled off from the people who have to come
+      // and fetch them, which is a trap rather than a decision.
+      return false;
+    }
     if (WET_TERRAIN.includes(this.terrainAt(cell))) {
       return false;
     }
@@ -645,13 +651,40 @@ export class World {
     return true;
   }
 
-  /** Drives a line of stakes into one cell. */
-  public raiseFence(cell: GridPoint): boolean {
-    return this.fences.lay(cell.gx, cell.gy);
+  /**
+   * Puts a length of wall up on one cell, and closes the ground under it.
+   *
+   * The navigation grid is re-costed in the same breath, because a wall nobody
+   * routes around is a decoration — and because a *gate* has to open the ground
+   * again the moment it is hung.
+   */
+  public raiseFence(cell: GridPoint, kind: FenceKind = 'palisade'): boolean {
+    if (!this.fences.raise(cell, kind)) {
+      return false;
+    }
+    this.navigation.refreshCell(this.terrain, cell.gx, cell.gy);
+    return true;
   }
 
-  /** Pulls one down. Immediate, like taking up a road: the timber is spent. */
+  /** Pulls one down. Immediate, like taking up a road: the material is spent. */
   public pullDownFence(cell: GridPoint): boolean {
-    return this.fences.lift(cell.gx, cell.gy);
+    if (!this.fences.pullDown(cell)) {
+      return false;
+    }
+    this.navigation.refreshCell(this.terrain, cell.gx, cell.gy);
+    return true;
+  }
+
+  /**
+   * One bite out of a cell of timber wall.
+   *
+   * @returns `true` on the bite that opens a hole, which re-costs the ground.
+   */
+  public gnawFence(cell: GridPoint): boolean {
+    if (!this.fences.gnaw(cell)) {
+      return false;
+    }
+    this.navigation.refreshCell(this.terrain, cell.gx, cell.gy);
+    return true;
   }
 }

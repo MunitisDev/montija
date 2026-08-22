@@ -79,7 +79,13 @@ import {
 import { NO_SPOILAGE, runSpoilage, type SpoilageReport } from './resources/SpoilageSystem';
 import { NO_FIRE, runFire, type FireReport } from './events/FireSystem';
 import { NO_WOLVES, runWolves, type WolfReport } from './events/WolfSystem';
-import { LOGS_PER_FENCE } from './world/FenceGrid';
+import {
+  LOGS_PER_FENCE,
+  LOGS_PER_GATE,
+  STONE_PER_GATE,
+  STONE_PER_WALL,
+  type FenceKind,
+} from './world/FenceGrid';
 import { waterWithinReach } from './world/Water';
 import {
   EMPTY_REPORT,
@@ -938,27 +944,125 @@ export class Simulation {
     if (!this.world.canFence(cell) || this.isFenceDesignated(cell)) {
       return false;
     }
-    if (this.takeStored('logs', LOGS_PER_FENCE) < LOGS_PER_FENCE) {
+    return this.orderWallWork(cell, 'raise-fence', 'logs', LOGS_PER_FENCE);
+  }
+
+  /**
+   * Orders a gateway cut into a length of wall.
+   *
+   * Only into a wall that is standing: a gate is a hole in something, and asking
+   * the player to place the wall and the gate as one gesture would mean drawing
+   * a run and then re-drawing part of it. Paid for up front like the wall itself.
+   */
+  public designateGate(cell: GridPoint): boolean {
+    const kind = this.world.fences.kindAt(cell);
+    if (kind === null || this.world.fences.isGate(cell) || this.isGateDesignated(cell)) {
+      return false;
+    }
+    return this.orderWallWork(cell, 'hang-gate', 'logs', LOGS_PER_GATE);
+  }
+
+  /** Cancels a pending gateway, and puts the timber back. */
+  public cancelGateDesignation(cell: GridPoint): boolean {
+    return this.callOffWallWork(cell, 'hang-gate', 'logs', LOGS_PER_GATE);
+  }
+
+  public isGateDesignated(cell: GridPoint): boolean {
+    return this.jobs.isTargetReserved('hang-gate', this.cellId(cell));
+  }
+
+  /**
+   * Orders a length of wall built up in stone.
+   *
+   * The upgrade a settlement wants once it has survived a winter behind timber:
+   * stone is the one thing a pack cannot chew through. A gate becomes a stone
+   * arch and stays a gate, which is what the player means by "in stone".
+   */
+  public designateWall(cell: GridPoint): boolean {
+    const kind = this.world.fences.kindAt(cell);
+    if (kind === null || kind === 'stone-wall' || kind === 'stone-gate') {
+      return false;
+    }
+    if (this.isWallDesignated(cell)) {
+      return false;
+    }
+    const cost = this.world.fences.isGate(cell) ? STONE_PER_GATE : STONE_PER_WALL;
+    return this.orderWallWork(cell, 'build-wall', 'stone', cost);
+  }
+
+  /** Cancels a pending stone upgrade, and puts the stone back. */
+  public cancelWallDesignation(cell: GridPoint): boolean {
+    const cost = this.world.fences.isGate(cell) ? STONE_PER_GATE : STONE_PER_WALL;
+    return this.callOffWallWork(cell, 'build-wall', 'stone', cost);
+  }
+
+  public isWallDesignated(cell: GridPoint): boolean {
+    return this.jobs.isTargetReserved('build-wall', this.cellId(cell));
+  }
+
+  /** What this cell of wall is, or `null` for open ground. */
+  public fenceKindAt(cell: GridPoint): FenceKind | null {
+    return this.world.fences.kindAt(cell);
+  }
+
+  private cellId(cell: GridPoint): number {
+    return cell.gy * this.world.width + cell.gx;
+  }
+
+  /**
+   * The shared half of every wall order: pay, post the work, refund on failure.
+   *
+   * Three orders wear this — stakes, a gate, a wall in stone — and they differ
+   * only in what they cost and what job they post. Writing it three times is how
+   * one of them ends up refunding the wrong material.
+   */
+  private orderWallWork(
+    cell: GridPoint,
+    type: 'raise-fence' | 'hang-gate' | 'build-wall',
+    resource: ResourceId,
+    cost: number,
+  ): boolean {
+    // **Paid before the work is posted, and refunded exactly.** `takeStored`
+    // reports what it actually found, which matters: a settlement holding one
+    // stone of the two a wall costs has that one stone taken, and it has to go
+    // back rather than be quietly kept.
+    const paid = this.takeStored(resource, cost);
+    if (paid < cost) {
+      this.giveBack(resource, paid);
       return false;
     }
 
-    const cellId = cell.gy * this.world.width + cell.gx;
     const job = this.jobs.create({
-      type: 'raise-fence',
+      type,
       target: cell,
-      // Alongside paving, digging and felling: the nearest job wins, so a fence
+      // Alongside paving, digging and felling: the nearest job wins, so a wall
       // the player asked for goes up within a day or two and still loses to
-      // hauling. A settlement never fences while its food is in the field —
-      // which matters here more than anywhere, because the food in the field is
-      // what the fence is protecting it from.
+      // hauling. A settlement never builds while its food is in the field —
+      // which matters here most of all, because the food in the field is what
+      // the wall is protecting it from.
       priority: JobPriority.normal,
-      targetEntityId: cellId,
+      targetEntityId: this.cellId(cell),
     });
     if (job === null) {
-      // Nothing was ordered, so nothing was bought.
-      this.giveBack('logs', LOGS_PER_FENCE);
+      this.giveBack(resource, cost);
       return false;
     }
+    return true;
+  }
+
+  private callOffWallWork(
+    cell: GridPoint,
+    type: 'raise-fence' | 'hang-gate' | 'build-wall',
+    resource: ResourceId,
+    cost: number,
+  ): boolean {
+    const job = this.jobs.findByTarget(type, this.cellId(cell));
+    if (!job) {
+      return false;
+    }
+    this.jobs.cancel(job.id);
+    this.releaseVillagersFrom(job.id);
+    this.giveBack(resource, cost);
     return true;
   }
 

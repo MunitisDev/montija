@@ -198,6 +198,9 @@ export const EN = {
   'action.dig': 'Dig a ditch',
   'action.fence': 'Palisade',
   'action.pullDownFence': 'Pull down',
+  'action.gate': 'Gate',
+  'action.stoneWall': 'In stone',
+  'action.stoneGate': 'Stone arch',
   'action.fillDitch': 'Fill in',
   'status.ditchOrdered': 'ditch ordered',
   'placement.needsWater': 'must be built on the water',
@@ -507,9 +510,9 @@ export const EN = {
   'guide.hardship.wolves': 'Wolves',
   'guide.hardship.wolves.detail':
     'From the settlement\u2019s second autumn onwards, packs come down in the hungry half of the year \u2014 never in spring or summer. They take the easiest thing they can find: food left lying in the fields, and failing that somebody working the far wood on their own. Anyone with company is left alone, and so is anything with a palisade between it and the trees. Clearing the wood back is a defence too: they will not come more than ten paces out of cover.',
-  'guide.land.palisade': 'The palisade',
+  'guide.land.palisade': 'The wall',
   'guide.land.palisade.detail':
-    'A line of driven stakes, drawn like a road and paid for in timber \u2014 one log a cell, set aside from the yard the moment you order it. Wolves will not cross it, so what it screens is safe: put it between the trees and whatever you leave outside, rather than trying to ring the whole settlement. Your own people walk through the gate, so it can never wall anybody in, and pulling one down does not give the timber back.',
+    'A line of driven stakes, drawn like a road and paid for when you order it \u2014 one log a cell. Wolves will not cross it, so what it screens is safe: put it between the trees and whatever you leave outside, rather than trying to ring the whole settlement. It stops your own people too, so tap a length of it to hang a **gate**: three logs, and the one cell they may walk through. Without a gate they go round, and a wall right across their way is a long walk. Tap a length to build it up **in stone** as well \u2014 two stone a cell, four for an arch over a gate \u2014 and that is the difference that lasts: a pack will chew through timber given long enough, and never through stone. Pulling a cell down is immediate and gives nothing back.',
   'guide.resources': 'Resources',
   'guide.resources.body':
     'Open the stores from the bar at the top and you can set how much of anything to keep. Once a good reaches its limit the workshops that make it stop, and their people go and do whatever the settlement needs more — until the stores fall again, when they go back to it on their own. Nothing you marked by hand is affected: a tree you ordered felled is still felled.',
@@ -835,6 +838,9 @@ export const ES: Messages = {
   'action.dig': 'Cavar acequia',
   'action.fence': 'Empalizada',
   'action.pullDownFence': 'Derribar',
+  'action.gate': 'Puerta',
+  'action.stoneWall': 'En piedra',
+  'action.stoneGate': 'Arco de piedra',
   'action.fillDitch': 'Rellenar',
   'status.ditchOrdered': 'acequia encargada',
   'placement.needsWater': 'debe construirse sobre el agua',
@@ -1127,9 +1133,9 @@ export const ES: Messages = {
   'guide.hardship.wolves': 'Lobos',
   'guide.hardship.wolves.detail':
     'Desde el segundo oto\u00f1o del asentamiento, las manadas bajan en la mitad hambrienta del a\u00f1o \u2014 nunca en primavera ni en verano. Se llevan lo m\u00e1s f\u00e1cil: la comida que se queda en los campos y, si no hay ninguna, a quien trabaje solo en el bosque lejano. A quien va acompa\u00f1ado no lo tocan, y tampoco lo que tenga una empalizada entre \u00e9l y los \u00e1rboles. Talar el bosque tambi\u00e9n defiende: no se alejan m\u00e1s de diez pasos de la espesura.',
-  'guide.land.palisade': 'La empalizada',
+  'guide.land.palisade': 'La muralla',
   'guide.land.palisade.detail':
-    'Una l\u00ednea de estacas clavadas, que se traza como un camino y se paga en madera: un tronco por casilla, apartado del almac\u00e9n en el momento de encargarla. Los lobos no la cruzan, as\u00ed que lo que queda detr\u00e1s est\u00e1 a salvo: ponla entre los \u00e1rboles y lo que dejes fuera, en lugar de intentar cercar todo el asentamiento. Tu gente pasa por la puerta, as\u00ed que nunca puede dejar a nadie encerrado, y derribarla no devuelve la madera.',
+    'Una l\u00ednea de estacas clavadas, que se traza como un camino y se paga al encargarla: un tronco por casilla. Los lobos no la cruzan, as\u00ed que lo que queda detr\u00e1s est\u00e1 a salvo: ponla entre los \u00e1rboles y lo que dejes fuera, en lugar de intentar cercar todo el asentamiento. Tambi\u00e9n detiene a tu gente, as\u00ed que toca un tramo para poner una **puerta**: tres troncos, y es la \u00fanica casilla por la que pasan. Sin puerta la rodean, y una muralla cruzada en su camino es un buen paseo. Toca un tramo tambi\u00e9n para levantarlo **en piedra** \u2014 dos piedras por casilla, cuatro para un arco sobre una puerta \u2014 y esa es la diferencia que dura: una manada acaba roy\u00e9ndose la madera si le das tiempo, y la piedra nunca.',
   'guide.resources': 'Recursos',
   'guide.resources.body':
     'Abre las reservas desde la barra de arriba y podrás fijar cuánto quieres guardar de cada cosa. Cuando algo llega a su límite, los talleres que lo producen se paran y su gente se va a lo que el asentamiento necesite más — hasta que las reservas bajen, y entonces vuelven solos. Lo que hayas marcado a mano no se toca: un árbol que mandaste talar se tala igual.',
