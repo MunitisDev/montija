@@ -201,6 +201,13 @@ export interface SaveGame {
      */
     readonly roads?: readonly { readonly gx: number; readonly gy: number }[];
     /**
+     * The palisade, as a list of cells.
+     *
+     * Absent in saves written before there was anything to keep out, which
+     * restore with no fence — true of those settlements, which never built one.
+     */
+    readonly fences?: readonly { readonly gx: number; readonly gy: number }[];
+    /**
      * The cell the settlers landed on.
      *
      * Saved rather than recomputed, and it has to be: the camp cell is built over
@@ -258,6 +265,8 @@ export interface SaveGame {
     /** Absent in saves written before the settlement could catch fire. */
     readonly firesFought?: number;
     readonly firesLost?: number;
+    /** Absent in saves written before the wood came down for the winter. */
+    readonly wolfRaids?: number;
   };
   /**
    * The roll of the dead: a line each, with an age and a cause.
@@ -313,6 +322,8 @@ export interface SaveGame {
     readonly forest?: { readonly seed: number; readonly cursor: number };
     /** Absent in saves written before anyone could fall ill. */
     readonly illness?: { readonly seed: number; readonly cursor: number };
+    /** Absent in saves written before the wolves came down. */
+    readonly wolves?: { readonly seed: number; readonly cursor: number };
   };
 }
 

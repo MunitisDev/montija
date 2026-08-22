@@ -199,3 +199,108 @@ export function drawBridgeConnector(graphics: Phaser.GameObjects.Graphics, mask:
     }
   }
 }
+
+/**
+ * How tall a stake line is drawn, in texture pixels.
+ *
+ * Twelve, against a tile 32 tall — chest height on a villager drawn at two
+ * thirds scale, which is what a palisade of driven stakes should be. Any taller
+ * and it hides the ground behind it at the zoom the game is played at; any
+ * shorter and it reads as a hedge.
+ */
+const STAKE_HEIGHT = 12;
+
+/** Fills a grid-aligned rectangle lifted off the ground by `lift` pixels. */
+function fillLiftedRect(
+  graphics: Phaser.GameObjects.Graphics,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  lift: number,
+): void {
+  const corners = [project(x0, y0), project(x1, y0), project(x1, y1), project(x0, y1)];
+  graphics.beginPath();
+  graphics.moveTo(corners[0]![0], corners[0]![1] - lift);
+  for (const [x, y] of corners.slice(1)) {
+    graphics.lineTo(x, y - lift);
+  }
+  graphics.closePath();
+  graphics.fillPath();
+}
+
+/**
+ * Fills the side of something standing up: the same rectangle, at two heights,
+ * with the wall between them.
+ *
+ * This is the whole of how height is faked in this game's flat tiles, and it is
+ * enough: a face in shadow under a lit top edge reads as a solid object without
+ * a single pixel of real perspective.
+ */
+function fillStanding(
+  graphics: Phaser.GameObjects.Graphics,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  height: number,
+  face: number,
+  top: number,
+): void {
+  graphics.fillStyle(face, 1);
+  for (let lift = 0; lift <= height; lift += 1) {
+    fillLiftedRect(graphics, x0, y0, x1, y1, lift);
+  }
+  graphics.fillStyle(top, 1);
+  fillLiftedRect(graphics, x0, y0, x1, y1, height + 1);
+}
+
+/**
+ * A palisade: driven stakes with a rail behind them.
+ *
+ * Drawn standing up rather than painted on the ground, because the whole point
+ * of it is that something cannot get past — a line on the floor would read as a
+ * path, which is the opposite of what it is. Three passes: the shadow it throws,
+ * the run of stakes along whichever ways it joins, and a post at the corner so
+ * two runs meeting look joined rather than crossed.
+ *
+ * A lone cell still gets a post and a short length of fence, so a player who
+ * orders one cell sees one cell of fence rather than nothing.
+ */
+export function drawFenceConnector(graphics: Phaser.GameObjects.Graphics, mask: number): void {
+  // The shadow, on the ground, so the stakes do not look like they are floating.
+  drawConnectorBand(graphics, mask, { half: 0.16, colour: 0x2b2419, alpha: 0.45 });
+
+  const arms = CONNECTOR_DIRECTIONS.filter((direction) => (mask & direction.bit) !== 0);
+  for (const direction of arms) {
+    if (direction.dx !== 0) {
+      const far = direction.dx * REACH;
+      fillStanding(
+        graphics,
+        Math.min(0, far),
+        -0.07,
+        Math.max(0, far),
+        0.07,
+        STAKE_HEIGHT,
+        0x4a3b28,
+        0x8a7350,
+      );
+    } else {
+      const far = direction.dy * REACH;
+      fillStanding(
+        graphics,
+        -0.07,
+        Math.min(0, far),
+        0.07,
+        Math.max(0, far),
+        STAKE_HEIGHT,
+        0x554430,
+        0x9a8158,
+      );
+    }
+  }
+
+  // The corner post: taller than the run, which is what makes a turn read as a
+  // turn. Always drawn, so a single ordered cell is a stake in the ground.
+  fillStanding(graphics, -0.11, -0.11, 0.11, 0.11, STAKE_HEIGHT + 4, 0x3f3223, 0x9c8459);
+}

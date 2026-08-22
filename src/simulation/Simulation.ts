@@ -78,6 +78,8 @@ import {
 } from './population/IllnessSystem';
 import { NO_SPOILAGE, runSpoilage, type SpoilageReport } from './resources/SpoilageSystem';
 import { NO_FIRE, runFire, type FireReport } from './events/FireSystem';
+import { NO_WOLVES, runWolves, type WolfReport } from './events/WolfSystem';
+import { LOGS_PER_FENCE } from './world/FenceGrid';
 import { waterWithinReach } from './world/Water';
 import {
   EMPTY_REPORT,
@@ -154,6 +156,8 @@ export type Advice =
   | 'noShelter'
   /** More than a quarter of the settlement is ill and nothing is treating them. */
   | 'sicknessSpreading'
+  /** A pack came down and found the harvest lying in the open. */
+  | 'wolvesAbout'
   /**
    * The harvest is lying in the fields and every adult is in a workshop.
    *
@@ -307,6 +311,7 @@ export interface SimulationSnapshot {
   readonly trade: TradeReport;
   /** Who is unwell, and how much of it the settlement is able to treat. */
   readonly illness: IllnessReport;
+  readonly wolves: WolfReport;
   /** Who reached a new level at their trade today, so the HUD can say so. */
   readonly skills: SkillReport;
   /** Lifetime totals: the settlement's own history, recorded as it happens. */
@@ -424,6 +429,7 @@ export class Simulation {
   private lastPopulation: PopulationReport = NO_POPULATION_CHANGE;
   private lastForest: ForestReport = NO_FOREST_CHANGE;
   private lastFire: FireReport = NO_FIRE;
+  private lastWolves: WolfReport = NO_WOLVES;
   private lastEmployment: EmploymentReport = NO_EMPLOYMENT_CHANGE;
   private lastTrade: TradeReport = NO_TRADE;
   private lastIllness: IllnessReport = NO_ILLNESS;
@@ -473,6 +479,7 @@ export class Simulation {
   private readonly fireRandom: SeededRandom;
   /** Sickness gets its own stream, for the same reason the woods do. */
   private readonly illnessRandom: SeededRandom;
+  private readonly wolfRandom: SeededRandom;
 
   /** Who reached a new level at their trade today. */
   private lastSkills: SkillReport = NO_SKILL_CHANGE;
@@ -499,6 +506,7 @@ export class Simulation {
     this.forestRandom = new SeededRandom(deriveSeed(this.seed, 'forest'));
     this.fireRandom = new SeededRandom(deriveSeed(this.seed, 'fire'));
     this.illnessRandom = new SeededRandom(deriveSeed(this.seed, 'illness'));
+    this.wolfRandom = new SeededRandom(deriveSeed(this.seed, 'wolves'));
     this.jobs = new JobManager();
 
     // Villagers get their own RNG stream, so adding a call here cannot shift
@@ -774,6 +782,7 @@ export class Simulation {
       employment: this.lastEmployment,
       trade: this.lastTrade,
       illness: this.lastIllness,
+      wolves: this.lastWolves,
       skills: this.lastSkills,
       deaths: this.totalDeaths,
       advice: this.adviseOn(year),
@@ -905,6 +914,107 @@ export class Simulation {
     return job !== null;
   }
 
+  /**
+   * Orders a line of stakes driven into a cell.
+   *
+   * **Paid for when the order is given, and that is the one thing about this
+   * building that is unlike every other.** Everything the settlement raises has
+   * its materials carried out to it by somebody — that is a founding rule of the
+   * game and it is not being bent here. What a palisade has instead is *no site*:
+   * it is forty separate cells drawn in one gesture, and forty construction sites
+   * each waiting on one log is a settlement that spends a fortnight hauling
+   * single logs to forty places and finishes none of them.
+   *
+   * So the timber is **set aside** out of the yard the moment the order is given,
+   * as a woodcutter's logs are, and cancelling an order puts it back. The player
+   * pays in advance and the work is the only thing left to do, which is also the
+   * honest reading of what it is: stakes are cut from the settlement's own store
+   * and driven where they are wanted.
+   *
+   * Refuses when the yard cannot pay, so the answer to "why is nothing being
+   * fenced?" is on the screen rather than in the wood.
+   */
+  public designateFence(cell: GridPoint): boolean {
+    if (!this.world.canFence(cell) || this.isFenceDesignated(cell)) {
+      return false;
+    }
+    if (this.takeStored('logs', LOGS_PER_FENCE) < LOGS_PER_FENCE) {
+      return false;
+    }
+
+    const cellId = cell.gy * this.world.width + cell.gx;
+    const job = this.jobs.create({
+      type: 'raise-fence',
+      target: cell,
+      // Alongside paving, digging and felling: the nearest job wins, so a fence
+      // the player asked for goes up within a day or two and still loses to
+      // hauling. A settlement never fences while its food is in the field —
+      // which matters here more than anywhere, because the food in the field is
+      // what the fence is protecting it from.
+      priority: JobPriority.normal,
+      targetEntityId: cellId,
+    });
+    if (job === null) {
+      // Nothing was ordered, so nothing was bought.
+      this.giveBack('logs', LOGS_PER_FENCE);
+      return false;
+    }
+    return true;
+  }
+
+  /** Cancels a pending stake-line order, and puts the timber back. */
+  public cancelFenceDesignation(cell: GridPoint): boolean {
+    const cellId = cell.gy * this.world.width + cell.gx;
+    const job = this.jobs.findByTarget('raise-fence', cellId);
+    if (!job) {
+      return false;
+    }
+    this.jobs.cancel(job.id);
+    this.releaseVillagersFrom(job.id);
+    this.giveBack('logs', LOGS_PER_FENCE);
+    return true;
+  }
+
+  public isFenceDesignated(cell: GridPoint): boolean {
+    const cellId = cell.gy * this.world.width + cell.gx;
+    return this.jobs.isTargetReserved('raise-fence', cellId);
+  }
+
+  public hasFence(cell: GridPoint): boolean {
+    return this.world.fences.hasAt(cell);
+  }
+
+  /**
+   * Pulls a stake line down. Immediate, like taking up a road.
+   *
+   * The timber does not come back: stakes are driven into the ground and split
+   * doing it. A player who fences the wrong side of the settlement has spent the
+   * logs, which is the same bargain every other building makes.
+   */
+  public pullDownFence(cell: GridPoint): boolean {
+    return this.world.pullDownFence(cell);
+  }
+
+  /**
+   * Puts goods back into the yards, as far as they will go.
+   *
+   * The other half of {@link takeStored}, for the orders that are paid for up
+   * front and can be called off. What will not fit is dropped where the
+   * settlement stands rather than deleted, because somebody carried it in.
+   */
+  private giveBack(resource: ResourceId, amount: number): void {
+    let remaining = amount;
+    for (const storage of this.storages.all) {
+      if (remaining <= 0) {
+        return;
+      }
+      remaining -= storage.inventory.add(resource, remaining);
+    }
+    if (remaining > 0) {
+      this.world.dropNear(this.world.landfallCell, resource, remaining);
+    }
+  }
+
   /** Cancels a pending digging order. */
   public cancelDitchDesignation(cell: GridPoint): boolean {
     const cellId = cell.gy * this.world.width + cell.gx;
@@ -1009,6 +1119,7 @@ export class Simulation {
     this.lastPopulation = NO_POPULATION_CHANGE;
     this.lastForest = NO_FOREST_CHANGE;
     this.lastFire = NO_FIRE;
+    this.lastWolves = NO_WOLVES;
     this.lastEmployment = NO_EMPLOYMENT_CHANGE;
     this.lastTrade = NO_TRADE;
     this.tradeOrder = AUTOMATIC_TRADE;
@@ -1072,6 +1183,17 @@ export class Simulation {
     const winterIsNear = year.season === 'autumn' || year.season === 'winter';
     if (this.lastPopulation.homeless > 0 && winterIsNear && !this.hasHousingUnderway()) {
       return 'noShelter';
+    }
+
+    // **The wood came down and found something.** Said only when a pack actually
+    // took something, and only while there is still food lying out for the next
+    // one — a warning about a raid the settlement has already answered is the
+    // kind of noise that teaches players to stop reading warnings.
+    if (
+      this.lastWolves.stolenTotal > 0 &&
+      FOOD_IDS.reduce((sum, id) => sum + this.world.piles.totalOf(id), 0) > 0
+    ) {
+      return 'wolvesAbout';
     }
 
     // **An outbreak, which is the one hardship with no picture.** A villager
@@ -1476,6 +1598,31 @@ export class Simulation {
         // burned with it, which is the whole cost of having no water in reach.
         this.retireBuilding(building, { salvage: false });
       }
+    }
+
+    // And the wood comes for what the settlement left out. After the fire and
+    // before the trees grow, which is only for tidiness: nothing here depends on
+    // either. Deliberately *after* the eating, so a heap the settlement has
+    // already fed itself from is not stolen retroactively.
+    this.lastWolves = runWolves({
+      world: this.world,
+      villagers: this.villagers.all,
+      random: this.wolfRandom,
+      season: this.year.season,
+      year: this.year.year,
+    });
+    for (const id of this.lastWolves.killed) {
+      const villager = this.villagers.findById(id);
+      if (!villager) {
+        continue;
+      }
+      this.necrology.record(villager, 'wolves', this.year);
+      this.villagers.remove(villager.id);
+      this.totalDeaths += 1;
+      this.chronicle.died += 1;
+    }
+    if (this.lastWolves.prowled) {
+      this.chronicle.wolfRaids += 1;
     }
 
     // The trees are a day older, which for two of them a year is the day they
@@ -2899,6 +3046,14 @@ export class Simulation {
   }
 
   /** Sickness's RNG position, so a loaded settlement falls ill the same way. */
+  public get wolfRandomState(): { seed: number; cursor: number } {
+    return this.wolfRandom.getState();
+  }
+
+  public restoreWolfRandom(state: { seed: number; cursor: number }): void {
+    this.wolfRandom.setState(state);
+  }
+
   public get illnessRandomState(): { seed: number; cursor: number } {
     return this.illnessRandom.getState();
   }

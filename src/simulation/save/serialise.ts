@@ -55,6 +55,7 @@ export function serialise(
         planted: tree.planted,
       })),
       roads: world.roads.all(),
+      fences: world.fences.all(),
       landfall: { ...world.landfallCell },
     },
 
@@ -135,6 +136,7 @@ export function serialise(
       villagers: simulation.villagers.randomState,
       forest: simulation.forestRandomState,
       illness: simulation.illnessRandomState,
+      wolves: simulation.wolfRandomState,
     },
   };
 }
@@ -165,6 +167,9 @@ export function restore(simulation: Simulation, save: SaveGame): void {
   // it re-costs every cell, so restoring them second would leave a settlement
   // whose roads were drawn but not routed over until the next one was laid.
   world.roads.restore(save.world.roads ?? []);
+  // Stake lines, restored the same way and for the same reason: a list, because
+  // a settlement has tens of them rather than thousands.
+  world.fences.restore(save.world.fences ?? []);
   world.navigation.rebuild(world.terrain);
   // Trees written before growth existed restore as full-grown; see `SavedTree`.
   world.trees.restore(
@@ -303,6 +308,9 @@ export function restore(simulation: Simulation, save: SaveGame): void {
     }
     if (save.random.illness) {
       simulation.restoreIllnessRandom(save.random.illness);
+    }
+    if (save.random.wolves) {
+      simulation.restoreWolfRandom(save.random.wolves);
     }
   }
   // Older saves have no chronicle and restore at zero: a settlement whose

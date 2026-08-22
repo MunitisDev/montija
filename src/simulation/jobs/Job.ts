@@ -32,6 +32,7 @@ export type JobType =
   | 'produce'
   | 'pave-road'
   | 'dig-ditch'
+  | 'raise-fence'
   | 'demolish';
 
 /**
@@ -164,6 +165,13 @@ export const JOB_WORK_TICKS: Readonly<Record<JobType, number>> = {
   // afternoon is not a decision — it is a tap. Compare a road at 20: beating a
   // track flat is an errand, cutting a channel is an undertaking.
   'dig-ditch': 120,
+  // Driving one cell's worth of stakes into the ground.
+  //
+  // **Half a day**, which is a third of a ditch and twice a road. A palisade is
+  // paid for in timber rather than in time — see `FenceGrid` — so the work is the
+  // smaller half of the decision: what makes a player think twice about fencing
+  // the whole settlement is the log a cell costs, not the afternoon.
+  'raise-fence': 30,
   // Pulling a building down and stacking what is worth keeping. Slower than
   // raising a wall is fast, but far quicker than building it — tearing down is
   // always easier than putting up.

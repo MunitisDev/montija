@@ -63,6 +63,7 @@ interface HudElements {
   readonly selectionRoad: HTMLButtonElement;
   readonly selectionDitch: HTMLButtonElement;
   readonly selectionBridge: HTMLButtonElement;
+  readonly selectionFence: HTMLButtonElement;
   readonly roadLineBar: HTMLElement;
   readonly roadLineLabel: HTMLElement;
   readonly roadLineHint: HTMLElement;
@@ -390,6 +391,19 @@ export class Hud {
     // below, which are counted off the day's hunger and cold and know nothing
     // about a sickbed.
     this.announce('event.diedOfIllness', snapshot.illness.died.length);
+
+    // **The wood, in three parts, like a fire.** A pack came down; it found the
+    // harvest; it found somebody. Only the first is said on a quiet night, which
+    // is the warning a player can still act on.
+    const wolves = snapshot.wolves;
+    if (wolves.prowled && wolves.stolenTotal === 0 && wolves.killed.length === 0) {
+      this.announceOnce(this.i18n.t('event.wolves'));
+    }
+    if (wolves.stolenTotal > 0) {
+      this.announceOnce(`${this.i18n.t('event.wolvesTook')} — ${wolves.stolenTotal}`, 'is-loss');
+    }
+    this.announce('event.wolvesKilled', wolves.killed.length);
+    this.announce('event.wolvesMissed', wolves.escaped.length);
     this.announce('event.diedOfOldAge', population.deathsOfOldAge);
     this.announce('event.died', fromHardship);
   }
@@ -803,7 +817,9 @@ export class Hud {
     }
 
     const paving = line.payable.length;
-    this.elements.roadLineLabel.textContent = `${this.i18n.t('action.pave')} — ${
+    this.elements.roadLineLabel.textContent = `${this.i18n.t(
+      line.kind === 'fence' ? 'action.fence' : 'action.pave',
+    )} — ${
       paving === 1 ? this.i18n.t('roadline.oneCell') : `${paving} ${this.i18n.t('roadline.cells')}`
     }`;
     this.elements.roadLineConfirm.textContent = this.i18n.t('action.confirm');
@@ -846,6 +862,7 @@ export class Hud {
     this.renderSelectionAction(actionable, selection.designated, selection.treeStage);
     this.renderRoadAction(selection);
     this.renderDitchAction(selection);
+    this.renderFenceAction(selection);
     this.renderBridgeAction(selection);
 
     // A tapped villager is what the player meant; the tile is the fallback.
@@ -966,6 +983,15 @@ export class Hud {
       this.context.toggleSelectedDitch();
       this.update();
     });
+    this.elements.selectionFence.addEventListener('click', () => {
+      // **A fence is a line, so tapping the button draws one.** Only undoing is
+      // a single cell, exactly as with roads: a player pulling down one stake
+      // line means that one and no other.
+      if (!this.context.beginFenceLine()) {
+        this.context.toggleSelectedFence();
+      }
+      this.update();
+    });
     this.elements.selectionBridge.addEventListener('click', () => {
       this.context.bridgeSelectedCell();
       this.update();
@@ -999,6 +1025,36 @@ export class Hud {
           : 'action.dig',
     );
     this.elements.selectionDitch.classList.toggle('is-cancel', undoing);
+  }
+
+  /**
+   * The palisade button, built exactly like the ditch one.
+   *
+   * Present on any cell that could take stakes, which is most of the map — a
+   * fence is the one thing in the game the player can put almost anywhere — so
+   * what the button says has to carry the whole meaning: raise a run, call one
+   * off, or pull one down.
+   */
+  private renderFenceAction(selection: {
+    hasFence: boolean;
+    fenceDesignated: boolean;
+    canFence: boolean;
+  }): void {
+    const available = selection.hasFence || selection.fenceDesignated || selection.canFence;
+    this.elements.selectionFence.hidden = !available;
+    if (!available) {
+      return;
+    }
+
+    const undoing = selection.hasFence || selection.fenceDesignated;
+    this.elements.selectionFence.textContent = this.i18n.t(
+      selection.hasFence
+        ? 'action.pullDownFence'
+        : selection.fenceDesignated
+          ? 'action.cancel'
+          : 'action.fence',
+    );
+    this.elements.selectionFence.classList.toggle('is-cancel', undoing);
   }
 
   /**
@@ -1151,6 +1207,7 @@ function collectElements(root: HTMLElement): HudElements {
     selectionAction: requireElement(root, '[data-hud="selection-action"]') as HTMLButtonElement,
     selectionRoad: requireElement(root, '[data-hud="selection-road"]') as HTMLButtonElement,
     selectionDitch: requireElement(root, '[data-hud="selection-ditch"]') as HTMLButtonElement,
+    selectionFence: requireElement(root, '[data-hud="selection-fence"]') as HTMLButtonElement,
     selectionBridge: requireElement(root, '[data-hud="selection-bridge"]') as HTMLButtonElement,
     roadLineBar: requireElement(root, '[data-hud="roadline"]'),
     roadLineLabel: requireElement(root, '[data-hud="roadline-label"]'),

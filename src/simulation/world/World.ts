@@ -26,6 +26,7 @@ import { WET_TERRAIN, terrainDefinition, type TerrainType } from '@/data/terrain
 import { gridBoundsToScene } from '@/shared/math/isometric';
 import type { GridPoint, SceneBounds } from '@/shared/types/geometry';
 import { BuildingRegistry } from '@/simulation/buildings/BuildingRegistry';
+import { FenceGrid } from './FenceGrid';
 import { RoadGrid } from './RoadGrid';
 import { ResourcePileRegistry } from '@/simulation/resources/ResourcePile';
 import { NavigationGrid } from './NavigationGrid';
@@ -50,6 +51,15 @@ export class World {
   public readonly navigation: NavigationGrid;
   public readonly trees: TreeRegistry;
   public readonly roads: RoadGrid;
+  /**
+   * The stake lines the settlement has raised.
+   *
+   * Beside the roads rather than in the terrain, and for the same reason: a fence
+   * stands *on* ground that keeps its own character. Unlike a road it costs the
+   * navigation grid nothing, because people go through the gate — see
+   * `FenceGrid`.
+   */
+  public readonly fences: FenceGrid;
   public readonly piles = new ResourcePileRegistry();
   public readonly buildings = new BuildingRegistry();
 
@@ -69,6 +79,7 @@ export class World {
     this.trees = new TreeRegistry(generated.terrain.width, generated.trees);
     this.navigation = new NavigationGrid(this.terrain);
     this.roads = new RoadGrid(this.terrain.width, this.terrain.height);
+    this.fences = new FenceGrid(this.terrain.width, this.terrain.height);
     this.navigation.useRoads(this.roads, this.terrain);
   }
 
@@ -612,5 +623,35 @@ export class World {
     }
     this.navigation.refreshCell(this.terrain, cell.gx, cell.gy);
     return true;
+  }
+
+  /**
+   * `true` when a stake line could stand on this cell.
+   *
+   * Anywhere walkable that has nothing on it. Not on water — a fence is driven
+   * into ground — not through a building, which is already a wall, and not on a
+   * cell with a tree still standing on it: the trees are what the fence is for.
+   */
+  public canFence(cell: GridPoint): boolean {
+    if (!this.terrain.contains(cell.gx, cell.gy) || this.fences.hasAt(cell)) {
+      return false;
+    }
+    if (WET_TERRAIN.includes(this.terrainAt(cell))) {
+      return false;
+    }
+    if (this.trees.has(cell) || this.buildings.getAt(cell) !== null) {
+      return false;
+    }
+    return true;
+  }
+
+  /** Drives a line of stakes into one cell. */
+  public raiseFence(cell: GridPoint): boolean {
+    return this.fences.lay(cell.gx, cell.gy);
+  }
+
+  /** Pulls one down. Immediate, like taking up a road: the timber is spent. */
+  public pullDownFence(cell: GridPoint): boolean {
+    return this.fences.lift(cell.gx, cell.gy);
   }
 }

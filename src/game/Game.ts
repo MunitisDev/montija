@@ -116,6 +116,12 @@ export interface Selection {
   readonly canDig: boolean;
   /** `true` when this cell of water could be bridged. */
   readonly canBridge: boolean;
+  /** `true` when a stake line already stands here. */
+  readonly hasFence: boolean;
+  /** `true` when a fence here has been ordered but not yet driven. */
+  readonly fenceDesignated: boolean;
+  /** `true` when this cell would take a stake line. */
+  readonly canFence: boolean;
 }
 
 /**
@@ -217,6 +223,7 @@ export interface GameContext {
    */
   toggleSelectedRoad(): boolean;
   toggleSelectedDitch(): boolean;
+  toggleSelectedFence(): boolean;
   bridgeSelectedCell(): boolean;
   /** Changes how many people the selected building should employ. */
   adjustSelectedWorkers(delta: number): boolean;
@@ -264,6 +271,7 @@ export interface GameContext {
   readonly roadLineVersion: number;
   /** Starts a run at the selected cell. `false` when it cannot be paved. */
   beginRoadLine(): boolean;
+  beginFenceLine(): boolean;
   /** Moves the far end. The near end never moves once the run has begun. */
   aimRoadLine(cell: GridPoint): void;
   /** Orders every payable cell of the run. Returns how many were ordered. */
@@ -330,6 +338,19 @@ export interface RoadLineState {
   readonly to: GridPoint;
   readonly cells: readonly GridPoint[];
   readonly payable: readonly GridPoint[];
+  /**
+   * What is being drawn.
+   *
+   * A palisade is drawn exactly the way a road is — two taps and a confirm — so
+   * it uses the same run, the same bar and the same preview rather than a second
+   * copy of all three. What differs is two things: what a cell has to be to take
+   * one, and whether the run bends. A road routes round the houses because a
+   * road that goes through a house is no use; a fence must **not**, because a
+   * fence is a straight screen between the settlement and the wood and a line
+   * that wandered round obstacles would leave gaps exactly where the player
+   * thought they had a wall.
+   */
+  readonly kind: 'road' | 'fence';
 }
 
 /**
@@ -571,7 +592,26 @@ export class Game implements GameContext, InputIntentSink {
     // Momentum would slide the map out from under a run the player is aiming,
     // exactly as it would slide a building's ghost.
     this.camera.stopMotion();
-    this.currentRoadLine = this.describeRoadLine(selection.cell, selection.cell);
+    this.currentRoadLine = this.describeRoadLine(selection.cell, selection.cell, 'road');
+    this.roadLineChanges += 1;
+    return true;
+  }
+
+  /**
+   * Opens a run of palisade, the same way {@link beginRoadLine} opens a road.
+   *
+   * The one thing a player almost never wants is a single cell of fence: a stake
+   * line is a line. So unlike the road button, this opens a run even on a cell
+   * that already has one ordered — undoing is what the cell's own button is for.
+   */
+  public beginFenceLine(): boolean {
+    const selection = this.currentSelection;
+    if (!selection || !this.simulation.world.canFence(selection.cell)) {
+      return false;
+    }
+
+    this.camera.stopMotion();
+    this.currentRoadLine = this.describeRoadLine(selection.cell, selection.cell, 'fence');
     this.roadLineChanges += 1;
     return true;
   }
@@ -588,7 +628,7 @@ export class Game implements GameContext, InputIntentSink {
     if (!line || (line.to.gx === cell.gx && line.to.gy === cell.gy)) {
       return;
     }
-    this.currentRoadLine = this.describeRoadLine(line.from, cell);
+    this.currentRoadLine = this.describeRoadLine(line.from, cell, line.kind);
     this.roadLineChanges += 1;
   }
 
@@ -610,7 +650,15 @@ export class Game implements GameContext, InputIntentSink {
 
     let ordered = 0;
     for (const cell of line.payable) {
-      if (this.simulation.designateRoad(cell)) {
+      // A fence run stops paying when the yard runs out of logs, which
+      // `designateFence` reports by refusing. The run is not abandoned over it:
+      // what the settlement could afford is ordered and the rest is not, which
+      // is the same bargain a construction site makes.
+      const placed =
+        line.kind === 'fence'
+          ? this.simulation.designateFence(cell)
+          : this.simulation.designateRoad(cell);
+      if (placed) {
         ordered += 1;
       }
     }
@@ -633,7 +681,14 @@ export class Game implements GameContext, InputIntentSink {
     this.roadLineChanges += 1;
   }
 
-  private describeRoadLine(from: GridPoint, to: GridPoint): RoadLineState {
+  private describeRoadLine(from: GridPoint, to: GridPoint, kind: 'road' | 'fence'): RoadLineState {
+    if (kind === 'fence') {
+      const canFence = (cell: GridPoint): boolean =>
+        this.simulation.world.canFence(cell) || this.simulation.isFenceDesignated(cell);
+      // Straight, always. See {@link RoadLineState.kind}.
+      const cells = cellLine(from, to);
+      return { from, to, cells, payable: cells.filter(canFence), kind };
+    }
     const canPave = (cell: GridPoint): boolean => this.simulation.world.canPave(cell);
     // **Round the houses, not through them.** A straight line is honest and
     // useless in a dense settlement — which is exactly where roads are worth
@@ -653,6 +708,7 @@ export class Game implements GameContext, InputIntentSink {
       // throughout by construction; a fallen-back straight line is where this
       // earns its keep.
       payable: cells.filter(canPave),
+      kind,
     };
   }
 
@@ -1057,6 +1113,9 @@ export class Game implements GameContext, InputIntentSink {
       hasDitch: this.simulation.hasDitch(cell),
       ditchDesignated: this.simulation.isDitchDesignated(cell),
       canDig: this.simulation.world.canDig(cell),
+      hasFence: this.simulation.hasFence(cell),
+      fenceDesignated: this.simulation.isFenceDesignated(cell),
+      canFence: this.simulation.world.canFence(cell),
       canBridge: this.simulation.canPlaceBuilding('bridge', cell).ok,
     };
   }
@@ -1264,6 +1323,31 @@ export class Game implements GameContext, InputIntentSink {
   }
 
   /**
+   * The fence button, which is the ditch button's twin in turn.
+   *
+   * Same three commands in one: a cell has a stake line, has one ordered, or
+   * could take one. Pulling one down gives no timber back — see
+   * `Simulation.pullDownFence`.
+   */
+  public toggleSelectedFence(): boolean {
+    const selection = this.currentSelection;
+    if (!selection) {
+      return false;
+    }
+
+    const acted = selection.hasFence
+      ? this.simulation.pullDownFence(selection.cell)
+      : selection.fenceDesignated
+        ? this.simulation.cancelFenceDesignation(selection.cell)
+        : this.simulation.designateFence(selection.cell);
+
+    if (acted) {
+      this.refreshSelection(selection.cell);
+    }
+    return acted;
+  }
+
+  /**
    * Orders a bridge over the selected cell of water.
    *
    * Not a menu building with a ghost: the player has already told the game which
@@ -1401,7 +1485,7 @@ export class Game implements GameContext, InputIntentSink {
    * Keeps an open panel telling the truth about what it is describing.
    *
    * **A selection is a snapshot**, taken at the tap and re-read only when the
-   * player taps again — which is right for a tile and wrong for a building. A
+   * player taps again — which was thought right for a tile and is wrong for both. A
    * house being improved sat there saying "waiting for 6 stone" long after the
    * masons had finished, a site never showed its progress moving, and a workshop
    * never showed the load it had just been brought.
@@ -1414,10 +1498,21 @@ export class Game implements GameContext, InputIntentSink {
    */
   private refreshStaleSelection(): void {
     const selection = this.currentSelection;
-    if (!selection?.building) {
+    if (!selection) {
       return;
     }
-    const version = this.simulation.world.buildings.version;
+    // **A tile does change on its own, and it took a palisade to notice.** The
+    // rule here used to be "buildings change, tiles do not", which was true when
+    // the only thing a tile could be was ground. A road, a channel or a stake
+    // line the player ordered is finished by somebody walking out to it minutes
+    // later, and until then the panel went on offering to order the thing that
+    // had just been built. Three grid versions, so a settlement where nothing is
+    // being laid still costs three comparisons a frame.
+    const version = selection.building
+      ? this.simulation.world.buildings.version
+      : this.simulation.world.roads.version +
+        this.simulation.world.fences.version +
+        this.simulation.world.terrain.version;
     if (version === this.lastSeenBuildingsVersion) {
       return;
     }

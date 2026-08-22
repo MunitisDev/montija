@@ -29,6 +29,7 @@ import {
   CONNECTOR_MASKS,
   drawBridgeConnector,
   drawDitchConnector,
+  drawFenceConnector,
   drawRoadConnector,
 } from './connectors';
 import { contactShadow, shade } from './shading';
@@ -38,13 +39,14 @@ import { drawTree, TREE_HEIGHT, TREE_SHAPES, TREE_WIDTH } from './treeArt';
 import { BUILDING_COLOURS, artVariants, buildingTextureSpec, drawBuilding } from './buildingArt';
 
 /**
- * The three things that run from cell to cell.
+ * The four things that run from cell to cell.
  *
- * A bridge is a road over water and a ditch is water in a cut, so all three are
- * the same shape problem — an end, a straight, a corner, a T or a crossing — and
- * they share one generator and one atlas.
+ * A bridge is a road over water and a ditch is water in a cut, so those three
+ * are the same shape problem — an end, a straight, a corner, a T or a crossing.
+ * A palisade is that same problem standing up, and it shares the generator and
+ * the atlas because the sixteen shapes are identical; only the drawing differs.
  */
-export const CONNECTOR_KINDS = ['road', 'bridge', 'ditch'] as const;
+export const CONNECTOR_KINDS = ['road', 'bridge', 'ditch', 'fence'] as const;
 export type ConnectorKind = (typeof CONNECTOR_KINDS)[number];
 
 /** Texture and frame keys, so call sites never pass raw strings around. */
@@ -287,6 +289,7 @@ function buildConnectorAtlas(scene: Phaser.Scene, graphics: Phaser.GameObjects.G
     road: (mask) => drawRoadConnector(graphics, mask),
     bridge: (mask) => drawBridgeConnector(graphics, mask),
     ditch: (mask) => drawDitchConnector(graphics, mask),
+    fence: (mask) => drawFenceConnector(graphics, mask),
   };
 
   CONNECTOR_KINDS.forEach((kind, column) => {

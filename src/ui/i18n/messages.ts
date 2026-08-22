@@ -196,6 +196,8 @@ export const EN = {
   'placement.needsRockFace': 'must be dug into a rock face',
   'action.bridge': 'Bridge',
   'action.dig': 'Dig a ditch',
+  'action.fence': 'Palisade',
+  'action.pullDownFence': 'Pull down',
   'action.fillDitch': 'Fill in',
   'status.ditchOrdered': 'ditch ordered',
   'placement.needsWater': 'must be built on the water',
@@ -208,6 +210,8 @@ export const EN = {
   'warning.foodFalling': 'The food is running out — more has to come in than is eaten',
   'warning.freezing': 'People are freezing',
   'warning.noShelter': 'People have no house for the winter — build Houses',
+  'warning.wolvesAbout':
+    'Wolves took food from the fields — haul it in, or fence what the wood can reach',
   'warning.sicknessSpreading':
     'Illness is going round the houses — a Well nearby to wash and a Healer\u2019s House to treat it',
   'warning.siteStalled': 'Building work has stopped — nothing is being built without',
@@ -227,6 +231,10 @@ export const EN = {
   'event.fireLost': 'a building burned down',
   'event.fireDeath': 'Someone did not get out of the fire',
   'event.diedOfIllness': 'Someone has died of their illness',
+  'event.wolves': 'Wolves are about',
+  'event.wolvesTook': 'Wolves took food left in the open',
+  'event.wolvesKilled': 'Wolves took someone working alone',
+  'event.wolvesMissed': 'Someone got away from the wolves',
   'event.merchant': 'A merchant has arrived',
   'event.fellIll': 'Someone has fallen ill',
   'event.recovered': 'Someone has recovered',
@@ -283,6 +291,7 @@ export const EN = {
   'death.oldAge': 'Old age',
   'death.fire': 'Fire',
   'death.illness': 'Illness',
+  'death.wolves': 'Wolves',
   'death.ill.f': 'ill',
   'death.ill.m': 'ill',
   'building.underConstruction': 'Under construction',
@@ -495,6 +504,12 @@ export const EN = {
   'guide.hardship.fire': 'Fire',
   'guide.hardship.fire.detail':
     'A lit hearth can set its own roof alight on a freezing night, and a working forge any day of the year. The tighter the settlement is packed, the likelier it is. Water within ten cells — the river, a channel or a Well — puts it out and the building stands; without it the building and everything in it are gone, and the fire may take the next one along unless a road, a ditch or the water itself lies between them. Worse: a building lost this way endangers whoever was inside \u2014 the household asleep in a house, the workers at a forge. Most get out; somebody already ill is likelier not to. Water within reach is what makes a fire cost nothing at all.',
+  'guide.hardship.wolves': 'Wolves',
+  'guide.hardship.wolves.detail':
+    'From the settlement\u2019s second autumn onwards, packs come down in the hungry half of the year \u2014 never in spring or summer. They take the easiest thing they can find: food left lying in the fields, and failing that somebody working the far wood on their own. Anyone with company is left alone, and so is anything with a palisade between it and the trees. Clearing the wood back is a defence too: they will not come more than ten paces out of cover.',
+  'guide.land.palisade': 'The palisade',
+  'guide.land.palisade.detail':
+    'A line of driven stakes, drawn like a road and paid for in timber \u2014 one log a cell, set aside from the yard the moment you order it. Wolves will not cross it, so what it screens is safe: put it between the trees and whatever you leave outside, rather than trying to ring the whole settlement. Your own people walk through the gate, so it can never wall anybody in, and pulling one down does not give the timber back.',
   'guide.resources': 'Resources',
   'guide.resources.body':
     'Open the stores from the bar at the top and you can set how much of anything to keep. Once a good reaches its limit the workshops that make it stop, and their people go and do whatever the settlement needs more — until the stores fall again, when they go back to it on their own. Nothing you marked by hand is affected: a tree you ordered felled is still felled.',
@@ -818,6 +833,8 @@ export const ES: Messages = {
   'placement.needsRockFace': 'debe excavarse en una pared de roca',
   'action.bridge': 'Puente',
   'action.dig': 'Cavar acequia',
+  'action.fence': 'Empalizada',
+  'action.pullDownFence': 'Derribar',
   'action.fillDitch': 'Rellenar',
   'status.ditchOrdered': 'acequia encargada',
   'placement.needsWater': 'debe construirse sobre el agua',
@@ -830,6 +847,8 @@ export const ES: Messages = {
   'warning.foodFalling': 'La comida se está acabando: tiene que entrar más de la que se come',
   'warning.freezing': 'La gente se está congelando',
   'warning.noShelter': 'Hay gente sin casa para el invierno: construye Casas',
+  'warning.wolvesAbout':
+    'Los lobos se han llevado comida de los campos: métela dentro o cierra con empalizada lo que alcanza el bosque',
   'warning.sicknessSpreading':
     'La enfermedad corre por las casas: un Pozo cerca para lavarse y una Casa del Sanador para curarla',
   'warning.siteStalled': 'Las obras están paradas: no se construye nada sin',
@@ -849,6 +868,10 @@ export const ES: Messages = {
   'event.fireLost': 'un edificio ha ardido',
   'event.fireDeath': 'Alguien no ha salido del incendio',
   'event.diedOfIllness': 'Alguien ha muerto de su enfermedad',
+  'event.wolves': 'Hay lobos cerca',
+  'event.wolvesTook': 'Los lobos se han llevado comida que estaba fuera',
+  'event.wolvesKilled': 'Los lobos se han llevado a alguien que trabajaba solo',
+  'event.wolvesMissed': 'Alguien ha escapado de los lobos',
   'event.merchant': 'Ha llegado un mercader',
   'event.fellIll': 'Alguien ha enfermado',
   'event.recovered': 'Alguien se ha recuperado',
@@ -890,6 +913,7 @@ export const ES: Messages = {
   'death.oldAge': 'Vejez',
   'death.fire': 'Fuego',
   'death.illness': 'Enfermedad',
+  'death.wolves': 'Lobos',
   'death.ill.f': 'enferma',
   'death.ill.m': 'enfermo',
   'building.underConstruction': 'En construcción',
@@ -1100,6 +1124,12 @@ export const ES: Messages = {
   'guide.hardship.fire': 'Fuego',
   'guide.hardship.fire.detail':
     'Un hogar encendido puede prender su propio tejado en noche de helada, y una fragua en marcha cualquier día del año. Cuanto más apretado esté el asentamiento, más probable es. Con agua a menos de diez casillas —el río, una acequia o un Pozo— se apaga y el edificio queda en pie; sin ella se pierde el edificio y todo lo que hubiera dentro, y el fuego puede saltar al siguiente si no hay un camino, una acequia o el agua de por medio. Y hay algo peor: un edificio perdido as\u00ed pone en peligro a quien estuviera dentro \u2014 la familia dormida en una casa, los obreros en una fragua. La mayor\u00eda sale; quien ya estaba enfermo tiene menos suerte. El agua al alcance es lo que hace que un incendio no cueste nada.',
+  'guide.hardship.wolves': 'Lobos',
+  'guide.hardship.wolves.detail':
+    'Desde el segundo oto\u00f1o del asentamiento, las manadas bajan en la mitad hambrienta del a\u00f1o \u2014 nunca en primavera ni en verano. Se llevan lo m\u00e1s f\u00e1cil: la comida que se queda en los campos y, si no hay ninguna, a quien trabaje solo en el bosque lejano. A quien va acompa\u00f1ado no lo tocan, y tampoco lo que tenga una empalizada entre \u00e9l y los \u00e1rboles. Talar el bosque tambi\u00e9n defiende: no se alejan m\u00e1s de diez pasos de la espesura.',
+  'guide.land.palisade': 'La empalizada',
+  'guide.land.palisade.detail':
+    'Una l\u00ednea de estacas clavadas, que se traza como un camino y se paga en madera: un tronco por casilla, apartado del almac\u00e9n en el momento de encargarla. Los lobos no la cruzan, as\u00ed que lo que queda detr\u00e1s est\u00e1 a salvo: ponla entre los \u00e1rboles y lo que dejes fuera, en lugar de intentar cercar todo el asentamiento. Tu gente pasa por la puerta, as\u00ed que nunca puede dejar a nadie encerrado, y derribarla no devuelve la madera.',
   'guide.resources': 'Recursos',
   'guide.resources.body':
     'Abre las reservas desde la barra de arriba y podrás fijar cuánto quieres guardar de cada cosa. Cuando algo llega a su límite, los talleres que lo producen se paran y su gente se va a lo que el asentamiento necesite más — hasta que las reservas bajen, y entonces vuelven solos. Lo que hayas marcado a mano no se toca: un árbol que mandaste talar se tala igual.',

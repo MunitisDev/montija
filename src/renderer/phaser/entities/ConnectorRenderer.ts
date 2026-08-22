@@ -48,6 +48,7 @@ export class ConnectorRenderer {
   /** Keyed by cell index, so a lifted road can be found and destroyed. */
   private readonly tiles = new Map<number, { image: Phaser.GameObjects.Image; piece: Piece }>();
   private renderedRoadVersion = -1;
+  private renderedFenceVersion = -1;
   private renderedTerrainVersion = -1;
   /** The run being aimed, as ghost tiles. Empty whenever nothing is drawn. */
   private readonly preview: Phaser.GameObjects.Image[] = [];
@@ -60,11 +61,13 @@ export class ConnectorRenderer {
   public sync(world: World): void {
     if (
       this.renderedRoadVersion === world.roads.version &&
+      this.renderedFenceVersion === world.fences.version &&
       this.renderedTerrainVersion === world.terrain.version
     ) {
       return;
     }
     this.renderedRoadVersion = world.roads.version;
+    this.renderedFenceVersion = world.fences.version;
     this.renderedTerrainVersion = world.terrain.version;
 
     const wanted = this.survey(world);
@@ -92,7 +95,13 @@ export class ConnectorRenderer {
           TextureKeys.connectorFrame(piece.kind, piece.mask),
         )
         .setOrigin(0.5, 0.5)
-        .setDepth(depthFor(gx, gy, RenderLayer.Overlay));
+        // **A palisade sorts as a structure, not as an overlay.** The other three
+        // are painted on the ground and everything walks over them; a fence
+        // stands up, so a villager on the near side of it has to be drawn in
+        // front and one on the far side behind.
+        .setDepth(
+          depthFor(gx, gy, piece.kind === 'fence' ? RenderLayer.Structure : RenderLayer.Overlay),
+        );
       this.tiles.set(index, { image, piece });
     }
 
@@ -167,6 +176,17 @@ export class ConnectorRenderer {
     const shore = (gx: number, gy: number): boolean =>
       paved(gx, gy) ||
       (world.terrain.contains(gx, gy) && !WET_TERRAIN.includes(world.terrain.get(gx, gy)));
+
+    // The stake lines, which join each other and nothing else: a fence running
+    // into a house is still a fence, and drawing it as though the wall were part
+    // of it would put a stake through somebody's kitchen.
+    const fenced = (gx: number, gy: number): boolean => world.fences.has(gx, gy);
+    for (const cell of world.fences.all()) {
+      pieces.set(cell.gy * world.width + cell.gx, {
+        kind: 'fence',
+        mask: connectorMask(cell.gx, cell.gy, fenced),
+      });
+    }
 
     for (const cell of world.roads.all()) {
       const spannable = WET_TERRAIN.includes(world.terrain.get(cell.gx, cell.gy));

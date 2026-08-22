@@ -110,6 +110,7 @@ describe('the roll', () => {
       oldAge: 1,
       fire: 0,
       illness: 0,
+      wolves: 0,
     });
   });
 

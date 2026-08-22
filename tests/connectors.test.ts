@@ -93,7 +93,9 @@ describe('the atlas the shapes live in', () => {
     expect(names.size).toBe(CONNECTOR_KINDS.length * CONNECTOR_MASKS);
   });
 
-  it('carries a road, a bridge and a ditch', () => {
-    expect([...CONNECTOR_KINDS]).toEqual(['road', 'bridge', 'ditch']);
+  it('carries a road, a bridge, a ditch and a palisade', () => {
+    // The palisade is the odd one out and shares the atlas anyway: the sixteen
+    // shapes are the same sixteen, and only the drawing stands up.
+    expect([...CONNECTOR_KINDS]).toEqual(['road', 'bridge', 'ditch', 'fence']);
   });
 });

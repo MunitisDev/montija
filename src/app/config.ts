@@ -132,10 +132,12 @@ export const REFERENCE_WORLD_SEED = 20260815;
  * - **patch** — a fix or a pass of polish. Flames instead of a red house, a
  *   warning that stops crying wolf, windows that are not crooked.
  *
- * `0.7.0` is an illness that can be the end of somebody, on a curve that doubles
- * every dozen years of age. `0.6.0` before it was illness that spreads and fire
- * that can take a life: hardships a player would notice were not there last
- * week, which is what a minor is for.
+ * `0.8.0` is wolves and the palisade: the first thing in this game that comes at
+ * the settlement from outside the valley, and the first wall built to keep
+ * anything out. `0.7.0` before it was an illness that can be the end of
+ * somebody, on a curve that doubles every dozen years of age, and `0.6.0` was
+ * illness that spreads and fire that can take a life. Hardships a player would
+ * notice were not there last week, which is what a minor is for.
  * `0.5.0` before it was the first honest figure this project has had. The version in
  * `package.json` said `0.1.0` through sixty-five phases of work, which was true
  * on the first afternoon and a lie ever since. Half way, then: the MVP's
@@ -146,4 +148,4 @@ export const REFERENCE_WORLD_SEED = 20260815;
  * cheaper than plumbing the same string through two config files and bundling
  * the manifest into the game to read one field off it.
  */
-export const GAME_VERSION = '0.7.0';
+export const GAME_VERSION = '0.8.0';

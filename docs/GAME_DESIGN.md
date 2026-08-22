@@ -1066,6 +1066,52 @@ villager about ten days later: roughly one winter, which is the span the player 
 
 ---
 
+## Wolves and the palisade — Implemented
+
+The settlement had nothing outside it. Everything that could go wrong came from inside the valley —
+the larder, the woodpile, a hearth, a sickbed — and a wilderness that never once pushed back is not
+much of a wilderness.
+
+A pack comes down in the **hungry half of the year**, and never before the settlement's **second**
+autumn. That last rule is a tuning decision stated as a rule: the first winter is this game's whole
+objective and every figure in it was measured against ten people with no walls and no spare timber.
+Measured with wolves in that first year, the tutorial lost two worlds in twelve — so the wood arrives
+once the settlement is a settlement.
+
+| What               | Decided by                                                                |
+| ------------------ | ------------------------------------------------------------------------- |
+| Whether one comes  | The season: nothing in spring or summer, 3% a day in autumn, 8% in winter |
+| What it takes      | Food lying in the open first, up to three heaps of it                     |
+| Failing that       | Somebody working the far wood **alone** — a quarter of them are taken     |
+| Who is safe        | Anyone with company within 3 cells, and anything behind a palisade        |
+| How far it reaches | 6 cells out of cover, so cleared ground is a defence in itself            |
+
+Both of the things a pack goes for are mistakes the game has been asking the player not to make since
+the first winter — the harvest left in the field, and a lone feller sent to the far woods — and this is
+the first rule that punishes them **directly** rather than through an empty larder three weeks later.
+
+### The palisade
+
+A line of driven stakes, drawn like a road and screening what is behind it: **a pack will not cross a
+stake line**. Deliberately the firebreak rule again — what lies _between_ two things decides whether
+one reaches the other — so a player who has understood roads and fires already understands fences.
+
+- **One log a cell**, set aside out of the yard when the order is given and given back if it is called
+  off. Every other building has its materials carried out to it, and a fence has no site: forty
+  separate cells each waiting on one log is a settlement that spends a fortnight hauling single logs
+  and finishes nothing.
+- **Half a day's work a cell.** The timber is the decision, not the time.
+- **It does not block anybody.** A real palisade has a gate, and gates are where people go through;
+  modelling every gate would be a great deal of interface for a rule the player already understands
+  from every fenced field they have seen — and it means the fence can never seal the settlement in.
+- **Pulling one down gives nothing back.** Stakes are split driving them.
+
+Measured over twelve settlements and six years: 74 raids, 473 food taken and 3 people. The bite is
+mostly the recurring theft, which is why the first version — one heap a night rather than three — was
+a rounding error at 236 food and was changed.
+
+---
+
 ## Illness — Implemented
 
 Health above has exactly one cause: it falls when somebody is starving or freezing. On its own that

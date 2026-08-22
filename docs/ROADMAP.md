@@ -2012,3 +2012,35 @@ The game has one difficulty and it is firewood. That is worth knowing before add
 land on the cold, which is already the killer, and their harvest cut is currently decorative. Before
 food can be a threat again it needs something that makes it tight — soil that wears out, or a
 population that grows — and before the settlement grows, somebody has to want to live in it.
+
+## PHASE 67 — Illness that spreads, fire that kills, and the wood coming down — Implemented
+
+Three hardships and one defence, in the order they were built.
+
+**Illness spreads.** Three per cent a day per ill person under the same roof, up to two per cent from
+the settlement at large scaled by the share who are ill, both halved by water within reach of the
+homes. Measured at 3%: 43 of 89 cases contagious. Two rules were tried and measured away — 5% bent
+the difficulty curve, and treating the homeless as one household moved the first death out of winter
+into autumn, because every settlement begins with ten people sleeping in the open.
+
+**Illness can kill.** A small roll per day unwell: 0.2% at twenty, doubling every twelve years, cut by
+70% by a staffed Healer and worsened by up to three quarters each by cold and hunger. The first rate
+tried was four times smaller and invisible; at the shipped rate six settlements over twenty years bury
+23 against **one** with a Healer standing. This does not undo the three measurements that said illness
+must not drain health — a drain compounds, a roll takes the frail.
+
+**Fire can kill.** A building lost to fire endangers whoever belongs to it: a quarter do not get out,
+twice that for anybody already ill. Not a die roll — a fire only reaches people in a building the
+settlement could not put out, which is one the player left out of reach of water.
+
+**Wolves, and the palisade.** A pack in the hungry half of the year, from the second autumn onwards,
+taking the harvest left in the fields or somebody working the far wood alone. The answer is a line of
+stakes that screens what is behind it — the firebreak rule doing a third job. See `GAME_DESIGN.md` for
+the numbers and the measurements behind them.
+
+### What is still true after all of it
+
+Cold is still the game's difficulty. Over twelve settlements and six years the wolves took 3 people and
+473 food; the winter took 110. Everything in this phase adds texture to a curve whose shape is still
+firewood, and the two things that would change that shape are the ones the measurements keep pointing
+at: a population that grows, and something that makes food tight again.

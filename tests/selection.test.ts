@@ -96,6 +96,9 @@ function ground(cell: { gx: number; gy: number }): Selection {
     ditchDesignated: false,
     canDig: false,
     canBridge: false,
+    hasFence: false,
+    fenceDesignated: false,
+    canFence: true,
   };
 }
 
@@ -211,6 +214,9 @@ function base(cell: GridPoint, building: Selection['building']): Selection {
     ditchDesignated: false,
     canDig: false,
     canBridge: false,
+    hasFence: false,
+    fenceDesignated: false,
+    canFence: true,
   };
 }
 

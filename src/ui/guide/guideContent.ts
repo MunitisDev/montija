@@ -179,7 +179,7 @@ export type SectionId = (typeof SECTION_IDS)[number];
  */
 const LOOP_STEPS = ['designate', 'work', 'haul', 'store'] as const;
 const CONTROLS = ['pan', 'zoom', 'select', 'build', 'speed', 'save'] as const;
-const HARDSHIPS = ['hunger', 'cold', 'illness', 'age', 'fire'] as const;
+const HARDSHIPS = ['hunger', 'cold', 'illness', 'age', 'fire', 'wolves'] as const;
 
 /**
  * What the player can do to the ground itself, as opposed to build on it.
@@ -188,7 +188,7 @@ const HARDSHIPS = ['hunger', 'cold', 'illness', 'age', 'fire'] as const;
  * bridge are all offered on the panel for the cell you tapped — so a player who
  * only reads the menu would never learn that any of them exists.
  */
-const LAND = ['wood', 'river', 'road', 'ditch', 'bridge'] as const;
+const LAND = ['wood', 'river', 'road', 'ditch', 'bridge', 'palisade'] as const;
 
 /**
  * The four meters on a villager, and how they differ.

@@ -14,8 +14,9 @@
  *
  * **The causes are the ones the simulation actually has.** Hunger and cold each
  * drain health, and health at zero is death; old age arrives on its own
- * schedule; a fire takes whoever could not get out of the building it took; and
- * an illness takes the frail, mostly the old.
+ * schedule; a fire takes whoever could not get out of the building it took; an
+ * illness takes the frail, mostly the old; and a pack takes whoever was working
+ * the far wood on their own.
  *
  * `illness` was for a long time deliberately absent from this list, because for
  * a long time an illness could not kill anybody — it cost a settlement working
@@ -38,7 +39,8 @@ import type { Sex, Villager } from '@/simulation/villagers/Villager';
  * two: a villager who was starving *and* freezing is the settlement failing at
  * both, and picking one of them for the roll would misreport a winter.
  */
-export type DeathCause = 'hunger' | 'cold' | 'hungerAndCold' | 'oldAge' | 'fire' | 'illness';
+export type DeathCause =
+  'hunger' | 'cold' | 'hungerAndCold' | 'oldAge' | 'fire' | 'illness' | 'wolves';
 
 export const DEATH_CAUSES: readonly DeathCause[] = [
   'hunger',
@@ -47,6 +49,7 @@ export const DEATH_CAUSES: readonly DeathCause[] = [
   'oldAge',
   'fire',
   'illness',
+  'wolves',
 ];
 
 /** One line of the roll. Plain data, so it writes to a save as-is. */
@@ -137,6 +140,7 @@ export class Necrology {
       oldAge: 0,
       fire: 0,
       illness: 0,
+      wolves: 0,
     };
     for (const record of this.records) {
       counts[record.cause] += 1;

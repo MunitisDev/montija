@@ -726,6 +726,9 @@ export class VillagerSystem {
       case 'dig-ditch':
         this.world.digDitch(job.target);
         break;
+      case 'raise-fence':
+        this.world.raiseFence(job.target);
+        break;
       case 'demolish':
         if (job.targetEntityId !== null) {
           this.onDemolished?.(job.targetEntityId);
