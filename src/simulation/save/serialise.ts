@@ -132,6 +132,10 @@ export function serialise(
     chronicle: { ...simulation.snapshot().chronicle },
     necrology: simulation.necrology.all.map((record) => ({ ...record })),
     woodland: simulation.woodland.state(),
+    // The pack, if one is on the map. A settlement saved mid-raid loads back
+    // mid-raid: the wolves are where they were, as hurt as they were, and the
+    // alarm is still up — anything else would be a free escape from a bad night.
+    wolves: simulation.wolves.state(),
     random: {
       villagers: simulation.villagers.randomState,
       forest: simulation.forestRandomState,
@@ -322,6 +326,7 @@ export function restore(simulation: Simulation, save: SaveGame): void {
   // and a save from another version is already rejected by the version check.
   simulation.restoreNecrology((save.necrology ?? []) as readonly DeathRecord[]);
   simulation.woodland.restore(save.woodland ?? {});
+  simulation.wolves.restore(save.wolves ?? {});
   simulation.restoreWearDebt(
     (save.wear ?? []).map(([resource, owed]) => [resource as ResourceId, owed] as const),
   );

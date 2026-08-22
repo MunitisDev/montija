@@ -28,7 +28,16 @@ import { Inventory } from '@/simulation/resources/Inventory';
 export const CARRY_CAPACITY = 40;
 
 /** What a villager is doing, as far as the renderer needs to know. */
-export type VillagerActivity = 'idle' | 'walking' | 'working' | 'hauling' | 'ill';
+export type VillagerActivity =
+  | 'idle'
+  | 'walking'
+  | 'working'
+  | 'hauling'
+  | 'ill'
+  /** Indoors while a pack is about: the children and the old. */
+  | 'sheltering'
+  /** Out at the wolves with a tool in hand. */
+  | 'fighting';
 
 /**
  * A standing instruction about where somebody should work.
@@ -94,6 +103,16 @@ export class Villager {
   public previousPosition: WorldPoint;
 
   public activity: VillagerActivity = 'idle';
+  /**
+   * How badly hurt they are, from nothing to {@link VILLAGER_VIGOUR}.
+   *
+   * Its own number rather than a bite out of `needs.health`, and the reason is the
+   * oldest rule in this codebase: health is what hunger and cold drain, and
+   * anything else that drains it becomes a multiplier on starving. A wound heals
+   * on its own over a few days — see `Combat.WOUND_HEALING_PER_DAY` — and only
+   * kills at the moment it is dealt.
+   */
+  public wounds = 0;
   public readonly needs: VillagerNeeds = { hunger: 100, warmth: 100, health: 100, spirit: 50 };
   /** What the villager is physically carrying. */
   public readonly inventory = new Inventory(CARRY_CAPACITY);

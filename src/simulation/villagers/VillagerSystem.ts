@@ -328,6 +328,18 @@ export class VillagerSystem {
   }
 
   /** Advances every villager by one fixed tick. */
+  /**
+   * What the settlement's defence wants of each villager, or `null` in peace.
+   *
+   * A hook rather than a dependency, exactly like {@link isCutOff}: this system
+   * owns *movement*, the wolf system owns *who is where*, and neither should have
+   * to import the other. Set by `Simulation`.
+   */
+  public defenceOrder?: (villager: Villager) => 'shelter' | 'muster' | null;
+
+  /** Where the nearest wolf is, for whoever is going out at them. */
+  public nearestWolfCell?: (from: GridPoint) => GridPoint | null;
+
   public update(tickSeconds: number): void {
     let workBudget = workSearchBudget(this.villagers.length);
     // **Wandering has its own ration.** Children and elders take the same routes
@@ -348,6 +360,17 @@ export class VillagerSystem {
         // `stepOutOfPocket`. The ground under them is fine; it is the ground
         // between them and the settlement that has closed.
         this.stepOutOfPocket(villager);
+      }
+
+      // **The alarm outranks everything except being ill.** A settlement that
+      // went on hauling logs while a pack ate its winter would be a settlement
+      // nobody believes in, so this is the one place the villagers act without
+      // the player: the children and the old go indoors, and everybody of
+      // working age goes out at them.
+      const order = this.defenceOrder?.(villager) ?? null;
+      if (order !== null && !villager.isIll) {
+        this.answerTheAlarm(villager, order, tickSeconds);
+        continue;
       }
 
       // Somebody unwell keeps to their bed. This is the whole cost of illness:
@@ -412,6 +435,130 @@ export class VillagerSystem {
       wanderBudget -= 1;
       this.chooseWanderTarget(villager);
     }
+  }
+
+  /**
+   * Sheltering, or going out at them.
+   *
+   * **Sheltering is standing in your own doorway and then not being there.** The
+   * renderer fades anybody `sheltering` out exactly as it does a worker who has
+   * gone inside a workshop, so a village under alarm visibly empties — which is
+   * the picture the player asked for.
+   *
+   * **Mustering is walking at the nearest wolf and stopping when you are next to
+   * it.** No path is planned: a fight is a few cells away and the ground between
+   * is ground they were just standing on, so they step toward it the way the
+   * wolves step toward them. The biting itself is `Combat.ts` — this only gets
+   * them there.
+   */
+  private answerTheAlarm(
+    villager: Villager,
+    order: 'shelter' | 'muster',
+    tickSeconds: number,
+  ): void {
+    villager.clearPath();
+    villager.destination = null;
+    // Whatever they were carrying goes down where they stand: a haul in progress
+    // is not worth a life, and the heap posts its own errand afterwards.
+    if (!villager.inventory.isEmpty) {
+      this.putDown(villager);
+    }
+    // And the job goes back, so nothing is reserved for somebody who is fighting.
+    if (villager.currentJobId !== null) {
+      this.jobs.release(villager.currentJobId);
+      villager.currentJobId = null;
+    }
+
+    if (order === 'shelter') {
+      const refuge = this.refugeFor(villager);
+      if (refuge === null || sameCell(villager.cell, refuge)) {
+        villager.activity = 'sheltering';
+        return;
+      }
+      villager.activity = 'walking';
+      this.stepToward(villager, refuge, tickSeconds);
+      return;
+    }
+
+    const wolf = this.nearestWolfCell?.(villager.cell) ?? null;
+    if (wolf === null) {
+      villager.activity = 'idle';
+      return;
+    }
+    villager.activity = 'fighting';
+    if (chebyshevCells(villager.cell, wolf) > 1) {
+      this.stepToward(villager, wolf, tickSeconds);
+    }
+  }
+
+  /**
+   * Where somebody goes to be out of the way: their own house, or any roof.
+   *
+   * Their own first, because that is where their family is. Any finished building
+   * will do at a pinch — a child caught out by the stores does not run home past
+   * the wolves — and `null` when the settlement has no roof at all, in which case
+   * they stand where they are, which is the honest picture of a camp.
+   */
+  private refugeFor(villager: Villager): GridPoint | null {
+    if (villager.homeId !== null) {
+      const home = this.world.buildings.getById(villager.homeId);
+      if (home?.isComplete) {
+        return home.accessCell;
+      }
+    }
+    let best: GridPoint | null = null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (const building of this.world.buildings.all) {
+      if (!building.isComplete) {
+        continue;
+      }
+      const distance = chebyshevCells(villager.cell, building.accessCell);
+      if (distance < bestDistance) {
+        best = building.accessCell;
+        bestDistance = distance;
+      }
+    }
+    return best;
+  }
+
+  /**
+   * One step toward a cell, without planning a route.
+   *
+   * For the alarm only. Everything else in this system walks a path the
+   * pathfinder made, because everything else has time; a villager with wolves in
+   * the village does not, and neither does the game — thirty simultaneous path
+   * requests on the tick an alarm goes up is the one spike this could add.
+   */
+  private stepToward(villager: Villager, target: GridPoint, tickSeconds: number): void {
+    const from = villager.cell;
+    let best: GridPoint | null = null;
+    let bestDistance = chebyshevCells(from, target);
+    for (const [dx, dy] of ADJACENT) {
+      const cell = { gx: from.gx + dx, gy: from.gy + dy };
+      const distance = chebyshevCells(cell, target);
+      if (distance >= bestDistance || !this.world.isWalkable(cell)) {
+        continue;
+      }
+      best = cell;
+      bestDistance = distance;
+    }
+    if (best === null) {
+      return;
+    }
+    const targetX = best.gx + 0.5;
+    const targetY = best.gy + 0.5;
+    const dx = targetX - villager.position.wx;
+    const dy = targetY - villager.position.wy;
+    const distance = Math.hypot(dx, dy);
+    const travel = VILLAGER_WALK_SPEED * tickSeconds;
+    if (distance <= travel || distance === 0) {
+      villager.position = { wx: targetX, wy: targetY };
+      return;
+    }
+    villager.position = {
+      wx: villager.position.wx + (dx / distance) * travel,
+      wy: villager.position.wy + (dy / distance) * travel,
+    };
   }
 
   /**
@@ -1599,4 +1746,12 @@ export class VillagerSystem {
   private rollSex(): Sex {
     return this.randomSource.next() < 0.5 ? 'f' : 'm';
   }
+}
+
+function sameCell(a: GridPoint, b: GridPoint): boolean {
+  return a.gx === b.gx && a.gy === b.gy;
+}
+
+function chebyshevCells(a: GridPoint, b: GridPoint): number {
+  return Math.max(Math.abs(a.gx - b.gx), Math.abs(a.gy - b.gy));
 }

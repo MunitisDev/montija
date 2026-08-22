@@ -70,6 +70,15 @@ export const TextureKeys = {
   selection: 'selection-diamond',
   villagerAtlas: 'villager-atlas',
   villagerRing: 'villager-ring',
+  /**
+   * A wolf, seen from three quarters on, in two frames.
+   *
+   * Two rather than one so a pack does not read as stamped copies: the second is
+   * the same animal with its head down. Which frame a wolf gets comes off its id,
+   * so it keeps the same one all night.
+   */
+  wolf: (variant: number): string => `wolf-${variant % WOLF_VARIANTS}`,
+  wolfAtlas: 'wolf-atlas',
   designation: 'designation-mark',
   /**
    * A heap of one good, lying on the ground.
@@ -176,6 +185,7 @@ export function createPlaceholderTextures(scene: Phaser.Scene): void {
   }
 
   buildVillagerAtlas(scene, graphics);
+  buildWolfAtlas(scene, graphics);
   buildConnectorAtlas(scene, graphics);
 
   if (!scene.textures.exists(TextureKeys.villagerRing)) {
@@ -762,6 +772,100 @@ function drawChild(
  * in. One batch for every villager on screen, however many kinds are walking
  * about.
  */
+/** How many wolves the atlas holds. See {@link TextureKeys.wolf}. */
+export const WOLF_VARIANTS = 2;
+
+/** Wolf sprite size. Lower and longer than a villager, which is the whole read. */
+export const WOLF_WIDTH = 24;
+export const WOLF_HEIGHT = 20;
+
+/**
+ * The pack, drawn once at load.
+ *
+ * **Low, long and dark**, which is the entire brief: at the zoom this game is
+ * played at a wolf is fourteen pixels of animal, so it cannot be a portrait — it
+ * has to be a *silhouette* that reads as not-a-villager in one glance. Four legs
+ * under a level back, a dropped head, a tail out behind, and the darkest value on
+ * the map so it stands out against grass and snow alike.
+ */
+function buildWolfAtlas(scene: Phaser.Scene, graphics: Phaser.GameObjects.Graphics): void {
+  if (scene.textures.exists(TextureKeys.wolfAtlas)) {
+    return;
+  }
+
+  for (let variant = 0; variant < WOLF_VARIANTS; variant += 1) {
+    graphics.translateCanvas(variant * WOLF_WIDTH, 0);
+    drawWolf(graphics, variant);
+    graphics.translateCanvas(-variant * WOLF_WIDTH, 0);
+  }
+  graphics.generateTexture(TextureKeys.wolfAtlas, WOLF_VARIANTS * WOLF_WIDTH, WOLF_HEIGHT);
+  graphics.clear();
+
+  const texture = scene.textures.get(TextureKeys.wolfAtlas);
+  for (let variant = 0; variant < WOLF_VARIANTS; variant += 1) {
+    texture.add(TextureKeys.wolf(variant), 0, variant * WOLF_WIDTH, 0, WOLF_WIDTH, WOLF_HEIGHT);
+  }
+}
+
+/**
+ * One wolf.
+ *
+ * Drawn from the feet up, because the sprite is anchored at the feet: the ground
+ * line is the bottom of the frame and everything is measured off it, exactly as a
+ * villager is.
+ */
+function drawWolf(graphics: Phaser.GameObjects.Graphics, variant: number): void {
+  const groundY = WOLF_HEIGHT - 1;
+  const midX = WOLF_WIDTH / 2;
+  // A dropped head on the second one: the same animal, nosing at something.
+  const headLift = variant === 0 ? 12 : 9;
+
+  // The shadow it stands in, so it is not a cut-out floating on grass.
+  graphics.fillStyle(0x1b1a17, 0.28);
+  graphics.fillEllipse(midX, groundY, 18, 5);
+
+  // Dark, and darker than anything else that moves: against grass, mud and snow
+  // alike a wolf has to read as a hole in the picture rather than as a grey dog.
+  const coat = variant === 0 ? 0x3b3a38 : 0x454341;
+  const dark = 0x201f1d;
+
+  // Legs first, so the body laps over them.
+  graphics.fillStyle(dark, 1);
+  for (const x of [midX - 6, midX - 3, midX + 3, midX + 6]) {
+    graphics.fillRect(x, groundY - 6, 2, 6);
+  }
+
+  // The body: a long level back, which is what says four legs at this size.
+  graphics.fillStyle(coat, 1);
+  graphics.fillRect(midX - 8, groundY - 11, 15, 5);
+  // Haunch and shoulder, a shade rounder than the middle.
+  graphics.fillEllipse(midX - 7, groundY - 9, 7, 7);
+  graphics.fillEllipse(midX + 6, groundY - 9, 6, 6);
+
+  // The tail, out behind and down: a wolf's tail is not a dog's flag.
+  graphics.fillStyle(dark, 1);
+  graphics.fillRect(midX - 12, groundY - 10, 5, 2);
+
+  // Head and muzzle, forward of the shoulder.
+  graphics.fillStyle(coat, 1);
+  graphics.fillEllipse(midX + 9, groundY - headLift, 6, 6);
+  graphics.fillStyle(dark, 1);
+  graphics.fillRect(midX + 11, groundY - headLift, 4, 2);
+  // Ears: two notches, which at this size is the whole difference between a wolf
+  // and a sheep.
+  graphics.fillTriangle(
+    midX + 7,
+    groundY - headLift - 3,
+    midX + 9,
+    groundY - headLift - 6,
+    midX + 10,
+    groundY - headLift - 2,
+  );
+  // And one lit eye, because something has to catch the light.
+  graphics.fillStyle(0xd8c26a, 0.9);
+  graphics.fillRect(midX + 10, groundY - headLift - 1, 1, 1);
+}
+
 function buildVillagerAtlas(scene: Phaser.Scene, graphics: Phaser.GameObjects.Graphics): void {
   if (scene.textures.exists(TextureKeys.villagerAtlas)) {
     return;

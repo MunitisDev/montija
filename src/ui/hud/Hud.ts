@@ -134,6 +134,10 @@ export class Hud {
   private lastRenderedFailure: string | null | undefined;
   /** The last day whose events were announced, so each is announced once. */
   private lastAnnouncedDay = -1;
+  /** So the alarm is announced once a raid, not once a day. */
+  private announcedAlarm = false;
+  /** Running total of wolves killed, so only the new ones are announced. */
+  private announcedSlain = 0;
   private lastRenderedSeason = '';
   private lastRenderedDay = '';
   private lastRenderedTemperature = Number.NaN;
@@ -395,18 +399,23 @@ export class Hud {
     // about a sickbed.
     this.announce('event.diedOfIllness', snapshot.illness.died.length);
 
-    // **The wood, in three parts, like a fire.** A pack came down; it found the
-    // harvest; it found somebody. Only the first is said on a quiet night, which
-    // is the warning a player can still act on.
+    // **The wood, in three parts, like a fire.** A pack is at the settlement;
+    // it took something; somebody did not come back. The first is the one the
+    // player can still act on, so it is said the moment anybody sees them.
     const wolves = snapshot.wolves;
-    if (wolves.prowled && wolves.stolenTotal === 0 && wolves.killed.length === 0) {
-      this.announceOnce(this.i18n.t('event.wolves'));
+    if (wolves.alarmed && !this.announcedAlarm) {
+      this.announceOnce(this.i18n.t('event.wolves'), 'is-loss');
+      this.announcedAlarm = true;
     }
-    if (wolves.stolenTotal > 0) {
-      this.announceOnce(`${this.i18n.t('event.wolvesTook')} — ${wolves.stolenTotal}`, 'is-loss');
+    if (!wolves.alarmed && wolves.pack.length === 0) {
+      this.announcedAlarm = false;
     }
-    this.announce('event.wolvesKilled', wolves.killed.length);
-    this.announce('event.wolvesMissed', wolves.escaped.length);
+    if (wolves.stolen > 0) {
+      this.announceOnce(`${this.i18n.t('event.wolvesTook')} — ${wolves.stolen}`, 'is-loss');
+    }
+    this.announce('event.wolvesKilled', wolves.fallen.length);
+    this.announce('event.wolvesSlain', wolves.slain - this.announcedSlain);
+    this.announcedSlain = wolves.slain;
     this.announce('event.diedOfOldAge', population.deathsOfOldAge);
     this.announce('event.died', fromHardship);
   }

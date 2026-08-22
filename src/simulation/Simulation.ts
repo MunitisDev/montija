@@ -78,7 +78,9 @@ import {
 } from './population/IllnessSystem';
 import { NO_SPOILAGE, runSpoilage, type SpoilageReport } from './resources/SpoilageSystem';
 import { NO_FIRE, runFire, type FireReport } from './events/FireSystem';
-import { NO_WOLVES, runWolves, type WolfReport } from './events/WolfSystem';
+import { WolfSystem, type WolfTickReport, NO_WOLF_TICK } from './wildlife/WolfSystem';
+import type { Wolf } from './wildlife/Wolf';
+import { WOUND_HEALING_PER_DAY, armedCount, exchangeBlows, type Exchange } from './wildlife/Combat';
 import {
   LOGS_PER_FENCE,
   LOGS_PER_GATE,
@@ -317,7 +319,20 @@ export interface SimulationSnapshot {
   readonly trade: TradeReport;
   /** Who is unwell, and how much of it the settlement is able to treat. */
   readonly illness: IllnessReport;
-  readonly wolves: WolfReport;
+  /**
+   * The pack, as the HUD and the renderer need it.
+   *
+   * The wolves themselves rather than a report, because they are on the map now:
+   * something has to draw them.
+   */
+  readonly wolves: {
+    readonly pack: readonly Wolf[];
+    readonly alarmed: boolean;
+    readonly stolen: number;
+    readonly breached: number;
+    readonly fallen: readonly number[];
+    readonly slain: number;
+  };
   /** Who reached a new level at their trade today, so the HUD can say so. */
   readonly skills: SkillReport;
   /** Lifetime totals: the settlement's own history, recorded as it happens. */
@@ -435,7 +450,17 @@ export class Simulation {
   private lastPopulation: PopulationReport = NO_POPULATION_CHANGE;
   private lastForest: ForestReport = NO_FOREST_CHANGE;
   private lastFire: FireReport = NO_FIRE;
-  private lastWolves: WolfReport = NO_WOLVES;
+  /**
+   * The pack, if one is on the map.
+   *
+   * Owned here rather than in the world for the same reason the villagers are:
+   * wolves are alive, and the world is the ground they stand on.
+   */
+  public readonly wolves = new WolfSystem();
+  private lastWolves: WolfTickReport = NO_WOLF_TICK;
+  /** Villagers taken by wolves today, and wolves killed. For the HUD. */
+  private lastFallen: number[] = [];
+  private lastSlain = 0;
   private lastEmployment: EmploymentReport = NO_EMPLOYMENT_CHANGE;
   private lastTrade: TradeReport = NO_TRADE;
   private lastIllness: IllnessReport = NO_ILLNESS;
@@ -562,6 +587,10 @@ export class Simulation {
       return building ? SKILL_WORK_BONUS[villager.skillAt(building.definition.id)] : 1;
     };
     this.villagers.isCutOff = (cell) => this.isCutOff(cell);
+    // The two halves of the alarm: what each villager should be doing, and where
+    // the nearest wolf is for the ones going out at them.
+    this.villagers.defenceOrder = (villager) => this.wolves.orderFor(villager);
+    this.villagers.nearestWolfCell = (from) => this.wolves.nearestTo(from)?.cell ?? null;
     this.villagers.onDemolished = (buildingId) => this.completeDemolition(buildingId);
     this.villagers.onTreeFelled = (cell, playerOrdered) => this.recordFelling(cell, playerOrdered);
     // Counted when the wall goes up rather than counted off the map later: a
@@ -618,7 +647,77 @@ export class Simulation {
     this.createHaulJobs();
     this.escalateStaleHauls();
     this.villagers.update(tickSeconds);
+    // **The pack moves after the people do**, so a villager who stepped up to a
+    // wolf this tick is beside it when the biting is worked out rather than a
+    // tick late. Everything about a fight is decided in the two calls below.
+    this.runWildlife(tickSeconds);
     // Phase 7+ : production, seasons.
+  }
+
+  /**
+   * One tick of the pack, and of the fight if there is one.
+   *
+   * The wolf system decides who is biting whom; `Combat` decides what that costs;
+   * and this decides what a death *means* — a household, a job, a line in the
+   * roll. Three files, one for each of those, because the last one is the only
+   * one that needs to know about the settlement.
+   */
+  private runWildlife(tickSeconds: number): void {
+    if (this.wolves.count === 0) {
+      this.lastWolves = NO_WOLF_TICK;
+      return;
+    }
+
+    this.lastWolves = this.wolves.update({
+      world: this.world,
+      villagers: this.villagers.all,
+      tickSeconds,
+    });
+
+    // **Tools are handed out, not spent.** However many the settlement has is how
+    // many of its people fight at full strength — see `Combat.ts`. Handed to the
+    // defenders in id order, which is arbitrary and fair and reproducible.
+    const pairings: Exchange[] = [];
+    const armed = armedCount(this.storages.totalOf('tools'), this.lastWolves.biting.length);
+    let handedOut = 0;
+    for (const { villagerId, wolfId } of this.lastWolves.biting) {
+      const villager = this.villagers.findById(villagerId);
+      const wolf = this.wolves.all.find((candidate) => candidate.id === wolfId);
+      if (!villager || !wolf) {
+        continue;
+      }
+      pairings.push({ villager, wolf, armed: handedOut < armed });
+      handedOut += 1;
+    }
+
+    const report = exchangeBlows(pairings);
+    for (const id of report.fallen) {
+      const villager = this.villagers.findById(id);
+      if (!villager) {
+        continue;
+      }
+      this.necrology.record(villager, 'wolves', this.year);
+      this.villagers.remove(villager.id);
+      this.totalDeaths += 1;
+      this.chronicle.died += 1;
+      this.lastFallen.push(id);
+    }
+    this.wolves.remove(report.slain);
+    this.lastSlain += report.slain.length;
+
+    // Anything the pack carried off, and any hole it made, is worth a line in the
+    // chronicle: the settlement will want to know why the larder is short.
+    this.chronicle.wolfKills += report.slain.length;
+    for (const taken of this.lastWolves.stolen) {
+      this.chronicle.wolfStolen += taken.amount;
+    }
+    if (this.lastWolves.breached.length > 0) {
+      this.world.buildings.markChanged();
+    }
+
+    // The dead are taken off the map before anybody looks again, so a wolf that
+    // died this tick cannot bite next tick.
+    this.wolves.remove(this.wolves.all.filter((wolf) => wolf.isDead).map((wolf) => wolf.id));
   }
 
   /**
@@ -788,7 +887,14 @@ export class Simulation {
       employment: this.lastEmployment,
       trade: this.lastTrade,
       illness: this.lastIllness,
-      wolves: this.lastWolves,
+      wolves: {
+        pack: this.wolves.all,
+        alarmed: this.wolves.isAlarmed,
+        stolen: this.lastWolves.stolen.reduce((total, take) => total + take.amount, 0),
+        breached: this.lastWolves.breached.length,
+        fallen: this.lastFallen,
+        slain: this.lastSlain,
+      },
       skills: this.lastSkills,
       deaths: this.totalDeaths,
       advice: this.adviseOn(year),
@@ -1223,7 +1329,13 @@ export class Simulation {
     this.lastPopulation = NO_POPULATION_CHANGE;
     this.lastForest = NO_FOREST_CHANGE;
     this.lastFire = NO_FIRE;
-    this.lastWolves = NO_WOLVES;
+    this.lastWolves = NO_WOLF_TICK;
+    this.lastFallen = [];
+    this.lastSlain = 0;
+    // **The pack is not cleared here.** This runs on a load as well as on a jump
+    // of the clock, and a settlement saved with wolves in the turnips has to load
+    // with wolves in the turnips — the save restores them a moment before this,
+    // and wiping them would be a free escape from a bad night.
     this.lastEmployment = NO_EMPLOYMENT_CHANGE;
     this.lastTrade = NO_TRADE;
     this.tradeOrder = AUTOMATIC_TRADE;
@@ -1294,7 +1406,7 @@ export class Simulation {
     // one — a warning about a raid the settlement has already answered is the
     // kind of noise that teaches players to stop reading warnings.
     if (
-      this.lastWolves.stolenTotal > 0 &&
+      this.wolves.isAlarmed &&
       FOOD_IDS.reduce((sum, id) => sum + this.world.piles.totalOf(id), 0) > 0
     ) {
       return 'wolvesAbout';
@@ -1704,29 +1816,25 @@ export class Simulation {
       }
     }
 
-    // And the wood comes for what the settlement left out. After the fire and
-    // before the trees grow, which is only for tidiness: nothing here depends on
-    // either. Deliberately *after* the eating, so a heap the settlement has
-    // already fed itself from is not stolen retroactively.
-    this.lastWolves = runWolves({
-      world: this.world,
-      villagers: this.villagers.all,
-      random: this.wolfRandom,
-      season: this.year.season,
-      year: this.year.year,
-    });
-    for (const id of this.lastWolves.killed) {
-      const villager = this.villagers.findById(id);
-      if (!villager) {
-        continue;
-      }
-      this.necrology.record(villager, 'wolves', this.year);
-      this.villagers.remove(villager.id);
-      this.totalDeaths += 1;
-      this.chronicle.died += 1;
-    }
-    if (this.lastWolves.prowled) {
+    // And the wood may come down tonight. Only the *arrival* is a daily roll;
+    // what the pack then does happens on the tick, like everything else alive.
+    if (
+      this.wolves.considerRaid({
+        world: this.world,
+        random: this.wolfRandom,
+        season: this.year.season,
+        year: this.year.year,
+      })
+    ) {
       this.chronicle.wolfRaids += 1;
+    }
+
+    // Wounds knit. Slowly enough that two raids in a week is a different
+    // proposition from two raids in a season.
+    for (const villager of this.villagers.all) {
+      if (villager.wounds > 0) {
+        villager.wounds = Math.max(0, villager.wounds - WOUND_HEALING_PER_DAY);
+      }
     }
 
     // The trees are a day older, which for two of them a year is the day they

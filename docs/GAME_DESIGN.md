@@ -1066,7 +1066,7 @@ villager about ten days later: roughly one winter, which is the span the player 
 
 ---
 
-## Wolves and the palisade — Implemented
+## Wolves — Implemented
 
 The settlement had nothing outside it. Everything that could go wrong came from inside the valley —
 the larder, the woodpile, a hearth, a sickbed — and a wilderness that never once pushed back is not
@@ -1078,17 +1078,63 @@ objective and every figure in it was measured against ten people with no walls a
 Measured with wolves in that first year, the tutorial lost two worlds in twelve — so the wood arrives
 once the settlement is a settlement.
 
+**They are on the map.** For one version a raid was a calculation at the day boundary: a pack "came
+down", a heap lost fifteen turnips, and on a bad night somebody was gone — none of it visible, none of
+it happening anywhere. The rules were right and there was nothing to watch, so there was nothing to
+_do_. Two to four wolves now come out of the trees, cross the ground, and meet whoever comes out to
+meet them.
+
 | What               | Decided by                                                                |
 | ------------------ | ------------------------------------------------------------------------- |
 | Whether one comes  | The season: nothing in spring or summer, 3% a day in autumn, 8% in winter |
-| What it takes      | Food lying in the open first, up to three heaps of it                     |
-| Failing that       | Somebody working the far wood **alone** — a quarter of them are taken     |
-| Who is safe        | Anyone with company within 3 cells, and anything behind a palisade        |
-| How far it reaches | 6 cells out of cover, so cleared ground is a defence in itself            |
+| Where from         | Standing wood, and they will not go more than 6 cells from cover          |
+| What they go for   | Anybody out of doors within 8 cells; failing that, food left in the open  |
+| Who is safe        | Anyone indoors, and anything behind a wall                                |
+| How long they stay | Two minutes of play, or until they have eaten, or until they are beaten   |
 
-Both of the things a pack goes for are mistakes the game has been asking the player not to make since
-the first winter — the harvest left in the field, and a lone feller sent to the far woods — and this is
-the first rule that punishes them **directly** rather than through an empty larder three weeks later.
+### The alarm
+
+**One villager seeing them tells everybody**, which is what a shout across a valley does. From that
+moment, and without the player touching anything:
+
+- **Children and elders go indoors** and disappear from the map — the same fade a worker gets walking
+  into a workshop. A sheltering villager is not a target at all.
+- **Everybody of working age drops what they are carrying and goes out at them.** The job goes back to
+  the pool, the load goes on the ground where it stood, and they walk at the nearest wolf.
+
+This is the one thing in the game the settlement does without being told, and it earns the exception: a
+village that stood in the fields watching wolves eat its winter would be a village nobody believes in.
+
+### The fight, and why a wolf is worth a person
+
+```text
+                 vigour   per tick   one against one wolf
+wolf               100       2.0     —
+villager, armed    100       2.0     both die
+villager, bare     100       1.4     the villager dies, the wolf lives
+```
+
+Equal numbers, on purpose: if a wolf and an armed villager are exactly matched then nothing about a
+fight is a die roll — the outcome is **numbers**, and numbers are what the player decides. Two wolves
+kill one villager. Two villagers kill one wolf. Nobody wins a fair one-on-one, which is precisely why a
+settlement must never send one person.
+
+**Damage is simultaneous.** Both sides are read before either is written, so two equal fighters reach
+zero on the same tick and both are lost; resolving one side first would hand the win to whoever
+happened to be earlier in an array, which is the sort of unfairness nobody can see and everybody feels.
+
+**There are no dice in the fight at all** — not one call to a random stream — so the fair-damage system
+is also perfectly reproducible. What decides it is how many came, whether they had tools, and whether
+the wall held.
+
+**Tools are the settlement's armoury.** However many `tools` are on the shelf is how many defenders
+fight at full strength; the rest fight bare-handed and lose one-on-one. It is the first time tools are
+a defence rather than a work bonus, and it gives the Blacksmith a reason a peaceful settlement never
+had.
+
+A survivor carries **wounds**, which heal 12 a day. Their own number rather than a bite out of health,
+for the oldest reason in this codebase: health is what hunger and cold drain, and anything else that
+drains it becomes a multiplier on starving.
 
 ### The wall
 
@@ -1124,9 +1170,12 @@ and the way out is to pull a cell down (immediate) or put a gate in it — both 
   winter and one that holds every winter.
 - **Pulling a cell down gives nothing back.** Stakes are split driving them and dressed stone is set.
 
-Measured over twelve settlements and six years: 74 raids, 473 food taken and 3 people. The bite is
-mostly the recurring theft, which is why the first version — one heap a night rather than three — was
-a rounding error at 236 food and was changed.
+Measured before the fight existed, over twelve settlements and six years: 74 raids, 473 food taken and 3
+people — and the first version of that, taking one heap a night rather than three, was a rounding error
+at 236 food. Those figures are kept because they are what the _arrival_ rates were tuned against. What a
+raid costs now depends on who comes out to meet it, which is the whole point of having made it a fight:
+verified in play, a ten-person settlement with tools on the shelf beats a pack of two and buries one of
+its own doing it.
 
 ---
 

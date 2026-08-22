@@ -275,6 +275,8 @@ export interface SaveGame {
     readonly firesLost?: number;
     /** Absent in saves written before the wood came down for the winter. */
     readonly wolfRaids?: number;
+    readonly wolfKills?: number;
+    readonly wolfStolen?: number;
   };
   /**
    * The roll of the dead: a line each, with an age and a cause.
@@ -316,6 +318,26 @@ export interface SaveGame {
       readonly day: number;
     }[];
     readonly barren: readonly (readonly [number, number])[];
+  };
+  /**
+   * The pack on the map, if there is one.
+   *
+   * Absent in every save written before wolves walked about, which restore with
+   * an empty wood — true of those settlements, where a raid was a number rather
+   * than a thing standing in the turnips.
+   */
+  readonly wolves?: {
+    readonly wolves?: readonly {
+      readonly id: number;
+      readonly wx: number;
+      readonly wy: number;
+      readonly vigour: number;
+      readonly eaten?: number;
+      readonly state?: string;
+    }[];
+    readonly nextId?: number;
+    readonly patience?: number;
+    readonly seen?: boolean;
   };
   /**
    * Where each random stream had got to.

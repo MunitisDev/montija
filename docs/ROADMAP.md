@@ -2044,3 +2044,35 @@ Cold is still the game's difficulty. Over twelve settlements and six years the w
 473 food; the winter took 110. Everything in this phase adds texture to a curve whose shape is still
 firewood, and the two things that would change that shape are the ones the measurements keep pointing
 at: a population that grows, and something that makes food tight again.
+
+## PHASE 68 — Wolves on the map, a wall with gates, and a fight — Implemented
+
+The raid was a calculation and the wall was a decoration. Both are now things that happen where the
+player can see them.
+
+**Wolves are entities.** Two to four come out of the trees on the seeded night the old rule already
+chose, cross the ground at a shade over a villager's pace, and go for whoever is out of doors — or, if
+nobody is, the food left lying in the fields. They will not go more than six cells from cover, so
+cleared ground is a defence; they will not cross a wall, and they will chew through timber if nobody
+stops them.
+
+**The alarm.** One villager seeing them tells everybody. The children and the old walk indoors and
+vanish from the map; everybody of working age drops their load, hands back their job and walks at the
+nearest wolf. The one thing in this game the settlement does without being told.
+
+**The fight, with no dice in it.** A wolf and an armed villager are exactly equal — same vigour, same
+damage — so two of either kill one of the other and nobody wins a fair one-on-one. Damage is
+simultaneous, so "equal" means equal rather than "whoever the array reached first". Tools decide who
+fights at full strength, which is the first time tools have been a defence rather than a work bonus.
+Wounds heal over days. See `GAME_DESIGN.md` for the table.
+
+**The wall stops people now**, and a gate is the way through: three logs cut into a standing length.
+Either can be built up in stone, and what stone buys is the one thing timber cannot do — it cannot be
+chewed through.
+
+### What is still true after all of it
+
+Cold is still the game's difficulty, and this phase did not set out to change that. What it changed is
+that the settlement now has an enemy it can _fight_, and losing a person to one is a consequence of
+three decisions the player made: where they sent people, whether there were tools on the shelf, and
+whether the wall was finished.

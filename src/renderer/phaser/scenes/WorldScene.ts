@@ -13,6 +13,8 @@ import { selectedCells } from '@/game/selection';
 import { PhaserCameraBinding } from '@/renderer/phaser/camera/PhaserCameraBinding';
 import { TerrainRenderer } from '@/renderer/phaser/terrain/TerrainRenderer';
 import { VillagerRenderer } from '@/renderer/phaser/entities/VillagerRenderer';
+import { WolfRenderer } from '@/renderer/phaser/entities/WolfRenderer';
+import { WOLF_VIGOUR } from '@/simulation/wildlife/Combat';
 import { DesignationRenderer } from '@/renderer/phaser/entities/DesignationRenderer';
 import { ConnectorRenderer } from '@/renderer/phaser/entities/ConnectorRenderer';
 import { ResourceRenderer } from '@/renderer/phaser/entities/ResourceRenderer';
@@ -36,6 +38,7 @@ export class WorldScene extends Phaser.Scene {
   private cameraBinding!: PhaserCameraBinding;
   private terrainRenderer!: TerrainRenderer;
   private villagerRenderer!: VillagerRenderer;
+  private wolfRenderer!: WolfRenderer;
   private designationRenderer!: DesignationRenderer;
   private connectorRenderer!: ConnectorRenderer;
   private resourceRenderer!: ResourceRenderer;
@@ -82,6 +85,7 @@ export class WorldScene extends Phaser.Scene {
       this.context.simulation.snapshot().season,
     );
     this.villagerRenderer = new VillagerRenderer(this);
+    this.wolfRenderer = new WolfRenderer(this);
     this.designationRenderer = new DesignationRenderer(this);
     this.connectorRenderer = new ConnectorRenderer(this);
     this.resourceRenderer = new ResourceRenderer(this);
@@ -98,6 +102,7 @@ export class WorldScene extends Phaser.Scene {
       this.terrainRenderer.destroy();
       this.weatherRenderer.destroy();
       this.villagerRenderer.destroy();
+      this.wolfRenderer.destroy();
       this.designationRenderer.destroy();
       this.connectorRenderer.destroy();
       this.resourceRenderer.destroy();
@@ -137,6 +142,10 @@ export class WorldScene extends Phaser.Scene {
       buildings: this.context.simulation.world.buildings,
       deltaSeconds: delta / 1000,
     });
+
+    // The pack, when there is one. Same interpolation as the people, because a
+    // wolf crossing a field at 1x must not step ten times a second either.
+    this.wolfRenderer.sync(this.context.simulation.wolves.all, this.context.tickAlpha, WOLF_VIGOUR);
 
     this.syncSeason(delta);
     this.designationRenderer.sync(this.context.simulation.jobs);
@@ -179,6 +188,7 @@ export class WorldScene extends Phaser.Scene {
       this.buildingRenderer.applySeason(season);
       this.villagerRenderer.applyTint(tint);
       this.resourceRenderer.applyTint(tint);
+      this.wolfRenderer.applyTint(tint);
     }
 
     // Re-anchored every frame: the camera's zoom changes under the player's

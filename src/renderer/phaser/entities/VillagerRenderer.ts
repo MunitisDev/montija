@@ -224,6 +224,14 @@ export class VillagerRenderer {
  *   in it. See `hasInterior`.
  */
 function worksInside(villager: Villager, buildings: BuildingRegistry): boolean {
+  // **Sheltering is being indoors too**, and it is the more dramatic of the two:
+  // when the alarm goes up the children and the old walk to a doorway and vanish
+  // through it, so a village under wolves visibly empties. The same fade, for the
+  // same reason — the simulation has somebody standing at a door, and whether
+  // that reads as *at* it or *through* it is a question about pictures.
+  if (villager.activity === 'sheltering') {
+    return true;
+  }
   if (villager.activity !== 'working' || villager.employerId === null) {
     return false;
   }

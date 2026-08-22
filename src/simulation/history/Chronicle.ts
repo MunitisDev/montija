@@ -35,8 +35,12 @@ export interface Chronicle {
   firesFought: number;
   /** Buildings lost to a fire nobody could reach with water. */
   firesLost: number;
-  /** Nights a pack came down and carried something off. */
+  /** Nights a pack came down. */
   wolfRaids: number;
+  /** Wolves the settlement killed. */
+  wolfKills: number;
+  /** Food a pack carried off, all told. */
+  wolfStolen: number;
 }
 
 /**
@@ -61,6 +65,8 @@ export function newChronicle(): Chronicle {
     firesFought: 0,
     firesLost: 0,
     wolfRaids: 0,
+    wolfKills: 0,
+    wolfStolen: 0,
   };
 }
 

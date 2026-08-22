@@ -1,14 +1,15 @@
 /**
- * The wood in winter, and the stake line that answers it.
+ * The wood in winter, the fight with it, and the wall that answers both.
  *
- * **A pack is never bad luck**, and every test here is about one of the five
- * decisions that make it so: what season it is, whether the settlement is past
- * its founding year, whether the harvest is lying in the open, whether anybody is
- * working the far wood alone, and whether a palisade stands between.
+ * **A pack is never bad luck**, and every test here is about one of the decisions
+ * that make it so: what season it is, whether the settlement is past its founding
+ * year, whether the harvest is lying in the open, whether the wall holds, and how
+ * many people came out with tools in their hands.
  *
- * Rolled with a stubbed night throughout, and deliberately: at a little over one
- * pack a year, a rule tested by playing years and hoping is a rule not tested at
- * all.
+ * The arrival is rolled with a stubbed night throughout, and deliberately: at a
+ * little over one pack a year, a rule tested by playing years and hoping is a rule
+ * not tested at all. Everything after the arrival has no dice in it at all — see
+ * `wildlife/Combat.ts` — so the fights below are exact rather than likely.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -16,14 +17,23 @@ import { describe, expect, it } from 'vitest';
 import { Simulation } from '@/simulation/Simulation';
 import {
   FIRST_WOLF_YEAR,
-  KILL_CHANCE,
-  NO_WOLVES,
   PACK_APPETITE,
-  PACK_HEAPS,
+  PACK_MIN,
   WOLF_REACH,
-  runWolves,
-} from '@/simulation/events/WolfSystem';
+} from '@/simulation/wildlife/WolfSystem';
 import {
+  ARMED_BLOW,
+  BARE_BLOW,
+  VILLAGER_VIGOUR,
+  WOLF_BITE,
+  WOLF_VIGOUR,
+  WOUND_HEALING_PER_DAY,
+  armedCount,
+  exchangeBlows,
+} from '@/simulation/wildlife/Combat';
+import { Wolf } from '@/simulation/wildlife/Wolf';
+import {
+  type FenceKind,
   LOGS_PER_FENCE,
   LOGS_PER_GATE,
   STONE_PER_GATE,
@@ -31,29 +41,40 @@ import {
   TIMBER_STRENGTH,
 } from '@/simulation/world/FenceGrid';
 import { restore, serialise } from '@/simulation/save/serialise';
-import { TICKS_PER_DAY, TICKS_PER_YEAR } from '@/simulation/seasons/SeasonClock';
+import { TICKS_PER_DAY } from '@/simulation/seasons/SeasonClock';
+import { WORKING_AGE, RETIREMENT_AGE } from '@/data/population';
 import type { GridPoint } from '@/shared/types/geometry';
-import type { Villager } from '@/simulation/villagers/Villager';
+import { Villager } from '@/simulation/villagers/Villager';
 import type { World } from '@/simulation/world/World';
 
 const OPTIONS = { seed: 20260824, worldWidth: 64, worldHeight: 64, startingVillagers: 10 };
 
-/** A night the pack comes down, and takes whoever it finds. */
+/** A night the pack comes down. */
 const ALWAYS = { next: () => 0 };
-function pack(
+
+/** Rolls for a raid, with the season and year the caller wants. */
+function raid(
   simulation: Simulation,
   options: {
     season?: 'spring' | 'summer' | 'autumn' | 'winter';
     year?: number;
     random?: { next(): number };
   } = {},
-) {
-  return runWolves({
+): boolean {
+  return simulation.wolves.considerRaid({
     world: simulation.world,
-    villagers: simulation.villagers.all,
     random: options.random ?? ALWAYS,
     season: options.season ?? 'winter',
     year: options.year ?? FIRST_WOLF_YEAR,
+  });
+}
+
+/** One tick of the pack, without the rest of the simulation. */
+function packTick(simulation: Simulation) {
+  return simulation.wolves.update({
+    world: simulation.world,
+    villagers: simulation.villagers.all,
+    tickSeconds: 0.1,
   });
 }
 
@@ -63,16 +84,17 @@ describe('when a pack comes down', () => {
     // business, which is also what keeps the threat pointed at the season the
     // game is about.
     const simulation = new Simulation(OPTIONS);
-    expect(pack(simulation, { season: 'spring' })).toEqual(NO_WOLVES);
-    expect(pack(simulation, { season: 'summer' })).toEqual(NO_WOLVES);
+    expect(raid(simulation, { season: 'spring' })).toBe(false);
+    expect(raid(simulation, { season: 'summer' })).toBe(false);
+    expect(simulation.wolves.count).toBe(0);
   });
 
   it('never in the settlement first year', () => {
     // Stated as a rule rather than hidden in a number: the first winter is this
     // game's whole objective and every figure in it was measured without wolves.
     const simulation = new Simulation(OPTIONS);
-    expect(pack(simulation, { year: FIRST_WOLF_YEAR - 1 })).toEqual(NO_WOLVES);
-    expect(pack(simulation, { year: FIRST_WOLF_YEAR }).prowled).toBe(true);
+    expect(raid(simulation, { year: FIRST_WOLF_YEAR - 1 })).toBe(false);
+    expect(raid(simulation, { year: FIRST_WOLF_YEAR })).toBe(true);
   });
 
   it('does not touch the settlement own random stream in a quiet season', () => {
@@ -80,14 +102,91 @@ describe('when a pack comes down', () => {
     // before wolves existed still describe those settlements exactly.
     const simulation = new Simulation(OPTIONS);
     let draws = 0;
-    const counted = {
-      next: () => {
-        draws += 1;
-        return 0;
+    raid(simulation, {
+      season: 'summer',
+      random: {
+        next: () => {
+          draws += 1;
+          return 0;
+        },
       },
-    };
-    pack(simulation, { season: 'summer', random: counted });
+    });
     expect(draws).toBe(0);
+  });
+
+  it('brings several of them, out of the trees', () => {
+    const simulation = new Simulation(OPTIONS);
+    expect(raid(simulation)).toBe(true);
+
+    expect(simulation.wolves.count).toBeGreaterThanOrEqual(PACK_MIN);
+    for (const wolf of simulation.wolves.all) {
+      // Out of cover, which is the only place they come from.
+      expect(treesNear(simulation.world, wolf.cell)).toBe(true);
+    }
+  });
+
+  it('brings one pack at a time', () => {
+    const simulation = new Simulation(OPTIONS);
+    raid(simulation);
+    const arrived = simulation.wolves.count;
+
+    expect(raid(simulation)).toBe(false);
+    expect(simulation.wolves.count).toBe(arrived);
+  });
+});
+
+describe('the alarm', () => {
+  it('goes up the moment anybody sees them, and tells everybody', () => {
+    // One villager seeing them tells the settlement, which is what a shout
+    // across a valley actually does.
+    const simulation = new Simulation(OPTIONS);
+    raid(simulation);
+    expect(simulation.wolves.isAlarmed).toBe(false);
+
+    const wolf = simulation.wolves.all[0]!;
+    simulation.villagers.all[0]!.position = { wx: wolf.position.wx, wy: wolf.position.wy };
+    packTick(simulation);
+
+    expect(simulation.wolves.isAlarmed).toBe(true);
+  });
+
+  it('sends the children and the old indoors, and everybody else out', () => {
+    const simulation = new Simulation(OPTIONS);
+    raid(simulation);
+    const wolf = simulation.wolves.all[0]!;
+    const child = simulation.villagers.all[0]!;
+    const elder = simulation.villagers.all[1]!;
+    const worker = simulation.villagers.all[2]!;
+    child.age = WORKING_AGE - 4;
+    elder.age = RETIREMENT_AGE + 5;
+    worker.age = 30;
+    worker.position = { wx: wolf.position.wx, wy: wolf.position.wy };
+    packTick(simulation);
+
+    expect(simulation.wolves.orderFor(child)).toBe('shelter');
+    expect(simulation.wolves.orderFor(elder)).toBe('shelter');
+    expect(simulation.wolves.orderFor(worker)).toBe('muster');
+  });
+
+  it('orders nobody about in peacetime', () => {
+    const simulation = new Simulation(OPTIONS);
+    expect(simulation.wolves.orderFor(simulation.villagers.all[0]!)).toBeNull();
+  });
+
+  it('is not raised by a settlement that is all indoors', () => {
+    // The honest consequence of the rule: a village entirely under its roofs
+    // never sees them, and loses whatever it left outside.
+    const simulation = new Simulation(OPTIONS);
+    raid(simulation);
+    const wolf = simulation.wolves.all[0]!;
+    for (const villager of simulation.villagers.all) {
+      villager.activity = 'sheltering';
+      villager.position = { wx: wolf.position.wx, wy: wolf.position.wy };
+    }
+
+    packTick(simulation);
+
+    expect(simulation.wolves.isAlarmed).toBe(false);
   });
 });
 
@@ -95,134 +194,206 @@ describe('what a pack takes', () => {
   it('the harvest, when it is lying in the open', () => {
     const simulation = new Simulation(OPTIONS);
     const cell = besideTrees(simulation.world);
-    simulation.world.piles.drop(cell, 'vegetables', 20);
+    simulation.world.piles.drop(cell, 'vegetables', 40);
+    raid(simulation);
+    // Nobody about to distract them, so they go for the heap.
+    sendEverybodyFar(simulation);
 
-    const report = pack(simulation);
-
-    expect(report.stolenTotal).toBe(PACK_APPETITE);
-    expect(report.stolen[0]?.resource).toBe('vegetables');
-    expect(simulation.world.piles.totalOf('vegetables')).toBe(20 - PACK_APPETITE);
-  });
-
-  it('several heaps in one night, which is what a scavenger does', () => {
-    // The rule that makes the mechanic bite: an exposed pile in this game holds
-    // three or four, so one heap a night was a rounding error.
-    const simulation = new Simulation(OPTIONS);
-    const cell = besideTrees(simulation.world);
-    for (let step = 0; step < PACK_HEAPS + 2; step += 1) {
-      simulation.world.piles.drop({ gx: cell.gx + step, gy: cell.gy }, 'fruit', 2);
+    let taken = 0;
+    for (let tick = 0; tick < 400 && taken === 0; tick += 1) {
+      taken = packTick(simulation).stolen.reduce((total, take) => total + take.amount, 0);
     }
 
-    const report = pack(simulation);
-
-    expect(report.stolen.length).toBe(PACK_HEAPS);
-    expect(report.stolenTotal).toBe(PACK_HEAPS * 2);
+    expect(taken).toBeGreaterThan(0);
+    expect(taken).toBeLessThanOrEqual(PACK_APPETITE);
   });
 
-  it('nothing at all from a heap behind a palisade', () => {
-    // The whole point of the fence, and it is the firebreak rule doing a second
+  it('nothing at all from a heap behind a wall', () => {
+    // The whole point of the wall, and it is the firebreak rule doing a second
     // job: what lies between decides whether one thing reaches the other.
     const simulation = new Simulation(OPTIONS);
     const cell = besideTrees(simulation.world);
-    simulation.world.piles.drop(cell, 'vegetables', 20);
-    fenceAround(simulation.world, cell);
+    simulation.world.piles.drop(cell, 'vegetables', 40);
+    fenceAround(simulation.world, cell, 'stone-wall');
+    sendEverybodyFar(simulation);
 
-    const report = pack(simulation);
+    // A pack will not even come for it: there is no cover with a line to it.
+    raid(simulation);
+    for (let tick = 0; tick < 200; tick += 1) {
+      packTick(simulation);
+    }
 
-    expect(report.stolenTotal).toBe(0);
-    expect(simulation.world.piles.totalOf('vegetables')).toBe(20);
+    expect(simulation.world.piles.totalOf('vegetables')).toBe(40);
   });
 
   it('stone never, however much of it is lying about', () => {
     const simulation = new Simulation(OPTIONS);
     simulation.world.piles.drop(besideTrees(simulation.world), 'stone', 30);
+    sendEverybodyFar(simulation);
+    raid(simulation);
 
-    expect(pack(simulation).stolenTotal).toBe(0);
-  });
-
-  it('nothing from a heap the wood cannot reach', () => {
-    // Clearing ground is a defence in itself: the same axes, doing a second job.
-    const simulation = new Simulation(OPTIONS);
-    const far = clearOfTrees(simulation.world);
-    simulation.world.piles.drop(far, 'vegetables', 20);
-
-    expect(pack(simulation).stolenTotal).toBe(0);
+    for (let tick = 0; tick < 200; tick += 1) {
+      expect(packTick(simulation).stolen).toEqual([]);
+    }
   });
 });
 
-describe('who a pack takes', () => {
-  it('somebody working alone with the trees at their back', () => {
-    const simulation = new Simulation(OPTIONS);
-    const lone = strandOne(simulation);
+describe('the fight', () => {
+  it('is even between a wolf and somebody with a tool', () => {
+    // **The rule the player asked for**: a wolf is worth a person. Nobody wins a
+    // fair one-on-one, which is exactly why a settlement never sends one person.
+    const villager = person({ age: 30 });
+    const wolf = new Wolf(1, { gx: 0, gy: 0 }, WOLF_VIGOUR);
 
-    const report = pack(simulation);
-
-    expect(report.killed).toEqual([lone.id]);
-  });
-
-  it('nobody who has company', () => {
-    // What makes *where the settlement sends people* the decision. The founding
-    // party stands together beside the stores, so it is safe by standing there.
-    const simulation = new Simulation(OPTIONS);
-    const cell = besideTrees(simulation.world);
-    for (const villager of simulation.villagers.all) {
-      villager.position = { wx: cell.gx + 0.5, wy: cell.gy + 0.5 };
+    let rounds = 0;
+    let report = exchangeBlows([{ villager, wolf, armed: true }]);
+    while (report.fallen.length === 0 && report.slain.length === 0 && rounds < 500) {
+      report = exchangeBlows([{ villager, wolf, armed: true }]);
+      rounds += 1;
     }
 
-    const report = pack(simulation);
-
-    expect(report.killed).toEqual([]);
-    expect(report.escaped).toEqual([]);
+    expect(report.fallen).toEqual([villager.id]);
+    expect(report.slain).toEqual([wolf.id]);
+    expect(ARMED_BLOW).toBe(WOLF_BITE);
   });
 
-  it('nobody behind a palisade', () => {
-    const simulation = new Simulation(OPTIONS);
-    const lone = strandOne(simulation);
-    fenceAround(simulation.world, lone.cell);
+  it('is lost by somebody with their bare hands', () => {
+    const villager = person({ age: 30 });
+    const wolf = new Wolf(1, { gx: 0, gy: 0 }, WOLF_VIGOUR);
 
-    expect(pack(simulation).killed).toEqual([]);
+    let report = exchangeBlows([{ villager, wolf, armed: false }]);
+    for (let round = 0; round < 500 && report.fallen.length === 0; round += 1) {
+      report = exchangeBlows([{ villager, wolf, armed: false }]);
+    }
+
+    expect(report.fallen).toEqual([villager.id]);
+    expect(wolf.vigour).toBeGreaterThan(0);
+    expect(BARE_BLOW).toBeLessThan(WOLF_BITE);
   });
 
-  it('and usually nobody at all, because most of them get away', () => {
-    // A quarter, not everybody: the roll is the last step of four decisions and
-    // the other three are the interesting ones.
-    const simulation = new Simulation(OPTIONS);
-    const lone = strandOne(simulation);
+  it('is won by two against one, whichever two', () => {
+    // Both halves of the same claim, and the reason the numbers are equal.
+    const oneVillager = person({ age: 30 });
+    const twoWolves = [
+      new Wolf(1, { gx: 0, gy: 0 }, WOLF_VIGOUR),
+      new Wolf(2, { gx: 0, gy: 0 }, WOLF_VIGOUR),
+    ];
+    let mauled = exchangeBlows(
+      twoWolves.map((wolf) => ({ villager: oneVillager, wolf, armed: true })),
+    );
+    for (let round = 0; round < 500 && mauled.fallen.length === 0; round += 1) {
+      mauled = exchangeBlows(
+        twoWolves.map((wolf) => ({ villager: oneVillager, wolf, armed: true })),
+      );
+    }
+    expect(mauled.fallen).toEqual([oneVillager.id]);
+    expect(mauled.slain).toEqual([]);
 
-    // The first draw is whether a pack comes at all; the second is whether it
-    // catches anybody. A night that comes and misses.
-    let draw = 0;
-    const report = pack(simulation, {
-      random: {
-        next: () => {
-          draw += 1;
-          return draw === 1 ? 0 : KILL_CHANCE * 1.5;
-        },
-      },
-    });
-
-    expect(report.killed).toEqual([]);
-    expect(report.escaped).toEqual([lone.id]);
+    const oneWolf = new Wolf(3, { gx: 0, gy: 0 }, WOLF_VIGOUR);
+    const twoVillagers = [person({ id: 2, age: 30 }), person({ id: 3, age: 30 })];
+    let hunted = exchangeBlows(
+      twoVillagers.map((villager) => ({ villager, wolf: oneWolf, armed: true })),
+    );
+    for (let round = 0; round < 500 && hunted.slain.length === 0; round += 1) {
+      hunted = exchangeBlows(
+        twoVillagers.map((villager) => ({ villager, wolf: oneWolf, armed: true })),
+      );
+    }
+    expect(hunted.slain).toEqual([oneWolf.id]);
+    expect(hunted.fallen).toEqual([]);
   });
 
-  it('and buries them under their own name, in the settlement roll', () => {
-    // End to end through the simulation, because the roll of the dead is what
-    // the player reads afterwards and it has to name the wolves.
+  it('hands out only the tools the settlement has', () => {
+    expect(armedCount(0, 4)).toBe(0);
+    expect(armedCount(2, 4)).toBe(2);
+    expect(armedCount(9, 4)).toBe(4);
+  });
+
+  it('leaves the survivors hurt, and the hurt heal', () => {
     const simulation = new Simulation(OPTIONS);
-    strandOne(simulation);
-    // Winter of the second year, when a pack can actually come.
-    simulation.restoreClock(TICKS_PER_YEAR + TICKS_PER_DAY * 40, 0);
+    const villager = simulation.villagers.all[0]!;
+    villager.wounds = VILLAGER_VIGOUR / 2;
+
+    runADay(simulation);
+
+    expect(villager.wounds).toBeLessThan(VILLAGER_VIGOUR / 2);
+    expect(WOUND_HEALING_PER_DAY).toBeGreaterThan(0);
+  });
+
+  it('takes people, and the roll of the dead names the wolves', () => {
+    // End to end through the simulation, with a whole pack on one villager who
+    // has nothing in his hands.
+    const simulation = new Simulation(OPTIONS);
+    emptyTheYards(simulation);
+    raid(simulation);
+    const wolf = simulation.wolves.all[0]!;
+    const victim = simulation.villagers.all[0]!;
+    victim.age = 30;
+    victim.position = { wx: wolf.position.wx, wy: wolf.position.wy };
+    sendEverybodyFar(simulation, 1);
     const before = simulation.villagers.count;
 
-    for (let day = 0; day < 12 && simulation.villagers.count === before; day += 1) {
-      runADay(simulation);
+    for (let tick = 0; tick < 600 && simulation.villagers.count === before; tick += 1) {
+      simulation.update(simulation.tick + 1, 0.1);
     }
 
-    // The rate is one pack in twelve winter days, so this may or may not have
-    // happened — what must hold is that if somebody died, the wolves are named.
-    for (const record of simulation.necrology.all) {
-      expect(['wolves', 'hunger', 'cold', 'hungerAndCold', 'illness']).toContain(record.cause);
+    expect(simulation.villagers.count).toBeLessThan(before);
+    expect(simulation.necrology.all.some((record) => record.cause === 'wolves')).toBe(true);
+  });
+
+  it('kills wolves too, and takes them off the map', () => {
+    const simulation = new Simulation(OPTIONS);
+    giveTools(simulation, 10);
+    raid(simulation);
+    const wolf = simulation.wolves.all[0]!;
+    // Everybody of working age, standing on it.
+    for (const villager of simulation.villagers.all) {
+      villager.age = 30;
+      villager.position = { wx: wolf.position.wx, wy: wolf.position.wy };
     }
+    const arrived = simulation.wolves.count;
+
+    for (let tick = 0; tick < 600 && simulation.wolves.count === arrived; tick += 1) {
+      simulation.update(simulation.tick + 1, 0.1);
+    }
+
+    expect(simulation.wolves.count).toBeLessThan(arrived);
+  });
+});
+
+describe('a wall against a pack', () => {
+  it('is chewed through if it is timber, and never if it is stone', () => {
+    const simulation = new Simulation(OPTIONS);
+    const timber = openGround(simulation);
+    simulation.world.raiseFence(timber, 'palisade');
+
+    let bites = 0;
+    while (simulation.world.fences.hasAt(timber) && bites < TIMBER_STRENGTH * 4) {
+      simulation.world.gnawFence(timber);
+      bites += 1;
+    }
+    expect(simulation.world.fences.hasAt(timber)).toBe(false);
+    expect(bites).toBeGreaterThan(10);
+
+    const stone = openGround(simulation);
+    simulation.world.raiseFence(stone, 'stone-wall');
+    for (let bite = 0; bite < TIMBER_STRENGTH * 4; bite += 1) {
+      simulation.world.gnawFence(stone);
+    }
+    expect(simulation.fenceKindAt(stone)).toBe('stone-wall');
+  });
+
+  it('carries the pack through a save and a load', () => {
+    const simulation = new Simulation(OPTIONS);
+    raid(simulation);
+    const arrived = simulation.wolves.count;
+    const where = simulation.wolves.all.map((wolf) => ({ ...wolf.position }));
+
+    const loaded = new Simulation(OPTIONS);
+    restore(loaded, serialise(simulation, 'now'));
+
+    expect(loaded.wolves.count).toBe(arrived);
+    expect(loaded.wolves.all.map((wolf) => ({ ...wolf.position }))).toEqual(where);
   });
 });
 
@@ -404,7 +575,51 @@ describe('raising a stake line', () => {
   });
 });
 
-// --- helpers ---------------------------------------------------------------
+// --- helpers ---
+
+/**
+ * Somebody to fight with, outside any settlement.
+ *
+ * The combat tests are about arithmetic rather than about a valley, so they use a
+ * villager built by hand: no home, no job, nothing but an age and a body.
+ */
+function person(options: { id?: number; age?: number } = {}): Villager {
+  return new Villager({
+    id: options.id ?? 1,
+    name: 'Test',
+    sex: 'f',
+    age: options.age ?? 30,
+    position: { wx: 0, wy: 0 },
+    lifespan: 70,
+  });
+}
+
+/**
+ * Sends everybody well clear of the wood, so a pack has nobody to go for.
+ *
+ * `keep` leaves the first few where they are, for the tests that want exactly one
+ * person in reach.
+ */
+function sendEverybodyFar(simulation: Simulation, keep = 0): void {
+  const away = clearOfTrees(simulation.world);
+  simulation.villagers.all.forEach((villager, index) => {
+    if (index < keep) {
+      return;
+    }
+    villager.position = { wx: away.gx + 0.5, wy: away.gy + 0.5 };
+  });
+}
+
+/** Puts tools on the shelf, for the tests about fighting armed. */
+function giveTools(simulation: Simulation, amount: number): void {
+  for (const storage of simulation.storages.all) {
+    if (storage.accepts('tools')) {
+      storage.inventory.add('tools', amount);
+      return;
+    }
+  }
+  throw new Error('nowhere to keep tools');
+}
 
 function runADay(simulation: Simulation): void {
   for (let tick = 0; tick < TICKS_PER_DAY; tick += 1) {
@@ -456,36 +671,15 @@ function treesNear(world: World, cell: GridPoint): boolean {
 }
 
 /** Rings a cell with stakes, so nothing has a line to it. */
-function fenceAround(world: World, cell: GridPoint): void {
+function fenceAround(world: World, cell: GridPoint, kind: FenceKind = 'palisade'): void {
   for (let gy = cell.gy - 1; gy <= cell.gy + 1; gy += 1) {
     for (let gx = cell.gx - 1; gx <= cell.gx + 1; gx += 1) {
       if (gx === cell.gx && gy === cell.gy) {
         continue;
       }
-      world.fences.lay(gx, gy);
+      world.raiseFence({ gx, gy }, kind);
     }
   }
-}
-
-/**
- * Sends one villager to the treeline and everybody else to the far corner.
- *
- * Which is the situation the rule is about: a settlement working the far wood
- * with one pair of hands.
- */
-function strandOne(simulation: Simulation): Villager {
-  const world = simulation.world;
-  const treeline = besideTrees(world);
-  const away = clearOfTrees(world);
-  const [lone, ...rest] = simulation.villagers.all;
-  if (!lone) {
-    throw new Error('no villagers');
-  }
-  lone.position = { wx: treeline.gx + 0.5, wy: treeline.gy + 0.5 };
-  for (const villager of rest) {
-    villager.position = { wx: away.gx + 0.5, wy: away.gy + 0.5 };
-  }
-  return lone;
 }
 
 /**
